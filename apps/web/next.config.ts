@@ -1,10 +1,13 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
+const monorepoRoot = path.resolve(process.cwd(), "..", "..");
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  outputFileTracingRoot: monorepoRoot,
   turbopack: {
-    root: path.resolve(process.cwd(), "..", "..")
+    root: monorepoRoot
   }
 };
 
