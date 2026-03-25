@@ -1,0 +1,25 @@
+<svg width="920" height="240" viewBox="0 0 920 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="240" rx="44" fill="#FBF5EA"/>
+  <g transform="translate(34 34)">
+    <rect width="172" height="172" rx="44" fill="#FBF5EA"/>
+    <circle cx="86" cy="86" r="70" fill="url(#paint0_radial)"/>
+    <circle cx="86" cy="86" r="58" stroke="#C96A32" stroke-width="6"/>
+    <circle cx="86" cy="86" r="38" stroke="#8F4324" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 10"/>
+    <path d="M86 33V139" stroke="#1D2940" stroke-width="8" stroke-linecap="round"/>
+    <path d="M33 86H139" stroke="#1D2940" stroke-width="8" stroke-linecap="round"/>
+    <path d="M59 110C66.8102 117.497 76.9298 121.67 86 121.67C95.0702 121.67 105.19 117.497 113 110" stroke="#FBF5EA" stroke-width="8" stroke-linecap="round"/>
+    <path d="M69 65L86 48L103 65" stroke="#FBF5EA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="86" cy="86" r="11" fill="#FBF5EA"/>
+    <circle cx="86" cy="86" r="5" fill="#1D2940"/>
+  </g>
+  <text x="242" y="94" fill="#8F4324" font-family="Georgia, serif" font-size="24" letter-spacing="4">ALVO CHURCH</text>
+  <text x="242" y="154" fill="#1D2940" font-family="Georgia, serif" font-size="76" font-weight="700">Alvo</text>
+  <text x="242" y="196" fill="#526072" font-family="Georgia, serif" font-size="26">Direcao para a jornada da igreja</text>
+  <defs>
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(86 78) rotate(90) scale(78)">
+      <stop stop-color="#F3C77B"/>
+      <stop offset="0.52" stop-color="#DE8A4B"/>
+      <stop offset="1" stop-color="#B5562D"/>
+    </radialGradient>
+  </defs>
+</svg>

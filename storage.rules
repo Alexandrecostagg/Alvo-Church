@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDocPath(orgId) {
+      return /databases/(default)/documents/organizations/$(orgId)/users/$(request.auth.uid);
+    }
+
+    function tenantUser(orgId) {
+      return firestore.get(userDocPath(orgId));
+    }
+
+    function isTenantMember(orgId) {
+      return signedIn()
+        && tenantUser(orgId).exists()
+        && tenantUser(orgId).data.organizationId == orgId
+        && tenantUser(orgId).data.isActive == true;
+    }
+
+    function isTenantAdmin(orgId) {
+      return isTenantMember(orgId)
+        && tenantUser(orgId).data.roles.hasAny([
+          "super_admin",
+          "church_admin",
+          "pastor",
+          "secretary"
+        ]);
+    }
+
+    match /organizations/{orgId}/branding/{assetKind}/{fileName} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/{allPaths=**} {
+      allow read: if isTenantMember(orgId);
+      allow write: if false;
+    }
+  }
+}

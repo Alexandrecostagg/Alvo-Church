@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Alvo Church",
+    "slug": "alvo-church",
+    "scheme": "alvochurch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#f6eee0",
+    "primaryColor": "#c96a32",
+    "icon": "./assets/generated/icon.png",
+    "splash": {
+      "image": "./assets/generated/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f6eee0"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "requireFullScreen": true,
+      "icon": "./assets/generated/icon.png",
+      "bundleIdentifier": "com.alvochurch.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/generated/adaptive-icon-foreground.png",
+        "backgroundColor": "#fbf5ea"
+      },
+      "package": "com.alvochurch.app"
+    }
+  }
+}

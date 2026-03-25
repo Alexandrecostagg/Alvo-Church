@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDocPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid);
+    }
+
+    function tenantUser(orgId) {
+      return get(userDocPath(orgId));
+    }
+
+    function isTenantMember(orgId) {
+      return signedIn()
+        && tenantUser(orgId).exists()
+        && tenantUser(orgId).data.organizationId == orgId
+        && tenantUser(orgId).data.isActive == true;
+    }
+
+    function isTenantAdmin(orgId) {
+      return isTenantMember(orgId)
+        && tenantUser(orgId).data.roles.hasAny([
+          "super_admin",
+          "church_admin",
+          "pastor",
+          "secretary"
+        ]);
+    }
+
+    match /organizations/{orgId}/users/{userId} {
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.isActive == true;
+
+      allow read: if signedIn() && (request.auth.uid == userId || isTenantAdmin(orgId));
+      allow update: if signedIn() && (request.auth.uid == userId || isTenantAdmin(orgId));
+      allow delete: if isTenantAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/settings/{documentId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/{document=**} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+  }
+}

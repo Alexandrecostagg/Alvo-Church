@@ -1,0 +1,28 @@
+{
+  "name": "@alvo/web",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --turbopack",
+    "lint": "next lint",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "format": "prettier --check ."
+  },
+  "dependencies": {
+    "@alvo/firebase": "workspace:*",
+    "@alvo/domain": "workspace:*",
+    "@alvo/types": "workspace:*",
+    "@alvo/ui": "workspace:*",
+    "@alvo/utils": "workspace:*",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  }
+}

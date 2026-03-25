@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "allowJs": false,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@alvo/ai": ["packages/ai/src"],
+      "@alvo/analytics": ["packages/analytics/src"],
+      "@alvo/domain": ["packages/domain/src"],
+      "@alvo/firebase": ["packages/firebase/src"],
+      "@alvo/types": ["packages/types/src"],
+      "@alvo/ui": ["packages/ui/src"],
+      "@alvo/utils": ["packages/utils/src"]
+    }
+  }
+}
+

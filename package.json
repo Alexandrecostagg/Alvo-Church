@@ -1,0 +1,19 @@
+{
+  "name": "alvo-church",
+  "private": true,
+  "packageManager": "pnpm@10.6.3",
+  "scripts": {
+    "build": "corepack pnpm -r build",
+    "dev": "corepack pnpm --parallel --filter @alvo/web --filter @alvo/mobile --filter @alvo/worker-api dev",
+    "lint": "corepack pnpm -r lint",
+    "typecheck": "corepack pnpm -r typecheck",
+    "format": "corepack pnpm -r format",
+    "seed:firebase": "tsx scripts/seed-firebase.ts"
+  },
+  "devDependencies": {
+    "firebase-admin": "^13.7.0",
+    "tsx": "^4.21.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.2"
+  }
+}

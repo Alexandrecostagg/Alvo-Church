@@ -1,0 +1,14 @@
+{
+  "name": "alvo-church-worker-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-17",
+  "vars": {
+    "PUBLIC_BRAND_BASE_URL": "https://assets.alvochurch.app"
+  },
+  "r2_buckets": [
+    {
+      "binding": "BRAND_ASSETS_BUCKET",
+      "bucket_name": "alvo-brand-assets"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@alvo/worker-api",
+  "private": true,
+  "scripts": {
+    "build": "wrangler deploy --dry-run",
+    "dev": "wrangler dev src/index.ts",
+    "lint": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "format": "prettier --check ."
+  },
+  "dependencies": {
+    "@alvo/ai": "workspace:*",
+    "@alvo/domain": "workspace:*",
+    "@alvo/types": "workspace:*",
+    "hono": "^4.7.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250303.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.6.0"
+  }
+}
+
