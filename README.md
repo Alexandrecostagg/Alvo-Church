@@ -37,6 +37,41 @@ Os scripts serao executados via `pnpm`.
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm seed:firebase`
+- `pnpm build:cloudflare:web`
+
+## Deploy do web no Cloudflare
+
+Para publicar o painel web com `Next.js 16` no Cloudflare, o caminho recomendado e usar `OpenNext for Cloudflare` no app web.
+
+Arquivos-base:
+
+- [apps/web/open-next.config.ts](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/web/open-next.config.ts)
+- [apps/web/wrangler.jsonc](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/web/wrangler.jsonc)
+
+Scripts:
+
+```bash
+corepack pnpm build:cloudflare:web
+corepack pnpm --filter @alvo/web preview:cloudflare
+corepack pnpm --filter @alvo/web deploy:cloudflare
+```
+
+Observacao importante:
+
+- `@cloudflare/next-on-pages` nao e mais o caminho recomendado para este projeto
+- como o Alvo usa `Next 16`, o deploy correto e via `@opennextjs/cloudflare`
+- para Git deploy no Cloudflare, use um projeto baseado em `Worker`, apontando para `apps/web/wrangler.jsonc`
+
+Variaveis de ambiente necessarias:
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=alvo-church.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=alvo-church
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=alvo-church.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+```
 
 ## Seed inicial do Firebase
 

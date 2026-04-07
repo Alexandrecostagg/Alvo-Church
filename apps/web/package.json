@@ -3,14 +3,17 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh opennextjs-cloudflare build",
     "dev": "next dev --turbopack",
+    "preview:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler dev'",
+    "deploy:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler deploy'",
     "lint": "next lint",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --check ."
   },
   "dependencies": {
-    "@alvo/firebase": "workspace:*",
     "@alvo/domain": "workspace:*",
+    "@alvo/firebase": "workspace:*",
     "@alvo/types": "workspace:*",
     "@alvo/ui": "workspace:*",
     "@alvo/utils": "workspace:*",
@@ -19,10 +22,12 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.18.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "wrangler": "^4.81.0"
   }
 }
