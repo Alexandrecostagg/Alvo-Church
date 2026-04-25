@@ -237,9 +237,11 @@ export interface FirestorePathMap {
   users: string;
   people: string;
   families: string;
+  visitorIntakes: string;
   groups: string;
   events: string;
   tribes: string;
+  financeReports: string;
   settings: string;
   branding: string;
   subscription: string;
@@ -313,9 +315,53 @@ export interface FollowUpTask {
   dueAt?: string;
 }
 
+export type VisitorIntakeStatus =
+  | "captured"
+  | "journey_created"
+  | "greeting_scheduled"
+  | "archived";
+
+export interface VisitorIntake {
+  id: string;
+  organizationId: string;
+  personId?: string;
+  journeyId?: string;
+  name: string;
+  phone?: string;
+  source: string;
+  status: VisitorIntakeStatus;
+  greeting?: string;
+  capturedByUserId?: string;
+  createdAt: string;
+}
+
 export interface VisitorDashboardSnapshot extends PeopleDashboardSnapshot {
   activeJourneys: VisitorJourney[];
   openFollowUps: FollowUpTask[];
+}
+
+export type FinancialTransparencyReportStatus = "draft" | "published" | "archived";
+
+export interface FinancialTransparencyEntry {
+  id: string;
+  amount: number;
+  category: string;
+  label: string;
+  note: string;
+}
+
+export interface FinancialTransparencyReport {
+  id: string;
+  organizationId: string;
+  month: string;
+  income: number;
+  expenses: number;
+  missions: number;
+  balance: number;
+  entries: FinancialTransparencyEntry[];
+  status: FinancialTransparencyReportStatus;
+  publishedAt?: string;
+  publishedByUserId?: string;
 }
 
 export type GroupType =

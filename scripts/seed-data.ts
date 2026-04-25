@@ -4,6 +4,7 @@ import type {
   EventRegistration,
   Family,
   FamilyMember,
+  FinancialTransparencyReport,
   FollowUpTask,
   Group,
   GroupAttendance,
@@ -13,16 +14,17 @@ import type {
   OrganizationFeaturesSettings,
   OrganizationSubscriptionSettings,
   Person,
+  VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
 
 export const seedOrganization: Organization = {
   id: "org_alvo_demo",
-  name: "Alvo Church",
-  legalName: "Alvo Church Tecnologia para Igrejas Ltda.",
-  publicName: "Igreja Alvo",
-  displayName: "Alvo Church",
-  slug: "alvo-church",
+  name: "Getro Church",
+  legalName: "Getro Church Tecnologia para Igrejas Ltda.",
+  publicName: "Getro Church",
+  displayName: "Getro Church",
+  slug: "getro-church",
   status: "active",
   timezone: "America/Belem",
   locale: "pt-BR",
@@ -33,15 +35,15 @@ export const seedOrganization: Organization = {
 export const seedOrganizationBranding: OrganizationBrandingSettings = {
   organizationId: seedOrganization.id,
   brandMode: "co_branded",
-  publicProductName: "Alvo Church",
-  publicShortName: "Alvo",
+  publicProductName: "Getro Church",
+  publicShortName: "Getro",
   primaryColor: "#d27836",
   secondaryColor: "#1c2433",
   accentColor: "#e8dcc7",
   surfaceColor: "#f7f3ea",
   textColor: "#1c2433",
   showPoweredByAlvo: true,
-  poweredByLabel: "Powered by Alvo"
+  poweredByLabel: "by Alvo"
 };
 
 export const seedOrganizationSubscription: OrganizationSubscriptionSettings = {
@@ -74,7 +76,7 @@ export const seedOrganizationFeatures: OrganizationFeaturesSettings = {
     tribes: { enabled: true, source: "plan" },
     journeys: { enabled: true, source: "plan" },
     communication: { enabled: true, source: "addon" },
-    finance: { enabled: false, source: "manual" },
+    finance: { enabled: true, source: "addon" },
     ai: { enabled: true, source: "trial", limits: { monthlySuggestions: 250 } }
   }
 };
@@ -203,6 +205,71 @@ export const seedFollowUpTasks: FollowUpTask[] = [
     type: "invite_to_group",
     status: "in_progress",
     dueAt: "2026-03-20T19:00:00.000Z"
+  }
+];
+
+export const seedVisitorIntakes: VisitorIntake[] = [
+  {
+    id: "visitor_intake_1",
+    organizationId: seedOrganization.id,
+    personId: "person_2",
+    journeyId: "journey_1",
+    name: "Lucas Costa",
+    phone: "+5591992222222",
+    source: "WhatsApp",
+    status: "journey_created",
+    greeting: "Cumprimentar na recepcao e convidar para a celula Centro Norte",
+    capturedByUserId: "user_admin_demo",
+    createdAt: "2026-03-16T18:20:00.000Z"
+  },
+  {
+    id: "visitor_intake_2",
+    organizationId: seedOrganization.id,
+    name: "Bianca Torres",
+    phone: "+5591977772211",
+    source: "Convite de membro",
+    status: "captured",
+    greeting: "Incluir nos cumprimentos da celebracao",
+    capturedByUserId: "user_admin_demo",
+    createdAt: "2026-03-18T13:10:00.000Z"
+  }
+];
+
+export const seedFinancialTransparencyReports: FinancialTransparencyReport[] = [
+  {
+    id: "marco-2026",
+    organizationId: seedOrganization.id,
+    month: "Marco 2026",
+    income: 42850,
+    expenses: 31740,
+    missions: 6200,
+    balance: 11110,
+    status: "published",
+    publishedAt: "2026-03-31T21:00:00.000Z",
+    publishedByUserId: "user_admin_demo",
+    entries: [
+      {
+        id: "finance_1",
+        label: "Dizimos e ofertas",
+        category: "Entrada",
+        amount: 42850,
+        note: "Cultos, Pix e envelopes"
+      },
+      {
+        id: "finance_2",
+        label: "Operacao da igreja",
+        category: "Saida",
+        amount: 18400,
+        note: "Aluguel, energia, manutencao e equipe"
+      },
+      {
+        id: "finance_3",
+        label: "Missoes e acao social",
+        category: "Destino",
+        amount: 6200,
+        note: "Cestas, visitas e apoio missionario"
+      }
+    ]
   }
 ];
 

@@ -7,6 +7,7 @@ import {
   seedEvents,
   seedFamilies,
   seedFamilyMembers,
+  seedFinancialTransparencyReports,
   seedFollowUpTasks,
   seedGroupAttendance,
   seedGroupMeetings,
@@ -16,6 +17,7 @@ import {
   seedOrganization,
   seedOrganizationSubscription,
   seedPeople,
+  seedVisitorIntakes,
   seedVisitorJourneys
 } from "./seed-data";
 
@@ -110,6 +112,11 @@ async function run() {
     batch.set(taskRef, task, { merge: true });
   }
 
+  for (const intake of seedVisitorIntakes) {
+    const intakeRef = organizationRef.collection("visitorIntakes").doc(intake.id);
+    batch.set(intakeRef, intake, { merge: true });
+  }
+
   for (const group of seedGroups) {
     const groupRef = organizationRef.collection("groups").doc(group.id);
     batch.set(groupRef, group, { merge: true });
@@ -158,10 +165,15 @@ async function run() {
     batch.set(checkInRef, checkIn, { merge: true });
   }
 
+  for (const report of seedFinancialTransparencyReports) {
+    const reportRef = organizationRef.collection("financeReports").doc(report.id);
+    batch.set(reportRef, report, { merge: true });
+  }
+
   await batch.commit();
 
   console.log(
-    `Seed concluido para ${seedOrganization.name}: ${seedPeople.length} pessoas, ${seedFamilies.length} familias, ${seedVisitorJourneys.length} jornadas, ${seedGroups.length} grupos, ${seedEvents.length} eventos e configuracoes SaaS do tenant.`
+    `Seed concluido para ${seedOrganization.name}: ${seedPeople.length} pessoas, ${seedFamilies.length} familias, ${seedVisitorJourneys.length} jornadas, ${seedVisitorIntakes.length} entradas de portaria, ${seedGroups.length} grupos, ${seedEvents.length} eventos e ${seedFinancialTransparencyReports.length} demonstrativo(s).`
   );
 }
 
