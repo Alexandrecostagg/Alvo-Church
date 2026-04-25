@@ -88,7 +88,7 @@ Para o painel web ler dados reais e autenticar usuarios:
 1. abra `Firebase Console > Configuracoes do projeto`
 2. em `Seus aplicativos`, crie um app da Web
 3. copie a configuracao do SDK Web
-4. crie um arquivo `.env.local` na raiz com:
+4. crie um arquivo `.env.local` na raiz do monorepo com:
 
 ```bash
 NEXT_PUBLIC_FIREBASE_API_KEY=
@@ -99,7 +99,8 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 ```
 
-Depois disso, execute `corepack pnpm --filter @alvo/web dev`.
+O app web carrega esse `.env.local` da raiz mesmo rodando dentro de `apps/web`.
+Depois disso, reinicie `corepack pnpm --filter @alvo/web dev`.
 
 ## Firestore Rules do tenant
 

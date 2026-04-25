@@ -97,11 +97,11 @@ export function isModuleEnabled(
   features: OrganizationFeaturesSettings,
   moduleKey: keyof OrganizationFeaturesSettings["modules"]
 ) {
-  return features.modules[moduleKey].enabled;
+  return features.modules[moduleKey]?.enabled ?? false;
 }
 
 export function getEnabledModuleCount(features: OrganizationFeaturesSettings) {
-  return Object.values(features.modules).filter((module) => module.enabled).length;
+  return Object.values(features.modules).filter((module) => module?.enabled).length;
 }
 
 export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brandMode"]) {

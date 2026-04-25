@@ -10,20 +10,24 @@ service cloud.firestore {
       return /databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid);
     }
 
-    function tenantUser(orgId) {
-      return get(userDocPath(orgId));
+    function tenantUserExists(orgId) {
+      return exists(userDocPath(orgId));
+    }
+
+    function tenantUserData(orgId) {
+      return get(userDocPath(orgId)).data;
     }
 
     function isTenantMember(orgId) {
       return signedIn()
-        && tenantUser(orgId).exists()
-        && tenantUser(orgId).data.organizationId == orgId
-        && tenantUser(orgId).data.isActive == true;
+        && tenantUserExists(orgId)
+        && tenantUserData(orgId).organizationId == orgId
+        && tenantUserData(orgId).isActive == true;
     }
 
     function isTenantAdmin(orgId) {
       return isTenantMember(orgId)
-        && tenantUser(orgId).data.roles.hasAny([
+        && tenantUserData(orgId).roles.hasAny([
           "super_admin",
           "church_admin",
           "pastor",

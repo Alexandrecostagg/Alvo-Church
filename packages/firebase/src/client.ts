@@ -27,7 +27,9 @@ const REQUIRED_FIREBASE_WEB_CONFIG_FIELDS = [
   "apiKey",
   "authDomain",
   "projectId",
-  "storageBucket"
+  "storageBucket",
+  "messagingSenderId",
+  "appId"
 ] as const;
 
 let firebaseApp: FirebaseApp | null = null;
