@@ -681,13 +681,16 @@ const moduleHighlights = [
 ];
 
 type VisitorIntakeRecord = {
+  communicationChannel: string;
+  communicationStatus: string;
+  greeting: string;
   id: string;
   name: string;
+  nextStep: string;
   phone: string;
+  presentationStatus: string;
   source: string;
   status: string;
-  nextStep: string;
-  greeting: string;
 };
 
 const visitorIntakeRecords: VisitorIntakeRecord[] = [
@@ -698,7 +701,10 @@ const visitorIntakeRecords: VisitorIntakeRecord[] = [
     source: "Instagram",
     status: "Jornada criada",
     nextStep: "Enviar boas-vindas no WhatsApp",
-    greeting: "Apresentar no final da celebracao"
+    greeting: "Apresentar no final da celebracao",
+    communicationChannel: "WhatsApp",
+    communicationStatus: "Pendente",
+    presentationStatus: "Na lista"
   },
   {
     id: "visitor_intake_2",
@@ -707,7 +713,10 @@ const visitorIntakeRecords: VisitorIntakeRecord[] = [
     source: "Convite de membro",
     status: "Aguardando acolhimento",
     nextStep: "Convidar para celula de jovens",
-    greeting: "Cumprimentar na recepcao"
+    greeting: "Cumprimentar na recepcao",
+    communicationChannel: "WhatsApp",
+    communicationStatus: "Pendente",
+    presentationStatus: "A confirmar"
   }
 ];
 
@@ -785,6 +794,8 @@ export default function HomePage() {
     phone: "",
     source: "WhatsApp"
   });
+  const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<string[]>([]);
+  const [greetedVisitorIds, setGreetedVisitorIds] = useState<string[]>([]);
   const [receptionStatus, setReceptionStatus] = useState<string | null>(null);
   const [publishedTransparencyMonth, setPublishedTransparencyMonth] = useState<string | null>(null);
   const [transparencyStatus, setTransparencyStatus] = useState<string | null>(
@@ -825,6 +836,12 @@ export default function HomePage() {
   );
   const selectedFollowUps = followUps.filter(
     (followUp) => followUp.personId === selectedPersonId
+  );
+  const pendingCommunicationVisitors = capturedVisitors.filter(
+    (visitor) => !preparedCommunicationIds.includes(visitor.id)
+  );
+  const celebrationGreetingVisitors = capturedVisitors.filter(
+    (visitor) => !greetedVisitorIds.includes(visitor.id)
   );
   const searchResults = useMemo(() => {
     const normalizedQuery = normalizeSearch(query);
@@ -898,7 +915,10 @@ export default function HomePage() {
       source: visitorDraft.source,
       status: "Jornada criada",
       nextStep: "Enviar boas-vindas no WhatsApp",
-      greeting: "Incluir nos cumprimentos da celebracao"
+      greeting: "Incluir nos cumprimentos da celebracao",
+      communicationChannel: "WhatsApp",
+      communicationStatus: "Pendente",
+      presentationStatus: "Na lista"
     };
 
     setCapturedVisitors((currentVisitors) => [
@@ -934,6 +954,20 @@ export default function HomePage() {
           : "Nao foi possivel salvar o visitante no Firestore."
       );
     }
+  }
+
+  function handlePrepareVisitorCommunication(visitorId: string) {
+    setPreparedCommunicationIds((currentIds) =>
+      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
+    );
+    setReceptionStatus("Mensagem preparada para a equipe de acolhimento revisar.");
+  }
+
+  function handleMarkGreetingComplete(visitorId: string) {
+    setGreetedVisitorIds((currentIds) =>
+      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
+    );
+    setReceptionStatus("Cumprimento marcado como realizado na celebracao.");
   }
 
   async function handlePublishTransparencyReport() {
@@ -1392,6 +1426,64 @@ export default function HomePage() {
                   <span>{visitor.status}</span>
                 </div>
               ))}
+            </div>
+
+            <div className="reception-workbench">
+              <div className="queue-panel">
+                <div className="queue-heading">
+                  <MessageSquareText size={18} />
+                  <strong>Fila de comunicacao</strong>
+                  <span>{pendingCommunicationVisitors.length}</span>
+                </div>
+                {capturedVisitors.slice(0, 4).map((visitor) => {
+                  const prepared = preparedCommunicationIds.includes(visitor.id);
+
+                  return (
+                    <div className="queue-item" key={`communication-${visitor.id}`}>
+                      <div>
+                        <strong>{visitor.name}</strong>
+                        <p>{visitor.communicationChannel} - {visitor.nextStep}</p>
+                      </div>
+                      <button
+                        className={prepared ? "queue-action is-done" : "queue-action"}
+                        onClick={() => handlePrepareVisitorCommunication(visitor.id)}
+                        type="button"
+                      >
+                        <CheckCircle2 size={16} />
+                        {prepared ? "Pronta" : "Preparar"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="queue-panel">
+                <div className="queue-heading">
+                  <Megaphone size={18} />
+                  <strong>Cumprimentos</strong>
+                  <span>{celebrationGreetingVisitors.length}</span>
+                </div>
+                {capturedVisitors.slice(0, 4).map((visitor) => {
+                  const greeted = greetedVisitorIds.includes(visitor.id);
+
+                  return (
+                    <div className="queue-item" key={`greeting-${visitor.id}`}>
+                      <div>
+                        <strong>{visitor.name}</strong>
+                        <p>{visitor.greeting}</p>
+                      </div>
+                      <button
+                        className={greeted ? "queue-action is-done" : "queue-action"}
+                        onClick={() => handleMarkGreetingComplete(visitor.id)}
+                        type="button"
+                      >
+                        <CheckCircle2 size={16} />
+                        {greeted ? "Feito" : "Marcar"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </article>
 
