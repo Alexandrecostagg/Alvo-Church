@@ -4,7 +4,7 @@
   "scripts": {
     "build": "next build --webpack",
     "build:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh opennextjs-cloudflare build",
-    "dev": "next dev --turbopack",
+    "dev": "next dev --webpack",
     "preview:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler dev'",
     "deploy:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler deploy'",
     "lint": "next lint",
@@ -17,6 +17,7 @@
     "@alvo/types": "workspace:*",
     "@alvo/ui": "workspace:*",
     "@alvo/utils": "workspace:*",
+    "lucide-react": "^0.468.0",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

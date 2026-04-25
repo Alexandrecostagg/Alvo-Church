@@ -91,8 +91,16 @@ export function getVisitorJourneysCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/visitorJourneys`;
 }
 
+export function getVisitorIntakesCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/visitorIntakes`;
+}
+
 export function getFollowUpTasksCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/followUpTasks`;
+}
+
+export function getFinanceReportsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/financeReports`;
 }
 
 export function getGroupsCollectionPath(context: TenantContext) {

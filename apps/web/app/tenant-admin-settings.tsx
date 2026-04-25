@@ -249,7 +249,7 @@ export function TenantAdminSettings() {
           </span>
           {draft.branding.showPoweredByAlvo ? (
             <span style={{ color: brandTheme.colors.inkSoft }}>
-              {draft.branding.poweredByLabel ?? "Powered by Alvo"}
+              {draft.branding.poweredByLabel ?? "by Alvo"}
             </span>
           ) : null}
         </div>
@@ -440,7 +440,7 @@ export function TenantAdminSettings() {
                 })
               }
             />
-            Exibir “Powered by Alvo”
+            Exibir assinatura “by Alvo”
           </label>
         </article>
 

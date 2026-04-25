@@ -4,8 +4,8 @@ import { AppProviders } from "./providers";
 import { TenantTheme } from "./tenant-theme";
 
 export const metadata: Metadata = {
-  title: "Alvo Church",
-  description: "Sistema completo de gestao de igrejas."
+  title: "Getro Church",
+  description: "Plataforma para igrejas em movimento."
 };
 
 export default function RootLayout({

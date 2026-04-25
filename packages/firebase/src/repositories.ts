@@ -7,6 +7,7 @@ import {
   limit,
   query,
   setDoc,
+  updateDoc,
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
@@ -41,11 +42,13 @@ import {
   getEventsCollectionPath,
   getFamiliesCollectionPath,
   getFollowUpTasksCollectionPath,
+  getFinanceReportsCollectionPath,
   getGroupAttendanceCollectionPath,
   getGroupMeetingsCollectionPath,
   getGroupsCollectionPath,
   getPeopleCollectionPath,
   getUsersCollectionPath,
+  getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath
 } from "./index";
 
@@ -517,6 +520,171 @@ export async function fetchFollowUpTasks(
   const snapshot = await getDocs(tasksQuery);
 
   return snapshot.docs.map((item) => toFollowUpTask(item.id, item.data()));
+}
+
+export async function createVisitorIntakeWorkflow(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    capturedByUserId?: string;
+    name: string;
+    phone?: string;
+    source: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const createdAt = new Date().toISOString();
+  const baseId = `${Date.now()}`;
+  const personId = `person_${baseId}`;
+  const journeyId = `journey_${baseId}`;
+  const welcomeTaskId = `followup_${baseId}_welcome`;
+  const groupTaskId = `followup_${baseId}_group`;
+  const intakeId = `visitor_intake_${baseId}`;
+  const [firstName, ...lastNameParts] = params.name.trim().split(/\s+/);
+  const lastName = lastNameParts.join(" ");
+
+  await Promise.all([
+    setDoc(doc(firestore, `${getPeopleCollectionPath(context)}/${personId}`), {
+      id: personId,
+      organizationId: context.organizationId,
+      firstName: firstName || params.name.trim(),
+      lastName,
+      preferredName: firstName || params.name.trim(),
+      whatsappPhone: params.phone ?? null,
+      personType: "adult",
+      memberStatus: "visitor",
+      status: "active",
+      createdAt,
+      createdByUserId: params.capturedByUserId ?? null
+    }),
+    setDoc(doc(firestore, `${getVisitorJourneysCollectionPath(context)}/${journeyId}`), {
+      id: journeyId,
+      organizationId: context.organizationId,
+      personId,
+      originChannel: mapVisitorSourceToOriginChannel(params.source),
+      currentStage: "new_visitor",
+      status: "active",
+      assignedToUserId: params.capturedByUserId ?? null,
+      firstVisitDate: createdAt,
+      nextActionAt: createdAt,
+      createdAt
+    }),
+    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${welcomeTaskId}`), {
+      id: welcomeTaskId,
+      organizationId: context.organizationId,
+      personId,
+      visitorJourneyId: journeyId,
+      assignedToUserId: params.capturedByUserId ?? null,
+      title: "Enviar boas-vindas no WhatsApp",
+      type: "welcome_message",
+      status: "open",
+      dueAt: createdAt,
+      createdAt
+    }),
+    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${groupTaskId}`), {
+      id: groupTaskId,
+      organizationId: context.organizationId,
+      personId,
+      visitorJourneyId: journeyId,
+      assignedToUserId: params.capturedByUserId ?? null,
+      title: "Convidar para uma celula",
+      type: "invite_to_group",
+      status: "open",
+      createdAt
+    }),
+    setDoc(doc(firestore, `${getVisitorIntakesCollectionPath(context)}/${intakeId}`), {
+      id: intakeId,
+      organizationId: context.organizationId,
+      personId,
+      journeyId,
+      name: params.name,
+      phone: params.phone ?? null,
+      source: params.source,
+      status: "journey_created",
+      greeting: "Incluir nos cumprimentos da celebracao",
+      capturedByUserId: params.capturedByUserId ?? null,
+      createdAt
+    })
+  ]);
+
+  return { groupTaskId, intakeId, journeyId, personId, welcomeTaskId };
+}
+
+export async function updateFollowUpTaskStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    completedByUserId?: string;
+    status: FollowUpTask["status"];
+    taskId: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await updateDoc(
+    doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${params.taskId}`),
+    {
+      status: params.status,
+      completedAt: params.status === "completed" ? new Date().toISOString() : null,
+      completedByUserId: params.completedByUserId ?? null,
+      updatedAt: new Date().toISOString()
+    }
+  );
+}
+
+export async function publishFinancialTransparencyReport(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    balance: number;
+    entries: Array<{
+      amount: number;
+      category: string;
+      label: string;
+      note: string;
+    }>;
+    expenses: number;
+    income: number;
+    missions: number;
+    month: string;
+    publishedByUserId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const reportId = params.month
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  await setDoc(doc(firestore, `${getFinanceReportsCollectionPath(context)}/${reportId}`), {
+    ...params,
+    organizationId: context.organizationId,
+    publishedAt: new Date().toISOString(),
+    publishedByUserId: params.publishedByUserId ?? null,
+    status: "published"
+  });
+
+  return { reportId };
+}
+
+function mapVisitorSourceToOriginChannel(source: string): VisitorJourney["originChannel"] {
+  const normalizedSource = source.toLowerCase();
+
+  if (normalizedSource.includes("whatsapp")) {
+    return "whatsapp";
+  }
+
+  if (normalizedSource.includes("instagram")) {
+    return "app";
+  }
+
+  if (normalizedSource.includes("rua")) {
+    return "secretary";
+  }
+
+  return "form";
 }
 
 export async function fetchGroups(

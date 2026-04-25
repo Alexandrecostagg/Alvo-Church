@@ -105,15 +105,15 @@ const fallbackTenantSettings: OrganizationSettingsSnapshot = {
   branding: {
     organizationId: "org_alvo_demo",
     brandMode: "co_branded",
-    publicProductName: "Alvo Church",
-    publicShortName: "Alvo",
+    publicProductName: "Getro Church",
+    publicShortName: "Getro",
     primaryColor: "#d27836",
     secondaryColor: "#1c2433",
     accentColor: "#e8dcc7",
     surfaceColor: "#f7f3ea",
     textColor: "#1c2433",
     showPoweredByAlvo: true,
-    poweredByLabel: "Powered by Alvo"
+    poweredByLabel: "by Alvo"
   },
   subscription: {
     organizationId: "org_alvo_demo",
@@ -153,13 +153,13 @@ const fallbackTenantSettings: OrganizationSettingsSnapshot = {
 const fallbackTenantRuntime: TenantRuntimeSnapshot = {
   organization: {
     id: "org_alvo_demo",
-    name: "Alvo Church",
-    slug: "alvo-church",
+    name: "Getro Church",
+    slug: "getro-church",
     status: "active",
     timezone: "America/Belem",
     locale: "pt-BR",
     countryCode: "BR",
-    displayName: "Alvo Church"
+    displayName: "Getro Church"
   },
   settings: fallbackTenantSettings
 };
@@ -320,7 +320,7 @@ export default function App() {
                 </Text>
                 {brandTheme.brand.showPoweredByAlvo ? (
                   <Text style={[styles.helperText, { marginTop: 4 }]}>
-                    {brandTheme.brand.poweredByLabel ?? "Powered by Alvo"}
+                    {brandTheme.brand.poweredByLabel ?? "by Alvo"}
                   </Text>
                 ) : null}
               </View>

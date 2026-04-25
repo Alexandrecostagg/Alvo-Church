@@ -12,7 +12,7 @@ export function BrandLogo({
 }) {
   const { tenantRuntime } = useAppAuth();
   const brandTheme = createBrandTheme(tenantRuntime?.settings?.branding);
-  const markUrl = brandTheme.brand.logoUrl ?? brandTheme.brand.markUrl ?? "/brand/alvo-mark.svg";
+  const markUrl = brandTheme.brand.logoUrl ?? brandTheme.brand.markUrl;
 
   return (
     <div
@@ -22,18 +22,40 @@ export function BrandLogo({
         gap: compact ? 10 : 14
       }}
     >
-      <img
-        src={markUrl}
-        alt={brandTheme.brand.appName}
-        width={size}
-        height={size}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: Math.round(size * 0.24),
-          boxShadow: "0 14px 30px rgba(29, 41, 64, 0.12)"
-        }}
-      />
+      {markUrl ? (
+        <img
+          src={markUrl}
+          alt={brandTheme.brand.appName}
+          width={size}
+          height={size}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: Math.round(size * 0.24),
+            boxShadow: "0 14px 30px rgba(29, 41, 64, 0.12)"
+          }}
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          style={{
+            width: size,
+            height: size,
+            display: "grid",
+            placeItems: "center",
+            borderRadius: Math.round(size * 0.24),
+            background:
+              "conic-gradient(from 220deg, #111827 0 46%, #f97316 46% 70%, #16a34a 70% 100%)",
+            boxShadow: "0 14px 30px rgba(29, 41, 64, 0.12)",
+            color: "#fff",
+            fontSize: Math.round(size * 0.46),
+            fontWeight: 950,
+            lineHeight: 1
+          }}
+        >
+          G
+        </div>
+      )}
       <div style={{ display: "grid", gap: 2 }}>
         <span
           style={{
@@ -61,7 +83,7 @@ export function BrandLogo({
               color: "var(--alvo-ink-soft, rgba(29, 41, 64, 0.72))"
             }}
           >
-            {brandTheme.brand.poweredByLabel ?? "Powered by Alvo"}
+            {brandTheme.brand.poweredByLabel ?? "by Alvo"}
           </span>
         ) : null}
       </div>

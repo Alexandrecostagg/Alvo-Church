@@ -2,16 +2,16 @@ import type { OrganizationBrandingSettings } from "@alvo/types";
 
 export const alvoTheme = {
   colors: {
-    background: "#f6eee0",
-    surface: "#fbf5ea",
-    surfaceStrong: "#f2e5cf",
-    accent: "#c96a32",
-    accentSoft: "#de8a4b",
-    accentGold: "#f3c77b",
-    accentDark: "#8f4324",
-    ink: "#1d2940",
-    inkSoft: "#526072",
-    line: "rgba(29, 41, 64, 0.12)",
+    background: "#eef2f6",
+    surface: "#ffffff",
+    surfaceStrong: "#0f172a",
+    accent: "#f97316",
+    accentSoft: "#ffedd5",
+    accentGold: "#facc15",
+    accentDark: "#111827",
+    ink: "#172033",
+    inkSoft: "#647087",
+    line: "#dfe5ee",
     successSurface: "#eef7ef",
     successInk: "#166534"
   },
@@ -29,9 +29,9 @@ export const alvoTheme = {
     xl: 32
   },
   brand: {
-    appName: "Alvo Church",
-    shortName: "Alvo",
-    tagline: "Direcao para a jornada da igreja"
+    appName: "Getro Church",
+    shortName: "Getro",
+    tagline: "Igrejas em movimento"
   }
 };
 
