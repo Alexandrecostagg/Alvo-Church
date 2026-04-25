@@ -17,6 +17,7 @@ import type {
   EventCheckIn,
   EventRegistration,
   Family,
+  FinancialTransparencyReport,
   FollowUpTask,
   Group,
   GroupAttendance,
@@ -29,6 +30,7 @@ import type {
   Person,
   TenantRuntimeSnapshot,
   TenantContext,
+  VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
 import { getFirebaseWebApp, type FirebaseWebRuntimeConfig } from "./client";
@@ -194,6 +196,22 @@ function toVisitorJourney(documentId: string, data: DocumentData): VisitorJourne
   };
 }
 
+function toVisitorIntake(documentId: string, data: DocumentData): VisitorIntake {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    personId: data.personId ? String(data.personId) : undefined,
+    journeyId: data.journeyId ? String(data.journeyId) : undefined,
+    name: String(data.name ?? ""),
+    phone: data.phone ? String(data.phone) : undefined,
+    source: String(data.source ?? ""),
+    status: (data.status as VisitorIntake["status"]) ?? "captured",
+    greeting: data.greeting ? String(data.greeting) : undefined,
+    capturedByUserId: data.capturedByUserId ? String(data.capturedByUserId) : undefined,
+    createdAt: String(data.createdAt ?? "")
+  };
+}
+
 function toFollowUpTask(documentId: string, data: DocumentData): FollowUpTask {
   return {
     id: documentId,
@@ -205,6 +223,35 @@ function toFollowUpTask(documentId: string, data: DocumentData): FollowUpTask {
     type: (data.type as FollowUpTask["type"]) ?? "first_contact",
     status: (data.status as FollowUpTask["status"]) ?? "open",
     dueAt: data.dueAt ? String(data.dueAt) : undefined
+  };
+}
+
+function toFinancialTransparencyReport(
+  documentId: string,
+  data: DocumentData
+): FinancialTransparencyReport {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    month: String(data.month ?? ""),
+    income: Number(data.income ?? 0),
+    expenses: Number(data.expenses ?? 0),
+    missions: Number(data.missions ?? 0),
+    balance: Number(data.balance ?? 0),
+    entries: Array.isArray(data.entries)
+      ? data.entries.map((entry, index) => ({
+          id: String(entry.id ?? `entry_${index + 1}`),
+          amount: Number(entry.amount ?? 0),
+          category: String(entry.category ?? ""),
+          label: String(entry.label ?? ""),
+          note: String(entry.note ?? "")
+        }))
+      : [],
+    status: (data.status as FinancialTransparencyReport["status"]) ?? "draft",
+    publishedAt: data.publishedAt ? String(data.publishedAt) : undefined,
+    publishedByUserId: data.publishedByUserId
+      ? String(data.publishedByUserId)
+      : undefined
   };
 }
 
@@ -507,6 +554,21 @@ export async function fetchVisitorJourneys(
   return snapshot.docs.map((item) => toVisitorJourney(item.id, item.data()));
 }
 
+export async function fetchVisitorIntakes(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 8
+) {
+  const firestore = getFirebaseFirestore(config);
+  const intakesQuery = query(
+    collection(firestore, getVisitorIntakesCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(intakesQuery);
+
+  return snapshot.docs.map((item) => toVisitorIntake(item.id, item.data()));
+}
+
 export async function fetchFollowUpTasks(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -667,6 +729,23 @@ export async function publishFinancialTransparencyReport(
   });
 
   return { reportId };
+}
+
+export async function fetchFinancialTransparencyReports(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 6
+) {
+  const firestore = getFirebaseFirestore(config);
+  const reportsQuery = query(
+    collection(firestore, getFinanceReportsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(reportsQuery);
+
+  return snapshot.docs.map((item) =>
+    toFinancialTransparencyReport(item.id, item.data())
+  );
 }
 
 function mapVisitorSourceToOriginChannel(source: string): VisitorJourney["originChannel"] {

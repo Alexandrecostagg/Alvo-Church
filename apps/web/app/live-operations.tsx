@@ -5,10 +5,12 @@ import type {
   Event,
   EventCheckIn,
   EventRegistration,
+  FinancialTransparencyReport,
   FollowUpTask,
   Group,
   GroupAttendance,
   GroupMeeting,
+  VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
 import {
@@ -16,18 +18,22 @@ import {
   fetchEventCheckIns,
   fetchEventRegistrations,
   fetchEvents,
+  fetchFinancialTransparencyReports,
   fetchFollowUpTasks,
   fetchGroupAttendance,
   fetchGroupMeetings,
   fetchGroups,
+  fetchVisitorIntakes,
   fetchVisitorJourneys,
   getEventCheckInsCollectionPath,
   getEventRegistrationsCollectionPath,
   getEventsCollectionPath,
+  getFinanceReportsCollectionPath,
   getFollowUpTasksCollectionPath,
   getGroupAttendanceCollectionPath,
   getGroupMeetingsCollectionPath,
   getGroupsCollectionPath,
+  getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
@@ -52,6 +58,7 @@ interface LiveOperationsProps {
 export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const { firebaseReady, tenantRuntime, user } = useAppAuth();
   const [visitorJourneys, setVisitorJourneys] = useState<VisitorJourney[]>([]);
+  const [visitorIntakes, setVisitorIntakes] = useState<VisitorIntake[]>([]);
   const [followUpTasks, setFollowUpTasks] = useState<FollowUpTask[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupMeetings, setGroupMeetings] = useState<GroupMeeting[]>([]);
@@ -59,6 +66,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [eventCheckIns, setEventCheckIns] = useState<EventCheckIn[]>([]);
+  const [financeReports, setFinanceReports] = useState<FinancialTransparencyReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,12 +100,21 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
       setError(null);
 
       try {
-        const [nextVisitorJourneys, nextFollowUpTasks, nextGroups, nextEvents] =
+        const [
+          nextVisitorJourneys,
+          nextVisitorIntakes,
+          nextFollowUpTasks,
+          nextGroups,
+          nextEvents,
+          nextFinanceReports
+        ] =
           await Promise.all([
             fetchVisitorJourneys(firebaseConfig, { organizationId }),
+            fetchVisitorIntakes(firebaseConfig, { organizationId }),
             fetchFollowUpTasks(firebaseConfig, { organizationId }),
             fetchGroups(firebaseConfig, { organizationId }),
-            fetchEvents(firebaseConfig, { organizationId })
+            fetchEvents(firebaseConfig, { organizationId }),
+            fetchFinancialTransparencyReports(firebaseConfig, { organizationId })
           ]);
 
         const [nextGroupMeetings, nextEventRegistrations, nextEventCheckIns] =
@@ -118,6 +135,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         }
 
         setVisitorJourneys(nextVisitorJourneys);
+        setVisitorIntakes(nextVisitorIntakes);
         setFollowUpTasks(nextFollowUpTasks);
         setGroups(nextGroups);
         setGroupMeetings(nextGroupMeetings);
@@ -125,6 +143,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         setEvents(nextEvents);
         setEventRegistrations(nextEventRegistrations);
         setEventCheckIns(nextEventCheckIns);
+        setFinanceReports(nextFinanceReports);
       } catch (nextError) {
         if (cancelled) {
           return;
@@ -157,6 +176,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const visitorsEnabled = settings ? isModuleEnabled(settings.features, "visitors") : true;
   const groupsEnabled = settings ? isModuleEnabled(settings.features, "groups") : true;
   const eventsEnabled = settings ? isModuleEnabled(settings.features, "events") : true;
+  const financeEnabled = settings ? isModuleEnabled(settings.features, "finance") : true;
 
   return (
     <section style={sectionStyle}>
@@ -193,7 +213,8 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
           <article style={cardStyle}>
             <strong>Visitantes em jornada</strong>
             <p style={metaStyle}>
-              {visitorJourneys.length} jornada(s) e {followUpTasks.length} follow-up(s)
+              {visitorJourneys.length} jornada(s), {visitorIntakes.length} entrada(s) e{" "}
+              {followUpTasks.length} follow-up(s)
             </p>
             <p style={pathStyle}>
               Collection: <code>{getVisitorJourneysCollectionPath({ organizationId })}</code>
@@ -204,6 +225,14 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
                   <strong>{journey.personId}</strong>
                   <p style={itemTextStyle}>
                     {getVisitorStageLabel(journey.currentStage)} · {journey.originChannel}
+                  </p>
+                </div>
+              ))}
+              {visitorIntakes.map((intake) => (
+                <div key={intake.id} style={itemStyle}>
+                  <strong>{intake.name}</strong>
+                  <p style={itemTextStyle}>
+                    {intake.status} Â· {intake.source}
                   </p>
                 </div>
               ))}
@@ -218,6 +247,9 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             </div>
             <p style={pathStyle}>
               Tasks: <code>{getFollowUpTasksCollectionPath({ organizationId })}</code>
+            </p>
+            <p style={pathStyle}>
+              Portaria: <code>{getVisitorIntakesCollectionPath({ organizationId })}</code>
             </p>
           </article>
         ) : null}
@@ -308,9 +340,39 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             </div>
           </article>
         ) : null}
+
+        {financeEnabled ? (
+          <article style={cardStyle}>
+            <strong>Transparencia financeira</strong>
+            <p style={metaStyle}>
+              {financeReports.length} demonstrativo(s) publicado(s)
+            </p>
+            <p style={pathStyle}>
+              Collection: <code>{getFinanceReportsCollectionPath({ organizationId })}</code>
+            </p>
+            <div style={stackStyle}>
+              {financeReports.map((report) => (
+                <div key={report.id} style={itemStyle}>
+                  <strong>{report.month}</strong>
+                  <p style={itemTextStyle}>
+                    {report.status} Â· saldo {formatCurrency(report.balance)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
       </div>
     </section>
   );
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0
+  }).format(value);
 }
 
 const sectionStyle = {

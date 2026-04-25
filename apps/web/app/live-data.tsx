@@ -7,11 +7,13 @@ import type {
   EventCheckIn,
   EventRegistration,
   Family,
+  FinancialTransparencyReport,
   FollowUpTask,
   Group,
   GroupAttendance,
   GroupMeeting,
   Person,
+  VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
 import {
@@ -20,11 +22,13 @@ import {
   fetchEventRegistrations,
   fetchEvents,
   fetchFamilies,
+  fetchFinancialTransparencyReports,
   fetchFollowUpTasks,
   fetchGroupAttendance,
   fetchGroupMeetings,
   fetchGroups,
   fetchPeople,
+  fetchVisitorIntakes,
   fetchVisitorJourneys,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
@@ -38,6 +42,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
   const [people, setPeople] = useState<Person[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
   const [visitorJourneys, setVisitorJourneys] = useState<VisitorJourney[]>([]);
+  const [visitorIntakes, setVisitorIntakes] = useState<VisitorIntake[]>([]);
   const [followUpTasks, setFollowUpTasks] = useState<FollowUpTask[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupMeetings, setGroupMeetings] = useState<GroupMeeting[]>([]);
@@ -45,6 +50,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [eventCheckIns, setEventCheckIns] = useState<EventCheckIn[]>([]);
+  const [financeReports, setFinanceReports] = useState<FinancialTransparencyReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { firebaseReady, tenantReady, tenantRuntime, user } = useAppAuth();
@@ -79,13 +85,24 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
       setError(null);
 
       try {
-        const [nextPeople, nextFamilies, nextVisitorJourneys, nextFollowUpTasks, nextGroups, nextEvents] = await Promise.all([
+        const [
+          nextPeople,
+          nextFamilies,
+          nextVisitorJourneys,
+          nextVisitorIntakes,
+          nextFollowUpTasks,
+          nextGroups,
+          nextEvents,
+          nextFinanceReports
+        ] = await Promise.all([
           fetchPeople(firebaseConfig, { organizationId }),
           fetchFamilies(firebaseConfig, { organizationId }),
           fetchVisitorJourneys(firebaseConfig, { organizationId }),
+          fetchVisitorIntakes(firebaseConfig, { organizationId }),
           fetchFollowUpTasks(firebaseConfig, { organizationId }),
           fetchGroups(firebaseConfig, { organizationId }),
-          fetchEvents(firebaseConfig, { organizationId })
+          fetchEvents(firebaseConfig, { organizationId }),
+          fetchFinancialTransparencyReports(firebaseConfig, { organizationId })
         ]);
 
         const [nextGroupMeetings, nextEventRegistrations, nextEventCheckIns] =
@@ -108,6 +125,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
         setPeople(nextPeople);
         setFamilies(nextFamilies);
         setVisitorJourneys(nextVisitorJourneys);
+        setVisitorIntakes(nextVisitorIntakes);
         setFollowUpTasks(nextFollowUpTasks);
         setGroups(nextGroups);
         setGroupMeetings(nextGroupMeetings);
@@ -115,6 +133,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
         setEvents(nextEvents);
         setEventRegistrations(nextEventRegistrations);
         setEventCheckIns(nextEventCheckIns);
+        setFinanceReports(nextFinanceReports);
       } catch (nextError) {
         if (cancelled) {
           return;
@@ -187,7 +206,8 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
         >
           <span>
             Visitantes: <strong>{visitorJourneys.length}</strong> jornada(s) e{" "}
-            <strong>{followUpTasks.length}</strong> follow-up(s)
+            <strong>{followUpTasks.length}</strong> follow-up(s), com{" "}
+            <strong>{visitorIntakes.length}</strong> entrada(s) de portaria
           </span>
           <span>
             Grupos: <strong>{groups.length}</strong> grupo(s),{" "}
@@ -198,6 +218,9 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
             Eventos: <strong>{events.length}</strong> evento(s),{" "}
             <strong>{eventRegistrations.length}</strong> inscricao(oes) e{" "}
             <strong>{eventCheckIns.length}</strong> check-in(s)
+          </span>
+          <span>
+            Transparencia: <strong>{financeReports.length}</strong> demonstrativo(s)
           </span>
           {tenantRuntime.settings ? (
             <span>
