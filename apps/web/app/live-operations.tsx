@@ -5,11 +5,16 @@ import type {
   Event,
   EventCheckIn,
   EventRegistration,
+  Family,
   FinancialTransparencyReport,
   FollowUpTask,
   Group,
   GroupAttendance,
   GroupMeeting,
+  MemberBenefitValidation,
+  PartnerBenefit,
+  PartnerOrganization,
+  Person,
   VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
@@ -20,19 +25,29 @@ import {
   fetchEvents,
   fetchFinancialTransparencyReports,
   fetchFollowUpTasks,
+  fetchFamilies,
   fetchGroupAttendance,
   fetchGroupMeetings,
   fetchGroups,
+  fetchMemberBenefitValidations,
+  fetchPartnerBenefits,
+  fetchPartnerOrganizations,
+  fetchPeople,
   fetchVisitorIntakes,
   fetchVisitorJourneys,
   getEventCheckInsCollectionPath,
   getEventRegistrationsCollectionPath,
   getEventsCollectionPath,
+  getFamiliesCollectionPath,
   getFinanceReportsCollectionPath,
   getFollowUpTasksCollectionPath,
   getGroupAttendanceCollectionPath,
   getGroupMeetingsCollectionPath,
   getGroupsCollectionPath,
+  getMemberBenefitValidationsCollectionPath,
+  getPartnerBenefitsCollectionPath,
+  getPartnersCollectionPath,
+  getPeopleCollectionPath,
   getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath,
   isFirebaseWebRuntimeConfigured
@@ -40,10 +55,13 @@ import {
 import {
   getBrandModeLabel,
   getAttendanceStatusLabel,
+  createFamilyDisplayName,
   getEnabledModuleCount,
   getEventTypeLabel,
   getFollowUpStatusLabel,
   getGroupTypeLabel,
+  getPartnerBenefitCategoryLabel,
+  getPersonFullName,
   getPlanTierLabel,
   getRegistrationStatusLabel,
   isModuleEnabled,
@@ -67,6 +85,11 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [eventCheckIns, setEventCheckIns] = useState<EventCheckIn[]>([]);
   const [financeReports, setFinanceReports] = useState<FinancialTransparencyReport[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [families, setFamilies] = useState<Family[]>([]);
+  const [partners, setPartners] = useState<PartnerOrganization[]>([]);
+  const [partnerBenefits, setPartnerBenefits] = useState<PartnerBenefit[]>([]);
+  const [benefitValidations, setBenefitValidations] = useState<MemberBenefitValidation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +129,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
           nextFollowUpTasks,
           nextGroups,
           nextEvents,
-          nextFinanceReports
+          nextFinanceReports,
+          nextPeople,
+          nextFamilies,
+          nextPartners,
+          nextPartnerBenefits,
+          nextBenefitValidations
         ] =
           await Promise.all([
             fetchVisitorJourneys(firebaseConfig, { organizationId }),
@@ -114,7 +142,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             fetchFollowUpTasks(firebaseConfig, { organizationId }),
             fetchGroups(firebaseConfig, { organizationId }),
             fetchEvents(firebaseConfig, { organizationId }),
-            fetchFinancialTransparencyReports(firebaseConfig, { organizationId })
+            fetchFinancialTransparencyReports(firebaseConfig, { organizationId }),
+            fetchPeople(firebaseConfig, { organizationId }),
+            fetchFamilies(firebaseConfig, { organizationId }),
+            fetchPartnerOrganizations(firebaseConfig, { organizationId }),
+            fetchPartnerBenefits(firebaseConfig, { organizationId }),
+            fetchMemberBenefitValidations(firebaseConfig, { organizationId })
           ]);
 
         const [nextGroupMeetings, nextEventRegistrations, nextEventCheckIns] =
@@ -144,6 +177,11 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         setEventRegistrations(nextEventRegistrations);
         setEventCheckIns(nextEventCheckIns);
         setFinanceReports(nextFinanceReports);
+        setPeople(nextPeople);
+        setFamilies(nextFamilies);
+        setPartners(nextPartners);
+        setPartnerBenefits(nextPartnerBenefits);
+        setBenefitValidations(nextBenefitValidations);
       } catch (nextError) {
         if (cancelled) {
           return;
@@ -177,6 +215,14 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const groupsEnabled = settings ? isModuleEnabled(settings.features, "groups") : true;
   const eventsEnabled = settings ? isModuleEnabled(settings.features, "events") : true;
   const financeEnabled = settings ? isModuleEnabled(settings.features, "finance") : true;
+  const memberCount = people.filter((person) =>
+    ["member", "leader", "volunteer"].includes(person.memberStatus)
+  ).length;
+  const visitorCount = people.filter((person) => person.memberStatus === "visitor").length;
+  const getroPassCount = people.filter((person) => person.partnerBenefitsEnabled).length;
+  const activeBenefitCount = partnerBenefits.filter(
+    (benefit) => benefit.status === "active"
+  ).length;
 
   return (
     <section style={sectionStyle}>
@@ -209,6 +255,45 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
       ) : null}
 
       <div style={gridStyle}>
+        <article style={cardStyle}>
+          <strong>Membros e familias</strong>
+          <p style={metaStyle}>
+            {people.length} pessoa(s), {memberCount} membro(s), {visitorCount} visitante(s) e{" "}
+            {families.length} familia(s)
+          </p>
+          <p style={pathStyle}>
+            Pessoas: <code>{getPeopleCollectionPath({ organizationId })}</code>
+          </p>
+          <p style={pathStyle}>
+            Familias: <code>{getFamiliesCollectionPath({ organizationId })}</code>
+          </p>
+          <div style={stackStyle}>
+            {people.map((person) => (
+              <div key={person.id} style={itemStyle}>
+                <strong>{getPersonFullName(person)}</strong>
+                <p style={itemTextStyle}>
+                  {getMemberStatusLabel(person.memberStatus)} -{" "}
+                  {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade nao informada"}
+                </p>
+                <p style={miniPathStyle}>
+                  {person.cpf ? `CPF ${maskCpf(person.cpf)} - ` : ""}
+                  {formatAddress(person.address)}
+                </p>
+              </div>
+            ))}
+            {families.map((family) => (
+              <div key={family.id} style={itemStyle}>
+                <strong>{createFamilyDisplayName(family)}</strong>
+                <p style={itemTextStyle}>
+                  {countFamilyPeople(people, family.id)} pessoa(s) vinculada(s) -{" "}
+                  {getIncomeRangeLabel(family.incomeRange)}
+                </p>
+                <p style={miniPathStyle}>{formatAddress(family.address)}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
         {visitorsEnabled ? (
           <article style={cardStyle}>
             <strong>Visitantes em jornada</strong>
@@ -253,6 +338,51 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             </p>
           </article>
         ) : null}
+
+        <article style={cardStyle}>
+          <strong>Getro Pass e convenios</strong>
+          <p style={metaStyle}>
+            {partners.length} parceiro(s), {activeBenefitCount} beneficio(s) ativo(s),{" "}
+            {getroPassCount} membro(s) habilitado(s) e {benefitValidations.length} validacao(oes)
+          </p>
+          <p style={pathStyle}>
+            Parceiros: <code>{getPartnersCollectionPath({ organizationId })}</code>
+          </p>
+          <p style={pathStyle}>
+            Beneficios: <code>{getPartnerBenefitsCollectionPath({ organizationId })}</code>
+          </p>
+          <div style={stackStyle}>
+            {partners.map((partner) => (
+              <div key={partner.id} style={itemStyle}>
+                <strong>{partner.name}</strong>
+                <p style={itemTextStyle}>
+                  {getPartnerBenefitCategoryLabel(partner.category)} - {partner.city ?? "cidade nao informada"}
+                </p>
+              </div>
+            ))}
+            {partnerBenefits.map((benefit) => (
+              <div key={benefit.id} style={itemStyle}>
+                <strong>{benefit.title}</strong>
+                <p style={itemTextStyle}>
+                  {benefit.discountLabel} - {benefit.verificationMode}
+                </p>
+                <p style={miniPathStyle}>{benefit.privacyNotes}</p>
+              </div>
+            ))}
+            {benefitValidations.map((validation) => (
+              <div key={validation.id} style={itemStyle}>
+                <strong>{validation.memberCardCode}</strong>
+                <p style={itemTextStyle}>
+                  {validation.validationStatus} - campos expostos:{" "}
+                  {validation.exposedFields.join(", ") || "nenhum"}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p style={pathStyle}>
+            Validacoes: <code>{getMemberBenefitValidationsCollectionPath({ organizationId })}</code>
+          </p>
+        </article>
 
         {groupsEnabled ? (
           <article style={cardStyle}>
@@ -367,12 +497,86 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   );
 }
 
+function calculateAge(birthDate: string) {
+  const birth = new Date(`${birthDate}T00:00:00`);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDelta = today.getMonth() - birth.getMonth();
+
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+
+  return Number.isFinite(age) ? age : 0;
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 0
   }).format(value);
+}
+
+function formatAddress(address: Person["address"] | Family["address"]) {
+  if (!address) {
+    return "endereco nao informado";
+  }
+
+  const formatted = [address.street, address.number, address.district, address.city, address.state]
+    .filter(Boolean)
+    .join(", ");
+
+  return formatted || "endereco nao informado";
+}
+
+function countFamilyPeople(people: readonly Person[], familyId: string) {
+  return people.filter((person) => person.primaryFamilyId === familyId).length;
+}
+
+function getMemberStatusLabel(status: Person["memberStatus"]) {
+  switch (status) {
+    case "visitor":
+      return "Visitante";
+    case "congregant":
+      return "Congregado";
+    case "new_believer":
+      return "Novo convertido";
+    case "member":
+      return "Membro";
+    case "leader":
+      return "Lider";
+    case "volunteer":
+      return "Voluntario";
+  }
+}
+
+function getIncomeRangeLabel(range: Family["incomeRange"]) {
+  switch (range) {
+    case "up_to_1_minimum_wage":
+      return "ate 1 salario minimo";
+    case "one_to_3_minimum_wages":
+      return "1 a 3 salarios minimos";
+    case "three_to_5_minimum_wages":
+      return "3 a 5 salarios minimos";
+    case "five_to_10_minimum_wages":
+      return "5 a 10 salarios minimos";
+    case "above_10_minimum_wages":
+      return "acima de 10 salarios minimos";
+    case "not_informed":
+    case undefined:
+      return "renda nao informada";
+  }
+}
+
+function maskCpf(cpf: string) {
+  const numbers = cpf.replace(/\D/g, "");
+
+  if (numbers.length !== 11) {
+    return cpf;
+  }
+
+  return `***.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-**`;
 }
 
 const sectionStyle = {

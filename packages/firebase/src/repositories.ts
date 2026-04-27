@@ -17,6 +17,7 @@ import type {
   EventCheckIn,
   EventRegistration,
   Family,
+  FamilyMember,
   FinancialTransparencyReport,
   FollowUpTask,
   Group,
@@ -46,6 +47,7 @@ import {
   getEventRegistrationsCollectionPath,
   getEventsCollectionPath,
   getFamiliesCollectionPath,
+  getFamilyMembersCollectionPath,
   getFollowUpTasksCollectionPath,
   getFinanceReportsCollectionPath,
   getGroupAttendanceCollectionPath,
@@ -594,6 +596,41 @@ export async function saveOrganizationFeaturesSettings(
   await setDoc(
     doc(firestore, getOrganizationFeaturesDocumentPath({ organizationId: settings.organizationId })),
     settings,
+    { merge: true }
+  );
+}
+
+export async function savePersonProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  person: Person
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(doc(firestore, getPeopleCollectionPath(context), person.id), person, {
+    merge: true
+  });
+}
+
+export async function saveFamilyProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  family: Family
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(doc(firestore, getFamiliesCollectionPath(context), family.id), family, {
+    merge: true
+  });
+}
+
+export async function saveFamilyMemberProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  member: FamilyMember
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getFamilyMembersCollectionPath(context, member.familyId), member.id),
+    member,
     { merge: true }
   );
 }

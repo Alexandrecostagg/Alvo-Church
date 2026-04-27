@@ -795,42 +795,62 @@ const kpis = [
 
 const moduleHighlights = [
   {
-    label: "People OS",
-    description: "Perfis, familias, visitantes e historico pastoral em uma linha do tempo unica.",
+    label: "Pessoas e familias",
+    description: "Base unica com dados cadastrais, casas, lideres, visitantes e vinculos familiares.",
+    href: "/members/new",
     icon: UsersRound,
-    enabled: isModuleEnabled(tenantSettings.features, "core")
+    enabled: isModuleEnabled(tenantSettings.features, "core"),
+    action: "Abrir cadastro"
   },
   {
-    label: "Engajamento",
-    description: "Grupos, eventos, check-ins e follow-ups com leitura de saude da igreja.",
-    icon: HeartHandshake,
-    enabled:
-      isModuleEnabled(tenantSettings.features, "groups") &&
-      isModuleEnabled(tenantSettings.features, "events")
+    label: "Portaria",
+    description: "Entrada do visitante que cria pessoa, jornada, comunicacao e roteiro de acolhimento.",
+    href: "#reception",
+    icon: ClipboardList,
+    enabled: isModuleEnabled(tenantSettings.features, "visitors"),
+    action: "Capturar visitante"
   },
   {
     label: "Jornadas",
-    description: "Missoes, badges e progresso para transformar proximos passos em habito.",
+    description: "Proximos passos, missoes e progresso para cada pessoa acompanhada.",
+    href: "#journeys",
     icon: Trophy,
-    enabled: isModuleEnabled(tenantSettings.features, "journeys")
+    enabled: isModuleEnabled(tenantSettings.features, "journeys"),
+    action: "Ver progresso"
   },
   {
-    label: "IA pastoral",
-    description: "Sinais, reclassificacao de tribos e sugestoes de cuidado com limite controlado.",
-    icon: Sparkles,
-    enabled: isModuleEnabled(tenantSettings.features, "ai")
+    label: "Celulas e eventos",
+    description: "Convites, presencas, check-ins e integracao pratica na agenda da igreja.",
+    href: "#groups",
+    icon: Waypoints,
+    enabled:
+      isModuleEnabled(tenantSettings.features, "groups") &&
+      isModuleEnabled(tenantSettings.features, "events"),
+    action: "Organizar agenda"
   },
   {
-    label: "Portaria inteligente",
-    description: "Cadastro de visitantes, jornada automatica, apresentacao e cumprimentos no culto.",
-    icon: ClipboardList,
-    enabled: isModuleEnabled(tenantSettings.features, "core")
+    label: "Comunicacao",
+    description: "Fila viva para WhatsApp, convites, lembretes e retorno pastoral.",
+    href: "#actions",
+    icon: MessageSquareText,
+    enabled: isModuleEnabled(tenantSettings.features, "communication"),
+    action: "Ver fila"
   },
   {
     label: "Transparencia",
     description: "Prestacao de contas, arrecadacoes e demonstrativos publicaveis para a igreja.",
+    href: "#transparency",
     icon: Landmark,
-    enabled: isModuleEnabled(tenantSettings.features, "finance")
+    enabled: isModuleEnabled(tenantSettings.features, "finance"),
+    action: "Publicar contas"
+  },
+  {
+    label: "SaaS e contratos",
+    description: "Onboarding de instituicoes contratantes com tenant, plano, marca e modulos.",
+    href: "/saas/organizations/new",
+    icon: Target,
+    enabled: true,
+    action: "Cadastrar instituicao"
   }
 ];
 
@@ -1119,6 +1139,56 @@ export default function HomePage() {
       normalizeSearch(`${item.type} ${item.title} ${item.detail}`).includes(normalizedQuery)
     );
   }, [query, completedActionIds, openActionFeed, capturedVisitors]);
+  const careWorkflowSteps = [
+    {
+      label: "Capturar",
+      title: "Portaria registra a pessoa",
+      description: "O visitante entra uma vez e ja nasce como pessoa, jornada e tarefa de cuidado.",
+      href: "#reception",
+      icon: ClipboardList,
+      metric: `${capturedVisitors.length} visitantes na fila`
+    },
+    {
+      label: "Entender",
+      title: "Cadastro vira panorama familiar",
+      description: "Dados sensiveis ficam protegidos, mas lideres enxergam familia, bairro e contexto.",
+      href: "#families",
+      icon: UsersRound,
+      metric: `${families.length} familias mapeadas`
+    },
+    {
+      label: "Cuidar",
+      title: "Jornada sugere o proximo passo",
+      description: "Follow-ups, missoes e sinais pastorais deixam claro quem precisa de atencao.",
+      href: "#journeys",
+      icon: MapIcon,
+      metric: `${openActionFeed.length} acoes abertas`
+    },
+    {
+      label: "Integrar",
+      title: "Grupos e eventos fecham o ciclo",
+      description: "Convites, presencas e check-ins mostram se a pessoa saiu da visita para comunidade.",
+      href: "#groups",
+      icon: Waypoints,
+      metric: `${latestAttendance.length} presencas recentes`
+    },
+    {
+      label: "Fortalecer",
+      title: "Getro Pass e comunicacao ampliam valor",
+      description: "Membro se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
+      href: "#actions",
+      icon: ShieldCheck,
+      metric: `${partnerBenefits.length} beneficios`
+    },
+    {
+      label: "Prestar contas",
+      title: "Gestao publica o essencial",
+      description: "Demonstrativos conectam confianca, arrecadacao e destino dos recursos.",
+      href: "#transparency",
+      icon: ReceiptText,
+      metric: transparencySummary.month
+    }
+  ];
 
   function openPersonProfile(personId: string) {
     setSelectedPersonId(personId);
@@ -1439,6 +1509,37 @@ export default function HomePage() {
           ))}
         </section>
 
+        <section className="workflow-panel" aria-label="Mapa da jornada operacional">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Como o Getro conecta tudo</p>
+              <h2>Da primeira visita ate o cuidado continuo</h2>
+            </div>
+            <span className="soft-pill">Fluxo recomendado</span>
+          </div>
+          <div className="workflow-rail">
+            {careWorkflowSteps.map((step, index) => (
+              <a
+                className="workflow-step"
+                href={step.href}
+                key={step.label}
+                onClick={() => setActiveSection(step.href.slice(1))}
+              >
+                <span className="workflow-index">{String(index + 1).padStart(2, "0")}</span>
+                <div className="workflow-icon">
+                  <step.icon size={18} />
+                </div>
+                <div>
+                  <small>{step.label}</small>
+                  <strong>{step.title}</strong>
+                  <p>{step.description}</p>
+                  <b>{step.metric}</b>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
         <section className="content-grid">
           <article className="panel span-2" id="people">
             <div className="section-heading">
@@ -1597,14 +1698,24 @@ export default function HomePage() {
             </div>
             <div className="module-list">
               {moduleHighlights.map((module) => (
-                <div key={module.label} className="module-item">
+                <a
+                  href={module.href}
+                  key={module.label}
+                  className="module-item"
+                  onClick={() => {
+                    if (module.href.startsWith("#")) {
+                      setActiveSection(module.href.slice(1));
+                    }
+                  }}
+                >
                   <module.icon size={18} />
                   <div>
                     <strong>{module.label}</strong>
                     <p>{module.description}</p>
+                    <small>{module.action}</small>
                   </div>
                   <span className={module.enabled ? "status-dot on" : "status-dot"} />
-                </div>
+                </a>
               ))}
             </div>
           </article>
