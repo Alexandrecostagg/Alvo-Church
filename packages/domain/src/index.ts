@@ -77,6 +77,9 @@ export function getTenantPaths(context: TenantContext): FirestorePathMap {
     users: `${base}/users`,
     people: `${base}/people`,
     families: `${base}/families`,
+    partners: `${base}/partners`,
+    partnerBenefits: `${base}/partnerBenefits`,
+    memberBenefitValidations: `${base}/memberBenefitValidations`,
     visitorIntakes: `${base}/visitorIntakes`,
     groups: `${base}/groups`,
     events: `${base}/events`,
@@ -125,6 +128,23 @@ export function getPlanTierLabel(planTier: OrganizationSubscriptionSettings["pla
       return "Advanced";
     case "enterprise":
       return "Enterprise";
+  }
+}
+
+export function getPartnerBenefitCategoryLabel(category: string) {
+  switch (category) {
+    case "health":
+      return "Saude";
+    case "education":
+      return "Educacao";
+    case "food":
+      return "Alimentacao";
+    case "services":
+      return "Servicos";
+    case "community":
+      return "Comunidade";
+    default:
+      return category;
   }
 }
 

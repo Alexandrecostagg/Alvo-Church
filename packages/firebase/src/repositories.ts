@@ -27,6 +27,9 @@ import type {
   OrganizationFeaturesSettings,
   OrganizationSettingsSnapshot,
   OrganizationSubscriptionSettings,
+  PartnerBenefit,
+  PartnerOrganization,
+  MemberBenefitValidation,
   Person,
   TenantRuntimeSnapshot,
   TenantContext,
@@ -48,6 +51,9 @@ import {
   getGroupAttendanceCollectionPath,
   getGroupMeetingsCollectionPath,
   getGroupsCollectionPath,
+  getMemberBenefitValidationsCollectionPath,
+  getPartnerBenefitsCollectionPath,
+  getPartnersCollectionPath,
   getPeopleCollectionPath,
   getUsersCollectionPath,
   getVisitorIntakesCollectionPath,
@@ -162,6 +168,14 @@ function toPerson(documentId: string, data: DocumentData): Person {
     mobilePhone: data.mobilePhone ? String(data.mobilePhone) : undefined,
     whatsappPhone: data.whatsappPhone ? String(data.whatsappPhone) : undefined,
     birthDate: data.birthDate ? String(data.birthDate) : undefined,
+    cpf: data.cpf ? String(data.cpf) : undefined,
+    address: data.address ? toPostalAddress(data.address as DocumentData) : undefined,
+    occupation: data.occupation ? String(data.occupation) : undefined,
+    educationLevel: data.educationLevel as Person["educationLevel"],
+    householdIncomeRange: data.householdIncomeRange as Person["householdIncomeRange"],
+    consentLgpdAt: data.consentLgpdAt ? String(data.consentLgpdAt) : undefined,
+    memberCardCode: data.memberCardCode ? String(data.memberCardCode) : undefined,
+    partnerBenefitsEnabled: Boolean(data.partnerBenefitsEnabled),
     personType: (data.personType as Person["personType"]) ?? "adult",
     memberStatus: (data.memberStatus as Person["memberStatus"]) ?? "visitor",
     status: (data.status as Person["status"]) ?? "active",
@@ -177,7 +191,74 @@ function toFamily(documentId: string, data: DocumentData): Family {
     campusId: data.campusId ? String(data.campusId) : undefined,
     familyName: String(data.familyName ?? ""),
     displayName: String(data.displayName ?? ""),
-    status: (data.status as Family["status"]) ?? "active"
+    status: (data.status as Family["status"]) ?? "active",
+    address: data.address ? toPostalAddress(data.address as DocumentData) : undefined,
+    incomeRange: data.incomeRange as Family["incomeRange"],
+    notes: data.notes ? String(data.notes) : undefined
+  };
+}
+
+function toPartnerOrganization(documentId: string, data: DocumentData): PartnerOrganization {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    name: String(data.name ?? ""),
+    category: (data.category as PartnerOrganization["category"]) ?? "community",
+    status: (data.status as PartnerOrganization["status"]) ?? "inactive",
+    contactName: data.contactName ? String(data.contactName) : undefined,
+    contactPhone: data.contactPhone ? String(data.contactPhone) : undefined,
+    city: data.city ? String(data.city) : undefined,
+    state: data.state ? String(data.state) : undefined
+  };
+}
+
+function toPartnerBenefit(documentId: string, data: DocumentData): PartnerBenefit {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    partnerId: String(data.partnerId ?? ""),
+    title: String(data.title ?? ""),
+    description: String(data.description ?? ""),
+    category: (data.category as PartnerBenefit["category"]) ?? "community",
+    status: (data.status as PartnerBenefit["status"]) ?? "paused",
+    discountLabel: String(data.discountLabel ?? ""),
+    verificationMode: (data.verificationMode as PartnerBenefit["verificationMode"]) ?? "manual",
+    validUntil: data.validUntil ? String(data.validUntil) : undefined,
+    privacyNotes: String(data.privacyNotes ?? "")
+  };
+}
+
+function toMemberBenefitValidation(
+  documentId: string,
+  data: DocumentData
+): MemberBenefitValidation {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    partnerId: String(data.partnerId ?? ""),
+    benefitId: String(data.benefitId ?? ""),
+    personId: String(data.personId ?? ""),
+    memberCardCode: String(data.memberCardCode ?? ""),
+    validationStatus:
+      (data.validationStatus as MemberBenefitValidation["validationStatus"]) ?? "denied",
+    validatedAt: String(data.validatedAt ?? ""),
+    exposedFields: Array.isArray(data.exposedFields)
+      ? data.exposedFields.map(String)
+      : []
+  };
+}
+
+function toPostalAddress(data: DocumentData) {
+  return {
+    postalCode: data.postalCode ? String(data.postalCode) : undefined,
+    street: data.street ? String(data.street) : undefined,
+    number: data.number ? String(data.number) : undefined,
+    complement: data.complement ? String(data.complement) : undefined,
+    district: data.district ? String(data.district) : undefined,
+    city: data.city ? String(data.city) : undefined,
+    state: data.state ? String(data.state) : undefined,
+    countryCode: data.countryCode ? String(data.countryCode) : undefined,
+    geohash: data.geohash ? String(data.geohash) : undefined
   };
 }
 
@@ -470,6 +551,14 @@ export async function ensureTenantUserAccess(
   );
 }
 
+export async function saveOrganizationProfile(
+  config: FirebaseWebRuntimeConfig,
+  organization: Organization
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(doc(firestore, "organizations", organization.id), organization, { merge: true });
+}
+
 export async function saveOrganizationBrandingSettings(
   config: FirebaseWebRuntimeConfig,
   settings: OrganizationBrandingSettings
@@ -537,6 +626,51 @@ export async function fetchFamilies(
   const snapshot = await getDocs(familiesQuery);
 
   return snapshot.docs.map((item) => toFamily(item.id, item.data()));
+}
+
+export async function fetchPartnerOrganizations(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 8
+) {
+  const firestore = getFirebaseFirestore(config);
+  const partnersQuery = query(
+    collection(firestore, getPartnersCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(partnersQuery);
+
+  return snapshot.docs.map((item) => toPartnerOrganization(item.id, item.data()));
+}
+
+export async function fetchPartnerBenefits(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 8
+) {
+  const firestore = getFirebaseFirestore(config);
+  const benefitsQuery = query(
+    collection(firestore, getPartnerBenefitsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(benefitsQuery);
+
+  return snapshot.docs.map((item) => toPartnerBenefit(item.id, item.data()));
+}
+
+export async function fetchMemberBenefitValidations(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 8
+) {
+  const firestore = getFirebaseFirestore(config);
+  const validationsQuery = query(
+    collection(firestore, getMemberBenefitValidationsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(validationsQuery);
+
+  return snapshot.docs.map((item) => toMemberBenefitValidation(item.id, item.data()));
 }
 
 export async function fetchVisitorJourneys(

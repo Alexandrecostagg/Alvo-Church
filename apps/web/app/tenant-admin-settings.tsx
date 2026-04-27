@@ -8,10 +8,12 @@ import {
   isFirebaseWebRuntimeConfigured,
   saveOrganizationBrandingSettings,
   saveOrganizationFeaturesSettings,
+  saveOrganizationProfile,
   saveOrganizationSubscriptionSettings,
   uploadOrganizationBrandAsset
 } from "@alvo/firebase";
 import type {
+  Organization,
   OrganizationBrandMode,
   OrganizationFeatureModule,
   OrganizationFeaturesSettings,
@@ -27,6 +29,25 @@ const BRAND_MODE_OPTIONS: OrganizationBrandMode[] = [
   "co_branded",
   "white_label"
 ];
+const GETRO_IDENTITY = {
+  name: "Getro Church",
+  legalName: "Getro Church Tecnologia para Igrejas Ltda.",
+  publicName: "Getro Church",
+  displayName: "Getro Church",
+  slug: "getro-church",
+  branding: {
+    brandMode: "co_branded",
+    publicProductName: "Getro Church",
+    publicShortName: "Getro",
+    primaryColor: "#d27836",
+    secondaryColor: "#1c2433",
+    accentColor: "#e8dcc7",
+    surfaceColor: "#f7f3ea",
+    textColor: "#1c2433",
+    showPoweredByAlvo: true,
+    poweredByLabel: "by Alvo"
+  }
+} as const;
 const MODULE_ORDER = [
   "core",
   "visitors",
@@ -147,6 +168,63 @@ export function TenantAdminSettings() {
         nextError instanceof Error
           ? nextError.message
           : "Nao foi possivel salvar as configuracoes da organizacao."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleApplyGetroIdentity() {
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setError("Firebase nao configurado para aplicar a identidade Getro.");
+      return;
+    }
+
+    if (!draft) {
+      setError("O tenant ainda nao carregou configuracoes suficientes para atualizar a marca.");
+      return;
+    }
+
+    const currentTenantRuntime = tenantRuntime;
+
+    if (!currentTenantRuntime) {
+      setError("O tenant ainda nao carregou a organizacao para atualizar a marca.");
+      return;
+    }
+
+    const nextOrganization: Organization = {
+      ...currentTenantRuntime.organization,
+      name: GETRO_IDENTITY.name,
+      legalName: GETRO_IDENTITY.legalName,
+      publicName: GETRO_IDENTITY.publicName,
+      displayName: GETRO_IDENTITY.displayName,
+      slug: GETRO_IDENTITY.slug
+    };
+    const nextBranding: OrganizationSettingsSnapshot["branding"] = {
+      ...draft.branding,
+      ...GETRO_IDENTITY.branding
+    };
+
+    try {
+      setSaving(true);
+      setError(null);
+      setStatus(null);
+
+      await Promise.all([
+        saveOrganizationProfile(firebaseConfig, nextOrganization),
+        saveOrganizationBrandingSettings(firebaseConfig, nextBranding)
+      ]);
+
+      setDraft({
+        ...draft,
+        branding: nextBranding
+      });
+      setStatus("Identidade Getro aplicada no Firestore. Atualize a pagina para ver o tenant renomeado.");
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Nao foi possivel aplicar a identidade Getro."
       );
     } finally {
       setSaving(false);
@@ -593,6 +671,13 @@ export function TenantAdminSettings() {
         <button onClick={() => void handleSave()} style={saveButtonStyle} disabled={saving}>
           {saving ? "Salvando..." : "Salvar configuracoes"}
         </button>
+        <button
+          onClick={() => void handleApplyGetroIdentity()}
+          style={secondaryButtonStyle}
+          disabled={saving}
+        >
+          Aplicar identidade Getro
+        </button>
       </div>
     </section>
   );
@@ -875,4 +960,11 @@ const saveButtonStyle = {
   color: "#fff",
   fontWeight: 700,
   cursor: "pointer"
+} as const;
+
+const secondaryButtonStyle = {
+  ...saveButtonStyle,
+  background: "#fff7ed",
+  color: "#9a3412",
+  border: "1px solid rgba(210, 120, 54, 0.35)"
 } as const;

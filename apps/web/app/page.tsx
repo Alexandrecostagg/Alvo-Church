@@ -38,6 +38,7 @@ import {
   getFollowUpStatusLabel,
   getGroupTypeLabel,
   getJourneyKindLabel,
+  getPartnerBenefitCategoryLabel,
   getPlanTierLabel,
   getRecommendedReviewType,
   getRecommendedReviewTypeLabel,
@@ -143,6 +144,25 @@ const recentPeople = [
     lastName: "Silva",
     preferredName: "Ana",
     email: "ana@alvochurch.app",
+    mobilePhone: "+5591991111111",
+    whatsappPhone: "+5591991111111",
+    birthDate: "1987-06-14",
+    cpf: "123.456.789-10",
+    occupation: "Professora",
+    educationLevel: "undergraduate",
+    householdIncomeRange: "three_to_5_minimum_wages",
+    address: {
+      postalCode: "66035-170",
+      street: "Travessa Padre Eutiquio",
+      number: "1220",
+      district: "Batista Campos",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-16T10:00:00.000Z",
+    memberCardCode: "GETRO-ANA-001",
+    partnerBenefitsEnabled: true,
     personType: "adult",
     memberStatus: "member",
     status: "active",
@@ -155,6 +175,26 @@ const recentPeople = [
     firstName: "Lucas",
     lastName: "Costa",
     email: "lucas@alvochurch.app",
+    primaryFamilyId: undefined,
+    mobilePhone: "+5591992222222",
+    whatsappPhone: "+5591992222222",
+    birthDate: "2001-11-03",
+    cpf: undefined,
+    occupation: "Estudante",
+    educationLevel: "technical",
+    householdIncomeRange: "one_to_3_minimum_wages",
+    address: {
+      postalCode: "66033-000",
+      street: "Avenida Governador Jose Malcher",
+      number: "880",
+      district: "Nazare",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-18T19:00:00.000Z",
+    memberCardCode: "GETRO-LUC-002",
+    partnerBenefitsEnabled: false,
     personType: "young_adult",
     memberStatus: "visitor",
     status: "active",
@@ -166,6 +206,26 @@ const recentPeople = [
     firstName: "Marina",
     lastName: "Souza",
     email: "marina@alvochurch.app",
+    mobilePhone: "+5591993333333",
+    whatsappPhone: "+5591993333333",
+    birthDate: "1992-02-22",
+    cpf: "987.654.321-00",
+    occupation: "Empreendedora",
+    educationLevel: "postgraduate",
+    householdIncomeRange: "five_to_10_minimum_wages",
+    address: {
+      postalCode: "66055-260",
+      street: "Rua dos Mundurucus",
+      number: "2400",
+      complement: "Apto 801",
+      district: "Cremacao",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-17T14:30:00.000Z",
+    memberCardCode: "GETRO-MAR-003",
+    partnerBenefitsEnabled: true,
     personType: "adult",
     memberStatus: "leader",
     status: "active",
@@ -181,7 +241,18 @@ const families = [
       organizationId: organization.id,
       familyName: "Silva",
       displayName: "Familia Silva",
-      status: "active"
+      status: "active",
+      incomeRange: "three_to_5_minimum_wages",
+      address: {
+        postalCode: "66035-170",
+        street: "Travessa Padre Eutiquio",
+        number: "1220",
+        district: "Batista Campos",
+        city: "Belem",
+        state: "PA",
+        countryCode: "BR"
+      },
+      notes: "Familia com forte envolvimento em acolhimento e integracao."
     },
     members: [
       {
@@ -202,7 +273,19 @@ const families = [
       organizationId: organization.id,
       familyName: "Souza",
       displayName: "Casa Souza",
-      status: "active"
+      status: "active",
+      incomeRange: "five_to_10_minimum_wages",
+      address: {
+        postalCode: "66055-260",
+        street: "Rua dos Mundurucus",
+        number: "2400",
+        complement: "Apto 801",
+        district: "Cremacao",
+        city: "Belem",
+        state: "PA",
+        countryCode: "BR"
+      },
+      notes: "Casa com perfil de lideranca e mentoria de novos membros."
     },
     members: [
       {
@@ -587,6 +670,76 @@ const personNames: Map<string, string> = new Map(
   ])
 );
 
+const familyPanorama = families.map((familySnapshot) => {
+  const members = familySnapshot.members
+    .map((member) => recentPeople.find((person) => person.id === member.personId))
+    .filter((person): person is (typeof recentPeople)[number] => Boolean(person));
+  const neighborhood = familySnapshot.family.address?.district ?? "Sem bairro";
+  const visitorLinks = activeJourneys.filter((journey) => {
+    const person = recentPeople.find((item) => item.id === journey.personId);
+
+    return person?.primaryFamilyId === familySnapshot.family.id || person?.memberStatus === "visitor";
+  });
+
+  return {
+    ...familySnapshot,
+    members,
+    neighborhood,
+    visitorLinks,
+    incomeRange: familySnapshot.family.incomeRange ?? "not_informed"
+  };
+});
+
+const neighborhoodDistribution = familyPanorama.reduce<Array<{ label: string; value: number }>>(
+  (acc, familySnapshot) => {
+    const current = acc.find((item) => item.label === familySnapshot.neighborhood);
+
+    if (current) {
+      current.value += familySnapshot.members.length;
+    } else {
+      acc.push({ label: familySnapshot.neighborhood, value: familySnapshot.members.length });
+    }
+
+    return acc;
+  },
+  []
+);
+
+const familyInsightMetrics = [
+  {
+    label: "Familias mapeadas",
+    value: familyPanorama.length,
+    detail: `${recentPeople.length} pessoas com perfil pastoral`
+  },
+  {
+    label: "Com endereco",
+    value: recentPeople.filter((person) => person.address?.district).length,
+    detail: "base para mapa por bairro"
+  },
+  {
+    label: "Com consentimento",
+    value: recentPeople.filter((person) => person.consentLgpdAt).length,
+    detail: "LGPD antes de dados sensiveis"
+  },
+  {
+    label: "Getro Pass ativo",
+    value: recentPeople.filter((person) => person.partnerBenefitsEnabled).length,
+    detail: "validacao externa sem expor CPF"
+  }
+];
+
+const memberPassPreview = recentPeople
+  .filter((person) => person.memberCardCode)
+  .map((person) => ({
+    id: person.id,
+    name: getPersonDisplayName(person),
+    code: person.memberCardCode ?? "",
+    active: Boolean(person.partnerBenefitsEnabled && String(person.memberStatus) !== "visitor"),
+    partnerScope: person.partnerBenefitsEnabled
+      ? "Farmacia parceira: desconto validado por QR"
+      : "Aguardando consentimento para beneficios"
+  }));
+
 const weeklyMomentum = [
   { label: "Dom", value: 58 },
   { label: "Seg", value: 45 },
@@ -600,6 +753,7 @@ const weeklyMomentum = [
 const navItems = [
   { label: "Resumo", icon: LayoutDashboard, href: "#overview" },
   { label: "Pessoas", icon: UsersRound, href: "#people" },
+  { label: "Familias", icon: HeartHandshake, href: "#families" },
   { label: "Jornadas", icon: MapIcon, href: "#journeys" },
   { label: "Portaria", icon: ClipboardList, href: "#reception" },
   { label: "Celulas", icon: Waypoints, href: "#groups" },
@@ -753,6 +907,78 @@ const transparencyEntries = [
   }
 ] as const;
 
+const partnerOrganizations = [
+  {
+    id: "partner_1",
+    organizationId: organization.id,
+    name: "Farmacia Vida Plena",
+    category: "health",
+    status: "active",
+    contactName: "Renata Alves",
+    city: "Belem",
+    state: "PA"
+  },
+  {
+    id: "partner_2",
+    organizationId: organization.id,
+    name: "Escola de Musica Harmonia",
+    category: "education",
+    status: "active",
+    contactName: "Daniel Rocha",
+    city: "Belem",
+    state: "PA"
+  }
+] as const;
+
+const partnerBenefits = [
+  {
+    id: "benefit_1",
+    organizationId: organization.id,
+    partnerId: "partner_1",
+    title: "Desconto em medicamentos",
+    description: "Validacao de membro ativo para desconto em itens elegiveis.",
+    category: "health",
+    status: "active",
+    discountLabel: "8% a 15%",
+    verificationMode: "qr_code",
+    privacyNotes: "Parceiro recebe somente status de elegibilidade e primeiro nome."
+  },
+  {
+    id: "benefit_2",
+    organizationId: organization.id,
+    partnerId: "partner_2",
+    title: "Bolsa em aula experimental",
+    description: "Primeira mensalidade com desconto para membros e filhos cadastrados.",
+    category: "education",
+    status: "active",
+    discountLabel: "20%",
+    verificationMode: "member_code",
+    privacyNotes: "Parceiro nao acessa CPF, renda, endereco ou historico pastoral."
+  }
+] as const;
+
+const memberBenefitValidations = [
+  {
+    id: "validation_1",
+    organizationId: organization.id,
+    partnerId: "partner_1",
+    benefitId: "benefit_1",
+    personId: "person_1",
+    memberCardCode: "GETRO-ANA-001",
+    validationStatus: "approved",
+    validatedAt: "2026-04-20T16:24:00.000Z",
+    exposedFields: ["firstName", "memberActive", "benefitEligible"]
+  }
+] as const;
+
+const partnerBenefitPreview = partnerBenefits.map((benefit) => ({
+  ...benefit,
+  partner: partnerOrganizations.find((partner) => partner.id === benefit.partnerId),
+  validations: memberBenefitValidations.filter(
+    (validation) => validation.benefitId === benefit.id
+  )
+}));
+
 const actionFeed = [
   ...followUps.map((task) => ({
     id: task.id,
@@ -837,6 +1063,9 @@ export default function HomePage() {
   const selectedFollowUps = followUps.filter(
     (followUp) => followUp.personId === selectedPersonId
   );
+  const selectedFamilySnapshot = selectedPerson?.primaryFamilyId
+    ? familyPanorama.find((familySnapshot) => familySnapshot.family.id === selectedPerson.primaryFamilyId)
+    : null;
   const pendingCommunicationVisitors = capturedVisitors.filter(
     (visitor) => !preparedCommunicationIds.includes(visitor.id)
   );
@@ -1248,6 +1477,77 @@ export default function HomePage() {
             </div>
           </article>
 
+          <article className="panel span-3 family-panel" id="families">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Pessoas & Familias 2.0</p>
+                <h2>Mapa completo de membros, casas e aspirantes</h2>
+              </div>
+              <span className="soft-pill">Dados sensiveis protegidos</span>
+            </div>
+
+            <div className="family-metrics">
+              {familyInsightMetrics.map((metric) => (
+                <div key={metric.label} className="family-metric">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <p>{metric.detail}</p>
+            </div>
+          ))}
+          <div className="family-metric">
+            <span>Parceiros ativos</span>
+            <strong>{partnerOrganizations.length}</strong>
+            <p>{partnerBenefits.length} beneficios publicados no Getro Pass</p>
+          </div>
+        </div>
+
+            <div className="family-workbench">
+              <div className="family-map-card">
+                <div>
+                  <strong>Panorama por bairro</strong>
+                  <p>
+                    Visao para lideres entenderem onde as familias estao, sem expor endereco
+                    completo em relatorios abertos.
+                  </p>
+                </div>
+                <div className="neighborhood-bars">
+                  {neighborhoodDistribution.map((item) => (
+                    <div key={item.label}>
+                      <span>{item.label}</span>
+                      <div>
+                        <b style={{ width: `${Math.max(18, item.value * 28)}%` }} />
+                      </div>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="family-list">
+                {familyPanorama.map((familySnapshot) => (
+                  <div key={familySnapshot.family.id} className="family-card">
+                    <div>
+                      <strong>{familySnapshot.family.displayName}</strong>
+                      <p>
+                        {familySnapshot.neighborhood} · {familySnapshot.members.length} membro(s) ·{" "}
+                        {getIncomeRangeLabel(familySnapshot.incomeRange)}
+                      </p>
+                    </div>
+                    <div className="family-tags">
+                      {familySnapshot.members.map((member) => (
+                        <span key={member.id}>{getPersonDisplayName(member)}</span>
+                      ))}
+                    </div>
+                    <small>
+                      {familySnapshot.visitorLinks.length} visitante(s)/aspirante(s) conectados a
+                      acompanhamento.
+                    </small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </article>
+
           <article className="panel">
             <div className="section-heading">
               <div>
@@ -1304,6 +1604,52 @@ export default function HomePage() {
                     <p>{module.description}</p>
                   </div>
                   <span className={module.enabled ? "status-dot on" : "status-dot"} />
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel member-pass-panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Getro Pass</p>
+                <h2>Carteira do membro</h2>
+              </div>
+              <QrCode size={20} />
+            </div>
+            <div className="member-pass-card">
+              <div>
+                <span>Validacao externa</span>
+                <strong>QR seguro</strong>
+                <p>
+                  Parceiros validam beneficio ativo sem receber CPF, renda, endereco ou historico
+                  pastoral.
+                </p>
+              </div>
+              <ShieldCheck size={28} />
+            </div>
+            <div className="member-pass-list">
+              {partnerBenefitPreview.map((benefit) => (
+                <div key={benefit.id}>
+                  <strong>{benefit.title}</strong>
+                  <code>{benefit.partner?.name ?? "Parceiro nao vinculado"}</code>
+                  <span className="pass-status on">
+                    {getPartnerBenefitCategoryLabel(benefit.category)} · {benefit.discountLabel}
+                  </span>
+                  <p>
+                    {benefit.description} {benefit.validations.length} validacao(oes) recente(s).
+                  </p>
+                  <small>{benefit.privacyNotes}</small>
+                </div>
+              ))}
+              {memberPassPreview.map((pass) => (
+                <div key={pass.id}>
+                  <strong>{pass.name}</strong>
+                  <code>{pass.code}</code>
+                  <span className={pass.active ? "pass-status on" : "pass-status"}>
+                    {pass.active ? "Ativo" : "Consentimento pendente"}
+                  </span>
+                  <p>{pass.partnerScope}</p>
                 </div>
               ))}
             </div>
@@ -1649,6 +1995,49 @@ export default function HomePage() {
               <span>Prontidao</span>
               <strong>{selectedJourneyProfile?.readinessLevel ?? "n/a"}</strong>
             </div>
+            <div>
+              <span>Idade</span>
+              <strong>{selectedPerson.birthDate ? `${calculateAge(selectedPerson.birthDate)} anos` : "n/a"}</strong>
+            </div>
+            <div>
+              <span>Familia</span>
+              <strong>{selectedFamilySnapshot?.family.displayName ?? "Sem grupo familiar"}</strong>
+            </div>
+            <div>
+              <span>Bairro</span>
+              <strong>{selectedPerson.address?.district ?? selectedFamilySnapshot?.neighborhood ?? "n/a"}</strong>
+            </div>
+            <div>
+              <span>Faixa de renda</span>
+              <strong>{getIncomeRangeLabel(selectedPerson.householdIncomeRange ?? selectedFamilySnapshot?.incomeRange)}</strong>
+            </div>
+          </div>
+
+          <div className="drawer-section sensitive-section">
+            <h3>Dados cadastrais protegidos</h3>
+            <p>
+              CPF {selectedPerson.cpf ? maskCpf(selectedPerson.cpf) : "nao informado"} ·{" "}
+              {selectedPerson.occupation ?? "ocupacao nao informada"} ·{" "}
+              {getEducationLevelLabel(selectedPerson.educationLevel)}
+            </p>
+            <p>
+              Consentimento LGPD:{" "}
+              <strong>{selectedPerson.consentLgpdAt ? "registrado" : "pendente"}</strong>
+            </p>
+          </div>
+
+          <div className="drawer-section member-pass-summary">
+            <h3>Getro Pass</h3>
+            <p>
+              Codigo {selectedPerson.memberCardCode ?? "nao emitido"} ·{" "}
+              {selectedPerson.partnerBenefitsEnabled
+                ? "beneficios externos ativos"
+                : "aguardando consentimento"}
+            </p>
+            <small>
+              Parceiros devem validar apenas status do beneficio, nunca CPF, endereco, renda ou
+              historico pastoral.
+            </small>
           </div>
 
           {selectedJourneyProfile ? (
@@ -1730,4 +2119,59 @@ function getPersonDisplayName(person: (typeof recentPeople)[number]) {
   const preferredName = "preferredName" in person ? person.preferredName : undefined;
 
   return preferredName ?? `${person.firstName} ${"lastName" in person ? person.lastName : ""}`.trim();
+}
+
+function calculateAge(birthDate: string) {
+  const birth = new Date(`${birthDate}T00:00:00`);
+  const today = new Date();
+  const age = today.getFullYear() - birth.getFullYear();
+  const hadBirthdayThisYear =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+
+  return hadBirthdayThisYear ? age : age - 1;
+}
+
+function getIncomeRangeLabel(incomeRange?: string) {
+  switch (incomeRange) {
+    case "up_to_1_minimum_wage":
+      return "ate 1 salario";
+    case "one_to_3_minimum_wages":
+      return "1 a 3 salarios";
+    case "three_to_5_minimum_wages":
+      return "3 a 5 salarios";
+    case "five_to_10_minimum_wages":
+      return "5 a 10 salarios";
+    case "above_10_minimum_wages":
+      return "acima de 10 salarios";
+    default:
+      return "nao informado";
+  }
+}
+
+function getEducationLevelLabel(educationLevel?: string) {
+  switch (educationLevel) {
+    case "elementary":
+      return "fundamental";
+    case "high_school":
+      return "ensino medio";
+    case "technical":
+      return "tecnico";
+    case "undergraduate":
+      return "superior";
+    case "postgraduate":
+      return "pos-graduacao";
+    default:
+      return "escolaridade nao informada";
+  }
+}
+
+function maskCpf(cpf: string) {
+  const digits = cpf.replace(/\D/g, "");
+
+  if (digits.length !== 11) {
+    return "***.***.***-**";
+  }
+
+  return `${digits.slice(0, 3)}.***.***-${digits.slice(-2)}`;
 }

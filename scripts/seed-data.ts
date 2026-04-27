@@ -13,7 +13,10 @@ import type {
   OrganizationBrandingSettings,
   OrganizationFeaturesSettings,
   OrganizationSubscriptionSettings,
+  PartnerBenefit,
+  PartnerOrganization,
   Person,
+  MemberBenefitValidation,
   VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
@@ -92,6 +95,23 @@ export const seedPeople: Person[] = [
     email: "ana@alvochurch.app",
     mobilePhone: "+5591991111111",
     whatsappPhone: "+5591991111111",
+    birthDate: "1987-06-14",
+    cpf: "123.456.789-10",
+    occupation: "Professora",
+    educationLevel: "undergraduate",
+    householdIncomeRange: "three_to_5_minimum_wages",
+    address: {
+      postalCode: "66035-170",
+      street: "Travessa Padre Eutiquio",
+      number: "1220",
+      district: "Batista Campos",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-16T10:00:00.000Z",
+    memberCardCode: "GETRO-ANA-001",
+    partnerBenefitsEnabled: true,
     personType: "adult",
     memberStatus: "member",
     status: "active",
@@ -106,6 +126,22 @@ export const seedPeople: Person[] = [
     email: "lucas@alvochurch.app",
     mobilePhone: "+5591992222222",
     whatsappPhone: "+5591992222222",
+    birthDate: "2001-11-03",
+    occupation: "Estudante",
+    educationLevel: "technical",
+    householdIncomeRange: "one_to_3_minimum_wages",
+    address: {
+      postalCode: "66033-000",
+      street: "Avenida Governador Jose Malcher",
+      number: "880",
+      district: "Nazare",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-18T19:00:00.000Z",
+    memberCardCode: "GETRO-LUC-002",
+    partnerBenefitsEnabled: false,
     personType: "young_adult",
     memberStatus: "visitor",
     status: "active",
@@ -121,6 +157,24 @@ export const seedPeople: Person[] = [
     email: "marina@alvochurch.app",
     mobilePhone: "+5591993333333",
     whatsappPhone: "+5591993333333",
+    birthDate: "1992-02-22",
+    cpf: "987.654.321-00",
+    occupation: "Empreendedora",
+    educationLevel: "postgraduate",
+    householdIncomeRange: "five_to_10_minimum_wages",
+    address: {
+      postalCode: "66055-260",
+      street: "Rua dos Mundurucus",
+      number: "2400",
+      complement: "Apto 801",
+      district: "Cremacao",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    consentLgpdAt: "2026-03-17T14:30:00.000Z",
+    memberCardCode: "GETRO-MAR-003",
+    partnerBenefitsEnabled: true,
     personType: "adult",
     memberStatus: "leader",
     status: "active",
@@ -135,14 +189,105 @@ export const seedFamilies: Family[] = [
     organizationId: seedOrganization.id,
     familyName: "Silva",
     displayName: "Familia Silva",
-    status: "active"
+    status: "active",
+    incomeRange: "three_to_5_minimum_wages",
+    address: {
+      postalCode: "66035-170",
+      street: "Travessa Padre Eutiquio",
+      number: "1220",
+      district: "Batista Campos",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    notes: "Familia com forte envolvimento em acolhimento e integracao."
   },
   {
     id: "family_2",
     organizationId: seedOrganization.id,
     familyName: "Souza",
     displayName: "Casa Souza",
-    status: "active"
+    status: "active",
+    incomeRange: "five_to_10_minimum_wages",
+    address: {
+      postalCode: "66055-260",
+      street: "Rua dos Mundurucus",
+      number: "2400",
+      complement: "Apto 801",
+      district: "Cremacao",
+      city: "Belem",
+      state: "PA",
+      countryCode: "BR"
+    },
+    notes: "Casa com perfil de lideranca e mentoria de novos membros."
+  }
+];
+
+export const seedPartners: PartnerOrganization[] = [
+  {
+    id: "partner_1",
+    organizationId: seedOrganization.id,
+    name: "Farmacia Vida Plena",
+    category: "health",
+    status: "active",
+    contactName: "Renata Alves",
+    contactPhone: "+5591988880001",
+    city: "Belem",
+    state: "PA"
+  },
+  {
+    id: "partner_2",
+    organizationId: seedOrganization.id,
+    name: "Escola de Musica Harmonia",
+    category: "education",
+    status: "active",
+    contactName: "Daniel Rocha",
+    contactPhone: "+5591988880002",
+    city: "Belem",
+    state: "PA"
+  }
+];
+
+export const seedPartnerBenefits: PartnerBenefit[] = [
+  {
+    id: "benefit_1",
+    organizationId: seedOrganization.id,
+    partnerId: "partner_1",
+    title: "Desconto em medicamentos",
+    description: "Validacao de membro ativo para desconto em itens elegiveis.",
+    category: "health",
+    status: "active",
+    discountLabel: "8% a 15%",
+    verificationMode: "qr_code",
+    validUntil: "2026-12-31T23:59:59.000Z",
+    privacyNotes: "Parceiro recebe somente status de elegibilidade e primeiro nome."
+  },
+  {
+    id: "benefit_2",
+    organizationId: seedOrganization.id,
+    partnerId: "partner_2",
+    title: "Bolsa em aula experimental",
+    description: "Primeira mensalidade com desconto para membros e filhos cadastrados.",
+    category: "education",
+    status: "active",
+    discountLabel: "20%",
+    verificationMode: "member_code",
+    validUntil: "2026-09-30T23:59:59.000Z",
+    privacyNotes: "Parceiro nao acessa CPF, renda, endereco ou historico pastoral."
+  }
+];
+
+export const seedMemberBenefitValidations: MemberBenefitValidation[] = [
+  {
+    id: "validation_1",
+    organizationId: seedOrganization.id,
+    partnerId: "partner_1",
+    benefitId: "benefit_1",
+    personId: "person_1",
+    memberCardCode: "GETRO-ANA-001",
+    validationStatus: "approved",
+    validatedAt: "2026-04-20T16:24:00.000Z",
+    exposedFields: ["firstName", "memberActive", "benefitEligible"]
   }
 ];
 

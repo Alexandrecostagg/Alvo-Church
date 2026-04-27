@@ -16,6 +16,9 @@ import {
   seedOrganizationFeatures,
   seedOrganization,
   seedOrganizationSubscription,
+  seedPartnerBenefits,
+  seedPartners,
+  seedMemberBenefitValidations,
   seedPeople,
   seedVisitorIntakes,
   seedVisitorJourneys
@@ -100,6 +103,23 @@ async function run() {
       .collection("members")
       .doc(member.id);
     batch.set(memberRef, member, { merge: true });
+  }
+
+  for (const partner of seedPartners) {
+    const partnerRef = organizationRef.collection("partners").doc(partner.id);
+    batch.set(partnerRef, partner, { merge: true });
+  }
+
+  for (const benefit of seedPartnerBenefits) {
+    const benefitRef = organizationRef.collection("partnerBenefits").doc(benefit.id);
+    batch.set(benefitRef, benefit, { merge: true });
+  }
+
+  for (const validation of seedMemberBenefitValidations) {
+    const validationRef = organizationRef
+      .collection("memberBenefitValidations")
+      .doc(validation.id);
+    batch.set(validationRef, validation, { merge: true });
   }
 
   for (const journey of seedVisitorJourneys) {

@@ -87,6 +87,18 @@ export function getFamilyMembersCollectionPath(context: TenantContext, familyId:
   return `organizations/${context.organizationId}/families/${familyId}/members`;
 }
 
+export function getPartnersCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/partners`;
+}
+
+export function getPartnerBenefitsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/partnerBenefits`;
+}
+
+export function getMemberBenefitValidationsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/memberBenefitValidations`;
+}
+
 export function getVisitorJourneysCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/visitorJourneys`;
 }

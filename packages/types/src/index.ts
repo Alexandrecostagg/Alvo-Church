@@ -165,6 +165,34 @@ export interface AuthUser {
   isActive: boolean;
 }
 
+export type HouseholdIncomeRange =
+  | "up_to_1_minimum_wage"
+  | "one_to_3_minimum_wages"
+  | "three_to_5_minimum_wages"
+  | "five_to_10_minimum_wages"
+  | "above_10_minimum_wages"
+  | "not_informed";
+
+export type EducationLevel =
+  | "elementary"
+  | "high_school"
+  | "technical"
+  | "undergraduate"
+  | "postgraduate"
+  | "not_informed";
+
+export interface PostalAddress {
+  postalCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  countryCode?: string;
+  geohash?: string;
+}
+
 export interface Family {
   id: string;
   organizationId: string;
@@ -172,6 +200,9 @@ export interface Family {
   familyName: string;
   displayName: string;
   status: "active" | "inactive";
+  address?: PostalAddress;
+  incomeRange?: HouseholdIncomeRange;
+  notes?: string;
 }
 
 export interface FamilyMember {
@@ -203,6 +234,14 @@ export interface Person {
   mobilePhone?: string;
   whatsappPhone?: string;
   birthDate?: string;
+  cpf?: string;
+  address?: PostalAddress;
+  occupation?: string;
+  educationLevel?: EducationLevel;
+  householdIncomeRange?: HouseholdIncomeRange;
+  consentLgpdAt?: string;
+  memberCardCode?: string;
+  partnerBenefitsEnabled?: boolean;
   personType: PersonType;
   memberStatus: MemberStatus;
   status: PersonStatus;
@@ -225,6 +264,53 @@ export interface FamilySnapshot {
   members: readonly FamilyMember[];
 }
 
+export type PartnerBenefitCategory =
+  | "health"
+  | "education"
+  | "food"
+  | "services"
+  | "community";
+
+export type PartnerBenefitStatus = "active" | "paused" | "expired";
+
+export interface PartnerOrganization {
+  id: string;
+  organizationId: string;
+  name: string;
+  category: PartnerBenefitCategory;
+  status: "active" | "inactive";
+  contactName?: string;
+  contactPhone?: string;
+  city?: string;
+  state?: string;
+}
+
+export interface PartnerBenefit {
+  id: string;
+  organizationId: string;
+  partnerId: string;
+  title: string;
+  description: string;
+  category: PartnerBenefitCategory;
+  status: PartnerBenefitStatus;
+  discountLabel: string;
+  verificationMode: "qr_code" | "member_code" | "manual";
+  validUntil?: string;
+  privacyNotes: string;
+}
+
+export interface MemberBenefitValidation {
+  id: string;
+  organizationId: string;
+  partnerId: string;
+  benefitId: string;
+  personId: string;
+  memberCardCode: string;
+  validationStatus: "approved" | "denied" | "expired";
+  validatedAt: string;
+  exposedFields: readonly string[];
+}
+
 export interface TenantContext {
   organizationId: string;
   campusId?: string;
@@ -237,6 +323,9 @@ export interface FirestorePathMap {
   users: string;
   people: string;
   families: string;
+  partners: string;
+  partnerBenefits: string;
+  memberBenefitValidations: string;
   visitorIntakes: string;
   groups: string;
   events: string;

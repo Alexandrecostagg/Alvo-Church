@@ -3,8 +3,8 @@
   "private": true,
   "main": "App.tsx",
   "scripts": {
-    "dev": "expo start",
-    "build": "expo export --platform all",
+    "dev": "node ../../scripts/with-workspace-env.mjs expo start",
+    "build": "node ../../scripts/with-workspace-env.mjs expo export --platform all",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --check ."

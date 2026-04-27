@@ -1,6 +1,6 @@
-# Alvo Church
+# Getro Church
 
-Monorepo inicial do Alvo Church.
+Monorepo inicial do Getro Church.
 
 ## Stack
 
@@ -71,6 +71,12 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=alvo-church
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=alvo-church.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=alvo-church.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=alvo-church
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=alvo-church.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
 ```
 
 ## Seed inicial do Firebase
@@ -97,10 +103,31 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=alvo-church
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=alvo-church.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=alvo-church.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=alvo-church
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=alvo-church.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
 ```
 
 O app web carrega esse `.env.local` da raiz mesmo rodando dentro de `apps/web`.
 Depois disso, reinicie `corepack pnpm --filter @alvo/web dev`.
+
+## Configuracao do app mobile com Firebase
+
+O app mobile usa as variaveis `EXPO_PUBLIC_FIREBASE_*` do mesmo `.env.local`
+da raiz. Os scripts do Expo carregam esse arquivo automaticamente via
+[scripts/with-workspace-env.mjs](scripts/with-workspace-env.mjs), entao rode:
+
+```bash
+corepack pnpm --filter @alvo/mobile dev
+```
+
+No Firebase Console, registre tambem os apps nativos no mesmo projeto:
+
+- Android package: `com.getrochurch.app`
+- iOS bundle identifier: `com.getrochurch.app`
 
 ## Firestore Rules do tenant
 
