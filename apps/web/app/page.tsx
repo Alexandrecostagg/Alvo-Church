@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Activity,
   Bell,
@@ -752,7 +753,7 @@ const weeklyMomentum = [
 
 const navItems = [
   { label: "Resumo", icon: LayoutDashboard, href: "#overview" },
-  { label: "Pessoas", icon: UsersRound, href: "#people" },
+  { label: "Pessoas", icon: UsersRound, href: "/members" },
   { label: "Familias", icon: HeartHandshake, href: "#families" },
   { label: "Jornadas", icon: MapIcon, href: "#journeys" },
   { label: "Portaria", icon: ClipboardList, href: "#reception" },
@@ -797,10 +798,10 @@ const moduleHighlights = [
   {
     label: "Pessoas e familias",
     description: "Base unica com dados cadastrais, casas, lideres, visitantes e vinculos familiares.",
-    href: "/members/new",
+    href: "/members",
     icon: UsersRound,
     enabled: isModuleEnabled(tenantSettings.features, "core"),
-    action: "Abrir cadastro"
+    action: "Ver base"
   },
   {
     label: "Portaria",
@@ -1358,7 +1359,11 @@ export default function HomePage() {
               className={
                 activeSection === item.href.slice(1) ? "app-nav-item is-active" : "app-nav-item"
               }
-              onClick={() => setActiveSection(item.href.slice(1))}
+              onClick={() => {
+                if (item.href.startsWith("#")) {
+                  setActiveSection(item.href.slice(1));
+                }
+              }}
             >
               <item.icon size={18} strokeWidth={2.2} />
               <span>{item.label}</span>
@@ -1547,7 +1552,12 @@ export default function HomePage() {
                 <p className="eyebrow">Pessoas e jornadas</p>
                 <h2>Progresso pastoral</h2>
               </div>
-              <span className="soft-pill">{canManagePeople(currentUser) ? "Admin" : "Leitura"}</span>
+              <div className="section-actions">
+                <Link className="soft-pill" href="/members">
+                  Ver base
+                </Link>
+                <span className="soft-pill">{canManagePeople(currentUser) ? "Admin" : "Leitura"}</span>
+              </div>
             </div>
             <div className="journey-list" id="journeys">
               {dashboard.journeyProfiles.map((profile) => (

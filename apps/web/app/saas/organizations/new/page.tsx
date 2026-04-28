@@ -42,7 +42,8 @@ export default function NewContractingOrganizationPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const displayName = getFormValue(form, "displayName");
     const publicName = getFormValue(form, "publicName") || displayName;
     const slug = slugify(getFormValue(form, "slug") || publicName);
@@ -135,7 +136,7 @@ export default function NewContractingOrganizationPage() {
       });
 
       setStatus(`${displayName} criada em organizations/${organizationId}.`);
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Nao foi possivel criar a instituicao.");
     }

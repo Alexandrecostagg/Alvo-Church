@@ -14,9 +14,17 @@ import { useAppAuth } from "../../providers";
 
 const organizationId = "org_alvo_demo";
 
+interface SavedMemberSummary {
+  familyId?: string;
+  fullName: string;
+  memberCardCode?: string;
+  personId: string;
+}
+
 export default function NewMemberPage() {
   const { configured, user } = useAppAuth();
   const [status, setStatus] = useState<string | null>(null);
+  const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
 
   const firebaseConfig = useMemo(
     () =>
@@ -37,17 +45,21 @@ export default function NewMemberPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const firstName = getFormValue(form, "firstName");
     const lastName = getFormValue(form, "lastName");
+    const fullName = `${firstName} ${lastName}`.trim();
 
     if (!firstName || !lastName) {
       setStatus("Informe nome e sobrenome para criar o cadastro.");
+      setLastSavedMember(null);
       return;
     }
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setStatus("Formulario pronto. Entre no Firebase para salvar este membro no Firestore.");
+      setLastSavedMember(null);
       return;
     }
 
@@ -124,12 +136,19 @@ export default function NewMemberPage() {
       await savePersonProfile(firebaseConfig, { organizationId }, person);
       setStatus(
         familyId
-          ? `${firstName} ${lastName} salvo em people/${personId} e vinculado a families/${familyId}.`
-          : `${firstName} ${lastName} salvo em people/${personId}.`
+          ? `${fullName} salvo em people/${personId} e vinculado a families/${familyId}.`
+          : `${fullName} salvo em people/${personId}.`
       );
-      event.currentTarget.reset();
+      setLastSavedMember({
+        familyId,
+        fullName,
+        memberCardCode: person.memberCardCode,
+        personId
+      });
+      formElement.reset();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Nao foi possivel salvar o membro.");
+      setLastSavedMember(null);
     }
   }
 
@@ -319,6 +338,57 @@ export default function NewMemberPage() {
           </button>
           {status ? <p className="form-status">{status}</p> : null}
         </div>
+
+        {lastSavedMember ? (
+          <div className="save-confirmation">
+            <div>
+              <p className="eyebrow">Cadastro salvo</p>
+              <h2>{lastSavedMember.fullName}</h2>
+              <p>
+                Perfil criado no Firestore e pronto para aparecer na base pastoral,
+                nos filtros de familia e nas validacoes do Getro Pass.
+              </p>
+            </div>
+            <dl>
+              <div>
+                <dt>Pessoa</dt>
+                <dd>{lastSavedMember.personId}</dd>
+              </div>
+              <div>
+                <dt>Familia</dt>
+                <dd>{lastSavedMember.familyId ?? "sem familia vinculada"}</dd>
+              </div>
+              <div>
+                <dt>Getro Pass</dt>
+                <dd>{lastSavedMember.memberCardCode ?? "nao habilitado"}</dd>
+              </div>
+            </dl>
+            <div className="confirmation-actions">
+              <Link
+                className="primary-button"
+                href={`/members/${lastSavedMember.personId}`}
+              >
+                Abrir ficha completa
+              </Link>
+              <Link
+                className="ghost-button"
+                href={`/members?q=${encodeURIComponent(lastSavedMember.fullName)}`}
+              >
+                Ver na base
+              </Link>
+              <button
+                className="ghost-button"
+                onClick={() => {
+                  setLastSavedMember(null);
+                  setStatus("Pronto para cadastrar outra pessoa.");
+                }}
+                type="button"
+              >
+                Cadastrar outra pessoa
+              </button>
+            </div>
+          </div>
+        ) : null}
       </form>
     </main>
   );

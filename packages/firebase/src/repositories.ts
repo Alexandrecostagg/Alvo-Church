@@ -66,6 +66,28 @@ function getFirebaseFirestore(config: FirebaseWebRuntimeConfig): Firestore {
   return getFirestore(getFirebaseWebApp(config));
 }
 
+function cleanFirestoreData<T>(value: T): DocumentData {
+  return removeUndefinedFields(value) as DocumentData;
+}
+
+function removeUndefinedFields(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => removeUndefinedFields(item))
+      .filter((item) => item !== undefined);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, entryValue]) => entryValue !== undefined)
+        .map(([key, entryValue]) => [key, removeUndefinedFields(entryValue)])
+    );
+  }
+
+  return value;
+}
+
 function toOrganization(documentId: string, data: DocumentData): Organization {
   return {
     id: documentId,
@@ -197,6 +219,20 @@ function toFamily(documentId: string, data: DocumentData): Family {
     address: data.address ? toPostalAddress(data.address as DocumentData) : undefined,
     incomeRange: data.incomeRange as Family["incomeRange"],
     notes: data.notes ? String(data.notes) : undefined
+  };
+}
+
+function toFamilyMember(documentId: string, data: DocumentData): FamilyMember {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    familyId: String(data.familyId ?? ""),
+    personId: String(data.personId ?? ""),
+    relationshipType:
+      (data.relationshipType as FamilyMember["relationshipType"]) ?? "other",
+    isPrimaryContact: Boolean(data.isPrimaryContact),
+    isFinancialResponsible: Boolean(data.isFinancialResponsible),
+    isLegalGuardian: Boolean(data.isLegalGuardian)
   };
 }
 
@@ -558,7 +594,9 @@ export async function saveOrganizationProfile(
   organization: Organization
 ) {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(doc(firestore, "organizations", organization.id), organization, { merge: true });
+  await setDoc(doc(firestore, "organizations", organization.id), cleanFirestoreData(organization), {
+    merge: true
+  });
 }
 
 export async function saveOrganizationBrandingSettings(
@@ -568,7 +606,7 @@ export async function saveOrganizationBrandingSettings(
   const firestore = getFirebaseFirestore(config);
   await setDoc(
     doc(firestore, getOrganizationBrandingDocumentPath({ organizationId: settings.organizationId })),
-    settings,
+    cleanFirestoreData(settings),
     { merge: true }
   );
 }
@@ -583,7 +621,7 @@ export async function saveOrganizationSubscriptionSettings(
       firestore,
       getOrganizationSubscriptionDocumentPath({ organizationId: settings.organizationId })
     ),
-    settings,
+    cleanFirestoreData(settings),
     { merge: true }
   );
 }
@@ -595,7 +633,7 @@ export async function saveOrganizationFeaturesSettings(
   const firestore = getFirebaseFirestore(config);
   await setDoc(
     doc(firestore, getOrganizationFeaturesDocumentPath({ organizationId: settings.organizationId })),
-    settings,
+    cleanFirestoreData(settings),
     { merge: true }
   );
 }
@@ -606,7 +644,7 @@ export async function savePersonProfile(
   person: Person
 ) {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(doc(firestore, getPeopleCollectionPath(context), person.id), person, {
+  await setDoc(doc(firestore, getPeopleCollectionPath(context), person.id), cleanFirestoreData(person), {
     merge: true
   });
 }
@@ -617,7 +655,7 @@ export async function saveFamilyProfile(
   family: Family
 ) {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(doc(firestore, getFamiliesCollectionPath(context), family.id), family, {
+  await setDoc(doc(firestore, getFamiliesCollectionPath(context), family.id), cleanFirestoreData(family), {
     merge: true
   });
 }
@@ -630,7 +668,7 @@ export async function saveFamilyMemberProfile(
   const firestore = getFirebaseFirestore(config);
   await setDoc(
     doc(firestore, getFamilyMembersCollectionPath(context, member.familyId), member.id),
-    member,
+    cleanFirestoreData(member),
     { merge: true }
   );
 }
@@ -650,6 +688,21 @@ export async function fetchPeople(
   return snapshot.docs.map((item) => toPerson(item.id, item.data()));
 }
 
+export async function fetchPersonById(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const snapshot = await getDoc(doc(firestore, getPeopleCollectionPath(context), personId));
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return toPerson(snapshot.id, snapshot.data());
+}
+
 export async function fetchFamilies(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -663,6 +716,37 @@ export async function fetchFamilies(
   const snapshot = await getDocs(familiesQuery);
 
   return snapshot.docs.map((item) => toFamily(item.id, item.data()));
+}
+
+export async function fetchFamilyById(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  familyId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const snapshot = await getDoc(doc(firestore, getFamiliesCollectionPath(context), familyId));
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return toFamily(snapshot.id, snapshot.data());
+}
+
+export async function fetchFamilyMembers(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  familyId: string,
+  maxItems = 20
+) {
+  const firestore = getFirebaseFirestore(config);
+  const membersQuery = query(
+    collection(firestore, getFamilyMembersCollectionPath(context, familyId)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(membersQuery);
+
+  return snapshot.docs.map((item) => toFamilyMember(item.id, item.data()));
 }
 
 export async function fetchPartnerOrganizations(
