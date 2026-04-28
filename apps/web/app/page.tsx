@@ -755,7 +755,7 @@ const navItems = [
   { label: "Resumo", icon: LayoutDashboard, href: "#overview" },
   { label: "Pessoas", icon: UsersRound, href: "/members" },
   { label: "Familias", icon: HeartHandshake, href: "#families" },
-  { label: "Jornadas", icon: MapIcon, href: "#journeys" },
+  { label: "Jornadas", icon: MapIcon, href: "/journeys" },
   { label: "Portaria", icon: ClipboardList, href: "/reception" },
   { label: "Celulas", icon: Waypoints, href: "#groups" },
   { label: "Eventos", icon: CalendarDays, href: "#events" },
@@ -814,7 +814,7 @@ const moduleHighlights = [
   {
     label: "Jornadas",
     description: "Proximos passos, missoes e progresso para cada pessoa acompanhada.",
-    href: "#journeys",
+    href: "/journeys",
     icon: Trophy,
     enabled: isModuleEnabled(tenantSettings.features, "journeys"),
     action: "Ver progresso"
@@ -879,6 +879,14 @@ const operationalShortcuts = [
     href: "/members",
     icon: UsersRound,
     meta: `${recentPeople.length} perfis demo`
+  },
+  {
+    label: "Jornadas",
+    title: "Funil vivo",
+    description: "Acompanhe convidado, aspirante, membro e integracao em celula.",
+    href: "/journeys",
+    icon: MapIcon,
+    meta: "Fluxo completo"
   },
   {
     label: "Novo cadastro",
@@ -1109,6 +1117,38 @@ export default function HomePage() {
   const openActionFeed = actionFeed.filter(
     (item) => !completedActionIds.includes(item.id)
   );
+  const journeyBottlenecks = [
+    {
+      label: "Visitantes sem contato",
+      value: capturedVisitors.filter((visitor) => !preparedCommunicationIds.includes(visitor.id)).length,
+      detail: "precisam de boas-vindas ou primeiro contato",
+      href: "/journeys"
+    },
+    {
+      label: "Aspirantes sem familia",
+      value: recentPeople.filter(
+        (person) => ["visitor", "congregant", "new_believer"].includes(person.memberStatus) && !person.primaryFamilyId
+      ).length,
+      detail: "ainda nao viraram panorama familiar",
+      href: "/members"
+    },
+    {
+      label: "Membros sem celula",
+      value: recentPeople.filter(
+        (person) =>
+          ["member", "leader", "volunteer"].includes(person.memberStatus) &&
+          !latestAttendance.some((attendance) => attendance.personId === person.id)
+      ).length,
+      detail: "membros ativos sem presenca recente em grupo",
+      href: "/journeys"
+    },
+    {
+      label: "Prontos para decisao",
+      value: dashboard.journeyProfiles.filter((profile) => profile.readinessLevel === "high").length,
+      detail: "jornadas pedindo proxima decisao pastoral",
+      href: "/journeys"
+    }
+  ];
   const selectedPerson = recentPeople.find((person) => person.id === selectedPersonId);
   const selectedJourneyProfile = dashboard.journeyProfiles.find(
     (profile) => profile.personId === selectedPersonId
@@ -1196,7 +1236,7 @@ export default function HomePage() {
       label: "Cuidar",
       title: "Jornada sugere o proximo passo",
       description: "Follow-ups, missoes e sinais pastorais deixam claro quem precisa de atencao.",
-      href: "#journeys",
+      href: "/journeys",
       icon: MapIcon,
       metric: `${openActionFeed.length} acoes abertas`
     },
@@ -1223,6 +1263,110 @@ export default function HomePage() {
       href: "#transparency",
       icon: ReceiptText,
       metric: transparencySummary.month
+    }
+  ];
+  const memberLifecycleStages = [
+    {
+      label: "01",
+      title: "Chegada do convidado",
+      description:
+        "A portaria registra nome, origem e telefone sem transformar a recepcao em burocracia.",
+      owner: "Equipe de recepcao",
+      module: "Portaria",
+      href: "/reception",
+      icon: ClipboardList,
+      tone: "blue",
+      records: ["visitorIntakes", "people", "visitorJourneys"],
+      nextActions: [
+        "Cumprimentar durante a celebracao",
+        "Enviar mensagem de boas-vindas",
+        "Identificar quem convidou"
+      ]
+    },
+    {
+      label: "02",
+      title: "Primeiro cuidado",
+      description:
+        "O visitante vira uma jornada acompanhada, com responsavel, canal e proxima acao clara.",
+      owner: "Acolhimento",
+      module: "Jornadas",
+      href: "/journeys",
+      icon: MessageSquareText,
+      tone: "green",
+      records: ["followUpTasks", "visitorJourneys"],
+      nextActions: [
+        "Confirmar primeira visita",
+        "Convidar para retorno",
+        "Encaminhar para classe ou celula"
+      ]
+    },
+    {
+      label: "03",
+      title: "Aspirante a membro",
+      description:
+        "Quando ha interesse real, o cadastro deixa de ser minimo e passa a mapear familia e contexto.",
+      owner: "Secretaria pastoral",
+      module: "Cadastro completo",
+      href: "/members/new",
+      icon: UserPlus,
+      tone: "orange",
+      records: ["people", "families", "family members"],
+      nextActions: [
+        "Coletar LGPD",
+        "Vincular grupo familiar",
+        "Classificar status pastoral"
+      ]
+    },
+    {
+      label: "04",
+      title: "Efetivacao como membro",
+      description:
+        "A pessoa passa a ter ficha completa, historico de cuidado, elegibilidade e responsabilidades.",
+      owner: "Lideranca",
+      module: "Membros",
+      href: "/members",
+      icon: UsersRound,
+      tone: "ink",
+      records: ["people.memberStatus", "memberCardCode", "consentLgpdAt"],
+      nextActions: [
+        "Validar dados sensiveis",
+        "Ativar Getro Pass se fizer sentido",
+        "Definir lider de acompanhamento"
+      ]
+    },
+    {
+      label: "05",
+      title: "Participacao em celula",
+      description:
+        "A integracao ganha corpo quando ha presenca, vinculo pequeno e acompanhamento semanal.",
+      owner: "Lider de celula",
+      module: "Celulas",
+      href: "#groups",
+      icon: Waypoints,
+      tone: "green",
+      records: ["groups", "meetings", "attendance"],
+      nextActions: [
+        "Convidar para grupo adequado",
+        "Registrar presenca",
+        "Sinalizar cuidado pastoral"
+      ]
+    },
+    {
+      label: "06",
+      title: "Membro ativo na comunidade",
+      description:
+        "A partir daqui o app acompanha servico, eventos, comunicacao, beneficios e transparencia.",
+      owner: "Gestao da igreja",
+      module: "Operacao completa",
+      href: "#actions",
+      icon: ShieldCheck,
+      tone: "gold",
+      records: ["events", "partnerBenefits", "financeReports"],
+      nextActions: [
+        "Participar de eventos",
+        "Servir em ministerios",
+        "Acompanhar prestacao de contas"
+      ]
     }
   ];
 
@@ -1551,6 +1695,31 @@ export default function HomePage() {
           ))}
         </section>
 
+        <section className="bottleneck-strip" aria-label="Gargalos da jornada">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Gargalos do fluxo</p>
+              <h2>Onde a igreja pode perder pessoas</h2>
+            </div>
+            <Link className="soft-pill" href="/journeys">
+              Abrir jornadas
+            </Link>
+          </div>
+          <div className="bottleneck-strip-grid">
+            {journeyBottlenecks.map((item) => (
+              <Link
+                className={item.value ? "bottleneck-mini has-risk" : "bottleneck-mini"}
+                href={item.href}
+                key={item.label}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <section className="shortcut-panel" aria-label="Atalhos operacionais">
           <div className="section-heading">
             <div>
@@ -1614,6 +1783,54 @@ export default function HomePage() {
                   <b>{step.metric}</b>
                 </div>
               </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="lifecycle-panel" aria-label="Fluxo completo do convidado ao membro ativo">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Jornada de vida</p>
+              <h2>Do convidado ao membro participante</h2>
+            </div>
+            <span className="soft-pill">Fluxo operacional</span>
+          </div>
+          <div className="lifecycle-grid">
+            {memberLifecycleStages.map((stage) => (
+              <article className={`lifecycle-card tone-${stage.tone}`} key={stage.label}>
+                <div className="lifecycle-card-header">
+                  <span>{stage.label}</span>
+                  <stage.icon size={18} />
+                </div>
+                <strong>{stage.title}</strong>
+                <p>{stage.description}</p>
+                <div className="lifecycle-meta">
+                  <small>{stage.owner}</small>
+                  <b>{stage.module}</b>
+                </div>
+                <div className="lifecycle-records">
+                  {stage.records.map((record) => (
+                    <code key={record}>{record}</code>
+                  ))}
+                </div>
+                <ul>
+                  {stage.nextActions.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+                <Link
+                  className="lifecycle-link"
+                  href={stage.href}
+                  onClick={() => {
+                    if (stage.href.startsWith("#")) {
+                      setActiveSection(stage.href.slice(1));
+                    }
+                  }}
+                >
+                  Abrir {stage.module}
+                  <ChevronRight size={16} />
+                </Link>
+              </article>
             ))}
           </div>
         </section>

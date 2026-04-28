@@ -119,6 +119,10 @@ export function getGroupsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/groups`;
 }
 
+export function getGroupMembersCollectionPath(context: TenantContext, groupId: string) {
+  return `organizations/${context.organizationId}/groups/${groupId}/members`;
+}
+
 export function getGroupMeetingsCollectionPath(context: TenantContext, groupId: string) {
   return `organizations/${context.organizationId}/groups/${groupId}/meetings`;
 }

@@ -22,6 +22,7 @@ import type {
   FollowUpTask,
   Group,
   GroupAttendance,
+  GroupMember,
   GroupMeeting,
   Organization,
   OrganizationBrandingSettings,
@@ -51,6 +52,7 @@ import {
   getFollowUpTasksCollectionPath,
   getFinanceReportsCollectionPath,
   getGroupAttendanceCollectionPath,
+  getGroupMembersCollectionPath,
   getGroupMeetingsCollectionPath,
   getGroupsCollectionPath,
   getMemberBenefitValidationsCollectionPath,
@@ -394,6 +396,17 @@ function toGroup(documentId: string, data: DocumentData): Group {
   };
 }
 
+function toGroupMember(documentId: string, data: DocumentData): GroupMember {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    groupId: String(data.groupId ?? ""),
+    personId: String(data.personId ?? ""),
+    roleInGroup: (data.roleInGroup as GroupMember["roleInGroup"]) ?? "member",
+    joinedAt: String(data.joinedAt ?? "")
+  };
+}
+
 function toGroupMeeting(documentId: string, data: DocumentData): GroupMeeting {
   return {
     id: documentId,
@@ -649,6 +662,23 @@ export async function savePersonProfile(
   });
 }
 
+export async function updatePersonMemberStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    memberStatus: Person["memberStatus"];
+    personId: string;
+    updatedByUserId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  await updateDoc(doc(firestore, getPeopleCollectionPath(context), params.personId), {
+    memberStatus: params.memberStatus,
+    memberStatusUpdatedAt: new Date().toISOString(),
+    memberStatusUpdatedByUserId: params.updatedByUserId ?? null
+  });
+}
+
 export async function saveFamilyProfile(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -837,6 +867,63 @@ export async function fetchFollowUpTasks(
   const snapshot = await getDocs(tasksQuery);
 
   return snapshot.docs.map((item) => toFollowUpTask(item.id, item.data()));
+}
+
+export async function createJourneyFollowUpTask(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    assignedToUserId?: string;
+    dueAt?: string;
+    personId: string;
+    title: string;
+    type: FollowUpTask["type"];
+    visitorJourneyId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const taskId = `followup_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const task: FollowUpTask = {
+    id: taskId,
+    organizationId: context.organizationId,
+    personId: params.personId,
+    visitorJourneyId: params.visitorJourneyId ?? "",
+    assignedToUserId: params.assignedToUserId,
+    title: params.title,
+    type: params.type,
+    status: "open",
+    dueAt: params.dueAt
+  };
+
+  await setDoc(
+    doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${taskId}`),
+    cleanFirestoreData({
+      ...task,
+      createdAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return task;
+}
+
+export async function updateVisitorJourneyStage(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    journeyId: string;
+    stage: VisitorJourney["currentStage"];
+    status?: VisitorJourney["status"];
+    updatedByUserId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  await updateDoc(doc(firestore, `${getVisitorJourneysCollectionPath(context)}/${params.journeyId}`), {
+    currentStage: params.stage,
+    status: params.status ?? "active",
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: params.updatedByUserId ?? null
+  });
 }
 
 export async function createVisitorIntakeWorkflow(
@@ -1034,6 +1121,61 @@ export async function fetchGroups(
   const snapshot = await getDocs(groupsQuery);
 
   return snapshot.docs.map((item) => toGroup(item.id, item.data()));
+}
+
+export async function fetchGroupMembers(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groups: readonly Group[],
+  maxItemsPerGroup = 20
+) {
+  const firestore = getFirebaseFirestore(config);
+  const snapshots = await Promise.all(
+    groups.map(async (group) => {
+      const membersQuery = query(
+        collection(firestore, getGroupMembersCollectionPath(context, group.id)),
+        limit(maxItemsPerGroup)
+      );
+      const snapshot = await getDocs(membersQuery);
+
+      return snapshot.docs.map((item) => toGroupMember(item.id, item.data()));
+    })
+  );
+
+  return snapshots.flat();
+}
+
+export async function assignPersonToGroup(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    assignedByUserId?: string;
+    groupId: string;
+    personId: string;
+    roleInGroup?: GroupMember["roleInGroup"];
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const memberId = `${params.groupId}_${params.personId}`;
+  const member: GroupMember = {
+    id: memberId,
+    organizationId: context.organizationId,
+    groupId: params.groupId,
+    personId: params.personId,
+    roleInGroup: params.roleInGroup ?? "visitor",
+    joinedAt: new Date().toISOString()
+  };
+
+  await setDoc(
+    doc(firestore, getGroupMembersCollectionPath(context, params.groupId), memberId),
+    cleanFirestoreData({
+      ...member,
+      assignedByUserId: params.assignedByUserId
+    }),
+    { merge: true }
+  );
+
+  return member;
 }
 
 export async function fetchGroupMeetings(

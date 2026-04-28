@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardList,
   LayoutDashboard,
+  Map,
   UserPlus,
   UsersRound
 } from "lucide-react";
@@ -31,6 +32,13 @@ const moduleNavItems = [
     href: "/members",
     icon: UsersRound,
     match: (pathname: string) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname)
+  },
+  {
+    label: "Jornadas",
+    description: "Funil vivo",
+    href: "/journeys",
+    icon: Map,
+    match: (pathname: string) => pathname.startsWith("/journeys")
   },
   {
     label: "Novo membro",
