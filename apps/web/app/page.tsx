@@ -756,7 +756,7 @@ const navItems = [
   { label: "Pessoas", icon: UsersRound, href: "/members" },
   { label: "Familias", icon: HeartHandshake, href: "#families" },
   { label: "Jornadas", icon: MapIcon, href: "#journeys" },
-  { label: "Portaria", icon: ClipboardList, href: "#reception" },
+  { label: "Portaria", icon: ClipboardList, href: "/reception" },
   { label: "Celulas", icon: Waypoints, href: "#groups" },
   { label: "Eventos", icon: CalendarDays, href: "#events" },
   { label: "Comunicacao", icon: MessageSquareText, href: "#actions" },
@@ -806,7 +806,7 @@ const moduleHighlights = [
   {
     label: "Portaria",
     description: "Entrada do visitante que cria pessoa, jornada, comunicacao e roteiro de acolhimento.",
-    href: "#reception",
+    href: "/reception",
     icon: ClipboardList,
     enabled: isModuleEnabled(tenantSettings.features, "visitors"),
     action: "Capturar visitante"
@@ -852,6 +852,41 @@ const moduleHighlights = [
     icon: Target,
     enabled: true,
     action: "Cadastrar instituicao"
+  }
+];
+
+const operationalShortcuts = [
+  {
+    label: "Painel geral",
+    title: "Visao completa",
+    description: "Volte para o resumo executivo com indicadores, filas e modulos.",
+    href: "#overview",
+    icon: LayoutDashboard,
+    meta: "Home do projeto"
+  },
+  {
+    label: "Portaria",
+    title: "Recepcao dedicada",
+    description: "Tela rapida para tablet ou notebook na entrada da celebracao.",
+    href: "/reception",
+    icon: ClipboardList,
+    meta: "Modulo dedicado"
+  },
+  {
+    label: "Membros",
+    title: "Base pastoral",
+    description: "Lista de pessoas, familias, filtros e fichas completas.",
+    href: "/members",
+    icon: UsersRound,
+    meta: `${recentPeople.length} perfis demo`
+  },
+  {
+    label: "Novo cadastro",
+    title: "Cadastrar membro",
+    description: "Crie pessoa, familia, LGPD e Getro Pass em uma ficha.",
+    href: "/members/new",
+    icon: UserPlus,
+    meta: "Secretaria"
   }
 ];
 
@@ -1113,7 +1148,7 @@ export default function HomePage() {
         type: "Visitante",
         title: visitor.name,
         detail: `${visitor.source} - ${visitor.nextStep}`,
-        href: "#reception"
+        href: "/reception"
       })),
       ...dashboard.activeGroups.map((group) => ({
         id: group.id,
@@ -1145,7 +1180,7 @@ export default function HomePage() {
       label: "Capturar",
       title: "Portaria registra a pessoa",
       description: "O visitante entra uma vez e ja nasce como pessoa, jornada e tarefa de cuidado.",
-      href: "#reception",
+      href: "/reception",
       icon: ClipboardList,
       metric: `${capturedVisitors.length} visitantes na fila`
     },
@@ -1408,7 +1443,9 @@ export default function HomePage() {
                             return;
                           }
 
-                          setActiveSection(result.href.slice(1));
+                          if (result.href.startsWith("#")) {
+                            setActiveSection(result.href.slice(1));
+                          }
                         }}
                       >
                         <span>{result.type}</span>
@@ -1514,6 +1551,38 @@ export default function HomePage() {
           ))}
         </section>
 
+        <section className="shortcut-panel" aria-label="Atalhos operacionais">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Central do projeto</p>
+              <h2>Escolha onde trabalhar agora</h2>
+            </div>
+            <span className="soft-pill">Paginas principais</span>
+          </div>
+          <div className="shortcut-grid">
+            {operationalShortcuts.map((shortcut) => (
+              <Link
+                className="shortcut-card"
+                href={shortcut.href}
+                key={shortcut.label}
+                onClick={() => {
+                  if (shortcut.href.startsWith("#")) {
+                    setActiveSection(shortcut.href.slice(1));
+                  }
+                }}
+              >
+                <div className="shortcut-icon">
+                  <shortcut.icon size={19} />
+                </div>
+                <span>{shortcut.label}</span>
+                <strong>{shortcut.title}</strong>
+                <p>{shortcut.description}</p>
+                <small>{shortcut.meta}</small>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <section className="workflow-panel" aria-label="Mapa da jornada operacional">
           <div className="section-heading">
             <div>
@@ -1528,7 +1597,11 @@ export default function HomePage() {
                 className="workflow-step"
                 href={step.href}
                 key={step.label}
-                onClick={() => setActiveSection(step.href.slice(1))}
+                onClick={() => {
+                  if (step.href.startsWith("#")) {
+                    setActiveSection(step.href.slice(1));
+                  }
+                }}
               >
                 <span className="workflow-index">{String(index + 1).padStart(2, "0")}</span>
                 <div className="workflow-icon">

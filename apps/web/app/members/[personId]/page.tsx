@@ -12,6 +12,7 @@ import {
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { Family, FamilyMember, Person } from "@alvo/types";
+import { ModuleNav } from "../../module-nav";
 import { useAppAuth } from "../../providers";
 
 const organizationId = "org_alvo_demo";
@@ -115,6 +116,7 @@ export default function MemberProfilePage() {
 
   return (
     <main className="form-page profile-page">
+      <ModuleNav />
       <section className="profile-hero">
         <div>
           <Link className="back-link" href="/members">

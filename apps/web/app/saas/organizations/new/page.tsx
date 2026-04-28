@@ -17,6 +17,7 @@ import type {
   OrganizationFeaturesSettings,
   OrganizationSubscriptionSettings
 } from "@alvo/types";
+import { ModuleNav } from "../../../module-nav";
 import { useAppAuth } from "../../../providers";
 
 export default function NewContractingOrganizationPage() {
@@ -144,6 +145,7 @@ export default function NewContractingOrganizationPage() {
 
   return (
     <main className="form-page saas-form-page">
+      <ModuleNav />
       <section className="form-hero">
         <Link className="back-link" href="/">
           Voltar ao painel

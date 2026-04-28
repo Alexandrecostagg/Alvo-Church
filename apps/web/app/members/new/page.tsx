@@ -10,6 +10,7 @@ import {
   savePersonProfile
 } from "@alvo/firebase";
 import type { Family, FamilyMember, Person } from "@alvo/types";
+import { ModuleNav } from "../../module-nav";
 import { useAppAuth } from "../../providers";
 
 const organizationId = "org_alvo_demo";
@@ -154,6 +155,7 @@ export default function NewMemberPage() {
 
   return (
     <main className="form-page">
+      <ModuleNav />
       <section className="form-hero">
         <Link className="back-link" href="/">
           Voltar ao painel

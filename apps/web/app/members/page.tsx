@@ -9,6 +9,7 @@ import {
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { Family, Person } from "@alvo/types";
+import { ModuleNav } from "../module-nav";
 import { useAppAuth } from "../providers";
 
 const organizationId = "org_alvo_demo";
@@ -134,6 +135,7 @@ export default function MembersDirectoryPage() {
 
   return (
     <main className="form-page directory-page">
+      <ModuleNav />
       <section className="form-hero">
         <Link className="back-link" href="/">
           Voltar ao painel
@@ -148,7 +150,7 @@ export default function MembersDirectoryPage() {
           <Link className="primary-button" href="/members/new">
             Cadastrar membro
           </Link>
-          <Link className="ghost-button" href="/#reception">
+          <Link className="ghost-button" href="/reception">
             Capturar visitante
           </Link>
           <span className="form-status">{status}</span>
