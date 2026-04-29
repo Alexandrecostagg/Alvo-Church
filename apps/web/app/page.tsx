@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardList,
   Flame,
+  Handshake,
   HeartHandshake,
   Landmark,
   LayoutDashboard,
@@ -757,7 +758,8 @@ const navItems = [
   { label: "Familias", icon: HeartHandshake, href: "#families" },
   { label: "Jornadas", icon: MapIcon, href: "/journeys" },
   { label: "Portaria", icon: ClipboardList, href: "/reception" },
-  { label: "Celulas", icon: Waypoints, href: "#groups" },
+  { label: "Celulas", icon: Waypoints, href: "/groups" },
+  { label: "Escalas", icon: Handshake, href: "/serving" },
   { label: "Eventos", icon: CalendarDays, href: "#events" },
   { label: "Comunicacao", icon: MessageSquareText, href: "#actions" },
   { label: "Transparencia", icon: Landmark, href: "#transparency" }
@@ -822,12 +824,20 @@ const moduleHighlights = [
   {
     label: "Celulas e eventos",
     description: "Convites, presencas, check-ins e integracao pratica na agenda da igreja.",
-    href: "#groups",
+    href: "/groups",
     icon: Waypoints,
     enabled:
       isModuleEnabled(tenantSettings.features, "groups") &&
       isModuleEnabled(tenantSettings.features, "events"),
     action: "Organizar agenda"
+  },
+  {
+    label: "Escalas e equipes",
+    description: "Voluntarios, ministerios, confirmacoes, justificativas e funcionarios contratados.",
+    href: "/serving",
+    icon: Handshake,
+    enabled: isModuleEnabled(tenantSettings.features, "volunteers"),
+    action: "Montar escala"
   },
   {
     label: "Comunicacao",
@@ -887,6 +897,22 @@ const operationalShortcuts = [
     href: "/journeys",
     icon: MapIcon,
     meta: "Fluxo completo"
+  },
+  {
+    label: "Celulas",
+    title: "Comunidade pequena",
+    description: "Veja grupos, participantes, presencas e pessoas ainda sem celula.",
+    href: "/groups",
+    icon: Waypoints,
+    meta: `${activeGroups.length} grupos ativos`
+  },
+  {
+    label: "Escalas",
+    title: "Servidores e equipes",
+    description: "Monte escalas, confirme presencas e acompanhe justificativas.",
+    href: "/serving",
+    icon: Handshake,
+    meta: "Voluntarios"
   },
   {
     label: "Novo cadastro",
@@ -1195,7 +1221,7 @@ export default function HomePage() {
         type: "Celula",
         title: group.name,
         detail: `${getGroupTypeLabel(group.type)} · ${group.meetingTime}`,
-        href: "#groups"
+        href: "/groups"
       })),
       ...dashboard.publishedEvents.map((event) => ({
         id: event.id,
@@ -1244,17 +1270,17 @@ export default function HomePage() {
       label: "Integrar",
       title: "Grupos e eventos fecham o ciclo",
       description: "Convites, presencas e check-ins mostram se a pessoa saiu da visita para comunidade.",
-      href: "#groups",
+      href: "/groups",
       icon: Waypoints,
       metric: `${latestAttendance.length} presencas recentes`
     },
     {
       label: "Fortalecer",
-      title: "Getro Pass e comunicacao ampliam valor",
-      description: "Membro se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
-      href: "#actions",
-      icon: ShieldCheck,
-      metric: `${partnerBenefits.length} beneficios`
+      title: "Servico, Getro Pass e comunicacao ampliam valor",
+      description: "Membro serve com escala clara, se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
+      href: "/serving",
+      icon: Handshake,
+      metric: `${tenantSettings.features.modules.volunteers.enabled ? "Escalas ativas" : partnerBenefits.length + " beneficios"}`
     },
     {
       label: "Prestar contas",
@@ -1341,7 +1367,7 @@ export default function HomePage() {
         "A integracao ganha corpo quando ha presenca, vinculo pequeno e acompanhamento semanal.",
       owner: "Lider de celula",
       module: "Celulas",
-      href: "#groups",
+      href: "/groups",
       icon: Waypoints,
       tone: "green",
       records: ["groups", "meetings", "attendance"],
@@ -1357,11 +1383,11 @@ export default function HomePage() {
       description:
         "A partir daqui o app acompanha servico, eventos, comunicacao, beneficios e transparencia.",
       owner: "Gestao da igreja",
-      module: "Operacao completa",
-      href: "#actions",
-      icon: ShieldCheck,
+      module: "Escalas e operacao",
+      href: "/serving",
+      icon: Handshake,
       tone: "gold",
-      records: ["events", "partnerBenefits", "financeReports"],
+      records: ["serviceTeams", "serviceAssignments", "employees"],
       nextActions: [
         "Participar de eventos",
         "Servir em ministerios",

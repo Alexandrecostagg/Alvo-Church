@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   ClipboardList,
+  Handshake,
   LayoutDashboard,
   Map,
   UserPlus,
-  UsersRound
+  UsersRound,
+  Waypoints
 } from "lucide-react";
 
 const moduleNavItems = [
@@ -39,6 +41,20 @@ const moduleNavItems = [
     href: "/journeys",
     icon: Map,
     match: (pathname: string) => pathname.startsWith("/journeys")
+  },
+  {
+    label: "Celulas",
+    description: "Grupos",
+    href: "/groups",
+    icon: Waypoints,
+    match: (pathname: string) => pathname.startsWith("/groups")
+  },
+  {
+    label: "Escalas",
+    description: "Servico",
+    href: "/serving",
+    icon: Handshake,
+    match: (pathname: string) => pathname.startsWith("/serving")
   },
   {
     label: "Novo membro",

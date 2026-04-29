@@ -90,6 +90,15 @@ function removeUndefinedFields(value: unknown): unknown {
   return value;
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function toOrganization(documentId: string, data: DocumentData): Organization {
   return {
     id: documentId,
@@ -1123,6 +1132,50 @@ export async function fetchGroups(
   return snapshot.docs.map((item) => toGroup(item.id, item.data()));
 }
 
+export async function createGroup(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    capacity?: number;
+    city?: string;
+    createdByUserId?: string;
+    meetingDayOfWeek?: number;
+    meetingTime?: string;
+    name: string;
+    state?: string;
+    type?: Group["type"];
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const groupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const group: Group = {
+    id: groupId,
+    organizationId: context.organizationId,
+    name: params.name,
+    slug: slugify(params.name),
+    type: params.type ?? "cell",
+    status: "active",
+    visibility: "internal",
+    meetingDayOfWeek: params.meetingDayOfWeek,
+    meetingTime: params.meetingTime,
+    city: params.city,
+    state: params.state,
+    capacity: params.capacity
+  };
+
+  await setDoc(
+    doc(firestore, getGroupsCollectionPath(context), groupId),
+    cleanFirestoreData({
+      ...group,
+      createdAt: new Date().toISOString(),
+      createdByUserId: params.createdByUserId
+    }),
+    { merge: true }
+  );
+
+  return group;
+}
+
 export async function fetchGroupMembers(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -1223,6 +1276,100 @@ export async function fetchGroupAttendance(
   );
 
   return snapshots.flat();
+}
+
+export async function createGroupMeeting(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    createdByUserId?: string;
+    groupId: string;
+    scheduledStartAt?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const meetingId = `meeting_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const meeting: GroupMeeting = {
+    id: meetingId,
+    organizationId: context.organizationId,
+    groupId: params.groupId,
+    scheduledStartAt: params.scheduledStartAt ?? new Date().toISOString(),
+    meetingStatus: "scheduled"
+  };
+
+  await setDoc(
+    doc(firestore, getGroupMeetingsCollectionPath(context, params.groupId), meetingId),
+    cleanFirestoreData({
+      ...meeting,
+      createdAt: new Date().toISOString(),
+      createdByUserId: params.createdByUserId
+    }),
+    { merge: true }
+  );
+
+  return meeting;
+}
+
+export async function updateGroupMeetingStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    groupId: string;
+    meetingId: string;
+    status: GroupMeeting["meetingStatus"];
+    updatedByUserId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await updateDoc(
+    doc(firestore, getGroupMeetingsCollectionPath(context, params.groupId), params.meetingId),
+    {
+      completedAt: params.status === "completed" ? new Date().toISOString() : null,
+      meetingStatus: params.status,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: params.updatedByUserId ?? null
+    }
+  );
+}
+
+export async function recordGroupAttendance(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    groupId: string;
+    groupMeetingId: string;
+    personId: string;
+    recordedByUserId?: string;
+    status: GroupAttendance["attendanceStatus"];
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  const attendanceId = `${params.groupMeetingId}_${params.personId}`;
+  const attendance: GroupAttendance = {
+    id: attendanceId,
+    organizationId: context.organizationId,
+    groupId: params.groupId,
+    groupMeetingId: params.groupMeetingId,
+    personId: params.personId,
+    attendanceStatus: params.status
+  };
+
+  await setDoc(
+    doc(
+      firestore,
+      getGroupAttendanceCollectionPath(context, params.groupId, params.groupMeetingId),
+      attendanceId
+    ),
+    cleanFirestoreData({
+      ...attendance,
+      recordedAt: new Date().toISOString(),
+      recordedByUserId: params.recordedByUserId
+    }),
+    { merge: true }
+  );
+
+  return attendance;
 }
 
 export async function fetchEvents(
