@@ -328,6 +328,8 @@ export interface FirestorePathMap {
   memberBenefitValidations: string;
   visitorIntakes: string;
   groups: string;
+  serviceAssignments: string;
+  serviceTeams: string;
   events: string;
   tribes: string;
   financeReports: string;
@@ -525,6 +527,43 @@ export interface GroupsDashboardSnapshot extends VisitorDashboardSnapshot {
   activeGroups: Group[];
   upcomingMeetings: GroupMeeting[];
   latestAttendance: GroupAttendance[];
+}
+
+export type ServiceAssignmentStatus =
+  | "pending"
+  | "confirmed"
+  | "declined"
+  | "present"
+  | "absent";
+
+export interface ServiceTeam {
+  id: string;
+  organizationId: string;
+  campusId?: string;
+  code: string;
+  name: string;
+  summary?: string;
+  targetVolunteers?: number;
+  status: "active" | "inactive";
+}
+
+export interface ServiceAssignment {
+  id: string;
+  organizationId: string;
+  campusId?: string;
+  serviceTeamId: string;
+  ministryCode: string;
+  personId: string;
+  role: string;
+  serviceDate: string;
+  status: ServiceAssignmentStatus;
+  responseNote?: string;
+  confirmedAt?: string;
+  declinedAt?: string;
+  checkedInAt?: string;
+  absentAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type EventType =

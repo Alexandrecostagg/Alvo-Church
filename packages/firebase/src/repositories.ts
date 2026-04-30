@@ -33,6 +33,8 @@ import type {
   PartnerOrganization,
   MemberBenefitValidation,
   Person,
+  ServiceAssignment,
+  ServiceTeam,
   TenantRuntimeSnapshot,
   TenantContext,
   VisitorIntake,
@@ -59,6 +61,8 @@ import {
   getPartnerBenefitsCollectionPath,
   getPartnersCollectionPath,
   getPeopleCollectionPath,
+  getServiceAssignmentsCollectionPath,
+  getServiceTeamsCollectionPath,
   getUsersCollectionPath,
   getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath
@@ -216,6 +220,42 @@ function toPerson(documentId: string, data: DocumentData): Person {
     status: (data.status as Person["status"]) ?? "active",
     tribePrimaryCode: data.tribePrimaryCode as Person["tribePrimaryCode"],
     tribeSecondaryCode: data.tribeSecondaryCode as Person["tribeSecondaryCode"]
+  };
+}
+
+function toServiceTeam(documentId: string, data: DocumentData): ServiceTeam {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    campusId: data.campusId ? String(data.campusId) : undefined,
+    code: String(data.code ?? documentId),
+    name: String(data.name ?? ""),
+    summary: data.summary ? String(data.summary) : undefined,
+    targetVolunteers: typeof data.targetVolunteers === "number" ? data.targetVolunteers : undefined,
+    status: (data.status as ServiceTeam["status"]) ?? "active"
+  };
+}
+
+function toServiceAssignment(documentId: string, data: DocumentData): ServiceAssignment {
+  const now = new Date().toISOString();
+
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    campusId: data.campusId ? String(data.campusId) : undefined,
+    serviceTeamId: String(data.serviceTeamId ?? data.ministryCode ?? ""),
+    ministryCode: String(data.ministryCode ?? data.serviceTeamId ?? ""),
+    personId: String(data.personId ?? ""),
+    role: String(data.role ?? "Apoio"),
+    serviceDate: String(data.serviceDate ?? now),
+    status: (data.status as ServiceAssignment["status"]) ?? "pending",
+    responseNote: data.responseNote ? String(data.responseNote) : undefined,
+    confirmedAt: data.confirmedAt ? String(data.confirmedAt) : undefined,
+    declinedAt: data.declinedAt ? String(data.declinedAt) : undefined,
+    checkedInAt: data.checkedInAt ? String(data.checkedInAt) : undefined,
+    absentAt: data.absentAt ? String(data.absentAt) : undefined,
+    createdAt: String(data.createdAt ?? now),
+    updatedAt: String(data.updatedAt ?? now)
   };
 }
 
@@ -1370,6 +1410,76 @@ export async function recordGroupAttendance(
   );
 
   return attendance;
+}
+
+export async function fetchServiceTeams(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 20
+) {
+  const firestore = getFirebaseFirestore(config);
+  const teamsQuery = query(
+    collection(firestore, getServiceTeamsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(teamsQuery);
+
+  return snapshot.docs.map((item) => toServiceTeam(item.id, item.data()));
+}
+
+export async function saveServiceTeam(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  team: ServiceTeam
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getServiceTeamsCollectionPath(context), team.id),
+    cleanFirestoreData({
+      ...team,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return team;
+}
+
+export async function fetchServiceAssignments(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 120
+) {
+  const firestore = getFirebaseFirestore(config);
+  const assignmentsQuery = query(
+    collection(firestore, getServiceAssignmentsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(assignmentsQuery);
+
+  return snapshot.docs.map((item) => toServiceAssignment(item.id, item.data()));
+}
+
+export async function saveServiceAssignment(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  assignment: ServiceAssignment
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getServiceAssignmentsCollectionPath(context), assignment.id),
+    cleanFirestoreData({
+      ...assignment,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return assignment;
 }
 
 export async function fetchEvents(

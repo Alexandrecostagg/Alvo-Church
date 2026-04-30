@@ -3596,6 +3596,7 @@ code {
 
 .serving-hero,
 .serving-metric-grid,
+.serving-flow-card,
 .serving-workbench,
 .staff-panel {
   max-width: 1180px;
@@ -3708,6 +3709,53 @@ code {
   font-size: 13px;
 }
 
+.serving-flow-card {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+}
+
+.serving-flow-card > div {
+  position: relative;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 34%),
+    rgba(255, 250, 242, 0.92);
+}
+
+.serving-flow-card span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.serving-flow-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--alvo-ink);
+}
+
+.serving-flow-card p {
+  margin: 6px 0 0;
+  color: var(--alvo-ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .serving-workbench {
   display: grid;
   gap: 16px;
@@ -3733,6 +3781,41 @@ code {
   background:
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.1), transparent 34%),
     rgba(255, 255, 255, 0.92);
+}
+
+.serving-next-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(14, 165, 233, 0.16);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(240, 249, 255, 0.94), rgba(255, 255, 255, 0.9));
+}
+
+.serving-next-step span {
+  color: #0369a1;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.serving-next-step strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--alvo-ink);
+  font-size: 18px;
+}
+
+.serving-next-step p {
+  margin: 5px 0 0;
+  color: var(--alvo-ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .ministry-list,
@@ -3816,10 +3899,62 @@ code {
   line-height: 1.42;
 }
 
+.scale-card small {
+  display: block;
+  margin-top: 7px;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.scale-note-input {
+  width: min(100%, 360px);
+  min-height: 34px;
+  margin-top: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--alvo-ink);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .volunteer-card small {
   display: block;
   color: #c2410c;
   font-weight: 900;
+}
+
+.serving-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 15px;
+  background: rgba(241, 245, 249, 0.74);
+}
+
+.serving-mode-switch button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--alvo-ink-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.serving-mode-switch button.is-active {
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
 }
 
 .servant-intake-form {
@@ -4914,6 +5049,7 @@ code {
   .group-detail-grid,
   .group-columns,
   .serving-metric-grid,
+  .serving-flow-card,
   .staff-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4995,8 +5131,10 @@ code {
   .group-detail-grid,
   .group-columns,
   .serving-metric-grid,
+  .serving-flow-card,
   .staff-grid,
   .scale-card,
+  .serving-next-step,
   .meeting-summary-grid,
   .quick-group-grid,
   .member-flow-lane,
@@ -5025,6 +5163,17 @@ code {
 
   .scale-actions {
     justify-content: flex-start;
+  }
+
+  .module-nav-links {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .module-nav-link {
+    min-width: 142px;
   }
 
   .directory-row {

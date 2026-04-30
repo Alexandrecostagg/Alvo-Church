@@ -82,6 +82,8 @@ export function getTenantPaths(context: TenantContext): FirestorePathMap {
     memberBenefitValidations: `${base}/memberBenefitValidations`,
     visitorIntakes: `${base}/visitorIntakes`,
     groups: `${base}/groups`,
+    serviceAssignments: `${base}/serviceAssignments`,
+    serviceTeams: `${base}/serviceTeams`,
     events: `${base}/events`,
     tribes: `${base}/tribes`,
     financeReports: `${base}/financeReports`,

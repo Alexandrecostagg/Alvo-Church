@@ -135,6 +135,14 @@ export function getGroupAttendanceCollectionPath(
   return `organizations/${context.organizationId}/groups/${groupId}/meetings/${meetingId}/attendance`;
 }
 
+export function getServiceTeamsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/serviceTeams`;
+}
+
+export function getServiceAssignmentsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/serviceAssignments`;
+}
+
 export function getEventsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/events`;
 }
