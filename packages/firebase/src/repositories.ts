@@ -40,7 +40,7 @@ import type {
   VisitorIntake,
   VisitorJourney
 } from "@alvo/types";
-import { getFirebaseWebApp, type FirebaseWebRuntimeConfig } from "./client";
+import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
   getOrganizationBrandingDocumentPath,
   getOrganizationFeaturesDocumentPath,
@@ -68,9 +68,7 @@ import {
   getVisitorJourneysCollectionPath
 } from "./index";
 
-function getFirebaseFirestore(config: FirebaseWebRuntimeConfig): Firestore {
-  return getFirestore(getFirebaseWebApp(config));
-}
+
 
 function cleanFirestoreData<T>(value: T): DocumentData {
   return removeUndefinedFields(value) as DocumentData;

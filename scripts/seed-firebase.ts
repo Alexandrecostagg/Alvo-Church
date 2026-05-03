@@ -30,7 +30,11 @@ interface ServiceAccount {
   private_key: string;
 }
 
-function getServiceAccount(): ServiceAccount {
+function getServiceAccount(): ServiceAccount | null {
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    return null;
+  }
+
   const rawFromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const rawFromPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
     ? readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, "utf8")
@@ -39,7 +43,7 @@ function getServiceAccount(): ServiceAccount {
 
   if (!raw) {
     throw new Error(
-      "Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH."
+      "Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH (or use FIRESTORE_EMULATOR_HOST)."
     );
   }
 
@@ -51,18 +55,24 @@ function getServiceAccount(): ServiceAccount {
   };
 }
 
-function getProjectId(serviceAccount: ServiceAccount) {
-  return process.env.FIREBASE_PROJECT_ID ?? serviceAccount.project_id;
+function getProjectId(serviceAccount: ServiceAccount | null) {
+  return process.env.FIREBASE_PROJECT_ID ?? serviceAccount?.project_id ?? "alvo-church";
 }
 
 async function run() {
   const serviceAccount = getServiceAccount();
 
   if (getApps().length === 0) {
-    initializeApp({
-      credential: cert(serviceAccount),
-      projectId: getProjectId(serviceAccount)
-    });
+    if (serviceAccount) {
+      initializeApp({
+        credential: cert(serviceAccount),
+        projectId: getProjectId(serviceAccount)
+      });
+    } else {
+      initializeApp({
+        projectId: getProjectId(null)
+      });
+    }
   }
 
   const firestore = getFirestore();

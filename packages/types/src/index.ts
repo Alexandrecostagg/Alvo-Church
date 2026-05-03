@@ -494,6 +494,7 @@ export interface Group {
   city?: string;
   state?: string;
   capacity?: number;
+  tribeCode?: TribeCode;
 }
 
 export interface GroupMember {

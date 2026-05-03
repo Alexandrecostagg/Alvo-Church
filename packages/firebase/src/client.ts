@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   getAuth,
   initializeAuth,
   onAuthStateChanged,
@@ -9,6 +10,7 @@ import {
   type Auth,
   type User
 } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
 
 export interface FirebaseWebRuntimeConfig {
@@ -18,6 +20,7 @@ export interface FirebaseWebRuntimeConfig {
   storageBucket: string;
   messagingSenderId?: string;
   appId?: string;
+  useEmulator?: boolean;
 }
 
 export type FirebaseAuthUser = User;
@@ -35,6 +38,7 @@ const REQUIRED_FIREBASE_WEB_CONFIG_FIELDS = [
 let firebaseApp: FirebaseApp | null = null;
 let firebaseAuth: Auth | null = null;
 let firebaseMobileAuth: Auth | null = null;
+let firebaseFirestore: Firestore | null = null;
 
 export function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
   return getMissingFirebaseWebRuntimeConfigFields(config).length === 0;
@@ -55,7 +59,8 @@ export function createFirebaseWebRuntimeConfigFromEnv(
     projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
     storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
     messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID
+    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
   };
 }
 
@@ -69,7 +74,8 @@ export function createFirebaseRuntimeConfigFromEnv(
     projectId: env[`${prefix}_FIREBASE_PROJECT_ID`] ?? "",
     storageBucket: env[`${prefix}_FIREBASE_STORAGE_BUCKET`] ?? "",
     messagingSenderId: env[`${prefix}_FIREBASE_MESSAGING_SENDER_ID`],
-    appId: env[`${prefix}_FIREBASE_APP_ID`]
+    appId: env[`${prefix}_FIREBASE_APP_ID`],
+    useEmulator: env[`${prefix}_USE_FIREBASE_EMULATOR`] === "true"
   };
 }
 
@@ -90,9 +96,26 @@ export function getFirebaseWebAuth(config: FirebaseWebRuntimeConfig) {
         : initializeAuth(app, {
             persistence: browserLocalPersistence
           });
+          
+    if (config.useEmulator) {
+      connectAuthEmulator(firebaseAuth, "http://localhost:9099");
+    }
   }
 
   return firebaseAuth;
+}
+
+export function getFirebaseFirestore(config: FirebaseWebRuntimeConfig) {
+  if (!firebaseFirestore) {
+    const app = getFirebaseWebApp(config);
+    firebaseFirestore = getFirestore(app);
+    
+    if (config.useEmulator) {
+      connectFirestoreEmulator(firebaseFirestore, "localhost", 8080);
+    }
+  }
+
+  return firebaseFirestore;
 }
 
 export function subscribeToFirebaseAuthState(
