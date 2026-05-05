@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "next build --webpack",
-    "build:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh opennextjs-cloudflare build",
+    "build:cloudflare": "next build && npx @cloudflare/next-on-pages",
     "dev": "next dev --webpack",
     "preview:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler dev'",
     "deploy:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler deploy'",
@@ -23,6 +23,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
     "@opennextjs/cloudflare": "^1.18.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.2",
