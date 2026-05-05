@@ -44,6 +44,7 @@ const navigationGroups = [
       { label: "Células", icon: Waypoints, href: "/groups", match: (pathname: string) => pathname.startsWith("/groups") },
       { label: "Jornadas", icon: MapIcon, href: "/journeys", match: (pathname: string) => pathname.startsWith("/journeys") },
       { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname.startsWith("/serving") },
+      { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", match: (pathname: string) => pathname.startsWith("/kids/scan") },
     ]
   },
   {

@@ -102,14 +102,17 @@ export function GroupsView() {
           return;
         }
 
-        setGroups(nextGroups);
-        setPeople(nextPeople);
+        const finalGroups = nextGroups.length > 0 ? nextGroups : (activeGroups as unknown as Group[]);
+        const finalPeople = nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]);
+
+        setGroups(finalGroups);
+        setPeople(finalPeople);
         setGroupMembers(nextMembers);
         setMeetings(nextMeetings);
         setAttendance(nextAttendance);
-        setSelectedGroupId((currentId) => currentId ?? nextGroups[0]?.id ?? null);
+        setSelectedGroupId((currentId) => currentId ?? finalGroups[0]?.id ?? null);
         setStatus(
-          `${nextGroups.length} celula(s), ${nextMembers.length} vinculo(s), ${nextMeetings.length} encontro(s) e ${nextAttendance.length} presenca(s).`
+          `${nextGroups.length} célula(s) reais [${finalGroups.length} total], ${nextMembers.length} vínculo(s), ${nextMeetings.length} encontro(s).`
         );
       } catch (error) {
         if (!cancelled) {

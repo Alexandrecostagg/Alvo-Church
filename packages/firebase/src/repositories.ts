@@ -1186,6 +1186,7 @@ export async function createGroup(
     name: string;
     state?: string;
     type?: Group["type"];
+    tribeCode?: string;
   }
 ) {
   const firestore = getFirebaseFirestore(config);
@@ -1202,7 +1203,8 @@ export async function createGroup(
     meetingTime: params.meetingTime,
     city: params.city,
     state: params.state,
-    capacity: params.capacity
+    capacity: params.capacity,
+    tribeCode: params.tribeCode as any
   };
 
   await setDoc(
