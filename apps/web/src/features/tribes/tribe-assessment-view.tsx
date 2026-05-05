@@ -76,7 +76,7 @@ export function TribeAssessmentView() {
           organizationId,
           tribeAssessmentId: assessmentId,
           tribeCode: s.tribeCode,
-          scoreRaw: s.score,
+          scoreRaw: s.scoreRaw,
           rankPosition: idx + 1
         }));
 
