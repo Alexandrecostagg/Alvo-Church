@@ -237,14 +237,27 @@ export function JourneysView() {
           return;
         }
 
-        setPeople(nextPeople);
-        setJourneys(nextJourneys);
-        setTasks(nextTasks);
-        setGroups(nextGroups);
-        setGroupMembers(nextGroupMembers);
-        setSelectedPersonId((currentId) => currentId ?? nextPeople[0]?.id ?? null);
+        const finalPeople = nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]);
+        const finalJourneys = nextJourneys.length > 0 ? nextJourneys : (activeJourneys as unknown as VisitorJourney[]);
+        const finalTasks = nextTasks.length > 0 ? nextTasks : (followUps as unknown as FollowUpTask[]);
+        const finalGroups = nextGroups.length > 0 ? nextGroups : (activeGroups as unknown as Group[]);
+        const finalGroupMembers = nextGroupMembers.length > 0 ? nextGroupMembers : (latestAttendance.map(a => ({
+          id: `member_${a.id}`,
+          organizationId,
+          groupId: a.groupId,
+          personId: a.personId,
+          roleInGroup: "member",
+          joinedAt: new Date().toISOString()
+        })) as unknown as GroupMember[]);
+
+        setPeople(finalPeople);
+        setJourneys(finalJourneys);
+        setTasks(finalTasks);
+        setGroups(finalGroups);
+        setGroupMembers(finalGroupMembers);
+        setSelectedPersonId((currentId) => currentId ?? finalPeople[0]?.id ?? null);
         setStatus(
-          `${nextPeople.length} pessoa(s), ${nextJourneys.length} jornada(s), ${nextTasks.length} tarefa(s) e ${nextGroups.length} celula(s).`
+          `${nextPeople.length} pessoa(s) [${finalPeople.length} total], ${nextJourneys.length} jornada(s), ${nextTasks.length} tarefa(s).`
         );
       } catch (error) {
         if (!cancelled) {

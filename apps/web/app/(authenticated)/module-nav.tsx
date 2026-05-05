@@ -27,6 +27,7 @@ const navigationGroups = [
     items: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
       { label: "Portaria", icon: ClipboardList, href: "/reception", match: (pathname: string) => pathname.startsWith("/reception") },
+      { label: "Finanças", icon: Landmark, href: "/finance", match: (pathname: string) => pathname.startsWith("/finance") },
     ]
   },
   {
