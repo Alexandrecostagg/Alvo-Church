@@ -62,7 +62,7 @@ export function TribeAssessmentView() {
         const assessment = {
           id: assessmentId,
           organizationId,
-          personId: user?.id || "anonymous",
+          personId: user?.uid || "anonymous",
           assessmentType: "initial" as const,
           status: "validated" as const,
           primaryTribeCode: primaryTribeCode,
