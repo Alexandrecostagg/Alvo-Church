@@ -12,7 +12,9 @@ import {
   Heart,
   ChevronRight,
   ShieldCheck,
-  Star
+  Star,
+  Baby,
+  Handshake
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
