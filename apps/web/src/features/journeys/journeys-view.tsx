@@ -28,6 +28,7 @@ import {
 } from "@alvo/firebase";
 import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { recentPeople, activeJourneys, followUps, activeGroups, latestAttendance } from "../../lib/mock-data";
 
 const journeyLanes = [
   {

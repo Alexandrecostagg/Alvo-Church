@@ -26,6 +26,7 @@ import {
 } from "@alvo/firebase";
 import type { Group, GroupAttendance, GroupMeeting, GroupMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { recentPeople, activeGroups } from "../../lib/mock-data";
 
 const weekdayOptions = [
   { label: "Domingo", value: 0 },

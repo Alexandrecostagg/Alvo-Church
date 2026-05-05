@@ -23,31 +23,31 @@ const mockEvents: Event[] = [
   {
     id: "event_women_2026",
     organizationId: "org_alvo",
-    title: "Conferência Águas Profundas",
+    name: "Conferência Águas Profundas",
+    slug: "conferencia-aguas-profundas",
     description: "Um mergulho na identidade e propósito feminino.",
     type: "conference",
     status: "published",
     locationType: "onsite",
-    locationName: "Campus Central Alvo",
-    startAt: "2026-06-12T19:00:00Z",
-    endAt: "2026-06-14T12:00:00Z",
+    startsAt: "2026-06-12T19:00:00Z",
+    endsAt: "2026-06-14T12:00:00Z",
     capacity: 350,
-    tags: ["mulheres", "conferencia"]
-  },
+    isPaid: true
+  } as Event,
   {
     id: "event_baptism_may",
     organizationId: "org_alvo",
-    title: "Batismo de Outono",
+    name: "Batismo de Outono",
+    slug: "batismo-outono",
     description: "Pública profissão de fé de novos discípulos.",
     type: "service",
     status: "published",
     locationType: "onsite",
-    locationName: "Sítio Alvo",
-    startAt: "2026-05-24T09:00:00Z",
-    endAt: "2026-05-24T13:00:00Z",
+    startsAt: "2026-05-24T09:00:00Z",
+    endsAt: "2026-05-24T13:00:00Z",
     capacity: 100,
-    tags: ["batismo", "festa"]
-  }
+    isPaid: false
+  } as Event
 ];
 
 export function EventsView() {
@@ -106,12 +106,12 @@ export function EventsView() {
                 onClick={() => setSelectedEventId(event.id)}
               >
                 <div className="event-date-box">
-                  <strong>{new Date(event.startAt).getDate()}</strong>
-                  <span>{new Date(event.startAt).toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
+                  <strong>{new Date(event.startsAt).getDate()}</strong>
+                  <span>{new Date(event.startsAt).toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
                 </div>
                 <div className="event-info">
-                  <strong>{event.title}</strong>
-                  <p>{event.locationName}</p>
+                  <strong>{event.name}</strong>
+                  <p>{event.locationType === 'onsite' ? 'Presencial' : 'Online'}</p>
                 </div>
               </div>
             ))}
@@ -124,7 +124,7 @@ export function EventsView() {
               <div className="detail-header">
                 <div className="title-area">
                   <span className={`event-type-badge ${selectedEvent.type}`}>{selectedEvent.type}</span>
-                  <h2>{selectedEvent.title}</h2>
+                  <h2>{selectedEvent.name}</h2>
                   <p>{selectedEvent.description}</p>
                 </div>
                 <div className="checkin-quick-btn">
@@ -152,7 +152,7 @@ export function EventsView() {
                  <div className="stat-box">
                    <Clock size={20} />
                    <div>
-                     <strong>{new Date(selectedEvent.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                     <strong>{new Date(selectedEvent.startsAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
                      <span>Início</span>
                    </div>
                  </div>

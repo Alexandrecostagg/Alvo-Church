@@ -12,6 +12,7 @@ import {
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import { 
+  getTribeDisplayLabel,
   getTribeMinistrySummary 
 } from "@alvo/domain";
 import type { Family, FamilyMember, Person, ServiceAssignment } from "@alvo/types";

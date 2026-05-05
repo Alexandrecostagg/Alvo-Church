@@ -17,7 +17,8 @@ import {
   UserPlus,
   UsersRound,
   Waypoints,
-  Tent
+  Tent,
+  CalendarRange
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 

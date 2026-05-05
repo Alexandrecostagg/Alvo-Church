@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useMemo, type FormEvent } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -7,12 +8,22 @@ import {
   Clock3,
   Handshake,
   ShieldCheck,
+  ShieldAlert,
+  ChevronRight,
+  Plus,
+  Search,
+  Users,
+  UsersRound
+} from "lucide-react";
+import {
   saveServiceAssignment,
-  savePersonProfile
+  savePersonProfile,
+  fetchServiceAssignments,
+  fetchPeople,
+  isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import { getTribeDisplayLabel } from "@alvo/domain";
 import { recentPeople } from "../../lib/mock-data";
-import type { FormEvent } from "react";
 import type { Person, ServiceAssignment, ServiceAssignmentStatus } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 

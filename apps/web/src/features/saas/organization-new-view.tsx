@@ -259,6 +259,7 @@ export function OrganizationNewView() {
             .premium-onboarding { flex-direction: column; text-align: center; gap: 2rem; }
           }
         `}</style>
+      </form>
     </main>
   );
 }

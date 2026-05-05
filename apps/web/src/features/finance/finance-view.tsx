@@ -18,7 +18,13 @@ import {
 import { useAppAuth } from "../../../app/providers";
 import { fetchFinancialTransparencyReports } from "@alvo/firebase";
 import type { FinancialTransparencyReport } from "@alvo/types";
-import { formatCurrency } from "../../lib/mock-data";
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(value);
+}
 
 // Mock fallback
 const mockReports: FinancialTransparencyReport[] = [
@@ -30,16 +36,16 @@ const mockReports: FinancialTransparencyReport[] = [
     expenses: 18200.40,
     missions: 4250.00,
     balance: 20050.40,
-    publicationStatus: "published",
+    status: "published",
     publishedAt: "2026-05-01T10:00:00Z",
     entries: [
-      { id: "e1", category: "Entrada", label: "Dízimos e Ofertas", amount: 38000.00, type: "income" },
-      { id: "e2", category: "Entrada", label: "Oferta de Missões", amount: 4500.80, type: "income" },
-      { id: "e3", category: "Saída", label: "Aluguel e IPTU", amount: 8500.00, type: "expense" },
-      { id: "e4", category: "Saída", label: "Energia e Água", amount: 1200.40, type: "expense" },
-      { id: "e5", category: "Missões", label: "Base Missionária Sertão", amount: 3000.00, type: "missions" },
+      { id: "e1", category: "Entrada", label: "Dízimos e Ofertas", amount: 38000.00, note: "" },
+      { id: "e2", category: "Entrada", label: "Oferta de Missões", amount: 4500.80, note: "" },
+      { id: "e3", category: "Saída", label: "Aluguel e IPTU", amount: 8500.00, note: "" },
+      { id: "e4", category: "Saída", label: "Energia e Água", amount: 1200.40, note: "" },
+      { id: "e5", category: "Missões", label: "Base Missionária Sertão", amount: 3000.00, note: "" },
     ]
-  }
+  } as FinancialTransparencyReport
 ];
 
 export function FinanceView() {
@@ -176,7 +182,7 @@ export function FinanceView() {
                 <tr key={entry.id}>
                   <td>05/05/2026</td>
                   <td>
-                    <span className={`entry-badge ${entry.type}`}>
+                    <span className={`entry-badge ${entry.category === 'Entrada' ? 'income' : entry.category === 'Missões' ? 'missions' : 'expense'}`}>
                       {entry.category}
                     </span>
                   </td>
@@ -185,8 +191,8 @@ export function FinanceView() {
                     {entry.note && <p className="entry-note">{entry.note}</p>}
                   </td>
                   <td>
-                    <b className={entry.type === 'income' ? 'text-income' : 'text-expense'}>
-                      {entry.type === 'expense' || entry.type === 'missions' ? '- ' : '+ '}
+                    <b className={entry.category === 'Entrada' ? 'text-income' : 'text-expense'}>
+                      {entry.category === 'Entrada' ? '+ ' : '- '}
                       {formatCurrency(entry.amount)}
                     </b>
                   </td>
