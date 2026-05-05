@@ -58,7 +58,7 @@ const ministryTeams = [
 const initialAssignments: ServiceAssignment[] = [
   {
     id: "scale_reception_1",
-    organizationId,
+    organizationId: "demo_org",
     serviceTeamId: "reception",
     ministryCode: "reception",
     personId: "person_1",
@@ -70,7 +70,7 @@ const initialAssignments: ServiceAssignment[] = [
   },
   {
     id: "scale_media_1",
-    organizationId,
+    organizationId: "demo_org",
     serviceTeamId: "media",
     ministryCode: "media",
     personId: "person_2",
@@ -82,7 +82,7 @@ const initialAssignments: ServiceAssignment[] = [
   },
   {
     id: "scale_worship_1",
-    organizationId,
+    organizationId: "demo_org",
     serviceTeamId: "worship",
     ministryCode: "worship",
     personId: "person_3",
@@ -94,7 +94,7 @@ const initialAssignments: ServiceAssignment[] = [
   },
   {
     id: "scale_kids_1",
-    organizationId,
+    organizationId: "demo_org",
     serviceTeamId: "kids",
     ministryCode: "kids",
     personId: "person_4",
