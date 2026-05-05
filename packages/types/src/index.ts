@@ -868,6 +868,29 @@ export interface TribeReclassificationSnapshot extends TribesDashboardSnapshot {
   behaviorSignals: TribeBehaviorSignal[];
 }
 
-export type KidsCheckInStatus = " checked_in\ | \checked_out\ | \cancelled\;
-export interface KidsCheckIn { id: string; organizationId: string; campusId?: string; childId: string; parentId: string; authorizedPickUpIds: string[]; checkedInAt: string; checkedOutAt?: string; checkedOutByParentId?: string; status: KidsCheckInStatus; roomCode?: string; securityToken: string; notes?: string; }
-export interface KidsSecuritySession { id: string; organizationId: string; parentId: string; token: string; expiresAt: string; status: \active\ | \used\ | \expired\; }
+export type KidsCheckInStatus = "checked_in" | "checked_out" | "cancelled";
+
+export interface KidsCheckIn { 
+  id: string; 
+  organizationId: string; 
+  campusId?: string; 
+  childId: string; 
+  parentId: string; 
+  authorizedPickUpIds: string[]; 
+  checkedInAt: string; 
+  checkedOutAt?: string; 
+  checkedOutByParentId?: string; 
+  status: KidsCheckInStatus; 
+  roomCode?: string; 
+  securityToken: string; 
+  notes?: string; 
+}
+
+export interface KidsSecuritySession { 
+  id: string; 
+  organizationId: string; 
+  parentId: string; 
+  token: string; 
+  expiresAt: string; 
+  status: "active" | "used" | "expired"; 
+}
