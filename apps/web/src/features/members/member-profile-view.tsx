@@ -12,11 +12,10 @@ import {
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import { 
-  getTribeDisplayLabel, 
   getTribeMinistrySummary 
 } from "@alvo/domain";
-import type { Family, FamilyMember, Person } from "@alvo/types";
-import { Tent } from "lucide-react";
+import type { Family, FamilyMember, Person, ServiceAssignment } from "@alvo/types";
+import { Tent, QrCode, CalendarCheck } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 
 export function MemberProfileView() {
@@ -221,17 +220,26 @@ export function MemberProfileView() {
               </div>
             </article>
 
-            <article className="profile-panel">
-              <p className="eyebrow">Privacidade</p>
-              <h2>Getro Pass seguro</h2>
+            <article className="profile-panel getro-pass-panel">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Acesso & Identidade</p>
+                  <h2>Getro Pass Digital</h2>
+                </div>
+                <QrCode size={20} />
+              </div>
               <p className="profile-muted">
-                Parceiros externos devem receber apenas confirmacao de beneficio.
-                CPF, renda, endereco e historico pastoral continuam protegidos.
+                Use este código para check-in em eventos, retirada de crianças e 
+                validação de benefícios em parceiros conveniados.
               </p>
-              <div className="pass-preview">
-                <span>Codigo</span>
-                <strong>{person.memberCardCode ?? "nao habilitado"}</strong>
-                <p>{person.partnerBenefitsEnabled ? "Apto para validacao externa." : "Uso restrito ao ambiente interno."}</p>
+              <div className="pass-visual antigravity-float">
+                <div className="qr-placeholder">
+                   <QrCode size={80} strokeWidth={1} />
+                </div>
+                <div className="pass-meta">
+                   <span>Código de Membro</span>
+                   <strong>{person.memberCardCode ?? "ALVO-000-000"}</strong>
+                </div>
               </div>
             </article>
 
@@ -255,7 +263,45 @@ export function MemberProfileView() {
                 </Link>
               </article>
             )}
+
+            <article className="profile-panel my-scale-panel">
+              <div className="section-heading">
+                 <div>
+                   <p className="eyebrow">Voluntariado</p>
+                   <h2>Minha Próxima Escala</h2>
+                 </div>
+                 <CalendarCheck size={20} color="var(--alvo-accent)" />
+              </div>
+              <div className="scale-status-card-member">
+                 <div className="scale-info-member">
+                    <strong>Recepção e Boas-vindas</strong>
+                    <span>Domingo, 19:00 · Campus Central</span>
+                 </div>
+                 <button className="confirm-btn-member">
+                   Confirmar Presença
+                 </button>
+              </div>
+              <p className="profile-muted" style={{ fontSize: '0.75rem', marginTop: '1rem' }}>
+                Você faz parte da equipe de hospitalidade. Sua tribo (Asher) 
+                tem o dom natural de acolher pessoas.
+              </p>
+            </article>
           </section>
+
+          <style jsx>{`
+            .getro-pass-panel { background: #111827 !important; color: white; }
+            .getro-pass-panel .profile-muted { color: rgba(255,255,255,0.6); }
+            .pass-visual { background: linear-gradient(135deg, #1c2433, #111827); padding: 1.5rem; border-radius: 1.5rem; display: flex; align-items: center; gap: 1.5rem; margin-top: 1.5rem; border: 1px solid rgba(255,255,255,0.1); }
+            .qr-placeholder { background: white; padding: 0.75rem; border-radius: 1rem; color: #111827; }
+            .pass-meta span { display: block; font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 800; }
+            .pass-meta strong { font-size: 1.25rem; font-family: monospace; letter-spacing: 0.1em; }
+
+            .my-scale-panel { border: 1px solid var(--alvo-accent-soft); background: #fffaf5; }
+            .scale-status-card-member { background: white; border: 1px solid #fed7aa; border-radius: 1.25rem; padding: 1.25rem; margin-top: 1rem; }
+            .scale-info-member strong { display: block; font-size: 1rem; }
+            .scale-info-member span { font-size: 0.8125rem; color: var(--alvo-ink-soft); }
+            .confirm-btn-member { margin-top: 1rem; width: 100%; background: var(--alvo-accent); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+          `}</style>
         </>
       ) : (
         <section className="profile-panel">

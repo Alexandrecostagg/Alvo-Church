@@ -128,155 +128,137 @@ export function OrganizationNewView() {
 
   return (
     <main className="form-page saas-form-page">
-      <section className="form-hero">
-        <Link className="back-link" href="/">
-          Voltar ao painel
-        </Link>
-        <p className="eyebrow">Cadastro SaaS</p>
-        <h1>Nova instituicao contratante</h1>
-        <p>
-          Use esta pagina para abrir um tenant: organizacao, marca, plano, limites,
-          modulos contratados e acesso inicial do gestor.
-        </p>
+      <section className="form-hero premium-onboarding">
+        <div className="hero-content">
+          <Link className="back-link" href="/">
+            Voltar ao painel
+          </Link>
+          <p className="eyebrow">SaaS Hub · Onboarding</p>
+          <h1>Nova Unidade Alvo</h1>
+          <p>
+            Expanda o ecossistema criando uma nova organização. Configure a identidade estratégica, 
+            escolha o modelo pastoral (Tribos) e ative os módulos operacionais.
+          </p>
+        </div>
+        <aside className="hero-stats-mini">
+           <div className="mini-card-saas">
+              <strong>99.9%</strong>
+              <span>Uptime Garantido</span>
+           </div>
+           <div className="mini-card-saas">
+              <strong>Multi-tenant</strong>
+              <span>Isolamento Total</span>
+           </div>
+        </aside>
       </section>
 
-      <form className="form-card form-grid" onSubmit={handleSubmit}>
-        <fieldset>
-          <legend>Dados da instituicao</legend>
-          <label>
-            Nome de exibicao
-            <input name="displayName" placeholder="Igreja Getro Norte" required />
-          </label>
-          <label>
-            Nome publico
-            <input name="publicName" placeholder="Getro Norte" />
-          </label>
-          <label>
-            Razao social
-            <input name="legalName" />
-          </label>
-          <label>
-            Slug
-            <input name="slug" placeholder="getro-norte" />
-          </label>
-          <label>
-            Tipo
-            <select name="organizationType" defaultValue="church">
-              <option value="church">Igreja local</option>
-              <option value="network">Rede</option>
-              <option value="denomination">Denominacao</option>
-              <option value="institution">Instituicao</option>
-            </select>
-          </label>
-          <label>
-            Fuso horario
-            <input name="timezone" defaultValue="America/Belem" />
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>Marca e plano</legend>
-          <label>
-            Produto exibido
-            <input name="productName" defaultValue="Getro Church" />
-          </label>
-          <label>
-            Nome curto
-            <input name="shortName" defaultValue="Getro" />
-          </label>
-          <label>
-            Cor primaria
-            <input name="primaryColor" type="color" defaultValue="#d27836" />
-          </label>
-          <label>
-            Marca
-            <select name="brandMode" defaultValue="co_branded">
-              <option value="alvo_managed">Marca Getro</option>
-              <option value="co_branded">Co-branded</option>
-              <option value="white_label">White-label</option>
-            </select>
-          </label>
-          <label>
-            Plano
-            <select name="planTier" defaultValue="growth">
-              <option value="base">Base</option>
-              <option value="growth">Growth</option>
-              <option value="advanced">Advanced</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-          </label>
-          <label>
-            Ciclo
-            <select name="billingCycle" defaultValue="monthly">
-              <option value="monthly">Mensal</option>
-              <option value="yearly">Anual</option>
-              <option value="custom">Personalizado</option>
-            </select>
-          </label>
-          <label className="check-row">
-            <input name="showPoweredByAlvo" type="checkbox" defaultChecked />
-            Mostrar assinatura powered by Getro
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>Capacidade contratada</legend>
-          <label>
-            Faixa de membros
-            <select name="memberRange" defaultValue="101_to_300">
-              <option value="up_to_100">Ate 100</option>
-              <option value="101_to_300">101 a 300</option>
-              <option value="301_to_800">301 a 800</option>
-              <option value="801_plus">801+</option>
-            </select>
-          </label>
-          <label>
-            Usuarios internos
-            <input name="seatLimit" type="number" defaultValue="8" min="1" />
-          </label>
-          <label>
-            Campi
-            <input name="campusLimit" type="number" defaultValue="1" min="1" />
-          </label>
-          <label>
-            Cota mensal de IA
-            <input name="aiQuota" type="number" defaultValue="100" min="0" />
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>Modulos liberados</legend>
-          {[
-            ["visitors", "Visitantes e portaria"],
-            ["groups", "Celulas e grupos"],
-            ["events", "Eventos e check-in"],
-            ["journeys", "Jornadas"],
-            ["communication", "Comunicacao"],
-            ["finance", "Transparencia financeira"],
-            ["tribes", "Tribos ministeriais"],
-            ["ai", "IA pastoral"],
-            ["children", "Criancas"],
-            ["youth", "Jovens"],
-            ["volunteers", "Voluntarios"]
-          ].map(([name, label]) => (
-            <label className="check-row" key={name}>
-              <input
-                name={name}
-                type="checkbox"
-                defaultChecked={!["children", "youth", "volunteers"].includes(name)}
-              />
-              {label}
+      <form className="onboarding-form" onSubmit={handleSubmit}>
+        <div className="onboarding-sections">
+          <fieldset className="premium-fieldset">
+            <legend>Identidade & Estratégia</legend>
+            <div className="form-row">
+              <label>
+                Nome da Igreja/Unidade
+                <input name="displayName" placeholder="Igreja Alvo Sul" required />
+              </label>
+              <label>
+                Slug da URL (subdomínio)
+                <input name="slug" placeholder="alvo-sul" required />
+              </label>
+            </div>
+            <label>
+              Modelo de Identidade Pastoral
+              <select name="identityModel" defaultValue="tribes_12">
+                <option value="tribes_12">Modelo das 12 Tribos (Integrado)</option>
+                <option value="custom">Ministérios Tradicionais</option>
+                <option value="cells_only">Células (G12/MDS)</option>
+              </select>
+              <p className="field-hint">Isso afeta como os membros são classificados e escalados.</p>
             </label>
-          ))}
-        </fieldset>
+          </fieldset>
 
-        <div className="form-actions">
-          <button className="primary-button" type="submit">
-            Criar instituicao
-          </button>
-          {status ? <p className="form-status">{status}</p> : null}
+          <fieldset className="premium-fieldset">
+            <legend>Módulos Ativos (SaaS Suite)</legend>
+            <div className="modules-grid-selection">
+               {[
+                 { id: "finance", label: "Finanças", desc: "Gestão e Transparência" },
+                 { id: "children", label: "Kids Security", desc: "Segurança Infantil" },
+                 { id: "tribes", label: "Tribos", desc: "Identidade e Dons" },
+                 { id: "ai", label: "IA Pastoral", desc: "Insights e Sinais" },
+                 { id: "events", label: "Eventos", desc: "Check-in e Inscrições" },
+                 { id: "groups", label: "Células", desc: "Gestão de Pequenos Grupos" }
+               ].map(mod => (
+                 <label className="checkbox-tile" key={mod.id}>
+                    <input type="checkbox" name={mod.id} defaultChecked />
+                    <div className="tile-content">
+                       <strong>{mod.label}</strong>
+                       <span>{mod.desc}</span>
+                    </div>
+                 </label>
+               ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="premium-fieldset">
+            <legend>Branding & White-label</legend>
+            <div className="form-row">
+              <label>
+                Nome do Produto
+                <input name="productName" defaultValue="Alvo Church" />
+              </label>
+              <label>
+                Cor Primária
+                <input name="primaryColor" type="color" defaultValue="#d27836" />
+              </label>
+            </div>
+            <label>
+              Modo de Marca
+              <select name="brandMode" defaultValue="co_branded">
+                <option value="alvo_managed">Marca Alvo Standard</option>
+                <option value="co_branded">Co-branded (Recomendado)</option>
+                <option value="white_label">White-label Premium</option>
+              </select>
+            </label>
+          </fieldset>
         </div>
-      </form>
+
+        <div className="form-actions-saas">
+           <button type="submit" className="primary-button giant antigravity-float">
+             Provisionar Nova Unidade
+           </button>
+           {status && <p className="status-message-saas">{status}</p>}
+        </div>
+
+        <style jsx>{`
+          .onboarding-form { max-width: 900px; margin: 0 auto; }
+          .premium-onboarding { display: flex; justify-content: space-between; align-items: center; padding: 4rem 0; max-width: 900px; margin: 0 auto; }
+          .hero-stats-mini { display: flex; gap: 1rem; }
+          .mini-card-saas { background: white; padding: 1.25rem; border-radius: 1.25rem; border: 1px solid var(--alvo-line); text-align: center; min-width: 130px; box-shadow: var(--alvo-shadow); }
+          .mini-card-saas strong { display: block; font-size: 1.5rem; color: var(--alvo-accent); letter-spacing: -0.04em; }
+          .mini-card-saas span { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--alvo-ink-soft); }
+
+          .premium-fieldset { border: none; background: white; padding: 2.5rem; border-radius: 2.5rem; border: 1px solid var(--alvo-line); margin-bottom: 2.5rem; box-shadow: var(--alvo-shadow-strong); }
+          .premium-fieldset legend { font-weight: 950; font-size: 1.5rem; margin-bottom: 2rem; letter-spacing: -0.05em; color: var(--alvo-ink); background: white; padding: 0 1rem; }
+          .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+          .field-hint { font-size: 0.8125rem; color: var(--alvo-ink-soft); margin-top: 0.5rem; }
+
+          .modules-grid-selection { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
+          .checkbox-tile { position: relative; cursor: pointer; display: block; }
+          .checkbox-tile input { position: absolute; opacity: 0; }
+          .tile-content { border: 2px solid #f1f5f9; padding: 1.5rem; border-radius: 1.5rem; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+          .checkbox-tile input:checked + .tile-content { border-color: var(--alvo-accent); background: #fff7ed; transform: scale(1.02); }
+          .tile-content strong { display: block; font-size: 1rem; color: var(--alvo-ink); }
+          .tile-content span { font-size: 0.8125rem; color: var(--alvo-ink-soft); }
+
+          .form-actions-saas { text-align: center; margin-top: 4rem; padding-bottom: 6rem; }
+          .primary-button.giant { padding: 1.5rem 4rem; font-size: 1.25rem; border-radius: 1.5rem; font-weight: 900; }
+          .status-message-saas { margin-top: 2rem; font-weight: 800; color: var(--alvo-accent); font-size: 1.125rem; }
+
+          @media (max-width: 768px) {
+            .form-row, .modules-grid-selection { grid-template-columns: 1fr; }
+            .premium-onboarding { flex-direction: column; text-align: center; gap: 2rem; }
+          }
+        `}</style>
     </main>
   );
 }
