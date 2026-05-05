@@ -7,17 +7,11 @@ import {
   Clock3,
   Handshake,
   ShieldCheck,
-  UsersRound
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import {
-  createFirebaseWebRuntimeConfigFromEnv,
-  fetchServiceAssignments,
-  fetchPeople,
-  isFirebaseWebRuntimeConfigured,
   saveServiceAssignment,
   savePersonProfile
 } from "@alvo/firebase";
+import { getTribeDisplayLabel } from "@alvo/domain";
+import { recentPeople } from "../../lib/mock-data";
 import type { FormEvent } from "react";
 import type { Person, ServiceAssignment, ServiceAssignmentStatus } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
@@ -157,14 +151,16 @@ export function ServingView() {
           return;
         }
 
-        setPeople(nextPeople);
-        if (nextAssignments.length) {
-          setAssignments(nextAssignments);
-        }
+        const finalPeople = nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]);
+        const finalAssignments = nextAssignments.length > 0 ? nextAssignments : (assignments as unknown as ServiceAssignment[]);
+
+        setPeople(finalPeople);
+        setAssignments(finalAssignments);
+        
         setStatus(
           nextAssignments.length
             ? `${nextAssignments.length} escala(s) sincronizada(s) com ${nextPeople.length} pessoa(s).`
-            : `${nextPeople.length} pessoa(s) disponiveis. Crie a primeira escala real.`
+            : `${finalPeople.length} pessoa(s) disponiveis (modo hibrido/mock).`
         );
       } catch (error) {
         if (!cancelled) {
@@ -321,6 +317,30 @@ export function ServingView() {
     setServantDraft({ email: "", name: "", phone: "", role: "Apoio" });
   }
 
+  // Tribes mapping for smart suggestions
+  const tribeMinistryMap: Record<string, string[]> = {
+    LEVI: ["worship"],
+    JUDAH: ["worship", "reception"],
+    ISSACHAR: ["operations"],
+    JOSEPH: ["operations"],
+    ASHER: ["reception", "kids"],
+    NAPHTALI: ["media"],
+    ZEBULUN: ["operations"],
+    GAD: ["operations"],
+    MANASSEH: ["kids"],
+    EPHRAIM: ["reception"],
+    BENJAMIN: ["reception"],
+    REUBEN: ["operations"],
+  };
+
+  const suggestedPeople = useMemo(() => {
+    return people.filter(p => {
+      if (!p.tribePrimaryCode) return false;
+      const targetMinistries = tribeMinistryMap[p.tribePrimaryCode] || [];
+      return targetMinistries.includes(selectedMinistry.code);
+    }).slice(0, 5);
+  }, [people, selectedMinistry.code]);
+
   return (
     <main className="form-page serving-page">
       <section className="serving-hero">
@@ -413,89 +433,131 @@ export function ServingView() {
             <span className="soft-pill">{selectedAssignments.length} pessoa(s)</span>
           </div>
 
-          <div className="serving-next-step">
+          <div className="serving-next-step tribe-aware">
             <div>
-              <span>Proximo passo</span>
+              <span>Próximo passo estratégico</span>
               <strong>{nextActionLabel}</strong>
               <p>{selectedMinistry.summary}</p>
             </div>
-            <button
-              className="primary-button compact-button"
-              onClick={() => setAssignMode(selectedAssignments.length ? "members" : "new")}
-              type="button"
-            >
-              Adicionar servo
-            </button>
+            <div className="tribe-hint">
+               <ShieldCheck size={14} />
+               <span>Encaixe de Tribos ativo</span>
+            </div>
           </div>
 
           <div className="scale-list">
             {selectedAssignments.length ? (
-              selectedAssignments.map((assignment) => {
-                const person = people.find((item) => item.id === assignment.personId);
+              <div className="scale-grid-premium">
+                {selectedAssignments.map((assignment) => {
+                  const person = people.find((item) => item.id === assignment.personId);
 
-                return (
-                  <div className={`scale-card is-${assignment.status}`} key={assignment.id}>
-                    <div>
-                      <span>{getAssignmentStatusLabel(assignment.status)}</span>
-                      <strong>{person ? getFullName(person) : assignment.personId}</strong>
-                      <p>{assignment.role} - {formatDateTime(assignment.serviceDate)}</p>
-                      {assignment.responseNote ? <small>{assignment.responseNote}</small> : null}
-                      <input
-                        className="scale-note-input"
-                        onChange={(event) =>
-                          setAssignmentNoteDrafts((currentDrafts) => ({
-                            ...currentDrafts,
-                            [assignment.id]: event.target.value
-                          }))
-                        }
-                        placeholder="Justificativa ou observacao"
-                        value={assignmentNoteDrafts[assignment.id] ?? ""}
-                      />
+                  return (
+                    <div className={`scale-card-premium is-${assignment.status} antigravity-float`} key={assignment.id}>
+                      <div className="card-top">
+                        <span className={`status-pill pill-${assignment.status}`}>
+                          {getAssignmentStatusLabel(assignment.status)}
+                        </span>
+                        {person?.tribePrimaryCode && (
+                          <span className="tribe-pill">
+                            Tribo {getTribeDisplayLabel(person.tribePrimaryCode)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="card-body">
+                        <strong>{person ? getFullName(person) : assignment.personId}</strong>
+                        <p>{assignment.role}</p>
+                      </div>
+                      <div className="card-actions-row">
+                        <button className="ghost-button-small" onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")}>Confirmar</button>
+                        <button className="primary-button-small" onClick={() => void handleAssignmentStatus(assignment.id, "present")}>Presença</button>
+                      </div>
                     </div>
-                    <div className="scale-actions">
-                      <button className="ghost-button" onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")} type="button">
-                        Confirmar
-                      </button>
-                      <button
-                        className="ghost-button"
-                        onClick={() =>
-                          void handleAssignmentStatus(
-                            assignment.id,
-                            "declined",
-                            assignmentNoteDrafts[assignment.id] || "Impossibilidade justificada."
-                          )
-                        }
-                        type="button"
-                      >
-                        Justificar
-                      </button>
-                      <button className="primary-button compact-button" onClick={() => void handleAssignmentStatus(assignment.id, "present")} type="button">
-                        Presenca
-                      </button>
-                      <button
-                        className="ghost-button"
-                        onClick={() =>
-                          void handleAssignmentStatus(
-                            assignment.id,
-                            "absent",
-                            assignmentNoteDrafts[assignment.id] || "Falta registrada."
-                          )
-                        }
-                        type="button"
-                      >
-                        Falta
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             ) : (
-              <div className="empty-state">
-                <strong>Ninguem escalado</strong>
-                <p>Use a fila de pessoas para montar a escala deste ministerio.</p>
+              <div className="empty-state-card">
+                <Handshake size={32} opacity={0.3} />
+                <strong>Equipe não montada</strong>
+                <p>Use as sugestões por Tribo abaixo para começar.</p>
               </div>
             )}
           </div>
+
+          {suggestedPeople.length > 0 && (
+            <div className="tribe-suggestions-panel-standalone">
+               <div className="suggestion-header-premium">
+                  <div className="header-text">
+                    <ShieldCheck size={20} />
+                    <div>
+                      <strong>Sugestões por Identidade Pastoral</strong>
+                      <p>Membros cujos dons (Tribos) se alinham naturalmente a {selectedMinistry.name}</p>
+                    </div>
+                  </div>
+               </div>
+               <div className="suggestion-scroll-row">
+                  {suggestedPeople.map(p => (
+                    <div key={p.id} className="suggestion-mini-card">
+                       <div className="person-brief">
+                          <strong>{getFullName(p)}</strong>
+                          <span>{getTribeDisplayLabel(p.tribePrimaryCode!)}</span>
+                       </div>
+                       <button className="quick-assign-btn" onClick={() => handleQuickAssign(p)}>
+                          Escalar
+                       </button>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
+
+          <div className="manual-assign-section">
+             <div className="section-heading compact">
+                <h2>Busca manual na base</h2>
+             </div>
+             <div className="picker-results-row">
+                {candidatePeople.slice(0, 12).map(p => (
+                  <div key={p.id} className="picker-chip" onClick={() => handleQuickAssign(p)}>
+                     {getFullName(p)}
+                  </div>
+                ))}
+             </div>
+          </div>
+
+          <style jsx>{`
+            .scale-grid-premium { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+            .scale-card-premium { background: white; border-radius: 1.25rem; padding: 1.25rem; border: 1px solid var(--alvo-line); box-shadow: var(--alvo-shadow); margin-bottom: 1rem; }
+            .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+            .status-pill { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; }
+            .pill-pending { background: #fef3c7; color: #92400e; }
+            .pill-confirmed { background: #dcfce7; color: #166534; }
+            .pill-present { background: #dcfce7; color: #166534; border: 1px solid #166534; }
+            .tribe-pill { font-size: 0.65rem; color: var(--alvo-ink-soft); font-weight: 600; }
+            .card-body strong { display: block; font-size: 1.125rem; }
+            .card-body p { font-size: 0.875rem; color: var(--alvo-ink-soft); }
+            .card-actions-row { display: flex; gap: 0.5rem; margin-top: 1.25rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; }
+            .ghost-button-small { background: #f8fafc; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+            .primary-button-small { background: var(--alvo-accent); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+            
+            .tribe-suggestions-panel-standalone { margin: 2rem 0; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 1.5rem; padding: 1.5rem; }
+            .suggestion-header-premium { margin-bottom: 1rem; }
+            .header-text { display: flex; gap: 0.75rem; color: #166534; }
+            .header-text p { font-size: 0.8125rem; opacity: 0.8; margin: 4px 0 0; }
+            .suggestion-scroll-row { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; }
+            .suggestion-mini-card { background: white; min-width: 180px; padding: 1rem; border-radius: 1rem; border: 1px solid #dcfce7; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.05); }
+            .person-brief strong { display: block; font-size: 0.875rem; }
+            .person-brief span { font-size: 0.75rem; color: #16a34a; font-weight: 700; }
+            .quick-assign-btn { margin-top: 0.75rem; width: 100%; background: #16a34a; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+            .quick-assign-btn:hover { background: #15803d; }
+            
+            .manual-assign-section { margin-top: 2rem; border-top: 1px solid var(--alvo-line); padding-top: 2rem; }
+            .picker-results-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+            .picker-chip { background: white; border: 1px solid var(--alvo-line); padding: 8px 16px; border-radius: 999px; font-size: 0.8125rem; cursor: pointer; transition: all 0.2s; }
+            .picker-chip:hover { border-color: var(--alvo-accent); color: var(--alvo-accent); background: #fff7ed; }
+            
+            .empty-state-card { text-align: center; padding: 4rem 2rem; color: var(--alvo-ink-soft); background: #f8fafc; border-radius: 1.5rem; border: 2px dashed #e2e8f0; }
+            .empty-state-card strong { display: block; font-size: 1.25rem; color: var(--alvo-ink); margin: 1rem 0 0.5rem; }
+          `}</style>
         </article>
 
         <aside className="serving-panel">
