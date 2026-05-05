@@ -487,6 +487,22 @@ export function GroupsView() {
                 />
               </label>
               <label>
+                Líder da célula
+                <select
+                  onChange={(event) =>
+                    setGroupForm((currentForm) => ({ ...currentForm, leaderPersonId: event.target.value }))
+                  }
+                  value={groupForm.leaderPersonId}
+                >
+                  <option value="">Selecionar líder...</option>
+                  {people.filter(p => ["member", "leader", "volunteer"].includes(p.memberStatus)).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
                 Tipo
                 <select
                   onChange={(event) =>

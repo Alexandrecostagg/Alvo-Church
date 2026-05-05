@@ -11,7 +11,12 @@ import {
   fetchPersonById,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { 
+  getTribeDisplayLabel, 
+  getTribeMinistrySummary 
+} from "@alvo/domain";
 import type { Family, FamilyMember, Person } from "@alvo/types";
+import { Tent } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 
 export function MemberProfileView() {
@@ -139,6 +144,11 @@ export function MemberProfileView() {
               <strong>{person.consentLgpdAt ? "Registrado" : "Pendente"}</strong>
               <p>{person.consentLgpdAt ? formatDate(person.consentLgpdAt) : "solicitar consentimento"}</p>
             </article>
+            <article className={`tribe-accent-${person.tribePrimaryCode || 'default'}`} style={{ borderLeft: '4px solid var(--tribe-color)' }}>
+              <span>Tribo</span>
+              <strong>{person.tribePrimaryCode ? getTribeDisplayLabel(person.tribePrimaryCode) : "Não definida"}</strong>
+              <p>{person.tribePrimaryCode ? "Consulte o perfil pastoral completo" : "Realizar Teste de Dons"}</p>
+            </article>
           </section>
 
           <section className="profile-grid">
@@ -224,6 +234,27 @@ export function MemberProfileView() {
                 <p>{person.partnerBenefitsEnabled ? "Apto para validacao externa." : "Uso restrito ao ambiente interno."}</p>
               </div>
             </article>
+
+            {person.tribePrimaryCode && (
+              <article className="profile-panel tribe-detail-highlight" style={{ borderTop: `4px solid var(--tribe-color, #94a3b8)` }}>
+                <div className="section-heading">
+                   <div>
+                     <p className="eyebrow">Identidade Pastoral</p>
+                     <h2>Tribo de {getTribeDisplayLabel(person.tribePrimaryCode)}</h2>
+                   </div>
+                   <div className={`tribe-icon-small tribe-${person.tribePrimaryCode}`}>
+                      <Tent size={20} />
+                   </div>
+                </div>
+                <p className="profile-muted" style={{ marginTop: '1rem' }}>
+                  O perfil de <strong>{person.tribePrimaryCode}</strong> está associado a ministérios de 
+                  {getTribeMinistrySummary(person.tribePrimaryCode)}.
+                </p>
+                <Link href={`/tribes?code=${person.tribePrimaryCode}`} className="text-button" style={{ marginTop: '1.5rem', color: 'var(--tribe-color)' }}>
+                   Explorar ecossistema da tribo →
+                </Link>
+              </article>
+            )}
           </section>
         </>
       ) : (

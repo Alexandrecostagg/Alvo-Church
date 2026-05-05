@@ -522,6 +522,37 @@ export function getTribeDisplayLabel(tribeCode: TribeCode) {
   }
 }
 
+export function getTribeMinistrySummary(tribeCode: TribeCode) {
+  switch (tribeCode) {
+    case "LEVI":
+      return "adoração, louvor e ambientes espirituais.";
+    case "JUDAH":
+      return "liderança, governo ministerial e condução de equipes.";
+    case "ISSACHAR":
+      return "estratégia, entendimento de tempos e planejamento.";
+    case "JOSEPH":
+      return "organização, gestão de recursos e suporte.";
+    case "ASHER":
+      return "hospitalidade, acolhimento e cuidado familiar.";
+    case "NAPHTALI":
+      return "comunicação criativa e alegria ministerial.";
+    case "ZEBULUN":
+      return "missões, mobilização e projetos externos.";
+    case "GAD":
+      return "ação prática, serviço de prontidão e resposta.";
+    case "MANASSEH":
+      return "restauração, cura e cuidado profundo.";
+    case "EPHRAIM":
+      return "multiplicação, crescimento e novas frentes.";
+    case "BENJAMIN":
+      return "proteção, suporte e operação vigilante.";
+    case "REUBEN":
+      return "iniciativa, pioneirismo e novas descobertas.";
+    default:
+      return "serviço e dedicação ao Reino.";
+  }
+}
+
 export function getTribeValidationLabel(status: MemberTribeProfile["validationStatus"]) {
   switch (status) {
     case "not_required":
