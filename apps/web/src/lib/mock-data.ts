@@ -280,36 +280,24 @@ export const followUps = [
 ] as const;
 
 export const activeGroups = [
-  {
-    id: "group_1",
-    organizationId: organization.id,
-    name: "Celula Centro Norte",
-    slug: "celula-centro-norte",
-    type: "cell",
-    status: "active",
-    visibility: "internal",
-    meetingDayOfWeek: 3,
-    meetingTime: "19:30",
-    city: "Belem",
-    state: "PA",
-    capacity: 18,
-    tribeCode: "ASHER" as TribeCode
-  },
-  {
-    id: "group_2",
-    organizationId: organization.id,
-    name: "Classe de Integracao",
-    slug: "classe-integracao",
-    type: "class",
-    status: "active",
-    visibility: "internal",
-    meetingDayOfWeek: 0,
-    meetingTime: "09:00",
-    city: "Belem",
-    state: "PA",
-    capacity: 30,
-    tribeCode: "LEVI" as TribeCode
-  }
+  { id: "group_1", organizationId: organization.id, name: "Célula Centro Norte", slug: "celula-centro-norte", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 3, meetingTime: "19:30", city: "Belém", state: "PA", capacity: 18, tribeCode: "ASHER" as TribeCode },
+  { id: "group_2", organizationId: organization.id, name: "Classe de Integração", slug: "classe-integracao", type: "class", status: "active", visibility: "internal", meetingDayOfWeek: 0, meetingTime: "09:00", city: "Belém", state: "PA", capacity: 30, tribeCode: "LEVI" as TribeCode },
+  { id: "group_3", organizationId: organization.id, name: "Célula Nazaré", slug: "celula-nazare", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 5, meetingTime: "19:00", city: "Belém", state: "PA", capacity: 15, tribeCode: "JUDAH" as TribeCode },
+  { id: "group_4", organizationId: organization.id, name: "Célula Cremação", slug: "celula-cremacao", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 2, meetingTime: "20:00", city: "Belém", state: "PA", capacity: 12, tribeCode: "ISSACHAR" as TribeCode },
+  { id: "group_5", organizationId: organization.id, name: "Grupo de Intercessão", slug: "grupo-intercessao", type: "small_group", status: "active", visibility: "internal", meetingDayOfWeek: 1, meetingTime: "07:00", city: "Belém", state: "PA", capacity: 20, tribeCode: "LEVI" as TribeCode },
+  { id: "group_6", organizationId: organization.id, name: "Célula Tapanã", slug: "celula-tapana", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 4, meetingTime: "19:30", city: "Belém", state: "PA", capacity: 14, tribeCode: "JOSEPH" as TribeCode },
+  { id: "group_7", organizationId: organization.id, name: "Ministério de Dança", slug: "ministerio-danca", type: "ministry_team", status: "active", visibility: "internal", meetingDayOfWeek: 6, meetingTime: "09:00", city: "Belém", state: "PA", capacity: 25, tribeCode: "NAPHTALI" as TribeCode },
+  { id: "group_8", organizationId: organization.id, name: "Célula Sacramenta", slug: "celula-sacramenta", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 3, meetingTime: "19:00", city: "Belém", state: "PA", capacity: 16, tribeCode: "ZEBULUN" as TribeCode },
+  { id: "group_9", organizationId: organization.id, name: "Equipe de Adoração", slug: "equipe-adoracao", type: "ministry_team", status: "active", visibility: "internal", meetingDayOfWeek: 6, meetingTime: "14:00", city: "Belém", state: "PA", capacity: 30, tribeCode: "LEVI" as TribeCode },
+  { id: "group_10", organizationId: organization.id, name: "Célula Jurunas", slug: "celula-jurunas", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 2, meetingTime: "19:30", city: "Belém", state: "PA", capacity: 12, tribeCode: "GAD" as TribeCode },
+  { id: "group_11", organizationId: organization.id, name: "Grupo de Negócios", slug: "grupo-negocios", type: "small_group", status: "active", visibility: "internal", meetingDayOfWeek: 5, meetingTime: "07:00", city: "Belém", state: "PA", capacity: 20, tribeCode: "ZEBULUN" as TribeCode },
+  { id: "group_12", organizationId: organization.id, name: "Célula Bengui", slug: "celula-bengui", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 4, meetingTime: "20:00", city: "Belém", state: "PA", capacity: 15, tribeCode: "MANASSEH" as TribeCode },
+  { id: "group_13", organizationId: organization.id, name: "Ministério Infantil", slug: "ministerio-infantil", type: "ministry_team", status: "active", visibility: "internal", meetingDayOfWeek: 0, meetingTime: "09:00", city: "Belém", state: "PA", capacity: 40, tribeCode: "ASHER" as TribeCode },
+  { id: "group_14", organizationId: organization.id, name: "Célula Pedreira", slug: "celula-pedreira", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 3, meetingTime: "19:30", city: "Belém", state: "PA", capacity: 14, tribeCode: "EPHRAIM" as TribeCode },
+  { id: "group_15", organizationId: organization.id, name: "Grupo de Jovens", slug: "grupo-jovens", type: "youth_group", status: "active", visibility: "internal", meetingDayOfWeek: 6, meetingTime: "16:00", city: "Belém", state: "PA", capacity: 50, tribeCode: "BENJAMIN" as TribeCode },
+  { id: "group_16", organizationId: organization.id, name: "Célula Entroncamento", slug: "celula-entroncamento", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 1, meetingTime: "19:00", city: "Belém", state: "PA", capacity: 12, tribeCode: "REUBEN" as TribeCode },
+  { id: "group_17", organizationId: organization.id, name: "Equipe de Comunicação", slug: "equipe-comunicacao", type: "ministry_team", status: "active", visibility: "internal", meetingDayOfWeek: 4, meetingTime: "19:00", city: "Belém", state: "PA", capacity: 15, tribeCode: "ISSACHAR" as TribeCode },
+  { id: "group_18", organizationId: organization.id, name: "Célula Marco", slug: "celula-marco", type: "cell", status: "active", visibility: "internal", meetingDayOfWeek: 2, meetingTime: "20:00", city: "Belém", state: "PA", capacity: 16, tribeCode: "JUDAH" as TribeCode }
 ] as const;
 
 export const upcomingMeetings = [
@@ -463,33 +451,18 @@ export const earnedBadges = [
 ] as const;
 
 export const tribeDefinitions = [
-  {
-    id: "tribe_levi",
-    organizationId: organization.id,
-    code: "LEVI",
-    name: "Levi",
-    description: "Adoracao, culto e servico no ambiente espiritual.",
-    ministrySummary: "Louvor, intercessao e suporte ao culto",
-    isActive: true
-  },
-  {
-    id: "tribe_judah",
-    organizationId: organization.id,
-    code: "JUDAH",
-    name: "Juda",
-    description: "Lideranca, governo e direcao ministerial.",
-    ministrySummary: "Lideranca, supervisao e conducao",
-    isActive: true
-  },
-  {
-    id: "tribe_asher",
-    organizationId: organization.id,
-    code: "ASHER",
-    name: "Aser",
-    description: "Acolhimento, hospitalidade e cuidado pratico.",
-    ministrySummary: "Recepcao, integracao e cuidado de familias",
-    isActive: true
-  }
+  { id: "tribe_levi", organizationId: organization.id, code: "LEVI", name: "Levi", description: "Adoração, culto e serviço no ambiente espiritual.", ministrySummary: "Louvor, intercessão, suporte ao culto e presença de Deus", isActive: true },
+  { id: "tribe_judah", organizationId: organization.id, code: "JUDAH", name: "Judá", description: "Liderança, governo e direção ministerial.", ministrySummary: "Liderança pastoral, supervisão e condução de pessoas", isActive: true },
+  { id: "tribe_asher", organizationId: organization.id, code: "ASHER", name: "Aser", description: "Acolhimento, hospitalidade e cuidado prático.", ministrySummary: "Recepção, integração e cuidado de famílias", isActive: true },
+  { id: "tribe_issachar", organizationId: organization.id, code: "ISSACHAR", name: "Issacar", description: "Discernimento de tempos e estratégia pastoral.", ministrySummary: "Comunicação, ensino e planejamento estratégico", isActive: true },
+  { id: "tribe_joseph", organizationId: organization.id, code: "JOSEPH", name: "José", description: "Administração, recursos e gestão com excelência.", ministrySummary: "Finanças, logística e estrutura organizacional", isActive: true },
+  { id: "tribe_naphtali", organizationId: organization.id, code: "NAPHTALI", name: "Naftali", description: "Expressão, artes e comunicação com leveza.", ministrySummary: "Dança, teatro, mídias e expressão artística", isActive: true },
+  { id: "tribe_zebulun", organizationId: organization.id, code: "ZEBULUN", name: "Zebulom", description: "Missões, alcance e expansão do Reino.", ministrySummary: "Evangelismo, missões urbanas e alcance comunitário", isActive: true },
+  { id: "tribe_gad", organizationId: organization.id, code: "GAD", name: "Gade", description: "Proteção, intercessão e cobertura espiritual.", ministrySummary: "Intercession, segurança espiritual e vigílias", isActive: true },
+  { id: "tribe_manasseh", organizationId: organization.id, code: "MANASSEH", name: "Manassés", description: "Cura, restauração e cuidado pastoral.", ministrySummary: "Aconselhamento, cuidado de feridos e restauração", isActive: true },
+  { id: "tribe_ephraim", organizationId: organization.id, code: "EPHRAIM", name: "Efraim", description: "Ensino, discipulado e formação de líderes.", ministrySummary: "Escola bíblica, discipulado e formação ministerial", isActive: true },
+  { id: "tribe_benjamin", organizationId: organization.id, code: "BENJAMIN", name: "Benjamim", description: "Juventude, ousadia e vanguarda espiritual.", ministrySummary: "Ministério jovem, inovação e movimentos de renovação", isActive: true },
+  { id: "tribe_reuben", organizationId: organization.id, code: "REUBEN", name: "Rúben", description: "Reconciliação, cuidado familiar e restauração de vínculos.", ministrySummary: "Aconselhamento familiar, mediação e restauração", isActive: true }
 ] as const;
 
 export const latestTribeAssessments = [

@@ -5935,6 +5935,99 @@ code {
   margin-bottom: 3rem;
 }
 
+/* Full 12-tribe grid — more compact cards */
+.tribe-grid-full {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Tribes stats bar */
+.tribes-stats-bar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.5rem;
+}
+
+.tribes-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--alvo-surface-muted, #f8fafc);
+  border: 1px solid var(--alvo-line, #e2e8f0);
+  font-size: 0.8125rem;
+  color: var(--alvo-ink-soft);
+}
+
+/* Tribe search bar */
+.tribes-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--alvo-line, #e2e8f0);
+  background: white;
+  margin-bottom: 1.25rem;
+  transition: border-color 0.2s;
+}
+.tribes-search-bar:focus-within {
+  border-color: var(--alvo-accent, #d27836);
+}
+.tribes-search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.875rem;
+  background: transparent;
+  color: var(--alvo-ink);
+}
+
+/* Tribe detail panel */
+.tribe-detail-panel {
+  padding: 1.25rem 1.5rem;
+  border-radius: 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+.tribe-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.tribe-detail-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+.tribe-detail-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+.tribe-detail-stats {
+  display: flex;
+  gap: 0.75rem;
+}
+.tribe-stat-box {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--alvo-ink-soft);
+  font-weight: 600;
+}
+
 .tribe-card {
   background: white;
   padding: 1.5rem;
@@ -6010,10 +6103,19 @@ code {
   color: var(--alvo-accent);
 }
 
-/* Tribe Colors */
-.tone-asher .tribe-icon { background: #ecfdf5; color: #059669; }
-.tone-levi .tribe-icon { background: #eff6ff; color: #2563eb; }
-.tone-judah .tribe-icon { background: #fff7ed; color: #ea580c; }
+/* Tribe Colors — all 12 tribes */
+.tone-asher .tribe-icon    { background: #ecfdf5; color: #059669; }
+.tone-levi .tribe-icon     { background: #eff6ff; color: #2563eb; }
+.tone-judah .tribe-icon    { background: #fff7ed; color: #ea580c; }
+.tone-issachar .tribe-icon { background: #f5f3ff; color: #7c3aed; }
+.tone-joseph .tribe-icon   { background: #ecfeff; color: #0891b2; }
+.tone-naphtali .tribe-icon { background: #fdf2f8; color: #db2777; }
+.tone-zebulun .tribe-icon  { background: #fffbeb; color: #d97706; }
+.tone-gad .tribe-icon      { background: #f8fafc; color: #475569; }
+.tone-manasseh .tribe-icon { background: #f0fdfa; color: #0d9488; }
+.tone-ephraim .tribe-icon  { background: #f7fee7; color: #65a30d; }
+.tone-benjamin .tribe-icon { background: #eef2ff; color: #4f46e5; }
+.tone-reuben .tribe-icon   { background: #fef2f2; color: #dc2626; }
 
 .cells-list-grid {
   display: grid;
@@ -6045,11 +6147,11 @@ code {
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
 }
-
-.cell-tribe-tag.tone-asher { background: #ecfdf5; color: #059669; }
-.cell-tribe-tag.tone-levi { background: #eff6ff; color: #2563eb; }
-.cell-tribe-tag.tone-judah { background: #fff7ed; color: #ea580c; }
 
 .cell-content {
   flex: 1;

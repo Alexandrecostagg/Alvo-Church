@@ -214,33 +214,37 @@ function getInitials(name: string) {
 
 function getTribeInfo(code?: TribeCode) {
   const tribes: Record<string, { name: string; summary: string }> = {
-    ASHER: { 
-      name: "Tribo de Aser", 
-      summary: "Excelencia no acolhimento e cuidado de familias." 
-    },
-    LEVI: { 
-      name: "Tribo de Levi", 
-      summary: "Adoracao e servico espiritual no ambiente do culto." 
-    },
-    JUDAH: { 
-      name: "Tribo de Judá", 
-      summary: "Lideranca, governo e direcao ministerial." 
-    },
-    default: { 
-      name: "Tribo Indefinida", 
-      summary: "Faca o teste para descobrir seu perfil pastoral." 
-    }
+    ASHER:    { name: "Tribo de Aser",     summary: "Excelência no acolhimento e cuidado de famílias." },
+    LEVI:     { name: "Tribo de Levi",     summary: "Adoração e serviço espiritual no ambiente do culto." },
+    JUDAH:    { name: "Tribo de Judá",     summary: "Liderança, governo e direção ministerial." },
+    ISSACHAR: { name: "Tribo de Issacar",  summary: "Discernimento de tempos e estratégia pastoral." },
+    JOSEPH:   { name: "Tribo de José",     summary: "Administração, recursos e gestão com excelência." },
+    NAPHTALI: { name: "Tribo de Naftali",  summary: "Expressão, artes e comunicação com leveza." },
+    ZEBULUN:  { name: "Tribo de Zebulom",  summary: "Missões, alcance e expansão do Reino." },
+    GAD:      { name: "Tribo de Gade",     summary: "Proteção, intercessão e cobertura espiritual." },
+    MANASSEH: { name: "Tribo de Manassés", summary: "Cura, restauração e cuidado pastoral." },
+    EPHRAIM:  { name: "Tribo de Efraim",   summary: "Ensino, discipulado e formação de líderes." },
+    BENJAMIN: { name: "Tribo de Benjamim", summary: "Juventude, ousadia e vanguarda espiritual." },
+    REUBEN:   { name: "Tribo de Rúben",    summary: "Reconciliação, cuidado familiar e restauração." },
+    default:  { name: "Tribo Indefinida",  summary: "Faça o teste para descobrir seu perfil pastoral." }
   };
-
   return tribes[code as string] || tribes.default;
 }
 function getTribeAccent(code?: TribeCode) {
   const accents: Record<string, { main: string; soft: string; dark: string }> = {
-    ASHER: { main: "#10b981", soft: "#ecfdf5", dark: "#065f46" },
-    LEVI: { main: "#3b82f6", soft: "#eff6ff", dark: "#1e3a8a" },
-    JUDAH: { main: "#f97316", soft: "#fff7ed", dark: "#7c2d12" },
-    default: { main: "#6366f1", soft: "#f5f3ff", dark: "#4338ca" }
+    ASHER:    { main: "#10b981", soft: "#ecfdf5", dark: "#065f46" },
+    LEVI:     { main: "#3b82f6", soft: "#eff6ff", dark: "#1e3a8a" },
+    JUDAH:    { main: "#f97316", soft: "#fff7ed", dark: "#7c2d12" },
+    ISSACHAR: { main: "#8b5cf6", soft: "#f5f3ff", dark: "#4c1d95" },
+    JOSEPH:   { main: "#06b6d4", soft: "#ecfeff", dark: "#083344" },
+    NAPHTALI: { main: "#ec4899", soft: "#fdf2f8", dark: "#831843" },
+    ZEBULUN:  { main: "#f59e0b", soft: "#fffbeb", dark: "#78350f" },
+    GAD:      { main: "#64748b", soft: "#f8fafc", dark: "#0f172a" },
+    MANASSEH: { main: "#14b8a6", soft: "#f0fdfa", dark: "#134e4a" },
+    EPHRAIM:  { main: "#84cc16", soft: "#f7fee7", dark: "#365314" },
+    BENJAMIN: { main: "#6366f1", soft: "#eef2ff", dark: "#1e1b4b" },
+    REUBEN:   { main: "#ef4444", soft: "#fef2f2", dark: "#7f1d1d" },
+    default:  { main: "#6366f1", soft: "#f5f3ff", dark: "#4338ca" }
   };
-
   return accents[code as string] || accents.default;
 }
