@@ -68,6 +68,9 @@ export function GroupsView() {
     type: "cell",
     leaderPersonId: ""
   });
+  const [groupFormError, setGroupFormError] = useState("");
+  const [groupFormSuccess, setGroupFormSuccess] = useState("");
+  const [groupFormSaving, setGroupFormSaving] = useState(false);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -216,12 +219,15 @@ export function GroupsView() {
 
   async function handleCreateGroup() {
     const name = groupForm.name.trim();
+    setGroupFormError("");
+    setGroupFormSuccess("");
 
     if (!name) {
-      setStatus("Informe o nome da celula antes de salvar.");
+      setGroupFormError("Digite o nome da célula para continuar.");
       return;
     }
 
+    setGroupFormSaving(true);
     const capacity = Number.parseInt(groupForm.capacity, 10);
     const localGroup: Group = {
       id: `group_local_${Date.now()}`,
@@ -240,11 +246,11 @@ export function GroupsView() {
     };
     setGroups((currentGroups) => [localGroup, ...currentGroups]);
     setSelectedGroupId(localGroup.id);
-    setStatus(`${localGroup.name} criada localmente.`);
-    setGroupForm((currentForm) => ({ ...currentForm, name: "" }));
+    setGroupForm((currentForm) => ({ ...currentForm, name: "", city: "", state: "", tribeCode: "", capacity: "12" }));
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Celula criada localmente. Conecte o Firebase para persistir.");
+      setGroupFormSuccess(`✅ "${localGroup.name}" criada! Conecte o Firebase para salvar permanentemente.`);
+      setGroupFormSaving(false);
       return;
     }
 
@@ -264,9 +270,11 @@ export function GroupsView() {
         currentGroups.map((group) => (group.id === localGroup.id ? savedGroup : group))
       );
       setSelectedGroupId(savedGroup.id);
-      setStatus("Celula salva no Firestore.");
+      setGroupFormSuccess(`✅ "${savedGroup.name}" salva no Firestore!`);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel salvar a celula.");
+      setGroupFormError(error instanceof Error ? error.message : "Não foi possível salvar a célula.");
+    } finally {
+      setGroupFormSaving(false);
     }
   }
 
@@ -453,14 +461,26 @@ export function GroupsView() {
           <div className="group-card-list">
             <div className="quick-group-form antigravity-float-delayed">
               <p className="eyebrow">Nova célula</p>
+              {groupFormError && (
+                <div className="form-inline-error">
+                  ⚠️ {groupFormError}
+                </div>
+              )}
+              {groupFormSuccess && (
+                <div className="form-inline-success">
+                  {groupFormSuccess}
+                </div>
+              )}
               <label>
-                Nome da célula
+                Nome da célula *
                 <input
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, name: event.target.value }))
-                  }
+                  onChange={(event) => {
+                    setGroupFormError("");
+                    setGroupForm((currentForm) => ({ ...currentForm, name: event.target.value }));
+                  }}
                   placeholder="Ex.: Célula Centro Sul"
                   value={groupForm.name}
+                  style={groupFormError && !groupForm.name ? { borderColor: '#ef4444' } : {}}
                 />
               </label>
               <label>
@@ -571,9 +591,15 @@ export function GroupsView() {
                   value={groupForm.capacity}
                 />
               </label>
-              <button className="primary-button full" onClick={() => void handleCreateGroup()} type="button">
+              <button 
+                className="primary-button full" 
+                onClick={() => void handleCreateGroup()} 
+                type="button"
+                disabled={groupFormSaving}
+                style={groupFormSaving ? { opacity: 0.7 } : {}}
+              >
                 <UserPlus size={15} />
-                Criar célula
+                {groupFormSaving ? "Salvando..." : "Criar célula"}
               </button>
             </div>
             {groups.length ? (

@@ -3535,6 +3535,29 @@ code {
   justify-content: center;
 }
 
+/* Inline form feedback */
+.form-inline-error {
+  padding: 0.6rem 0.875rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.form-inline-success {
+  padding: 0.6rem 0.875rem;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .group-card span {
   display: inline-flex;
   min-height: 24px;
