@@ -200,7 +200,6 @@ export function MemberProfileView() {
         </button>
       </footer>
     </main>
-    </main>
   );
 }
 
