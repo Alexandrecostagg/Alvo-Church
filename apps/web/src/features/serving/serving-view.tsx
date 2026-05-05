@@ -22,8 +22,6 @@ import type { FormEvent } from "react";
 import type { Person, ServiceAssignment, ServiceAssignmentStatus } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
-const organizationId = "org_alvo_demo";
-
 const ministryTeams = [
   {
     code: "reception",
@@ -124,7 +122,7 @@ const employeeRecords = [
 ];
 
 export function ServingView() {
-  const { configured, firebaseReady, user } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [assignments, setAssignments] = useState<ServiceAssignment[]>(initialAssignments);
   const [assignmentNoteDrafts, setAssignmentNoteDrafts] = useState<Record<string, string>>({});
@@ -137,22 +135,6 @@ export function ServingView() {
     role: "Apoio"
   });
   const [status, setStatus] = useState("Carregando escalas...");
-
-  const firebaseConfig = useMemo(
-    () =>
-      createFirebaseWebRuntimeConfigFromEnv({
-        NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-      }),
-    []
-  );
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -196,7 +178,7 @@ export function ServingView() {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, user]);
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const selectedMinistry = ministryTeams.find((team) => team.code === selectedMinistryCode) ?? ministryTeams[0];
   const selectedAssignments = assignments.filter(

@@ -29,8 +29,6 @@ import {
 import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
-const organizationId = "org_alvo_demo";
-
 const journeyLanes = [
   {
     key: "visitor",
@@ -201,7 +199,7 @@ type CarePlanStep =
 type CareSignalLevel = "urgent" | "attention" | "stable";
 
 export function JourneysView() {
-  const { configured, firebaseReady, user } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [journeys, setJourneys] = useState<VisitorJourney[]>([]);
   const [tasks, setTasks] = useState<FollowUpTask[]>([]);
@@ -212,22 +210,6 @@ export function JourneysView() {
   const [query, setQuery] = useState("");
   const [focusFilter, setFocusFilter] = useState<JourneyFilter>("all");
   const [copiedScriptForPersonId, setCopiedScriptForPersonId] = useState<string | null>(null);
-
-  const firebaseConfig = useMemo(
-    () =>
-      createFirebaseWebRuntimeConfigFromEnv({
-        NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-      }),
-    []
-  );
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -276,7 +258,7 @@ export function JourneysView() {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, user]);
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const selectedPerson = people.find((person) => person.id === selectedPersonId) ?? null;
   const selectedJourney = selectedPerson

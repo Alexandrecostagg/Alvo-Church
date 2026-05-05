@@ -16,7 +16,8 @@ import {
   signInWithFirebaseEmailPassword,
   signOutFromFirebase,
   subscribeToFirebaseAuthState,
-  type FirebaseAuthUser
+  type FirebaseAuthUser,
+  type FirebaseWebRuntimeConfig
 } from "@alvo/firebase";
 import type { TenantRuntimeSnapshot } from "@alvo/types";
 
@@ -26,27 +27,22 @@ interface AuthContextValue {
   user: FirebaseAuthUser | null;
   tenantRuntime: TenantRuntimeSnapshot | null;
   tenantReady: boolean;
+  organizationId: string;
+  firebaseConfig: FirebaseWebRuntimeConfig;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  firebaseReady: false,
-  configured: false,
-  user: null,
-  tenantRuntime: null,
-  tenantReady: false,
-  signIn: async () => undefined,
-  signOut: async () => undefined
-});
+const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
 
-const ORGANIZATION_ID = "org_alvo_demo";
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
+  const [organizationId, setOrganizationId] = useState(DEFAULT_ORGANIZATION_ID);
 
   const firebaseConfig = useMemo(
     () =>
@@ -93,14 +89,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
     async function loadTenantRuntime() {
       try {
         await ensureTenantUserAccess(firebaseConfig, {
-          organizationId: ORGANIZATION_ID,
+          organizationId,
           userId: currentUser.uid,
           email: currentUser.email ?? "",
           roles: ["church_admin"]
         });
 
         const snapshot = await fetchTenantRuntimeSnapshot(firebaseConfig, {
-          organizationId: ORGANIZATION_ID
+          organizationId
         });
 
         if (!cancelled) {
@@ -122,7 +118,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, user]);
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   return (
     <AuthContext.Provider
@@ -132,6 +128,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
         user,
         tenantRuntime,
         tenantReady,
+        organizationId,
+        firebaseConfig,
         signIn: async (email, password) => {
           if (!configured) {
             throw new Error("Firebase nao configurado.");
@@ -158,5 +156,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
 }
 
 export function useAppAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAppAuth deve ser usado dentro de um AppProviders");
+  }
+  return context;
 }

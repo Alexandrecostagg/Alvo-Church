@@ -38,7 +38,9 @@ import type {
   TenantRuntimeSnapshot,
   TenantContext,
   VisitorIntake,
-  VisitorJourney
+  VisitorJourney,
+  TribeAssessment,
+  TribeAssessmentScore
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -65,7 +67,9 @@ import {
   getServiceTeamsCollectionPath,
   getUsersCollectionPath,
   getVisitorIntakesCollectionPath,
-  getVisitorJourneysCollectionPath
+  getVisitorJourneysCollectionPath,
+  getTribeAssessmentsCollectionPath,
+  getTribeAssessmentScoresCollectionPath
 } from "./index";
 
 
@@ -1537,4 +1541,58 @@ export async function fetchEventCheckIns(
   );
 
   return snapshots.flat();
+}
+export async function fetchTribeAssessments(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 10
+) {
+  const firestore = getFirebaseFirestore(config);
+  const assessmentsQuery = query(
+    collection(firestore, getTribeAssessmentsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(assessmentsQuery);
+
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data()
+  } as TribeAssessment));
+}
+
+export async function saveTribeAssessment(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  assessment: TribeAssessment,
+  scores: TribeAssessmentScore[]
+) {
+  const firestore = getFirebaseFirestore(config);
+  
+  // Save main assessment
+  await setDoc(
+    doc(firestore, getTribeAssessmentsCollectionPath(context), assessment.id),
+    cleanFirestoreData({
+      ...assessment,
+      organizationId: context.organizationId,
+      submittedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  // Save scores as sub-collection
+  await Promise.all(
+    scores.map(score => 
+      setDoc(
+        doc(firestore, getTribeAssessmentScoresCollectionPath(context, assessment.id), score.id),
+        cleanFirestoreData({
+          ...score,
+          organizationId: context.organizationId,
+          tribeAssessmentId: assessment.id
+        }),
+        { merge: true }
+      )
+    )
+  );
+
+  return assessment;
 }

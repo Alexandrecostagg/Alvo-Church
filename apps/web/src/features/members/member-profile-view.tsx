@@ -14,33 +14,15 @@ import {
 import type { Family, FamilyMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
-const organizationId = "org_alvo_demo";
-
 export function MemberProfileView() {
   const params = useParams<{ personId?: string }>();
   const personId = typeof params.personId === "string" ? params.personId : "";
-  const { configured, firebaseReady, user } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [person, setPerson] = useState<Person | null>(null);
   const [family, setFamily] = useState<Family | null>(null);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
   const [status, setStatus] = useState("Carregando ficha do membro...");
-
-  const firebaseConfig = useMemo(
-    () =>
-      createFirebaseWebRuntimeConfigFromEnv({
-        NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-      }),
-    []
-  );
 
   useEffect(() => {
     if (!personId) {
@@ -108,7 +90,7 @@ export function MemberProfileView() {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, personId, user]);
+  }, [configured, firebaseConfig, firebaseReady, personId, organizationId, user]);
 
   const fullName = person ? getFullName(person) : "Ficha de membro";
   const profileHealth = person ? getProfileHealth(person) : [];

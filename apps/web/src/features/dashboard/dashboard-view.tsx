@@ -90,7 +90,7 @@ import { organization, tenantSettings, currentUser, recentPeople, families, acti
 
 
 export function DashboardView() {
-  const { configured, user } = useAppAuth();
+  const { configured, user, organizationId, firebaseConfig } = useAppAuth();
   const [activeSection, setActiveSection] = useState("overview");
   const [completedActionIds, setCompletedActionIds] = useState<string[]>([]);
   const [actionSyncStatus, setActionSyncStatus] = useState<string | null>(null);
@@ -119,23 +119,6 @@ export function DashboardView() {
   const [realIntakes, setRealIntakes] = useState<VisitorIntake[]>([]);
   const [realReports, setRealReports] = useState<FinancialTransparencyReport[]>([]);
   const [syncMessage, setSyncMessage] = useState("Iniciando conexao pastoral...");
-
-  const organizationId = "org_alvo_demo";
-  const firebaseConfig = useMemo(
-    () =>
-      createFirebaseWebRuntimeConfigFromEnv({
-        NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-      }),
-    []
-  );
 
   useEffect(() => {
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -178,7 +161,7 @@ export function DashboardView() {
 
     void syncDashboard();
     return () => { cancelled = true; };
-  }, [configured, firebaseConfig, user]);
+  }, [configured, firebaseConfig, organizationId, user]);
   const strongestSignal = getStrongestBehaviorSignal(
     dashboard.behaviorSignals,
     dashboard.reviewRequests[0]?.personId ?? ""
@@ -542,7 +525,7 @@ export function DashboardView() {
     try {
       await createVisitorIntakeWorkflow(
         firebaseConfig,
-        { organizationId: organization.id },
+        { organizationId },
         {
           capturedByUserId: user.uid,
           name,
@@ -587,7 +570,7 @@ export function DashboardView() {
     try {
       await publishFinancialTransparencyReport(
         firebaseConfig,
-        { organizationId: organization.id },
+        { organizationId },
         {
           balance: transparencySummary.balance,
           entries: transparencyEntries.map(({ amount, category, label, note }) => ({
@@ -633,7 +616,7 @@ export function DashboardView() {
     try {
       await updateFollowUpTaskStatus(
         firebaseConfig,
-        { organizationId: organization.id },
+        { organizationId },
         {
           taskId: actionId,
           status: "completed",
@@ -655,69 +638,82 @@ export function DashboardView() {
     <>
 
       <section className="app-workspace animate-entrance" id="overview">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Painel operacional</p>
-            <h1>Bom dia, Getro Church.</h1>
-            <p className="form-status" style={{ marginTop: '4px', fontSize: '13px', color: 'var(--alvo-ink-soft)' }}>
-              {syncMessage}
-            </p>
-          </div>
-          <div className="topbar-actions">
-            <div className="search-box">
-              <Search size={16} />
-              <input
-                aria-label="Buscar pessoas, grupos e eventos"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar pessoas, grupos e eventos"
-                value={query}
-              />
-              {query ? (
-                <div className="search-results">
-                  {searchResults.length ? (
-                    searchResults.slice(0, 6).map((result) => (
-                      <a
-                        href={result.href}
-                        key={`${result.type}-${result.id}`}
-                        onClick={(event) => {
-                          if (result.type === "Pessoa") {
-                            event.preventDefault();
-                            openPersonProfile(result.id);
-                            return;
-                          }
-
-                          if (result.href.startsWith("#")) {
-                            setActiveSection(result.href.slice(1));
-                          }
-                        }}
-                      >
-                        <span>{result.type}</span>
-                        <strong>{result.title}</strong>
-                        <small>{result.detail}</small>
-                      </a>
-                    ))
-                  ) : (
-                    <p>Nenhum resultado encontrado.</p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-            <button
-              aria-expanded={notificationsOpen}
-              className="icon-button"
-              aria-label="Notificacoes"
-              onClick={() => setNotificationsOpen((isOpen) => !isOpen)}
-            >
-              <Bell size={18} />
-            </button>
-            {notificationsOpen ? (
-              <div className="notification-popover">
-                <strong>Notificacoes</strong>
-                <p>{openActionFeed.length} acao(oes) aguardando retorno pastoral.</p>
-                <p>{dashboard.reviewRequests.length} revisao de tribo em aberto.</p>
+        <header className="dashboard-header-premium">
+          <div className="header-main">
+            <div className="welcome-section">
+              <p className="eyebrow">Painel Operacional</p>
+              <h1>Bom dia, {user?.displayName || 'Getro'}.</h1>
+              <div className="sync-status">
+                <Activity size={14} className={syncMessage.includes('Erro') ? 'text-red' : 'text-green'} />
+                <span>{syncMessage}</span>
               </div>
-            ) : null}
+            </div>
+
+            <div className="command-center">
+              <div className="global-search-container">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Pessoas, grupos ou comandos... (⌘K)"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                {query && (
+                  <div className="search-overlay-dropdown antigravity-float">
+                    {searchResults.length > 0 ? (
+                      searchResults.slice(0, 8).map(result => (
+                        <Link key={`${result.type}-${result.id}`} href={result.href} className="search-result-row">
+                          <span className="type-tag">{result.type}</span>
+                          <div className="result-info">
+                            <strong>{result.title}</strong>
+                            <small>{result.detail}</small>
+                          </div>
+                          <ChevronRight size={14} />
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="no-results">Nenhum resultado para "{query}"</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="quick-access-tools">
+                <button 
+                  className="tool-button" 
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  data-active={notificationsOpen}
+                >
+                  <Bell size={20} />
+                  {dashboard.reviewRequests.length > 0 && <span className="urgent-indicator" />}
+                </button>
+                <Link href="/members/new" className="action-button primary">
+                  <UserPlus size={18} />
+                  <span>Novo Membro</span>
+                </Link>
+              </div>
+            </div>
           </div>
+          
+          {notificationsOpen && (
+            <div className="notifications-dropdown-panel antigravity-float animate-entrance">
+              <div className="panel-header">
+                <strong>Pendências Pastorais</strong>
+                <span className="soft-pill">{openActionFeed.length}</span>
+              </div>
+              <div className="panel-content">
+                {openActionFeed.map(item => (
+                  <Link key={item.id} href={item.href} className="notification-item">
+                    <item.icon size={16} />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>{item.detail}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </header>
 
         <section className="hero-grid">

@@ -21,8 +21,6 @@ import {
 import type { VisitorIntake, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
-const organizationId = "org_alvo_demo";
-
 type CapturedVisitor = {
   id: string;
   journeyId?: string;
@@ -46,7 +44,7 @@ const demoVisitors: CapturedVisitor[] = [
 ];
 
 export function ReceptionView() {
-  const { configured, firebaseReady, user } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [visitorDraft, setVisitorDraft] = useState({
     name: "",
     phone: "",
@@ -59,22 +57,6 @@ export function ReceptionView() {
   const [greetedVisitorIds, setGreetedVisitorIds] = useState<string[]>([]);
   const [status, setStatus] = useState("Pronto para receber visitantes.");
   const [lastCreated, setLastCreated] = useState<CapturedVisitor | null>(null);
-
-  const firebaseConfig = useMemo(
-    () =>
-      createFirebaseWebRuntimeConfigFromEnv({
-        NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-      }),
-    []
-  );
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -111,7 +93,7 @@ export function ReceptionView() {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, user]);
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   async function handleVisitorCapture(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

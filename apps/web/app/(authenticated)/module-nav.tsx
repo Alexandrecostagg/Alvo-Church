@@ -21,17 +21,37 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 
-const moduleNavItems = [
-  { label: "Resumo", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
-  { label: "Minha Area", icon: UserCircle, href: "/me", match: (pathname: string) => pathname.startsWith("/me") },
-  { label: "Portaria", icon: ClipboardList, href: "/reception", match: (pathname: string) => pathname.startsWith("/reception") },
-  { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname: string) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
-  { label: "Jornadas", icon: MapIcon, href: "/journeys", match: (pathname: string) => pathname.startsWith("/journeys") },
-  { label: "Tribos", icon: Tent, href: "/tribes", match: (pathname: string) => pathname.startsWith("/tribes") },
-  { label: "Celulas", icon: Waypoints, href: "/groups", match: (pathname: string) => pathname.startsWith("/groups") },
-  { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname.startsWith("/serving") },
-  { label: "Novo membro", icon: UserPlus, href: "/members/new", match: (pathname: string) => pathname.startsWith("/members/new") },
-  { label: "SaaS", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") }
+const navigationGroups = [
+  {
+    title: "Geral",
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
+      { label: "Portaria", icon: ClipboardList, href: "/reception", match: (pathname: string) => pathname.startsWith("/reception") },
+    ]
+  },
+  {
+    title: "Membros",
+    items: [
+      { label: "Minha Area", icon: UserCircle, href: "/me", match: (pathname: string) => pathname.startsWith("/me") },
+      { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname: string) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
+      { label: "Novo Membro", icon: UserPlus, href: "/members/new", match: (pathname: string) => pathname.startsWith("/members/new") },
+    ]
+  },
+  {
+    title: "Estrategia",
+    items: [
+      { label: "Tribos", icon: Tent, href: "/tribes", match: (pathname: string) => pathname.startsWith("/tribes") },
+      { label: "Células", icon: Waypoints, href: "/groups", match: (pathname: string) => pathname.startsWith("/groups") },
+      { label: "Jornadas", icon: MapIcon, href: "/journeys", match: (pathname: string) => pathname.startsWith("/journeys") },
+      { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname.startsWith("/serving") },
+    ]
+  },
+  {
+    title: "Admin",
+    items: [
+      { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") }
+    ]
+  }
 ];
 
 export function ModuleNav() {
@@ -41,19 +61,26 @@ export function ModuleNav() {
     <aside className="app-sidebar">
       <BrandLogo compact size={42} />
       <nav className="app-nav" aria-label="Navegacao principal">
-        {moduleNavItems.map((item) => {
-          const isActive = item.match(pathname);
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={isActive ? "app-nav-item is-active" : "app-nav-item"}
-            >
-              <item.icon size={18} strokeWidth={2.2} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {navigationGroups.map((group) => (
+          <div key={group.title} className="nav-group">
+            <span className="nav-group-title">{group.title}</span>
+            <div className="nav-group-items">
+              {group.items.map((item) => {
+                const isActive = item.match(pathname);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={isActive ? "app-nav-item is-active" : "app-nav-item"}
+                  >
+                    <item.icon size={18} strokeWidth={2.2} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="sidebar-status">
         <ShieldCheck size={18} />
