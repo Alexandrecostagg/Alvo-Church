@@ -3,6 +3,8 @@ import "./globals.css";
 import { AppProviders } from "./providers";
 import { TenantTheme } from "./tenant-theme";
 
+export const runtime = "edge";
+
 export const metadata: Metadata = {
   title: "Getro Church",
   description: "Plataforma para igrejas em movimento."
