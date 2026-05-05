@@ -55,7 +55,7 @@ export function TribeAssessmentView() {
     setIsSubmitting(true);
     try {
       const questionnaireResult = calculateTribeQuestionnaireResult(finalAnswers);
-      const primaryTribe = questionnaireResult.primaryTribe;
+      const primaryTribeCode = questionnaireResult.primaryTribeCode;
       
       if (isFirebaseWebRuntimeConfigured(firebaseConfig)) {
         const assessmentId = `assessment_${Date.now()}`;
@@ -65,7 +65,7 @@ export function TribeAssessmentView() {
           personId: user?.id || "anonymous",
           assessmentType: "initial" as const,
           status: "validated" as const,
-          primaryTribeCode: primaryTribe,
+          primaryTribeCode: primaryTribeCode,
           confidenceLevel: "high" as const,
           validationStatus: "validated" as const,
           submittedAt: new Date().toISOString()
@@ -95,7 +95,7 @@ export function TribeAssessmentView() {
   };
 
   if (result) {
-    const tribeCode = result.primaryTribe;
+    const tribeCode = result.primaryTribeCode;
     const accent = getTribeAccent(tribeCode);
     const label = getTribeDisplayLabel(tribeCode);
 
