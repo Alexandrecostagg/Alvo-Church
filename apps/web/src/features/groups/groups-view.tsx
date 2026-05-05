@@ -63,7 +63,10 @@ export function GroupsView() {
     meetingDayOfWeek: "3",
     meetingTime: "19:30",
     name: "",
-    state: ""
+    state: "",
+    tribeCode: "",
+    type: "cell",
+    leaderPersonId: ""
   });
 
   useEffect(() => {
@@ -225,14 +228,15 @@ export function GroupsView() {
       organizationId,
       name,
       slug: slugifyLocal(name),
-      type: "cell",
+      type: groupForm.type as Group["type"],
       status: "active",
       visibility: "internal",
       meetingDayOfWeek: Number.parseInt(groupForm.meetingDayOfWeek, 10),
       meetingTime: groupForm.meetingTime || undefined,
       city: groupForm.city.trim() || undefined,
       state: groupForm.state.trim() || undefined,
-      capacity: Number.isNaN(capacity) ? undefined : capacity
+      capacity: Number.isNaN(capacity) ? undefined : capacity,
+      tribeCode: (groupForm.tribeCode || undefined) as Group["tribeCode"]
     };
     setGroups((currentGroups) => [localGroup, ...currentGroups]);
     setSelectedGroupId(localGroup.id);
@@ -253,8 +257,9 @@ export function GroupsView() {
         meetingTime: localGroup.meetingTime,
         name: localGroup.name,
         state: localGroup.state,
-        type: "cell"
-      });
+        type: localGroup.type,
+        tribeCode: localGroup.tribeCode
+      } as any);
       setGroups((currentGroups) =>
         currentGroups.map((group) => (group.id === localGroup.id ? savedGroup : group))
       );
@@ -447,16 +452,54 @@ export function GroupsView() {
           </div>
           <div className="group-card-list">
             <div className="quick-group-form antigravity-float-delayed">
-              <p className="eyebrow">Nova celula</p>
+              <p className="eyebrow">Nova célula</p>
               <label>
-                Nome
+                Nome da célula
                 <input
                   onChange={(event) =>
                     setGroupForm((currentForm) => ({ ...currentForm, name: event.target.value }))
                   }
-                  placeholder="Ex.: Celula Centro Sul"
+                  placeholder="Ex.: Célula Centro Sul"
                   value={groupForm.name}
                 />
+              </label>
+              <label>
+                Tipo
+                <select
+                  onChange={(event) =>
+                    setGroupForm((currentForm) => ({ ...currentForm, type: event.target.value }))
+                  }
+                  value={groupForm.type}
+                >
+                  <option value="cell">Célula</option>
+                  <option value="small_group">Pequeno Grupo</option>
+                  <option value="class">Classe / Escola</option>
+                  <option value="youth_group">Grupo de Jovens</option>
+                  <option value="ministry_team">Equipe de Ministério</option>
+                </select>
+              </label>
+              <label>
+                Tribo vinculada
+                <select
+                  onChange={(event) =>
+                    setGroupForm((currentForm) => ({ ...currentForm, tribeCode: event.target.value }))
+                  }
+                  value={groupForm.tribeCode}
+                >
+                  <option value="">Selecionar tribo...</option>
+                  <option value="LEVI">🔵 Levi — Adoração e Culto</option>
+                  <option value="JUDAH">🟠 Judá — Liderança</option>
+                  <option value="ASHER">🟢 Aser — Acolhimento</option>
+                  <option value="ISSACHAR">🟣 Issacar — Estratégia</option>
+                  <option value="JOSEPH">🩵 José — Administração</option>
+                  <option value="NAPHTALI">🩷 Naftali — Artes</option>
+                  <option value="ZEBULUN">🟡 Zebulom — Missões</option>
+                  <option value="GAD">⚫ Gade — Intercessão</option>
+                  <option value="MANASSEH">🩵 Manassés — Cura</option>
+                  <option value="EPHRAIM">🟢 Efraim — Ensino</option>
+                  <option value="BENJAMIN">💜 Benjamim — Jovens</option>
+                  <option value="REUBEN">🔴 Rúben — Família</option>
+                </select>
               </label>
               <div className="quick-group-grid">
                 <label>
@@ -478,7 +521,7 @@ export function GroupsView() {
                   </select>
                 </label>
                 <label>
-                  Horario
+                  Horário
                   <input
                     onChange={(event) =>
                       setGroupForm((currentForm) => ({
@@ -503,23 +546,34 @@ export function GroupsView() {
                   />
                 </label>
                 <label>
-                  Vagas
+                  Estado (UF)
                   <input
-                    min="1"
+                    maxLength={2}
                     onChange={(event) =>
-                      setGroupForm((currentForm) => ({
-                        ...currentForm,
-                        capacity: event.target.value
-                      }))
+                      setGroupForm((currentForm) => ({ ...currentForm, state: event.target.value.toUpperCase() }))
                     }
-                    type="number"
-                    value={groupForm.capacity}
+                    placeholder="PA"
+                    value={groupForm.state}
                   />
                 </label>
               </div>
+              <label>
+                Vagas
+                <input
+                  min="1"
+                  onChange={(event) =>
+                    setGroupForm((currentForm) => ({
+                      ...currentForm,
+                      capacity: event.target.value
+                    }))
+                  }
+                  type="number"
+                  value={groupForm.capacity}
+                />
+              </label>
               <button className="primary-button full" onClick={() => void handleCreateGroup()} type="button">
                 <UserPlus size={15} />
-                Criar celula
+                Criar célula
               </button>
             </div>
             {groups.length ? (
