@@ -4,6 +4,7 @@
   "scripts": {
     "build": "next build --webpack",
     "build:cloudflare": "next build && npx @cloudflare/next-on-pages",
+    "build:cloudflare:web": "next build && npx @cloudflare/next-on-pages",
     "dev": "next dev --webpack",
     "preview:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler dev'",
     "deploy:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler deploy'",
