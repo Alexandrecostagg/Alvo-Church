@@ -208,3 +208,19 @@ export function getTribeReviewRequestsCollectionPath(context: TenantContext) {
 export function getTribeBehaviorSignalsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/tribeBehaviorSignals`;
 }
+
+export function getLeaderEmotionalPulseCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/leaderEmotionalPulse`;
+}
+
+export function getWellBeingResourcesCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/wellBeingResources`;
+}
+
+export function getMentoringSessionsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/mentoringSessions`;
+}
+
+export function getEmergencySOSCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/emergencySOS`;
+}

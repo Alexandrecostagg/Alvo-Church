@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { TribeAssessmentView } from "../../../../src/features/tribes/tribe-assessment-view";
 
 export default function TribeAssessmentPage() {

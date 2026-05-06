@@ -356,7 +356,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
               <div key={partner.id} style={itemStyle}>
                 <strong>{partner.name}</strong>
                 <p style={itemTextStyle}>
-                  {getPartnerBenefitCategoryLabel(partner.category)} - {partner.city ?? "cidade nao informada"}
+                  {getPartnerBenefitCategoryLabel(partner.category)} - {partner.address?.city ?? "cidade nao informada"}
                 </p>
               </div>
             ))}

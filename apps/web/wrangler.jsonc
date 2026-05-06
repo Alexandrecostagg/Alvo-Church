@@ -1,6 +1,12 @@
 {
   "name": "alvo-church-web",
-  "pages_build_output_dir": ".vercel/output/static",
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
   "compatibility_date": "2026-04-07",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
 }

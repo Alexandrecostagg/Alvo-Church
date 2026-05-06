@@ -281,8 +281,21 @@ export interface PartnerOrganization {
   status: "active" | "inactive";
   contactName?: string;
   contactPhone?: string;
-  city?: string;
-  state?: string;
+  ownerPersonId?: string;
+  isMemberBusiness: boolean;
+  logoUrl?: string;
+  website?: string;
+  instagram?: string;
+  address?: {
+    street: string;
+    number: string;
+    district: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    lat?: number;
+    lng?: number;
+  };
 }
 
 export interface PartnerBenefit {
@@ -894,3 +907,53 @@ export interface KidsSecuritySession {
   expiresAt: string; 
   status: "active" | "used" | "expired"; 
 }
+
+// Leader Wellness Types
+export type EmotionalMood = "tired" | "anxious" | "neutral" | "happy" | "energetic";
+
+export interface LeaderEmotionalPulse {
+  id: string;
+  organizationId: string;
+  leaderId: string;
+  mood: EmotionalMood;
+  energyLevel: number; // 1-10
+  stressLevel: number; // 1-10
+  notedAt: string;
+  notes?: string;
+}
+
+export interface WellBeingResource {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string;
+  category: "mental" | "physical" | "spiritual" | "relational";
+  contentUrl: string;
+  thumbnailUrl?: string;
+  durationMinutes?: number;
+  tags: string[];
+}
+
+export interface MentoringSession {
+  id: string;
+  organizationId: string;
+  leaderId: string;
+  mentorName: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: "scheduled" | "completed" | "cancelled";
+  meetingLink?: string;
+  summaryNotes?: string;
+}
+
+export interface EmergencySOS {
+  id: string;
+  organizationId: string;
+  leaderId: string;
+  triggeredAt: string;
+  reason: string;
+  status: "active" | "resolved" | "dismissed";
+  resolvedAt?: string;
+  resolvedByUserId?: string;
+}
+

@@ -1,5 +1,6 @@
 "use client";
 
+export const runtime = 'nodejs';
 import { DashboardView } from "../../src/features/dashboard/dashboard-view";
 
 export default function HomePage() {

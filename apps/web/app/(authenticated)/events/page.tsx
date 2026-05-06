@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { EventsView } from "../../../src/features/events/events-view";
 
 export default function EventsPage() {

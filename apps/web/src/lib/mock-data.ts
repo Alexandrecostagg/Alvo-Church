@@ -1,6 +1,6 @@
 import { Activity, Bell, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Flame, Handshake, HeartHandshake, Landmark, LayoutDashboard, Map as MapIcon, Megaphone, MessageSquareText, QrCode, ReceiptText, Search, Send, ShieldCheck, Sparkles, Smartphone, Target, Trophy, UserPlus, UsersRound, Waypoints } from "lucide-react";
 import { calculateTribeQuestionnaireResult, canManagePeople, createTribeReclassificationSnapshot, getBrandModeLabel, getEnabledModuleCount, getEventTypeLabel, getFollowUpStatusLabel, getGroupTypeLabel, getJourneyKindLabel, getPartnerBenefitCategoryLabel, getPlanTierLabel, getRecommendedReviewType, getRecommendedReviewTypeLabel, getRegistrationStatusLabel, getReviewRequestStatusLabel, getStrongestBehaviorSignal, getTribeDisplayLabel, getTribeValidationLabel, getVisitorStageLabel, isModuleEnabled, shouldRecommendTribeReview, tribeQuestionnaireV1 } from "@alvo/domain";
-import type { OrganizationSettingsSnapshot, TribeCode } from "@alvo/types";
+import type { OrganizationSettingsSnapshot, TribeCode, PartnerOrganization, PartnerBenefit } from "@alvo/types";
 
 function getPersonDisplayName(person: any) { return person.firstName + " " + person.lastName; }
 function getPersonName(personId: string) { return personId; }
@@ -908,7 +908,7 @@ export const transparencyEntries = [
   }
 ] as const;
 
-export const partnerOrganizations = [
+export const partnerOrganizations: PartnerOrganization[] = [
   {
     id: "partner_1",
     organizationId: organization.id,
@@ -916,8 +916,15 @@ export const partnerOrganizations = [
     category: "health",
     status: "active",
     contactName: "Renata Alves",
-    city: "Belem",
-    state: "PA"
+    isMemberBusiness: false,
+    address: {
+      street: "Av. Gentil Bittencourt",
+      number: "123",
+      district: "Nazare",
+      city: "Belem",
+      state: "PA",
+      postalCode: "66035-000"
+    }
   },
   {
     id: "partner_2",
@@ -926,10 +933,61 @@ export const partnerOrganizations = [
     category: "education",
     status: "active",
     contactName: "Daniel Rocha",
-    city: "Belem",
-    state: "PA"
+    isMemberBusiness: false,
+    address: {
+      street: "Rua Dos Mundurucus",
+      number: "456",
+      district: "Batista Campos",
+      city: "Belem",
+      state: "PA",
+      postalCode: "66033-000"
+    }
+  },
+  {
+    id: "business_1",
+    organizationId: organization.id,
+    name: "Pão da Vida",
+    category: "food",
+    status: "active",
+    contactName: "Ana Silva",
+    isMemberBusiness: true,
+    ownerPersonId: "person_1",
+    logoUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=200&auto=format&fit=crop",
+    instagram: "@paodavida_alvo",
+    address: {
+      street: "Travessa Mauriti",
+      number: "1020",
+      district: "Marco",
+      city: "Belem",
+      state: "PA",
+      postalCode: "66093-000",
+      lat: -1.4367,
+      lng: -48.4578
+    }
+  },
+  {
+    id: "business_2",
+    organizationId: organization.id,
+    name: "Conecta Tech",
+    category: "services",
+    status: "active",
+    contactName: "Lucas Costa",
+    isMemberBusiness: true,
+    ownerPersonId: "person_2",
+    logoUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200&auto=format&fit=crop",
+    website: "https://conectatech.alvo.app",
+    address: {
+      street: "Avenida Visconde de Souza Franco",
+      number: "500",
+      district: "Reduto",
+      city: "Belem",
+      state: "PA",
+      postalCode: "66053-000",
+      lat: -1.4485,
+      lng: -48.4892
+    }
   }
-] as const;
+];
 
 export const partnerBenefits = [
   {
@@ -955,6 +1013,30 @@ export const partnerBenefits = [
     discountLabel: "20%",
     verificationMode: "member_code",
     privacyNotes: "Parceiro nao acessa CPF, renda, endereco ou historico pastoral."
+  },
+  {
+    id: "benefit_3",
+    organizationId: organization.id,
+    partnerId: "business_1",
+    title: "Café da Manhã do Reino",
+    description: "15% de desconto em qualquer combo de café da manhã apresentando o Getro Pass.",
+    category: "food",
+    status: "active",
+    discountLabel: "15%",
+    verificationMode: "qr_code",
+    privacyNotes: "Apenas para membros ativos."
+  },
+  {
+    id: "benefit_4",
+    organizationId: organization.id,
+    partnerId: "business_2",
+    title: "Consultoria Gratuita",
+    description: "Primeira consultoria de segurança digital gratuita para empresas de membros.",
+    category: "services",
+    status: "active",
+    discountLabel: "FREE",
+    verificationMode: "member_code",
+    privacyNotes: "Sujeito a disponibilidade de agenda."
   }
 ] as const;
 

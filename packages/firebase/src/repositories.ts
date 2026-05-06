@@ -40,7 +40,11 @@ import type {
   VisitorIntake,
   VisitorJourney,
   TribeAssessment,
-  TribeAssessmentScore
+  TribeAssessmentScore,
+  LeaderEmotionalPulse,
+  WellBeingResource,
+  MentoringSession,
+  EmergencySOS
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -69,7 +73,11 @@ import {
   getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath,
   getTribeAssessmentsCollectionPath,
-  getTribeAssessmentScoresCollectionPath
+  getTribeAssessmentScoresCollectionPath,
+  getLeaderEmotionalPulseCollectionPath,
+  getWellBeingResourcesCollectionPath,
+  getMentoringSessionsCollectionPath,
+  getEmergencySOSCollectionPath
 } from "./index";
 
 
@@ -298,8 +306,21 @@ function toPartnerOrganization(documentId: string, data: DocumentData): PartnerO
     status: (data.status as PartnerOrganization["status"]) ?? "inactive",
     contactName: data.contactName ? String(data.contactName) : undefined,
     contactPhone: data.contactPhone ? String(data.contactPhone) : undefined,
-    city: data.city ? String(data.city) : undefined,
-    state: data.state ? String(data.state) : undefined
+    ownerPersonId: data.ownerPersonId ? String(data.ownerPersonId) : undefined,
+    isMemberBusiness: Boolean(data.isMemberBusiness),
+    logoUrl: data.logoUrl ? String(data.logoUrl) : undefined,
+    website: data.website ? String(data.website) : undefined,
+    instagram: data.instagram ? String(data.instagram) : undefined,
+    address: data.address ? {
+      street: String(data.address.street ?? ""),
+      number: String(data.address.number ?? ""),
+      district: String(data.address.district ?? ""),
+      city: String(data.address.city ?? ""),
+      state: String(data.address.state ?? ""),
+      postalCode: String(data.address.postalCode ?? ""),
+      lat: data.address.lat ? Number(data.address.lat) : undefined,
+      lng: data.address.lng ? Number(data.address.lng) : undefined
+    } : undefined
   };
 }
 
@@ -830,35 +851,9 @@ export async function fetchFamilyMembers(
   return snapshot.docs.map((item) => toFamilyMember(item.id, item.data()));
 }
 
-export async function fetchPartnerOrganizations(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  maxItems = 8
-) {
-  const firestore = getFirebaseFirestore(config);
-  const partnersQuery = query(
-    collection(firestore, getPartnersCollectionPath(context)),
-    limit(maxItems)
-  );
-  const snapshot = await getDocs(partnersQuery);
 
-  return snapshot.docs.map((item) => toPartnerOrganization(item.id, item.data()));
-}
 
-export async function fetchPartnerBenefits(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  maxItems = 8
-) {
-  const firestore = getFirebaseFirestore(config);
-  const benefitsQuery = query(
-    collection(firestore, getPartnerBenefitsCollectionPath(context)),
-    limit(maxItems)
-  );
-  const snapshot = await getDocs(benefitsQuery);
 
-  return snapshot.docs.map((item) => toPartnerBenefit(item.id, item.data()));
-}
 
 export async function fetchMemberBenefitValidations(
   config: FirebaseWebRuntimeConfig,
@@ -1598,3 +1593,245 @@ export async function saveTribeAssessment(
 
   return assessment;
 }
+
+export async function fetchLeaderEmotionalPulses(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  leaderId: string,
+  maxItems = 30
+) {
+  const firestore = getFirebaseFirestore(config);
+  const pulsesQuery = query(
+    collection(firestore, getLeaderEmotionalPulseCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(pulsesQuery);
+
+  return snapshot.docs
+    .map((doc) => toLeaderEmotionalPulse(doc.id, doc.data()))
+    .filter(p => p.leaderId === leaderId)
+    .sort((a, b) => b.notedAt.localeCompare(a.notedAt));
+}
+
+export async function saveLeaderEmotionalPulse(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  pulse: Omit<LeaderEmotionalPulse, "id">
+) {
+  const firestore = getFirebaseFirestore(config);
+  const id = doc(collection(firestore, getLeaderEmotionalPulseCollectionPath(context))).id;
+  
+  const docRef = doc(firestore, getLeaderEmotionalPulseCollectionPath(context), id);
+  await setDoc(docRef, cleanFirestoreData({
+    ...pulse,
+    id
+  }));
+
+  return { ...pulse, id };
+}
+
+export async function fetchWellBeingResources(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  category?: WellBeingResource["category"]
+) {
+  const firestore = getFirebaseFirestore(config);
+  const resourcesQuery = query(
+    collection(firestore, getWellBeingResourcesCollectionPath(context))
+  );
+  const snapshot = await getDocs(resourcesQuery);
+
+  let resources = snapshot.docs.map((doc) => toWellBeingResource(doc.id, doc.data()));
+  if (category) {
+    resources = resources.filter(r => r.category === category);
+  }
+  return resources;
+}
+
+export async function fetchMentoringSessions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  leaderId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const sessionsQuery = query(
+    collection(firestore, getMentoringSessionsCollectionPath(context))
+  );
+  const snapshot = await getDocs(sessionsQuery);
+
+  return snapshot.docs
+    .map((doc) => toMentoringSession(doc.id, doc.data()))
+    .filter(s => s.leaderId === leaderId)
+    .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+}
+
+export async function triggerEmergencySOS(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  leaderId: string,
+  reason?: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const id = doc(collection(firestore, getEmergencySOSCollectionPath(context))).id;
+  
+  const sos: EmergencySOS = {
+    id,
+    organizationId: context.organizationId,
+    leaderId,
+    triggeredAt: new Date().toISOString(),
+    reason: reason || "Motivo não especificado",
+    status: "active"
+  };
+
+  await setDoc(
+    doc(firestore, getEmergencySOSCollectionPath(context), id),
+    cleanFirestoreData(sos)
+  );
+
+  return sos;
+}
+
+export async function fetchPartnerOrganizations(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 50
+) {
+  const firestore = getFirebaseFirestore(config);
+  const partnersQuery = query(
+    collection(firestore, getPartnersCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(partnersQuery);
+
+  return snapshot.docs.map((item) => toPartnerOrganization(item.id, item.data()));
+}
+
+export async function savePartnerOrganization(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  partner: PartnerOrganization
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getPartnersCollectionPath(context), partner.id),
+    cleanFirestoreData({
+      ...partner,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return partner;
+}
+
+export async function fetchPartnerBenefits(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 100
+) {
+  const firestore = getFirebaseFirestore(config);
+  const benefitsQuery = query(
+    collection(firestore, getPartnerBenefitsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(benefitsQuery);
+
+  return snapshot.docs.map((item) => toPartnerBenefit(item.id, item.data()));
+}
+
+export async function savePartnerBenefit(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  benefit: PartnerBenefit
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getPartnerBenefitsCollectionPath(context), benefit.id),
+    cleanFirestoreData({
+      ...benefit,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return benefit;
+}
+
+export async function saveMemberBenefitValidation(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  validation: MemberBenefitValidation
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getMemberBenefitValidationsCollectionPath(context), validation.id),
+    cleanFirestoreData({
+      ...validation,
+      organizationId: context.organizationId,
+      createdAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return validation;
+}
+
+function toLeaderEmotionalPulse(documentId: string, data: DocumentData): LeaderEmotionalPulse {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    leaderId: String(data.leaderId ?? ""),
+    mood: data.mood,
+    energyLevel: Number(data.energyLevel ?? 5),
+    stressLevel: Number(data.stressLevel ?? 5),
+    notedAt: String(data.notedAt ?? data.timestamp ?? ""),
+    notes: data.notes ? String(data.notes) : undefined
+  };
+}
+
+function toWellBeingResource(documentId: string, data: DocumentData): WellBeingResource {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    title: String(data.title ?? ""),
+    description: String(data.description ?? ""),
+    category: data.category,
+    contentUrl: String(data.contentUrl ?? data.url ?? ""),
+    thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : undefined,
+    durationMinutes: typeof data.durationMinutes === "number" ? data.durationMinutes : undefined,
+    tags: Array.isArray(data.tags) ? data.tags.map(String) : []
+  };
+}
+
+function toMentoringSession(documentId: string, data: DocumentData): MentoringSession {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    leaderId: String(data.leaderId ?? ""),
+    mentorName: String(data.mentorName ?? ""),
+    scheduledAt: String(data.scheduledAt ?? ""),
+    durationMinutes: Number(data.durationMinutes ?? 60),
+    status: data.status,
+    summaryNotes: data.summaryNotes ? String(data.summaryNotes) : undefined,
+    meetingLink: data.meetingLink ? String(data.meetingLink) : undefined
+  };
+}
+
+function toEmergencySOS(documentId: string, data: DocumentData): EmergencySOS {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    leaderId: String(data.leaderId ?? ""),
+    triggeredAt: String(data.triggeredAt ?? ""),
+    reason: String(data.reason ?? ""),
+    status: data.status,
+    resolvedAt: data.resolvedAt ? String(data.resolvedAt) : undefined,
+    resolvedByUserId: data.resolvedByUserId ? String(data.resolvedByUserId) : undefined
+  };
+}
+
