@@ -19,3 +19,4 @@ apps/web/.wrangler
 .env.*.local
 firebase-debug.log
 wrangler*.log
+apps/web/dist-cloudflare
