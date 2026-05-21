@@ -441,7 +441,14 @@ export function ServingView() {
               <p className="eyebrow">Escala selecionada</p>
               <h2>{selectedMinistry.name}</h2>
             </div>
-            <span className="soft-pill">{selectedAssignments.length} pessoa(s)</span>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              {selectedMinistry.code === "worship" && (
+                <Link href="/serving/worship" className="primary-button-small" style={{ backgroundColor: "#8b5cf6", padding: "6px 12px", borderRadius: "8px", textDecoration: "none" }}>
+                  🎵 Repertório e Cifras
+                </Link>
+              )}
+              <span className="soft-pill">{selectedAssignments.length} pessoa(s)</span>
+            </div>
           </div>
 
           <div className="serving-next-step tribe-aware">

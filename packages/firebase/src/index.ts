@@ -1,5 +1,12 @@
+export async function initializeFirebase() {
+  // Placeholder: initialize Firebase SDK clients here
+  return {
+    message: 'firebase initialized (stub)'
+  };
+}
+
+export { initClient, getClientConfig } from './client';
 export * from "./client";
-export * from "./repositories";
 
 import type { TenantContext } from "@alvo/types";
 
@@ -97,6 +104,18 @@ export function getPartnerBenefitsCollectionPath(context: TenantContext) {
 
 export function getMemberBenefitValidationsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/memberBenefitValidations`;
+}
+
+export function getCommunityStoresCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/communityStores`;
+}
+
+export function getCommunityOffersCollectionPath(context: TenantContext, storeId: string) {
+  return `organizations/${context.organizationId}/communityStores/${storeId}/offers`;
+}
+
+export function getCommunityStoreModerationLogsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/communityStoreModerationLogs`;
 }
 
 export function getVisitorJourneysCollectionPath(context: TenantContext) {
@@ -223,4 +242,35 @@ export function getMentoringSessionsCollectionPath(context: TenantContext) {
 
 export function getEmergencySOSCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/emergencySOS`;
+}
+
+// Worship collection paths
+export function getWorshipSongsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/worshipSongs`;
+}
+
+export function getWorshipSetlistsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/worshipSetlists`;
+}
+
+// Alvo Canvas collection paths
+export function getGroupBannersCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/groupBanners`;
+}
+
+// LMS / EAD paths
+export function getCoursesCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/courses`;
+}
+
+export function getCourseModulesCollectionPath(context: TenantContext, courseId: string) {
+  return `organizations/${context.organizationId}/courses/${courseId}/modules`;
+}
+
+export function getLessonsCollectionPath(context: TenantContext, courseId: string) {
+  return `organizations/${context.organizationId}/courses/${courseId}/lessons`;
+}
+
+export function getMemberCourseProgressCollectionPath(context: TenantContext, memberId: string) {
+  return `organizations/${context.organizationId}/people/${memberId}/courseProgress`;
 }

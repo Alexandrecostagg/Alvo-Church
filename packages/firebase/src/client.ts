@@ -1,3 +1,48 @@
+type FirebaseClientHandles = {
+  auth?: any;
+  firestore?: any;
+};
+
+export function getClientConfig() {
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+    projectId: process.env.FIREBASE_PROJECT_ID ?? "alvo-church",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? ""
+  };
+}
+
+export async function initClient(): Promise<FirebaseClientHandles> {
+  if (typeof window === "undefined") return {};
+
+  const config = getClientConfig();
+  const { initializeApp, getApps } = await import("firebase/app");
+  if (getApps().length === 0) {
+    initializeApp(config);
+  }
+
+  const { getAuth, connectAuthEmulator } = await import("firebase/auth");
+  const { getFirestore, connectFirestoreEmulator } = await import("firebase/firestore");
+
+  const auth = getAuth();
+  const firestore = getFirestore();
+
+  const useEmulator = typeof window !== "undefined" && (location.hostname === "localhost" || process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true");
+  if (useEmulator) {
+    try {
+      connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true } as any);
+      connectFirestoreEmulator(firestore, "localhost", 8080);
+    } catch (e) {
+      // ignore if emulators are not available
+      // eslint-disable-next-line no-console
+      console.warn("Failed to connect to firebase emulators:", e);
+    }
+  }
+
+  return { auth, firestore };
+}
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
   browserLocalPersistence,
@@ -7,6 +52,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  inMemoryPersistence,
   type Auth,
   type User
 } from "firebase/auth";
@@ -94,7 +140,7 @@ export function getFirebaseWebAuth(config: FirebaseWebRuntimeConfig) {
       getApps().length > 0
         ? getAuth(app)
         : initializeAuth(app, {
-            persistence: browserLocalPersistence
+            persistence: typeof window !== "undefined" ? browserLocalPersistence : inMemoryPersistence
           });
           
     if (config.useEmulator) {

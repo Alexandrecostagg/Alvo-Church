@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
+  Sparkles,
   UserPlus,
   UsersRound,
   Waypoints
@@ -671,6 +672,10 @@ export function GroupsView() {
                       {groupHealth.label}
                     </span>
                   ) : null}
+                  <Link href={`/groups/${selectedGroup.id}/banner`} className="primary-button compact-button" style={{ backgroundColor: "#10b981", color: "white" }}>
+                    <Sparkles size={15} />
+                    Gerar Banner da Célula
+                  </Link>
                   <button className="primary-button compact-button" onClick={() => void handleCreateMeeting()} type="button">
                     <CalendarDays size={15} />
                     Abrir encontro

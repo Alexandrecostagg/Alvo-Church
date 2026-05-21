@@ -1,3 +1,9 @@
+export type OrganizationRef = {
+  id: string;
+  name?: string;
+};
+
+export type ID = string;
 export type JourneyStage =
   | "exploring"
   | "connecting"
@@ -322,6 +328,70 @@ export interface MemberBenefitValidation {
   validationStatus: "approved" | "denied" | "expired";
   validatedAt: string;
   exposedFields: readonly string[];
+}
+
+export type CommunityStoreStatus = "pending" | "approved" | "rejected" | "suspended";
+export type CommunityOfferStatus = "active" | "expired" | "suspended";
+export type CommunityOfferType = "percentage" | "fixed_amount" | "freebie" | "promotion";
+
+export interface CommunityStore {
+  id: string;
+  organizationId: string;
+  ownerId: string; // PersonId - Proprietário/Comerciante
+  name: string;
+  description: string;
+  category: PartnerBenefitCategory;
+  status: CommunityStoreStatus;
+  images: string[]; // URLs de banners/imagens
+  bannerImageUrl?: string;
+  contact: {
+    phone?: string;
+    email?: string;
+    address?: PostalAddress;
+  };
+  socialLinks?: {
+    instagram?: string;
+    whatsapp?: string;
+    website?: string;
+    facebook?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+  suspensionReason?: string;
+  moderatedBy?: string; // UserId do admin que moderou
+}
+
+export interface CommunityOffer {
+  id: string;
+  organizationId: string;
+  storeId: string;
+  title: string;
+  description: string;
+  type: CommunityOfferType;
+  discountPercentage?: number; // Se type == 'percentage'
+  discountAmount?: number; // Se type == 'fixed_amount'
+  images: string[]; // URLs de imagens do cupom/promoção
+  validFrom: string;
+  validUntil: string;
+  status: CommunityOfferStatus;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string; // PersonId do criador
+}
+
+export interface CommunityStoreModerationLog {
+  id: string;
+  organizationId: string;
+  storeId: string;
+  action: "created" | "approved" | "rejected" | "suspended" | "reactivated" | "updated";
+  moderatedBy: string; // UserId
+  reason?: string;
+  previousStatus?: CommunityStoreStatus;
+  newStatus?: CommunityStoreStatus;
+  timestamp: string;
+  notes?: string;
 }
 
 export interface TenantContext {
@@ -957,3 +1027,84 @@ export interface EmergencySOS {
   resolvedByUserId?: string;
 }
 
+// Worship Setlists (Louvor e Repertório)
+export interface WorshipSong {
+  id: string;
+  organizationId: string;
+  title: string;
+  artist: string;
+  originalKey: string;
+  tempoBpm?: number;
+  spotifyUrl?: string;
+  youtubeUrl?: string;
+  chordsLyrics?: string; // Cifras dinâmicas em Markdown: [C] [G] [Am] [F]
+  createdAt: string;
+}
+
+export interface WorshipSetlist {
+  id: string;
+  organizationId: string;
+  eventId: string; // Culto ou evento vinculado
+  songs: Array<{
+    songId: string;
+    selectedKey: string; // Tom transposto para o cantor
+    sortOrder: number;
+  }>;
+  updatedAt: string;
+}
+
+// Alvo Canvas (Banners de Células)
+export interface GroupBannerConfig {
+  id: string;
+  organizationId: string;
+  groupId: string;
+  themeColor: string; // Paleta de cor selecionada
+  titleText: string;
+  subtitleText?: string;
+  bannerFormat: "feed" | "story"; // Formatos solicitados
+  showLeaderPhoto: boolean;
+  customAddress?: string;
+  updatedAt: string;
+}
+
+// EAD / LMS de Discipulado
+export interface Course {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string;
+  badgeUnlockedId?: string; // Destrava Badge do Alvo Journeys ao concluir
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CourseModule {
+  id: string;
+  organizationId: string;
+  courseId: string;
+  title: string;
+  sortOrder: number;
+}
+
+export interface Lesson {
+  id: string;
+  organizationId: string;
+  courseId: string;
+  moduleId: string;
+  title: string;
+  videoUrl: string; // Vimeo, YouTube ou Cloudflare Stream
+  durationMinutes: number;
+  sortOrder: number;
+}
+
+export interface MemberCourseProgress {
+  id: string;
+  organizationId: string;
+  memberId: string;
+  courseId: string;
+  completedLessons: string[]; // IDs de aulas concluídas
+  isCompleted: boolean;
+  completedAt?: string;
+  updatedAt: string;
+}

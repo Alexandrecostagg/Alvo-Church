@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ModuleNav } from "./module-nav";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (

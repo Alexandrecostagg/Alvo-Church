@@ -16,6 +16,7 @@ const firebaseEnvKeys = [
 const workspaceEnv = readDotEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   reactCompiler: true,
   env: firebaseEnvKeys.reduce<Record<string, string>>((acc, key) => {
     const value = process.env[key] ?? workspaceEnv[key];

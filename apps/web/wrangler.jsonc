@@ -1,12 +1,17 @@
 {
   "name": "alvo-church-web",
-  "main": ".open-next/worker.js",
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "compatibility_date": "2026-04-07",
+  "pages_build_output_dir": "dist-cloudflare",
+  "compatibility_date": "2026-05-01",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "vars": {
+    "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "alvo-church.firebaseapp.com",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "alvo-church",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "alvo-church.firebasestorage.app",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "616327426236",
+    "NEXT_PUBLIC_FIREBASE_APP_ID": "1:616327426236:web:8b3e265426a5d00ce120b9",
+    "NEXT_PUBLIC_USE_FIREBASE_EMULATOR": "false"
+  }
 }

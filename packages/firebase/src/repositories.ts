@@ -32,6 +32,9 @@ import type {
   PartnerBenefit,
   PartnerOrganization,
   MemberBenefitValidation,
+  CommunityStore,
+  CommunityOffer,
+  CommunityStoreModerationLog,
   Person,
   ServiceAssignment,
   ServiceTeam,
@@ -44,7 +47,14 @@ import type {
   LeaderEmotionalPulse,
   WellBeingResource,
   MentoringSession,
-  EmergencySOS
+  EmergencySOS,
+  WorshipSong,
+  WorshipSetlist,
+  GroupBannerConfig,
+  Course,
+  CourseModule,
+  Lesson,
+  MemberCourseProgress
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -77,7 +87,17 @@ import {
   getLeaderEmotionalPulseCollectionPath,
   getWellBeingResourcesCollectionPath,
   getMentoringSessionsCollectionPath,
-  getEmergencySOSCollectionPath
+  getEmergencySOSCollectionPath,
+  getCommunityStoresCollectionPath,
+  getCommunityOffersCollectionPath,
+  getCommunityStoreModerationLogsCollectionPath,
+  getWorshipSongsCollectionPath,
+  getWorshipSetlistsCollectionPath,
+  getGroupBannersCollectionPath,
+  getCoursesCollectionPath,
+  getCourseModulesCollectionPath,
+  getLessonsCollectionPath,
+  getMemberCourseProgressCollectionPath
 } from "./index";
 
 
@@ -1781,6 +1801,211 @@ export async function saveMemberBenefitValidation(
   return validation;
 }
 
+// Community Stores Repositories
+export async function fetchCommunityStores(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 100
+) {
+  const firestore = getFirebaseFirestore(config);
+  const storesQuery = query(
+    collection(firestore, getCommunityStoresCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(storesQuery);
+
+  return snapshot.docs.map((item) => toCommunityStore(item.id, item.data()));
+}
+
+export async function fetchCommunityStoreById(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  storeId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const docRef = doc(firestore, getCommunityStoresCollectionPath(context), storeId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    throw new Error(`Store ${storeId} not found`);
+  }
+
+  return toCommunityStore(docSnap.id, docSnap.data());
+}
+
+export async function saveCommunityStore(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  store: CommunityStore
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getCommunityStoresCollectionPath(context), store.id),
+    cleanFirestoreData({
+      ...store,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return store;
+}
+
+export async function fetchCommunityOffers(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  storeId: string,
+  maxItems = 50
+) {
+  const firestore = getFirebaseFirestore(config);
+  const offersQuery = query(
+    collection(firestore, getCommunityOffersCollectionPath(context, storeId)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(offersQuery);
+
+  return snapshot.docs.map((item) => toCommunityOffer(item.id, item.data()));
+}
+
+export async function saveCommunityOffer(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  storeId: string,
+  offer: CommunityOffer
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getCommunityOffersCollectionPath(context, storeId), offer.id),
+    cleanFirestoreData({
+      ...offer,
+      organizationId: context.organizationId,
+      updatedAt: new Date().toISOString()
+    }),
+    { merge: true }
+  );
+
+  return offer;
+}
+
+export async function fetchCommunityStoreModerationLogs(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  storeId?: string,
+  maxItems = 100
+) {
+  const firestore = getFirebaseFirestore(config);
+  const logsQuery = query(
+    collection(firestore, getCommunityStoreModerationLogsCollectionPath(context)),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(logsQuery);
+
+  let logs = snapshot.docs.map((item) => toCommunityStoreModerationLog(item.id, item.data()));
+  if (storeId) {
+    logs = logs.filter(log => log.storeId === storeId);
+  }
+  return logs;
+}
+
+export async function saveCommunityStoreModerationLog(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  log: CommunityStoreModerationLog
+) {
+  const firestore = getFirebaseFirestore(config);
+
+  await setDoc(
+    doc(firestore, getCommunityStoreModerationLogsCollectionPath(context), log.id),
+    cleanFirestoreData({
+      ...log,
+      organizationId: context.organizationId
+    }),
+    { merge: true }
+  );
+
+  return log;
+}
+
+// Conversion functions
+function toCommunityStore(documentId: string, data: DocumentData): CommunityStore {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    ownerId: String(data.ownerId ?? ""),
+    name: String(data.name ?? ""),
+    description: String(data.description ?? ""),
+    category: (data.category as CommunityStore["category"]) ?? "community",
+    status: (data.status as CommunityStore["status"]) ?? "pending",
+    images: Array.isArray(data.images) ? data.images.map(String) : [],
+    bannerImageUrl: data.bannerImageUrl ? String(data.bannerImageUrl) : undefined,
+    contact: {
+      phone: data.contact?.phone ? String(data.contact.phone) : undefined,
+      email: data.contact?.email ? String(data.contact.email) : undefined,
+      address: data.contact?.address ? {
+        postalCode: data.contact.address.postalCode ? String(data.contact.address.postalCode) : undefined,
+        street: data.contact.address.street ? String(data.contact.address.street) : undefined,
+        number: data.contact.address.number ? String(data.contact.address.number) : undefined,
+        complement: data.contact.address.complement ? String(data.contact.address.complement) : undefined,
+        district: data.contact.address.district ? String(data.contact.address.district) : undefined,
+        city: data.contact.address.city ? String(data.contact.address.city) : undefined,
+        state: data.contact.address.state ? String(data.contact.address.state) : undefined,
+        countryCode: data.contact.address.countryCode ? String(data.contact.address.countryCode) : undefined,
+        geohash: data.contact.address.geohash ? String(data.contact.address.geohash) : undefined
+      } : undefined
+    },
+    socialLinks: data.socialLinks ? {
+      instagram: data.socialLinks.instagram ? String(data.socialLinks.instagram) : undefined,
+      whatsapp: data.socialLinks.whatsapp ? String(data.socialLinks.whatsapp) : undefined,
+      website: data.socialLinks.website ? String(data.socialLinks.website) : undefined,
+      facebook: data.socialLinks.facebook ? String(data.socialLinks.facebook) : undefined
+    } : undefined,
+    createdAt: String(data.createdAt ?? ""),
+    updatedAt: String(data.updatedAt ?? ""),
+    approvedAt: data.approvedAt ? String(data.approvedAt) : undefined,
+    rejectionReason: data.rejectionReason ? String(data.rejectionReason) : undefined,
+    suspensionReason: data.suspensionReason ? String(data.suspensionReason) : undefined,
+    moderatedBy: data.moderatedBy ? String(data.moderatedBy) : undefined
+  };
+}
+
+function toCommunityOffer(documentId: string, data: DocumentData): CommunityOffer {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    storeId: String(data.storeId ?? ""),
+    title: String(data.title ?? ""),
+    description: String(data.description ?? ""),
+    type: (data.type as CommunityOffer["type"]) ?? "promotion",
+    discountPercentage: data.discountPercentage ? Number(data.discountPercentage) : undefined,
+    discountAmount: data.discountAmount ? Number(data.discountAmount) : undefined,
+    images: Array.isArray(data.images) ? data.images.map(String) : [],
+    validFrom: String(data.validFrom ?? ""),
+    validUntil: String(data.validUntil ?? ""),
+    status: (data.status as CommunityOffer["status"]) ?? "active",
+    createdAt: String(data.createdAt ?? ""),
+    updatedAt: String(data.updatedAt ?? ""),
+    createdBy: String(data.createdBy ?? "")
+  };
+}
+
+function toCommunityStoreModerationLog(documentId: string, data: DocumentData): CommunityStoreModerationLog {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    storeId: String(data.storeId ?? ""),
+    action: (data.action as CommunityStoreModerationLog["action"]) ?? "created",
+    moderatedBy: String(data.moderatedBy ?? ""),
+    reason: data.reason ? String(data.reason) : undefined,
+    previousStatus: data.previousStatus as CommunityStoreModerationLog["previousStatus"],
+    newStatus: data.newStatus as CommunityStoreModerationLog["newStatus"],
+    timestamp: String(data.timestamp ?? ""),
+    notes: data.notes ? String(data.notes) : undefined
+  };
+}
+
 function toLeaderEmotionalPulse(documentId: string, data: DocumentData): LeaderEmotionalPulse {
   return {
     id: documentId,
@@ -1833,5 +2058,238 @@ function toEmergencySOS(documentId: string, data: DocumentData): EmergencySOS {
     resolvedAt: data.resolvedAt ? String(data.resolvedAt) : undefined,
     resolvedByUserId: data.resolvedByUserId ? String(data.resolvedByUserId) : undefined
   };
+}
+
+// worship setlists mappers
+function toWorshipSong(documentId: string, data: DocumentData): WorshipSong {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    title: String(data.title ?? ""),
+    artist: String(data.artist ?? ""),
+    originalKey: String(data.originalKey ?? "C"),
+    tempoBpm: data.tempoBpm ? Number(data.tempoBpm) : undefined,
+    spotifyUrl: data.spotifyUrl ? String(data.spotifyUrl) : undefined,
+    youtubeUrl: data.youtubeUrl ? String(data.youtubeUrl) : undefined,
+    chordsLyrics: data.chordsLyrics ? String(data.chordsLyrics) : undefined,
+    createdAt: String(data.createdAt ?? "")
+  };
+}
+
+function toWorshipSetlist(documentId: string, data: DocumentData): WorshipSetlist {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    eventId: String(data.eventId ?? ""),
+    songs: Array.isArray(data.songs)
+      ? data.songs.map((s) => ({
+          songId: String(s.songId),
+          selectedKey: String(s.selectedKey),
+          sortOrder: Number(s.sortOrder ?? 0)
+        }))
+      : [],
+    updatedAt: String(data.updatedAt ?? "")
+  };
+}
+
+// Alvo Canvas mapper
+function toGroupBannerConfig(documentId: string, data: DocumentData): GroupBannerConfig {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    groupId: String(data.groupId ?? ""),
+    themeColor: String(data.themeColor ?? "#d27836"),
+    titleText: String(data.titleText ?? "Culto de Célula"),
+    subtitleText: data.subtitleText ? String(data.subtitleText) : undefined,
+    bannerFormat: (data.bannerFormat as GroupBannerConfig["bannerFormat"]) ?? "feed",
+    showLeaderPhoto: Boolean(data.showLeaderPhoto),
+    customAddress: data.customAddress ? String(data.customAddress) : undefined,
+    updatedAt: String(data.updatedAt ?? "")
+  };
+}
+
+// LMS / EAD mappers
+function toCourse(documentId: string, data: DocumentData): Course {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    title: String(data.title ?? ""),
+    description: String(data.description ?? ""),
+    thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : undefined,
+    badgeUnlockedId: data.badgeUnlockedId ? String(data.badgeUnlockedId) : undefined,
+    isActive: Boolean(data.isActive),
+    createdAt: String(data.createdAt ?? "")
+  };
+}
+
+function toCourseModule(documentId: string, data: DocumentData): CourseModule {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    courseId: String(data.courseId ?? ""),
+    title: String(data.title ?? ""),
+    sortOrder: Number(data.sortOrder ?? 0)
+  };
+}
+
+function toLesson(documentId: string, data: DocumentData): Lesson {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    courseId: String(data.courseId ?? ""),
+    moduleId: String(data.moduleId ?? ""),
+    title: String(data.title ?? ""),
+    videoUrl: String(data.videoUrl ?? ""),
+    durationMinutes: Number(data.durationMinutes ?? 0),
+    sortOrder: Number(data.sortOrder ?? 0)
+  };
+}
+
+function toMemberCourseProgress(documentId: string, data: DocumentData): MemberCourseProgress {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    memberId: String(data.memberId ?? ""),
+    courseId: String(data.courseId ?? ""),
+    completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons.map(String) : [],
+    isCompleted: Boolean(data.isCompleted),
+    completedAt: data.completedAt ? String(data.completedAt) : undefined,
+    updatedAt: String(data.updatedAt ?? "")
+  };
+}
+
+
+// --- WORSHIP REPOSITORY METHODS ---
+
+export async function fetchWorshipSongs(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<WorshipSong[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getWorshipSongsCollectionPath(context)));
+  return snap.docs.map((d) => toWorshipSong(d.id, d.data()));
+}
+
+export async function saveWorshipSong(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  song: WorshipSong
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getWorshipSongsCollectionPath(context), song.id),
+    cleanFirestoreData(song),
+    { merge: true }
+  );
+}
+
+export async function fetchWorshipSetlistByEventId(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  eventId: string
+): Promise<WorshipSetlist | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getWorshipSetlistsCollectionPath(context), eventId));
+  if (!snap.exists()) return null;
+  return toWorshipSetlist(snap.id, snap.data());
+}
+
+export async function saveWorshipSetlist(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  setlist: WorshipSetlist
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getWorshipSetlistsCollectionPath(context), setlist.id),
+    cleanFirestoreData(setlist),
+    { merge: true }
+  );
+}
+
+
+// --- ALVO CANVAS REPOSITORY METHODS ---
+
+export async function fetchGroupBannerConfig(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groupId: string
+): Promise<GroupBannerConfig | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getGroupBannersCollectionPath(context), groupId));
+  if (!snap.exists()) return null;
+  return toGroupBannerConfig(snap.id, snap.data());
+}
+
+export async function saveGroupBannerConfig(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  banner: GroupBannerConfig
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getGroupBannersCollectionPath(context), banner.groupId),
+    cleanFirestoreData(banner),
+    { merge: true }
+  );
+}
+
+
+// --- LMS / EAD REPOSITORY METHODS ---
+
+export async function fetchCourses(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<Course[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getCoursesCollectionPath(context)));
+  return snap.docs.map((d) => toCourse(d.id, d.data()));
+}
+
+export async function fetchCourseModules(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  courseId: string
+): Promise<CourseModule[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getCourseModulesCollectionPath(context, courseId)));
+  return snap.docs.map((d) => toCourseModule(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function fetchCourseLessons(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  courseId: string
+): Promise<Lesson[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getLessonsCollectionPath(context, courseId)));
+  return snap.docs.map((d) => toLesson(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function fetchMemberCourseProgress(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  memberId: string,
+  courseId: string
+): Promise<MemberCourseProgress | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(
+    doc(firestore, getMemberCourseProgressCollectionPath(context, memberId), courseId)
+  );
+  if (!snap.exists()) return null;
+  return toMemberCourseProgress(snap.id, snap.data());
+}
+
+export async function saveMemberCourseProgress(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  progress: MemberCourseProgress
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getMemberCourseProgressCollectionPath(context, progress.memberId), progress.courseId),
+    cleanFirestoreData(progress),
+    { merge: true }
+  );
 }
 

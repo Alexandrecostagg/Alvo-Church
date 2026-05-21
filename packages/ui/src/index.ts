@@ -1,3 +1,7 @@
+export function PlaceholderButton(props: { label: string }) {
+  // simple non-React placeholder to avoid introducing framework deps in the package
+  return { type: 'button', label: props.label };
+}
 import type { OrganizationBrandingSettings } from "@alvo/types";
 
 export const alvoTheme = {

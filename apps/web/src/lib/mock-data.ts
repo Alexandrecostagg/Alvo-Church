@@ -1,4 +1,4 @@
-import { Activity, Bell, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Flame, Handshake, HeartHandshake, Landmark, LayoutDashboard, Map as MapIcon, Megaphone, MessageSquareText, QrCode, ReceiptText, Search, Send, ShieldCheck, Sparkles, Smartphone, Target, Trophy, UserPlus, UsersRound, Waypoints } from "lucide-react";
+import { Activity, Bell, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Flame, Handshake, HeartHandshake, Landmark, LayoutDashboard, Map as MapIcon, Megaphone, MessageSquareText, QrCode, ReceiptText, Search, Send, ShieldCheck, ShoppingBag, Sparkles, Smartphone, Target, Trophy, UserPlus, UsersRound, Waypoints } from "lucide-react";
 import { calculateTribeQuestionnaireResult, canManagePeople, createTribeReclassificationSnapshot, getBrandModeLabel, getEnabledModuleCount, getEventTypeLabel, getFollowUpStatusLabel, getGroupTypeLabel, getJourneyKindLabel, getPartnerBenefitCategoryLabel, getPlanTierLabel, getRecommendedReviewType, getRecommendedReviewTypeLabel, getRegistrationStatusLabel, getReviewRequestStatusLabel, getStrongestBehaviorSignal, getTribeDisplayLabel, getTribeValidationLabel, getVisitorStageLabel, isModuleEnabled, shouldRecommendTribeReview, tribeQuestionnaireV1 } from "@alvo/domain";
 import type { OrganizationSettingsSnapshot, TribeCode, PartnerOrganization, PartnerBenefit } from "@alvo/types";
 
@@ -672,6 +672,7 @@ export const navItems = [
   { label: "Celulas", icon: Waypoints, href: "/groups" },
   { label: "Escalas", icon: Handshake, href: "/serving" },
   { label: "Eventos", icon: CalendarDays, href: "#events" },
+  { label: "Marketplace", icon: ShoppingBag, href: "/marketplace-community" },
   { label: "Comunicacao", icon: MessageSquareText, href: "#actions" },
   { label: "Transparencia", icon: Landmark, href: "#transparency" }
 ];
@@ -1088,3 +1089,170 @@ export const actionFeed = [
     href: "#tribes"
   }))
 ];
+
+// --- MOCK DATA FOR WORSHIP MODULE ---
+export const MOCK_WORSHIP_SONGS = [
+  {
+    id: "song_1",
+    organizationId: organization.id,
+    title: "Porque Ele Vive",
+    artist: "Harpa Cristã",
+    originalKey: "G",
+    tempoBpm: 74,
+    spotifyUrl: "https://open.spotify.com/track/1",
+    youtubeUrl: "https://youtube.com/watch?v=1",
+    chordsLyrics: `[Intro]
+[G] [C] [G] [D]
+
+[Verso 1]
+Deus en[G]viou Seu Filho a[C]mado
+Para mor[G]rer em meu lu[D]gar
+Na cruz so[G]freu por meus pe[C]cados
+Mas o túmulo va[G]zio está
+[D]Porque Ele vi[G]ve
+
+[Refrão]
+Porque Ele vi[G]ve, eu posso crer no ama[C]nhã
+Porque Ele vi[G]ve, temor não [D]há
+Mas eu bem [G]sei, eu sei, que a minha vi[C]da
+Está nas [G]mãos do meu Se[D]nhor, que vivo es[G]tá`,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "song_2",
+    organizationId: organization.id,
+    title: "O Quão Lindo Esse Nome É",
+    artist: "Hillsong Worship",
+    originalKey: "D",
+    tempoBpm: 68,
+    spotifyUrl: "https://open.spotify.com/track/2",
+    youtubeUrl: "https://youtube.com/watch?v=2",
+    chordsLyrics: `[Intro]
+[D] [G] [Bm] [A]
+
+[Verso 1]
+No prin[D]cípio era o Verbo
+Com o [G]Altíssimo Senhor
+O mis[Bm]tério da cri[A]ação
+Em Ti, [Bm]Cristo, se re[A]velou
+
+[Refrão]
+O quão [D]lindo esse nome é
+O quão [A]lindo esse nome é
+O nome de [Bm]Jesus, meu [A]Rei, Se[G]nhor
+O quão [D/F#]lindo esse nome é
+Maior que [A]tudo ele é
+O quão [Bm]lindo esse nome [A]é, o nome de Je[G]sus`,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "song_3",
+    organizationId: organization.id,
+    title: "A Casa É Sua",
+    artist: "Casa Worship",
+    originalKey: "A",
+    tempoBpm: 72,
+    spotifyUrl: "https://open.spotify.com/track/3",
+    youtubeUrl: "https://youtube.com/watch?v=3",
+    chordsLyrics: `[Intro]
+[F#m7] [D] [A] [E]
+
+[Verso]
+Você é [F#m7]bem-vindo aqui
+A casa é [D]Sua, pode entrar
+Me esva[A]zio de mim
+Me esva[E]zio de mim
+
+[Refrão]
+[F#m7]Sopra em nós o Teu vento
+[D]Queremos ouvir Teu sussurro
+[A]Essa casa é Sua casa
+[E]Nós deixamos ela pra Você, Jesus`,
+    createdAt: new Date().toISOString()
+  }
+];
+
+export const MOCK_WORSHIP_SETLISTS = [
+  {
+    id: "setlist_1",
+    organizationId: organization.id,
+    eventId: "event_1", // Vinculado ao culto
+    songs: [
+      { songId: "song_2", selectedKey: "D", sortOrder: 1 },
+      { songId: "song_3", selectedKey: "B", sortOrder: 2 }, // Transposto de A para B (+2 semitons)
+      { songId: "song_1", selectedKey: "G", sortOrder: 3 }
+    ],
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// --- MOCK DATA FOR ALVO CANVAS ---
+export const MOCK_GROUP_BANNERS = [
+  {
+    id: "banner_group_1",
+    organizationId: organization.id,
+    groupId: "group_1",
+    themeColor: "#d27836",
+    titleText: "Célula Centro Norte",
+    subtitleText: "Viver em Família e Comunhão",
+    bannerFormat: "feed",
+    showLeaderPhoto: true,
+    customAddress: "Travessa Padre Eutiquio, 1220",
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// --- MOCK DATA FOR LMS / EAD ---
+export const MOCK_COURSES = [
+  {
+    id: "course_1",
+    organizationId: organization.id,
+    title: "DNA da Liderança - Escola de Líderes",
+    description: "Curso oficial de formação de líderes de célula do Alvo Church. Aprenda a pastorear, liderar e multiplicar seu grupo com excelência e profundidade espiritual.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_lider_capacitado",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_2",
+    organizationId: organization.id,
+    title: "Passos da Integração: Nova Vida",
+    description: "Ideal para novos convertidos e novos membros. Descubra os fundamentos da fé cristã, a importância da comunhão em células e a visão teológica da nossa igreja.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_primeiro_passo",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+export const MOCK_COURSE_MODULES = [
+  { id: "mod_1", organizationId: organization.id, courseId: "course_1", title: "Módulo 1: O Coração do Líder", sortOrder: 1 },
+  { id: "mod_2", organizationId: organization.id, courseId: "course_1", title: "Módulo 2: Estratégias de Multiplicação", sortOrder: 2 },
+  { id: "mod_3", organizationId: organization.id, courseId: "course_2", title: "Módulo 1: Primeiros Passos com Jesus", sortOrder: 1 }
+];
+
+export const MOCK_LESSONS = [
+  // Curso 1 - Modulo 1
+  { id: "les_1", organizationId: organization.id, courseId: "course_1", moduleId: "mod_1", title: "Aula 1: A Vocação Pastoral de Todo Crente", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 1 },
+  { id: "les_2", organizationId: organization.id, courseId: "course_1", moduleId: "mod_1", title: "Aula 2: Caráter e Espiritualidade do Líder", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 22, sortOrder: 2 },
+  // Curso 1 - Modulo 2
+  { id: "les_3", organizationId: organization.id, courseId: "course_1", moduleId: "mod_2", title: "Aula 1: Planejando o Dia da Multiplicação", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 15, sortOrder: 1 },
+  { id: "les_4", organizationId: organization.id, courseId: "course_1", moduleId: "mod_2", title: "Aula 2: Resolução de Conflitos na Célula", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 25, sortOrder: 2 },
+  // Curso 2 - Modulo 1
+  { id: "les_5", organizationId: organization.id, courseId: "course_2", moduleId: "mod_3", title: "Aula 1: O que é a Salvação e o Batismo?", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 12, sortOrder: 1 },
+  { id: "les_6", organizationId: organization.id, courseId: "course_2", moduleId: "mod_3", title: "Aula 2: A Importância Devocional Diária", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 2 }
+];
+
+export const MOCK_MEMBER_COURSE_PROGRESS = [
+  {
+    id: "progress_1",
+    organizationId: organization.id,
+    memberId: "person_1", // Ana Silva
+    courseId: "course_1",
+    completedLessons: ["les_1"],
+    isCompleted: false,
+    updatedAt: new Date().toISOString()
+  }
+];
+

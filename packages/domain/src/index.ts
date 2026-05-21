@@ -1,3 +1,7 @@
+export function calculateProgress(completed: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.round((completed / total) * 100);
+}
 import type {
   AppRole,
   AuthUser,
@@ -984,4 +988,78 @@ export function createTribeReclassificationSnapshot(params: {
     reviewRequests: params.reviewRequests,
     behaviorSignals: params.behaviorSignals
   };
+}
+
+// DYNAMIC CHORDS TRANSPOSER (Louvor e Cifras Dinâmicas)
+const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLATS  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
+// Normaliza o tom para encontrar a nota base (remove menor 'm', números, etc.)
+function getBaseNote(chord: string): { base: string; suffix: string } {
+  // Regex para extrair notas como C#, Db, F#, Bb, C, D, etc.
+  const match = chord.match(/^([A-G]#?|[A-G]b?)(.*)$/);
+  if (!match) return { base: chord, suffix: "" };
+  return { base: match[1], suffix: match[2] };
+}
+
+// Encontra o índice da nota na escala cromática
+function getNoteIndex(note: string): number {
+  let idx = SHARPS.indexOf(note);
+  if (idx !== -1) return idx;
+  idx = FLATS.indexOf(note);
+  return idx;
+}
+
+// Transpõe uma única nota base
+function transposeNote(note: string, semitones: number, preferFlats = false): string {
+  const currentIdx = getNoteIndex(note);
+  if (currentIdx === -1) return note;
+  
+  let targetIdx = (currentIdx + semitones) % 12;
+  if (targetIdx < 0) targetIdx += 12;
+  
+  return preferFlats ? FLATS[targetIdx] : SHARPS[targetIdx];
+}
+
+// Transpõe um acorde completo (suporta acordes com barra como G/B e suspensos/menores)
+export function transposeChord(chord: string, semitones: number): string {
+  if (!chord) return "";
+  
+  // Se for acorde com barra (ex: G/B), transpõe ambos os lados da barra
+  if (chord.includes("/")) {
+    const parts = chord.split("/");
+    return `${transposeChord(parts[0], semitones)}/${transposeChord(parts[1], semitones)}`;
+  }
+  
+  const { base, suffix } = getBaseNote(chord);
+  const isFlat = base.includes("b");
+  const transposedBase = transposeNote(base, semitones, isFlat);
+  
+  return transposedBase + suffix;
+}
+
+// Função principal: Recebe a letra cifrada [C] [G] e transpõe todas as ocorrências
+export function transposeChordsText(lyricsWithChords: string, originalKey: string, selectedKey: string): string {
+  if (!lyricsWithChords) return "";
+  
+  const origBase = getBaseNote(originalKey).base;
+  const targetBase = getBaseNote(selectedKey).base;
+  
+  const origIdx = getNoteIndex(origBase);
+  const targetIdx = getNoteIndex(targetBase);
+  
+  if (origIdx === -1 || targetIdx === -1) return lyricsWithChords;
+  
+  const semitones = targetIdx - origIdx;
+  if (semitones === 0) return lyricsWithChords;
+  
+  // Regex para achar tudo dentro de colchetes, ex: [C#m7/G#]
+  return lyricsWithChords.replace(/\[([^\]]+)\]/g, (match, chord) => {
+    try {
+      const transposed = transposeChord(chord, semitones);
+      return `[${transposed}]`;
+    } catch (e) {
+      return match;
+    }
+  });
 }
