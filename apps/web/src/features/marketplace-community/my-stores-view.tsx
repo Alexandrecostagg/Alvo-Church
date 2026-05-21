@@ -33,7 +33,7 @@ export function MyStoresView() {
         
         // Filter by owner
         const myStores = allStores.filter(store => 
-          store.ownerId === (user.personId || user.id)
+          store.ownerId === user.uid
         );
         setStores(myStores);
       } catch (error) {
@@ -197,7 +197,7 @@ export function MyStoresView() {
                       <span className="label">Categoria:</span>
                       <span className="value">{store.category}</span>
                     </div>
-                    {store.contact?.city && (
+                    {store.contact?.address?.city && (
                       <div className="meta-item">
                         <span className="label">Local:</span>
                         <span className="value">{store.contact.address?.city}</span>

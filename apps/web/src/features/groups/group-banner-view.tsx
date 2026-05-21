@@ -32,12 +32,12 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [themeIndex, setThemeIndex] = useState(0);
   const [format, setFormat] = useState<"feed" | "story">("feed");
-  const [title, setTitle] = useState(group.name);
+  const [title, setTitle] = useState<string>(group.name);
   const [subtitle, setSubtitle] = useState("Viver em Família e Comunhão");
   const [customText, setCustomText] = useState("Você é nosso convidado especial!");
   const [customAddress, setCustomAddress] = useState("Endereço da Célula");
   const [meetingDay, setMeetingDay] = useState("Quarta-feira");
-  const [meetingTime, setMeetingTime] = useState(group.meetingTime ?? "19:30");
+  const [meetingTime, setMeetingTime] = useState<string>(group.meetingTime ?? "19:30");
   const [isGenerating, setIsGenerating] = useState(false);
 
   const theme = COLOR_THEMES[themeIndex];

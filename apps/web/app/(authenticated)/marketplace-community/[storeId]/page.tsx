@@ -1,5 +1,6 @@
 import { StoreDetailView } from "../../../../src/features/marketplace-community/store-detail-view";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <StoreDetailView storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <StoreDetailView storeId={storeId} />;
 }

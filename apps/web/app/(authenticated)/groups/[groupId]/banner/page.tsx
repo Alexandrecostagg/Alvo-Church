@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 import { GroupBannerView } from "../../../../../src/features/groups/group-banner-view";
 
-export default function Page({ params }: { params: { groupId: string } }) {
-  return <GroupBannerView groupId={params.groupId} />;
+export default async function Page({ params }: { params: Promise<{ groupId: string }> }) {
+  const { groupId } = await params;
+  return <GroupBannerView groupId={groupId} />;
 }

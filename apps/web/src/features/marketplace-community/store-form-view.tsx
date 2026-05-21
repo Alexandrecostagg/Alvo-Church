@@ -101,7 +101,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
       const store: CommunityStore = {
         id: initialStore?.id || `store_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         organizationId,
-        ownerId: initialStore?.ownerId || user.personId || user.id,
+        ownerId: initialStore?.ownerId || user.uid,
         name: formData.name,
         description: formData.description,
         category: formData.category,

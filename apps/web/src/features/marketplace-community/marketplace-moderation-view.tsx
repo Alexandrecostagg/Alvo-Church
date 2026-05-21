@@ -34,7 +34,7 @@ export function MarketplaceModerationView() {
         const context: TenantContext = { organizationId };
         const [allStores, allLogs] = await Promise.all([
           fetchCommunityStores(firebaseConfig, context, 200),
-          fetchCommunityStoreModerationLogs(firebaseConfig, context, 500)
+          fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500)
         ]);
         setStores(allStores);
         setLogs(allLogs);
@@ -72,7 +72,7 @@ export function MarketplaceModerationView() {
         organizationId,
         storeId,
         action: "approved",
-        moderatedBy: user.id,
+        moderatedBy: user.uid,
         timestamp: now
       };
 
@@ -113,7 +113,7 @@ export function MarketplaceModerationView() {
         organizationId,
         storeId,
         action: "rejected",
-        moderatedBy: user.id,
+        moderatedBy: user.uid,
         reason: rejectionReason,
         timestamp: now
       };
@@ -154,7 +154,7 @@ export function MarketplaceModerationView() {
         organizationId,
         storeId,
         action: "suspended",
-        moderatedBy: user.id,
+        moderatedBy: user.uid,
         previousStatus: store.status,
         timestamp: now
       };
