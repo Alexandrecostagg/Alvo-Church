@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { StoreFormView } from "../../../../../src/features/marketplace-community/store-form-view";
 import { fetchCommunityStoreById } from "@alvo/firebase";
 
