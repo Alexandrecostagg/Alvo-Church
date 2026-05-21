@@ -25,6 +25,132 @@ export function MarketplaceModerationView() {
   const [actioningStore, setActioningStore] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionForm, setShowRejectionForm] = useState<string | null>(null);
+  const [generatingDemo, setGeneratingDemo] = useState(false);
+
+  const handleGenerateDemoStores = async () => {
+    if (!firebaseReady || !tenantReady || !user) return;
+    try {
+      setGeneratingDemo(true);
+      const context: TenantContext = { organizationId };
+
+      const demoStores: CommunityStore[] = [
+        {
+          id: `store_demo_1_${Date.now()}`,
+          organizationId,
+          ownerId: user.uid,
+          name: "Padaria Graça e Pão",
+          description: "Pães quentinhos artesanais, bolos caseiros deliciosos e cafés especiais feitos com amor por membros da nossa comunidade para abençoar a sua família.",
+          category: "food",
+          status: "pending",
+          images: [],
+          bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=60",
+          contact: {
+            phone: "+55 11 98888-7777",
+            email: "contato@gracaepao.com.br",
+            address: {
+              street: "Av. Principal",
+              number: "123",
+              district: "Centro",
+              city: "São Paulo",
+              state: "SP",
+              postalCode: "01000-000"
+            }
+          },
+          socialLinks: {
+            whatsapp: "5511988887777",
+            instagram: "gracaepao"
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: `store_demo_2_${Date.now()}`,
+          organizationId,
+          ownerId: user.uid,
+          name: "Clínica Integrada Aliança",
+          description: "Atendimento psicológico de qualidade, fisioterapia e apoio psicoterapêutico com profissionais cristãos altamente qualificados, focado na restauração integral.",
+          category: "health",
+          status: "pending",
+          images: [],
+          bannerImageUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60",
+          contact: {
+            phone: "+55 11 97777-6666",
+            email: "clinica@alianca.com.br",
+            address: {
+              street: "Rua das Oliveiras",
+              number: "456",
+              district: "Jardins",
+              city: "São Paulo",
+              state: "SP",
+              postalCode: "02000-000"
+            }
+          },
+          socialLinks: {
+            whatsapp: "5511977776666",
+            instagram: "clinicaalianca"
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: `store_demo_3_${Date.now()}`,
+          organizationId,
+          ownerId: user.uid,
+          name: "Getro Digital Code",
+          description: "Criação de sites premium, sistemas web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
+          category: "services",
+          status: "pending",
+          images: [],
+          bannerImageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60",
+          contact: {
+            phone: "+55 11 96666-5555",
+            email: "suporte@getrodigital.com.br",
+            address: {
+              street: "Av. Paulista",
+              number: "1000",
+              district: "Bela Vista",
+              city: "São Paulo",
+              state: "SP",
+              postalCode: "01310-100"
+            }
+          },
+          socialLinks: {
+            whatsapp: "5511966665555",
+            instagram: "getrodigital"
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      await Promise.all([
+        ...demoStores.map(store => saveCommunityStore(firebaseConfig, context, store)),
+        ...demoStores.map(store => {
+          const log: CommunityStoreModerationLog = {
+            id: `log_demo_${store.id}`,
+            organizationId,
+            storeId: store.id,
+            action: "created",
+            moderatedBy: user.uid,
+            timestamp: new Date().toISOString()
+          };
+          return saveCommunityStoreModerationLog(firebaseConfig, context, log);
+        })
+      ]);
+
+      const [allStores, allLogs] = await Promise.all([
+        fetchCommunityStores(firebaseConfig, context, 200),
+        fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500)
+      ]);
+      setStores(allStores);
+      setLogs(allLogs);
+    } catch (error) {
+      console.error("Error generating demo stores:", error);
+      alert("Erro ao gerar lojas de teste no Firestore. Verifique o console.");
+    } finally {
+      setGeneratingDemo(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -257,6 +383,28 @@ export function MarketplaceModerationView() {
           <div className="empty-queue">
             <CheckCircle size={48} opacity={0.3} />
             <p>{filterStatus === "pending" ? "Nenhuma loja aguardando aprovação!" : "Nenhuma loja neste status"}</p>
+            {filterStatus === "pending" && (
+              <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px dashed #e5e5e5', borderRadius: '0.75rem', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px', margin: '1rem auto 0 auto' }}>
+                <p style={{ fontSize: '0.875rem', color: '#666', lineHeight: '1.4' }}>
+                  Para fins de teste e demonstração do sistema, você pode injetar lojas de demonstração diretamente no seu Firestore em 1 clique!
+                </p>
+                <button 
+                  className="action-btn approve"
+                  onClick={handleGenerateDemoStores}
+                  disabled={generatingDemo}
+                  style={{ alignSelf: 'center', marginTop: '0.5rem', padding: '0.5rem 1rem' }}
+                >
+                  {generatingDemo ? (
+                    <>
+                      <Loader2 size={16} className="spinner-small" />
+                      <span>Gerando Lojas...</span>
+                    </>
+                  ) : (
+                    <span>⚙️ Gerar Lojas de Teste no Firestore</span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="stores-list">
