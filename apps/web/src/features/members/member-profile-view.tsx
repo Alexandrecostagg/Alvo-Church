@@ -37,6 +37,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
+import { recentPeople } from "../../lib/mock-data";
 
 // Definindo os estágios da jornada pastoral
 const JOURNEY_STAGES = [
@@ -77,7 +78,22 @@ export function MemberProfileView() {
     }
 
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre no Firebase para abrir a ficha completa.");
+      const mockPerson = (recentPeople as readonly any[]).find(p => p.id === personId) || (recentPeople as readonly any[])[0];
+      if (mockPerson) {
+        setPerson(mockPerson);
+        if (mockPerson.memberStatus === "visitor") {
+          setActiveStage("reception");
+        } else if (mockPerson.memberStatus === "congregant" || mockPerson.memberStatus === "new_believer") {
+          setActiveStage("cell");
+        } else if (mockPerson.memberStatus === "member") {
+          setActiveStage("baptism");
+        } else if (mockPerson.memberStatus === "leader" || mockPerson.memberStatus === "volunteer") {
+          setActiveStage("leader");
+        }
+        setStatus("Exibindo dados simulados de demonstração (Firebase desconectado).");
+      } else {
+        setStatus("Entre no Firebase para abrir a ficha completa.");
+      }
       return;
     }
 

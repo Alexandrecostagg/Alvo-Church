@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   QrCode, 
   ShieldCheck, 
@@ -14,31 +14,82 @@ import {
   Users,
   Clock,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  FileText,
+  UserX,
+  Activity,
+  Heart,
+  Volume2
 } from "lucide-react";
 import Link from "next/link";
 import { useAppAuth } from "../../../app/providers";
 
-// Mock data for the leader
-const checkedInKids = [
-  { id: "child_2", name: "Ana Beatriz", age: 3, photo: "", status: "checked_in", checkInTime: "18:30", parentName: "Michelle Oliveira" },
-  { id: "child_3", name: "Gabriel Souza", age: 6, photo: "", status: "checked_in", checkInTime: "18:45", parentName: "Carlos Souza" },
-];
-
-const authorizedGuardians = {
-  "child_2": ["Michelle Oliveira", "Ricardo Silva"],
-  "child_3": ["Carlos Souza"]
-};
+interface KidRecord {
+  id: string;
+  name: string;
+  age: number;
+  photo: string;
+  status: "checked_in" | "checked_out";
+  checkInTime: string;
+  parentName: string;
+  allergies?: string;
+  securityRestrictions?: string;
+}
 
 export function KidsLeaderView() {
   const { user } = useAppAuth();
-  const [view, setView] = useState<"list" | "scan" | "checkout">("list");
+  
+  // Interactive Kids presence states
+  const [kidsList, setKidsList] = useState<KidRecord[]>([
+    { 
+      id: "child_1", 
+      name: "Ana Beatriz Oliveira", 
+      age: 3, 
+      photo: "", 
+      status: "checked_in", 
+      checkInTime: "18:30", 
+      parentName: "Michelle Oliveira",
+      allergies: "Alergia severa a lactose",
+      securityRestrictions: "Apenas pais biológicos podem retirar"
+    },
+    { 
+      id: "child_2", 
+      name: "Gabriel Souza Costa", 
+      age: 6, 
+      photo: "", 
+      status: "checked_in", 
+      checkInTime: "18:45", 
+      parentName: "Carlos Souza",
+      allergies: "Nenhuma",
+      securityRestrictions: "Nenhuma"
+    },
+  ]);
+
+  // Kids Security Incident & Movement logs
+  const [securityLogs, setSecurityLogs] = useState([
+    { time: "18:30", text: "Check-in: Ana Beatriz Oliveira autorizada por Michelle Oliveira.", type: "success" },
+    { time: "18:45", text: "Check-in: Gabriel Souza Costa autorizado por Carlos Souza.", type: "success" }
+  ]);
+
+  const [view, setView] = useState<"list" | "scan" | "checkout" | "checkin">("list");
   const [search, setSearch] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [scannedChild, setScannedChild] = useState<any>(null);
+  const [scannedChild, setScannedChild] = useState<KidRecord | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"pending" | "success" | "error" | null>(null);
 
-  const filteredKids = checkedInKids.filter(k => 
+  // New check-in state
+  const [newKidDraft, setNewKidDraft] = useState({
+    name: "",
+    age: "",
+    parentName: "",
+    allergies: "",
+    securityRestrictions: ""
+  });
+
+  const [scanSoundVisual, setScanSoundVisual] = useState(false);
+
+  const filteredKids = kidsList.filter(k => 
     k.name.toLowerCase().includes(search.toLowerCase()) || 
     k.parentName.toLowerCase().includes(search.toLowerCase())
   );
@@ -49,14 +100,33 @@ export function KidsLeaderView() {
     // Simulate scan after 2 seconds
     setTimeout(() => {
       setIsScanning(false);
-      setScannedChild(checkedInKids[0]); // Simulate scanning Ana Beatriz
+      setScanSoundVisual(true);
+      // Select the first kid on scan
+      setScannedChild(kidsList[0]); 
+      
+      // Turn off scan success sound visual after 1s
+      setTimeout(() => {
+        setScanSoundVisual(false);
+      }, 1000);
     }, 2000);
   };
 
   const handleCheckout = () => {
+    if (!scannedChild) return;
     setCheckoutStatus("pending");
     setTimeout(() => {
       setCheckoutStatus("success");
+      
+      // Update local list status
+      setKidsList(prev => prev.map(k => k.id === scannedChild.id ? { ...k, status: "checked_out" } : k));
+      
+      // Log audit action
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      setSecurityLogs(prev => [
+        { time: timeString, text: `Retirada: ${scannedChild.name} foi retirado(a) por ${scannedChild.parentName}.`, type: "success" },
+        ...prev
+      ]);
+
       setTimeout(() => {
         setView("list");
         setScannedChild(null);
@@ -65,396 +135,444 @@ export function KidsLeaderView() {
     }, 1000);
   };
 
+  const handleCheckinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKidDraft.name || !newKidDraft.parentName || !newKidDraft.age) return;
+
+    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const newKid: KidRecord = {
+      id: `child_${Date.now()}`,
+      name: newKidDraft.name,
+      age: parseInt(newKidDraft.age),
+      photo: "",
+      status: "checked_in",
+      checkInTime: timeString,
+      parentName: newKidDraft.parentName,
+      allergies: newKidDraft.allergies || "Nenhuma",
+      securityRestrictions: newKidDraft.securityRestrictions || "Nenhuma"
+    };
+
+    setKidsList(prev => [newKid, ...prev]);
+    setSecurityLogs(prev => [
+      { time: timeString, text: `Check-in: ${newKid.name} cadastrado e autorizado por ${newKid.parentName}.`, type: "success" },
+      ...prev
+    ]);
+
+    setNewKidDraft({
+      name: "",
+      age: "",
+      parentName: "",
+      allergies: "",
+      securityRestrictions: ""
+    });
+    
+    setView("list");
+  };
+
+  const activeCheckedInCount = kidsList.filter(k => k.status === "checked_in").length;
+
   return (
-    <main className="kids-leader-workbench animate-entrance">
-      <header className="topbar">
-        <div className="topbar-content">
-          <Link href="/dashboard" className="back-link">
-             <ArrowLeft size={16} /> Voltar
+    <main className="kids-leader-workbench" style={{ background: "#070c14", color: "#f8fafc", minHeight: "100vh", padding: "2rem" }}>
+      
+      {/* HEADER TOPBAR (Futuristic Security Style) */}
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <Link href="/" style={{ color: "#f97316", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
+            ← Voltar ao painel principal
           </Link>
-          <h1>Operação Kids Alvo</h1>
-          <p className="eyebrow">Painel do Líder de Escolinha</p>
+          <p className="eyebrow" style={{ color: "#f97316", marginTop: "1rem" }}>Lounge Kids & Segurança Ativa</p>
+          <h1 style={{ color: "white", fontSize: "2rem", fontWeight: 950, letterSpacing: "-0.03em", margin: "4px 0" }}>
+            Operação Kids Alvo
+          </h1>
         </div>
-        <div className="topbar-actions">
-           <div className="status-pill online">
-             <span className="live-pulse"></span>
-             Sistema de Segurança Ativo
-           </div>
+        <div>
+          <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "20px", padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: "0.85rem", color: "#10b981", fontWeight: 700 }}>
+            <span style={{ width: 8, height: 8, background: "#10b981", borderRadius: "50%", display: "inline-block", animation: "pulse 2s infinite" }}></span>
+            Rede Kids Protegida e Criptografada
+          </div>
         </div>
       </header>
 
+      {/* DASHBOARD PRINCIPAL LIST */}
       {view === "list" && (
         <section className="kids-dashboard">
-          <div className="kids-stats-row">
-            <div className="stat-card-premium">
-              <Baby size={24} />
-              <strong>{checkedInKids.length}</strong>
-              <span>Crianças Presentes</span>
+          
+          {/* STATS & QUICK ACTIONS ROW */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
+            <div style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Presentes Agora</span>
+              <strong style={{ fontSize: "2rem", color: "white" }}>{activeCheckedInCount}</strong>
+              <p style={{ color: "#64748b", fontSize: "0.7rem" }}>crianças sob cuidado pastoral</p>
             </div>
-            <div className="stat-card-premium">
-              <Users size={24} />
-              <strong>12</strong>
-              <span>Vagas Disponíveis</span>
+            
+            <div style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Vagas das Salas</span>
+              <strong style={{ fontSize: "2rem", color: "white" }}>15</strong>
+              <p style={{ color: "#64748b", fontSize: "0.7rem" }}>capacidade técnica recomendada</p>
             </div>
-            <button className="scan-trigger-card antigravity-float" onClick={handleStartScan}>
-              <Scan size={32} />
-              <strong>Escanear Token</strong>
-              <span>Check-in ou Retirada</span>
+
+            <button 
+              onClick={() => setView("checkin")}
+              style={{ background: "rgba(249, 115, 22, 0.15)", border: "1px solid rgba(249, 115, 22, 0.25)", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
+            >
+              <Plus size={24} style={{ color: "#f97316" }} />
+              <strong style={{ fontSize: "1.1rem", marginTop: 4 }}>Check-in Lounge</strong>
+              <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Cadastrar nova criança de entrada</span>
+            </button>
+
+            <button 
+              onClick={handleStartScan}
+              style={{ background: "#f97316", border: "none", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
+            >
+              <Scan size={24} />
+              <strong style={{ fontSize: "1.1rem", marginTop: 4 }}>Escanear Token QR</strong>
+              <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.8)" }}>Validar saída/retirada segura</span>
             </button>
           </div>
 
-          <div className="kids-inventory-panel">
-            <div className="panel-header">
-              <h2>Lista de Presença</h2>
-              <div className="search-bar-compact">
-                <Search size={16} />
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+            
+            {/* TABELA DE PRESENTES */}
+            <article style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "2rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+                <h2 style={{ fontSize: "1.25rem", color: "white", fontWeight: 800, margin: 0 }}>Crianças Ativas nas Salas</h2>
+                <div style={{ position: "relative" }}>
+                  <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                  <input 
+                    placeholder="Filtrar criança ou responsável..." 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ padding: "6px 10px 6px 30px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "white", fontSize: "0.8rem", outline: "none" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {filteredKids.length ? (
+                  filteredKids.map(kid => (
+                    <div 
+                      key={kid.id} 
+                      style={{ 
+                        background: kid.status === "checked_out" ? "rgba(255,255,255,0.02)" : "rgba(30, 41, 59, 0.2)", 
+                        border: "1px solid rgba(255, 255, 255, 0.05)", 
+                        borderRadius: "16px", 
+                        padding: "1rem 1.25rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <strong style={{ color: kid.status === "checked_out" ? "#64748b" : "white", fontSize: "1rem" }}>{kid.name}</strong>
+                          <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>({kid.age} anos)</span>
+                          
+                          {/* Alert marker for lactose/peanut allergies */}
+                          {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
+                            <span style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: "0.65rem", padding: "2px 8px", borderRadius: "6px", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                              ⚠️ ALERGIA
+                            </span>
+                          )}
+                        </div>
+
+                        <p style={{ color: "#64748b", fontSize: "0.75rem", margin: "4px 0 0" }}>
+                          Responsável: <strong style={{ color: "#cbd5e1" }}>{kid.parentName}</strong> • Entrada: {kid.checkInTime}
+                        </p>
+
+                        {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
+                          <p style={{ color: "#ef4444", fontSize: "0.7rem", margin: "4px 0 0", fontWeight: 700 }}>
+                            Atenção médica: {kid.allergies}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        {kid.status === "checked_in" ? (
+                          <button 
+                            onClick={() => {
+                              setScannedChild(kid);
+                              setView("checkout");
+                            }}
+                            style={{ background: "#f97316", border: "none", color: "white", padding: "6px 12px", borderRadius: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Retirada Segura
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 700 }}>✓ Entregue</span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: "center", padding: "3rem", background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "20px", color: "#64748b" }}>
+                    Nenhuma criança cadastrada nas salas no momento.
+                  </div>
+                )}
+              </div>
+            </article>
+
+            {/* AUDITORIA DE SEGURANÇA (Kids Security Audit Trail) */}
+            <aside style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "1.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.25rem" }}>
+                <Activity size={16} style={{ color: "#f97316" }} />
+                <h3 style={{ fontSize: "1.1rem", color: "white", fontWeight: 800, margin: 0 }}>Histórico de Movimentação</h3>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "350px", overflowY: "auto", paddingRight: 4 }}>
+                {securityLogs.map((log, index) => (
+                  <div key={index} style={{ fontSize: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "8px" }}>
+                    <span style={{ color: "#f97316", fontWeight: 700 }}>{log.time}</span> - <span style={{ color: "#cbd5e1" }}>{log.text}</span>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </section>
+      )}
+
+      {/* VIEW: CHECK-IN LOUNGE TERMINAL */}
+      {view === "checkin" && (
+        <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255,255,255,0.08)", padding: "2.5rem", borderRadius: "24px", width: "100%", maxWidth: "550px" }}>
+            <h2 style={{ color: "white", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
+              👶 Lounge de Entrada Expressa
+            </h2>
+            <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+              Cadastre a criança na recepção de entrada. Especifique qualquer necessidade alimentar, médica ou restrição de entrega de familiares.
+            </p>
+
+            <form onSubmit={handleCheckinSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                Nome da Criança
                 <input 
-                  placeholder="Buscar criança ou responsável..." 
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  required
+                  placeholder="Nome completo"
+                  value={newKidDraft.name}
+                  onChange={e => setNewKidDraft(prev => ({ ...prev, name: e.target.value }))}
+                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
                 />
+              </label>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Idade
+                  <input 
+                    required
+                    type="number"
+                    placeholder="Ex: 5"
+                    value={newKidDraft.age}
+                    onChange={e => setNewKidDraft(prev => ({ ...prev, age: e.target.value }))}
+                    style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                  />
+                </label>
+
+                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Responsável pela Entrada
+                  <input 
+                    required
+                    placeholder="Nome do Pai/Mãe"
+                    value={newKidDraft.parentName}
+                    onChange={e => setNewKidDraft(prev => ({ ...prev, parentName: e.target.value }))}
+                    style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                  />
+                </label>
+              </div>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                Alergias / Necessidades Médicas
+                <input 
+                  placeholder="Ex: Alergia severa a amendoim (deixar em branco se nenhuma)"
+                  value={newKidDraft.allergies}
+                  onChange={e => setNewKidDraft(prev => ({ ...prev, allergies: e.target.value }))}
+                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                />
+              </label>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                Restrições de Retirada (Segurança)
+                <input 
+                  placeholder="Ex: Tio Ricardo não está autorizado a retirar"
+                  value={newKidDraft.securityRestrictions}
+                  onChange={e => setNewKidDraft(prev => ({ ...prev, securityRestrictions: e.target.value }))}
+                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                />
+              </label>
+
+              <div style={{ display: "flex", gap: "1rem", marginTop: 10 }}>
+                <button 
+                  type="button"
+                  onClick={() => setView("list")}
+                  style={{ flex: 1, padding: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "white", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  style={{ flex: 1, padding: "12px", background: "#f97316", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
+                >
+                  Imprimir Crachá & Check-in
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      )}
+
+      {/* VIEW: SIMULADOR DE SCANNER QR CODE COM ANIMAÇÕES */}
+      {view === "scan" && (
+        <section style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 0" }}>
+          <div style={{ background: "#0a0f1d", border: "2px solid rgba(255,255,255,0.1)", borderRadius: "24px", padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
+            
+            <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "black", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid rgba(249, 115, 22, 0.3)" }}>
+              
+              {/* Target Scan Laser */}
+              {isScanning && (
+                <div style={{ 
+                  position: "absolute", 
+                  left: 0, 
+                  width: "100%", 
+                  height: "3px", 
+                  background: "#f97316", 
+                  boxShadow: "0 0 15px #f97316",
+                  animation: "scanLineAnim 2s infinite"
+                }}></div>
+              )}
+
+              {isScanning ? (
+                <div>
+                  <Camera size={40} style={{ color: "#64748b", margin: "0 auto 12px" }} />
+                  <p style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>Ajustando o foco da câmera do terminal...</p>
+                  <p style={{ color: "#f97316", fontSize: "0.75rem", marginTop: 4, fontWeight: 700 }}>Posicione o QR Code da pulseira/smartphone dos pais</p>
+                </div>
+              ) : scannedChild ? (
+                <div style={{ padding: "2rem" }}>
+                  
+                  {scanSoundVisual && (
+                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "6px 12px", borderRadius: "10px", color: "#10b981", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 15 }}>
+                      <Volume2 size={14} /> Beep! Token Seguro Validado
+                    </div>
+                  )}
+
+                  <CheckCircle2 size={54} style={{ color: "#10b981", margin: "0 auto 12px" }} />
+                  <h3 style={{ color: "white", fontSize: "1.2rem", fontWeight: 800 }}>Token Seguro Confirmado</h3>
+                  <p style={{ color: "#cbd5e1", fontSize: "0.85rem", marginTop: 4 }}>
+                    Criança identificada: <strong style={{ color: "white" }}>{scannedChild.name}</strong>
+                  </p>
+                  
+                  <button 
+                    onClick={() => setView("checkout")}
+                    style={{ background: "#f97316", border: "none", color: "white", padding: "10px 20px", borderRadius: "10px", fontSize: "0.85rem", fontWeight: 800, marginTop: 20, cursor: "pointer" }}
+                  >
+                    Abrir Protocolo de Retirada →
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <button 
+              onClick={() => setView("list")}
+              style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "8px 20px", borderRadius: "10px", fontSize: "0.8rem", marginTop: 20, cursor: "pointer" }}
+            >
+              Cancelar Scanner
+            </button>
+          </div>
+
+          <style jsx global>{`
+            @keyframes scanLineAnim {
+              0% { top: 0%; }
+              50% { top: 100%; }
+              100% { top: 0%; }
+            }
+          `}</style>
+        </section>
+      )}
+
+      {/* VIEW: PROTOCOLO DE RETIRADA RIGIDO (CHECKOUT) */}
+      {view === "checkout" && scannedChild && (
+        <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255,255,255,0.08)", padding: "2.5rem", borderRadius: "24px", width: "100%", maxWidth: "550px" }}>
+            
+            <div style={{ textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
+              <ShieldCheck size={40} style={{ color: "#f97316", margin: "0 auto 8px" }} />
+              <h2 style={{ color: "white", fontSize: "1.5rem", fontWeight: 900, margin: 0 }}>Protocolo de Retirada Rígido</h2>
+              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Código do Token de Segurança: SEC-MATCH-092-29</span>
+            </div>
+
+            {/* Entity Child summary */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Criança</span>
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px", borderRadius: "16px", display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
+                <Baby size={28} style={{ color: "#f97316" }} />
+                <div>
+                  <strong style={{ color: "white", display: "block" }}>{scannedChild.name}</strong>
+                  <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>{scannedChild.age} anos • Sala de Escolinha 02</span>
+                </div>
               </div>
             </div>
 
-            <div className="kids-table-wrapper">
-              <table className="kids-table">
-                <thead>
-                  <tr>
-                    <th>Criança</th>
-                    <th>Responsável</th>
-                    <th>Entrada</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredKids.map(kid => (
-                    <tr key={kid.id}>
-                      <td>
-                        <div className="kid-cell">
-                          <div className="avatar-small"><Baby size={16} /></div>
-                          <div>
-                            <strong>{kid.name}</strong>
-                            <small>{kid.age} anos</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{kid.parentName}</td>
-                      <td>
-                        <div className="time-cell">
-                          <Clock size={12} /> {kid.checkInTime}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge-success">Checked-in</span>
-                      </td>
-                      <td>
-                        <button className="action-button-small" onClick={() => {
-                          setScannedChild(kid);
-                          setView("checkout");
-                        }}>
-                          Retirada
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {view === "scan" && (
-        <section className="scanner-overlay">
-          <div className="scanner-container">
-            <div className="scanner-viewfinder">
-               {isScanning ? (
-                 <div className="scan-animation">
-                   <div className="scan-line"></div>
-                   <p>Buscando QR Code...</p>
-                 </div>
-               ) : scannedChild ? (
-                 <div className="scan-result-preview animate-entrance">
-                   <div className="success-icon-large"><CheckCircle2 size={48} /></div>
-                   <h2>Token Validado!</h2>
-                   <p>Criança identificada: <strong>{scannedChild.name}</strong></p>
-                   <button className="primary-button" onClick={() => setView("checkout")}>
-                     Prosseguir para Retirada
-                   </button>
-                 </div>
-               ) : (
-                 <div className="scanner-idle">
-                    <Camera size={48} opacity={0.3} />
-                    <p>Câmera desativada</p>
-                 </div>
-               )}
-            </div>
-            <button className="close-scanner" onClick={() => setView("list")}>
-              <X size={24} />
-            </button>
-          </div>
-        </section>
-      )}
-
-      {view === "checkout" && scannedChild && (
-        <section className="checkout-screen animate-entrance">
-          <div className="checkout-card antigravity-float">
-            <div className="checkout-header">
-              <ShieldCheck size={32} color="#16a34a" />
-              <h1>Protocolo de Retirada</h1>
-            </div>
-
-            <div className="checkout-body">
-              <div className="checkout-section">
-                <p className="eyebrow">Criança</p>
-                <div className="entity-summary">
-                  <div className="avatar-medium"><Baby size={24} /></div>
+            {/* Authorized Guardians with simulated match confirmation */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Pais / Responsáveis Autorizados</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: 6 }}>
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1.5px dashed rgba(255,255,255,0.1)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: "0.9rem" }}>
+                  <UserCheck size={16} style={{ color: "#10b981" }} />
                   <div>
-                    <strong>{scannedChild.name}</strong>
-                    <span>{scannedChild.age} anos • Sala 02</span>
+                    <strong>{scannedChild.parentName}</strong>
+                    <span style={{ display: "block", fontSize: "0.7rem", color: "#10b981" }}>✓ Responsável Principal Autenticado por Token QR</span>
                   </div>
                 </div>
               </div>
-
-              <div className="checkout-section">
-                <p className="eyebrow">Responsáveis Autorizados</p>
-                <div className="guardians-list">
-                  {authorizedGuardians[scannedChild.id as keyof typeof authorizedGuardians].map(g => (
-                    <div key={g} className="guardian-item">
-                       <UserCheck size={16} />
-                       <span>{g}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="security-alert">
-                 <AlertTriangle size={16} />
-                 <p>Confirme a identidade visual do responsável antes de liberar.</p>
-              </div>
             </div>
 
-            <div className="checkout-footer">
+            {/* Medical details or warnings */}
+            {scannedChild.allergies && scannedChild.allergies !== "Nenhuma" && (
+              <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
+                <span style={{ color: "#ef4444", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>ATENÇÃO MÉDICA CRÍTICA:</span>
+                <p style={{ color: "#cbd5e1", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.allergies}</p>
+              </div>
+            )}
+
+            {/* Security restrictions or alerts */}
+            {scannedChild.securityRestrictions && scannedChild.securityRestrictions !== "Nenhuma" && (
+              <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
+                <span style={{ color: "#f59e0b", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>RESTRIÇÃO DE SEGURANÇA ATIVA:</span>
+                <p style={{ color: "#cbd5e1", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.securityRestrictions}</p>
+              </div>
+            )}
+
+            {/* Action panel */}
+            <div>
               {checkoutStatus === "success" ? (
-                <div className="checkout-success animate-entrance">
-                   <CheckCircle2 size={24} />
-                   <span>Retirada Confirmada!</span>
+                <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid #10b981", borderRadius: "16px", padding: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#10b981", fontWeight: 900 }}>
+                  <CheckCircle2 size={20} />
+                  Criança entregue ao responsável com sucesso!
                 </div>
               ) : (
-                <div className="action-row">
-                  <button className="ghost-button" onClick={() => setView("list")}>Cancelar</button>
+                <div style={{ display: "flex", gap: "1rem" }}>
                   <button 
-                    className="primary-button" 
+                    onClick={() => {
+                      setView("list");
+                      setScannedChild(null);
+                    }}
+                    style={{ flex: 1, padding: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "white", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Cancelar
+                  </button>
+
+                  <button 
                     onClick={handleCheckout}
                     disabled={checkoutStatus === "pending"}
+                    style={{ flex: 1, padding: "12px", background: "#f97316", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                   >
-                    {checkoutStatus === "pending" ? "Processando..." : "Confirmar Entrega"}
+                    {checkoutStatus === "pending" ? "Validando Token..." : "Confirmar Liberação"}
                   </button>
                 </div>
               )}
             </div>
+
           </div>
         </section>
       )}
 
-      <style jsx>{`
-        .kids-leader-workbench {
-          padding: 2rem;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        .kids-stats-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2rem;
-        }
-        .stat-card-premium {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 1.5rem;
-          border: 1px solid var(--alvo-line);
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-        .stat-card-premium strong { font-size: 2.5rem; line-height: 1; }
-        .stat-card-premium span { font-size: 0.875rem; color: var(--alvo-ink-soft); font-weight: 600; }
-        
-        .scan-trigger-card {
-          background: linear-gradient(135deg, var(--alvo-accent) 0%, #9a3412 100%);
-          color: white;
-          padding: 1.5rem;
-          border-radius: 1.5rem;
-          border: none;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .scan-trigger-card:hover { transform: scale(1.02); }
-
-        .kids-inventory-panel {
-          background: white;
-          border-radius: 2rem;
-          padding: 2rem;
-          border: 1px solid var(--alvo-line);
-          box-shadow: var(--alvo-shadow);
-        }
-        .panel-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-          flex-wrap: wrap;
-          gap: 1rem;
-        }
-        .search-bar-compact {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          background: #f1f5f9;
-          padding: 0.5rem 1rem;
-          border-radius: 999px;
-          width: 320px;
-        }
-        .search-bar-compact input {
-          border: none;
-          background: transparent;
-          outline: none;
-          width: 100%;
-          font-size: 0.875rem;
-        }
-
-        .kids-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .kids-table th {
-          text-align: left;
-          padding: 1rem;
-          border-bottom: 2px solid #f1f5f9;
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--alvo-ink-soft);
-        }
-        .kids-table td {
-          padding: 1.25rem 1rem;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        
-        .kid-cell { display: flex; align-items: center; gap: 0.75rem; }
-        .avatar-small { width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; display: grid; place-items: center; color: var(--alvo-accent); }
-        .kid-cell strong { display: block; font-size: 0.9375rem; }
-        .kid-cell small { color: var(--alvo-ink-soft); font-size: 0.8125rem; }
-
-        .time-cell { display: flex; align-items: center; gap: 0.4rem; color: var(--alvo-ink-soft); font-size: 0.875rem; }
-        .badge-success { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-        
-        .action-button-small {
-          background: white;
-          border: 1px solid var(--alvo-line);
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 0.8125rem;
-          font-weight: 700;
-          cursor: pointer;
-        }
-        .action-button-small:hover { background: #f8fafc; border-color: var(--alvo-accent); color: var(--alvo-accent); }
-
-        /* Scanner */
-        .scanner-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.85);
-          backdrop-filter: blur(8px);
-          z-index: 1000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 2rem;
-        }
-        .scanner-container {
-          width: 100%;
-          max-width: 500px;
-          position: relative;
-        }
-        .scanner-viewfinder {
-          background: #000;
-          aspect-ratio: 1;
-          border-radius: 2rem;
-          overflow: hidden;
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 4px solid rgba(255,255,255,0.1);
-        }
-        .scan-animation { text-align: center; color: white; }
-        .scan-line {
-          width: 100%;
-          height: 2px;
-          background: var(--alvo-accent);
-          position: absolute;
-          top: 0;
-          box-shadow: 0 0 20px var(--alvo-accent);
-          animation: scanLine 2s infinite;
-        }
-        @keyframes scanLine {
-          0% { top: 0; }
-          50% { top: 100%; }
-          100% { top: 0; }
-        }
-        
-        .scan-result-preview { text-align: center; color: white; padding: 2rem; }
-        .success-icon-large { margin-bottom: 1.5rem; color: #22c55e; }
-        
-        .close-scanner {
-          position: absolute;
-          top: -4rem;
-          right: 0;
-          background: white;
-          border: none;
-          width: 3rem;
-          height: 3rem;
-          border-radius: 50%;
-          cursor: pointer;
-        }
-
-        /* Checkout */
-        .checkout-screen {
-          display: flex;
-          justify-content: center;
-          padding: 2rem 0;
-        }
-        .checkout-card {
-          background: white;
-          width: 100%;
-          max-width: 500px;
-          padding: 2.5rem;
-          border-radius: 2.5rem;
-          box-shadow: var(--alvo-shadow-strong);
-        }
-        .checkout-header { text-align: center; margin-bottom: 2rem; }
-        .checkout-header h1 { font-size: 1.75rem; margin-top: 1rem; }
-        
-        .checkout-section { margin-bottom: 2rem; }
-        .entity-summary { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #f8fafc; border-radius: 1rem; }
-        .avatar-medium { width: 48px; height: 48px; border-radius: 12px; background: white; display: grid; place-items: center; color: var(--alvo-accent); }
-        
-        .guardians-list { display: flex; flex-direction: column; gap: 0.75rem; }
-        .guardian-item { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; border: 1.5px dashed #cbd5e1; border-radius: 1rem; color: var(--alvo-ink-bold); font-weight: 700; }
-        
-        .security-alert { display: flex; gap: 0.75rem; padding: 1rem; background: #fff7ed; color: #9a3412; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
-        
-        .checkout-success { display: flex; align-items: center; gap: 0.75rem; color: #16a34a; font-weight: 900; justify-content: center; width: 100%; }
-        .action-row { display: flex; gap: 1rem; }
-      `}</style>
     </main>
   );
 }
