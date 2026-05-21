@@ -19,7 +19,8 @@ import {
   UsersRound,
   Waypoints,
   Tent,
-  CalendarRange
+  CalendarRange,
+  Store
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 
@@ -38,6 +39,7 @@ const navigationGroups = [
       { label: "Minha Area", icon: UserCircle, href: "/me", match: (pathname: string) => pathname.startsWith("/me") },
       { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname: string) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
       { label: "Novo Membro", icon: UserPlus, href: "/members/new", match: (pathname: string) => pathname.startsWith("/members/new") },
+      { label: "Marketplace", icon: Store, href: "/marketplace-community", match: (pathname: string) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
     ]
   },
   {
