@@ -668,7 +668,7 @@ export const navItems = [
   { label: "Pessoas", icon: UsersRound, href: "/members" },
   { label: "Familias", icon: HeartHandshake, href: "#families" },
   { label: "Jornadas", icon: MapIcon, href: "/journeys" },
-  { label: "Portaria", icon: ClipboardList, href: "/reception" },
+  { label: "Recepção", icon: ClipboardList, href: "/reception" },
   { label: "Celulas", icon: Waypoints, href: "/groups" },
   { label: "Escalas", icon: Handshake, href: "/serving" },
   { label: "Eventos", icon: CalendarDays, href: "#events" },
@@ -718,7 +718,7 @@ export const moduleHighlights = [
     action: "Ver base"
   },
   {
-    label: "Portaria",
+    label: "Recepção",
     description: "Entrada do visitante que cria pessoa, jornada, comunicacao e roteiro de acolhimento.",
     href: "/reception",
     icon: ClipboardList,
@@ -787,7 +787,7 @@ export const operationalShortcuts = [
     meta: "Home do projeto"
   },
   {
-    label: "Portaria",
+    label: "Recepção",
     title: "Recepcao dedicada",
     description: "Tela rapida para tablet ou notebook na entrada da celebracao.",
     href: "/reception",

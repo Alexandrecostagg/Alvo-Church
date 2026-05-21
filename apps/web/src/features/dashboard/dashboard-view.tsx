@@ -326,7 +326,7 @@ export function DashboardView() {
   const careWorkflowSteps = [
     {
       label: "Capturar",
-      title: "Portaria registra a pessoa",
+      title: "Recepção registra a pessoa",
       description: "O visitante entra uma vez e ja nasce como pessoa, jornada e tarefa de cuidado.",
       href: "/reception",
       icon: ClipboardList,
@@ -378,9 +378,9 @@ export function DashboardView() {
       label: "01",
       title: "Chegada do convidado",
       description:
-        "A portaria registra nome, origem e telefone sem transformar a recepcao em burocracia.",
+        "A recepção registra nome, origem e telefone sem transformar a recepcao em burocracia.",
       owner: "Equipe de recepcao",
-      module: "Portaria",
+      module: "Recepção",
       href: "/reception",
       icon: ClipboardList,
       tone: "blue",
@@ -1194,7 +1194,7 @@ export function DashboardView() {
           <article className="panel span-2 reception-panel" id="reception">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Portaria inteligente</p>
+                <p className="eyebrow">Recepção inteligente</p>
                 <h2>Entrada de visitantes</h2>
               </div>
               <span className="soft-pill">{capturedVisitors.length} visitantes</span>
