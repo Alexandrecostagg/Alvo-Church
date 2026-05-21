@@ -7,6 +7,7 @@ export async function initializeFirebase() {
 
 export { initClient, getClientConfig } from './client';
 export * from "./client";
+export * from "./repositories";
 
 import type { TenantContext } from "@alvo/types";
 
