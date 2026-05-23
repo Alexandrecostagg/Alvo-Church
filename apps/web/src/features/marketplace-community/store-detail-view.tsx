@@ -281,6 +281,9 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           max-width: 1200px;
           margin: 0 auto;
           padding: 2rem;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
         }
 
         .store-detail-container.loading {
@@ -288,32 +291,35 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           align-items: center;
           justify-content: center;
           min-height: 50vh;
+          color: #64748b;
         }
 
         .loader {
-          color: #999;
+          color: #f97316;
           font-size: 1.125rem;
+          font-weight: 700;
         }
 
         .back-link {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem 1rem;
+          padding: 0.75rem 1.25rem;
           margin-bottom: 2rem;
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          color: #666;
+          background: rgba(35, 45, 65, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
           text-decoration: none;
-          font-weight: 500;
-          transition: all 0.2s;
+          font-weight: 700;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .back-link:hover {
-          border-color: #d27836;
-          color: #d27836;
-          background: #faf8f6;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.08);
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
 
         .error-state {
@@ -321,25 +327,30 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
+          padding: 6rem 2rem;
           gap: 1rem;
-          color: #999;
+          color: #64748b;
           text-align: center;
+          background: rgba(30, 41, 59, 0.15);
+          border: 2px dashed rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
         }
 
         .error-state h2 {
-          color: #666;
+          color: white;
           font-size: 1.5rem;
+          font-weight: 800;
         }
 
         .store-hero {
           position: relative;
           width: 100%;
           height: 400px;
-          background: #f5f5f5;
-          border-radius: 1rem;
+          background: #0f172a;
+          border-radius: 1.5rem;
           overflow: hidden;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .hero-image {
@@ -354,7 +365,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
         }
 
         .hero-overlay {
@@ -363,11 +374,11 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%);
+          background: linear-gradient(180deg, transparent 0%, rgba(11, 15, 25, 0.9) 100%);
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
-          padding: 2rem;
+          padding: 2.5rem;
         }
 
         .hero-content {
@@ -375,8 +386,8 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .store-category {
-          font-size: 0.875rem;
-          font-weight: 600;
+          font-size: 0.85rem;
+          font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           margin-bottom: 0.5rem;
@@ -384,19 +395,22 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
 
         .hero-content h1 {
           font-size: 2.5rem;
-          font-weight: 700;
+          font-weight: 950;
           color: white;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
+          letter-spacing: -0.04em;
         }
 
         .verification-badge {
           display: inline-block;
-          padding: 0.375rem 0.75rem;
-          background: rgba(16, 185, 129, 0.9);
-          color: white;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 600;
+          padding: 0.4rem 0.8rem;
+          background: rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          color: #10b981;
+          border-radius: 2rem;
+          font-size: 0.8rem;
+          font-weight: 800;
+          backdrop-filter: blur(10px);
         }
 
         .hero-actions {
@@ -405,32 +419,33 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .action-btn {
-          background: rgba(255, 255, 255, 0.9);
-          border: none;
-          border-radius: 0.5rem;
+          background: rgba(15, 23, 42, 0.75);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
           width: 2.75rem;
           height: 2.75rem;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.2s;
-          color: #333;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: white;
         }
 
         .action-btn:hover {
           background: white;
+          color: #0b0f19;
           transform: scale(1.05);
         }
 
         .action-btn.favorite:hover {
-          color: #d27836;
+          color: #ef4444;
         }
 
         .store-content {
           display: grid;
           grid-template-columns: 320px 1fr;
-          gap: 2rem;
+          gap: 2.5rem;
         }
 
         .store-sidebar {
@@ -440,26 +455,27 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .contact-card {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
-          padding: 1.5rem;
+          background: rgba(30, 41, 59, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.25rem;
+          padding: 1.75rem;
           position: sticky;
           top: 2rem;
         }
 
         .contact-card h3 {
           font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-          color: #1a1a1a;
+          font-weight: 800;
+          margin-bottom: 1.25rem;
+          color: white;
+          letter-spacing: -0.02em;
         }
 
         .contact-item {
           display: flex;
           gap: 1rem;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid #f0f0f0;
+          padding: 1rem 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
           text-decoration: none;
           color: inherit;
           cursor: pointer;
@@ -471,19 +487,19 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .contact-item:hover {
-          color: #d27836;
+          color: #f97316;
         }
 
         .contact-item svg {
-          color: #d27836;
+          color: #f97316;
           flex-shrink: 0;
           margin-top: 0.125rem;
         }
 
         .contact-label {
           font-size: 0.75rem;
-          font-weight: 600;
-          color: #999;
+          font-weight: 700;
+          color: #64748b;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
@@ -491,36 +507,39 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         .contact-value {
           font-size: 0.9375rem;
           font-weight: 500;
-          color: #1a1a1a;
-          margin-top: 0.125rem;
+          color: #cbd5e1;
+          margin-top: 0.25rem;
+          line-height: 1.4;
         }
 
         .contact-socials {
           display: flex;
           gap: 0.75rem;
-          padding-top: 1rem;
-          border-top: 1px solid #f0f0f0;
-          margin-top: 1rem;
+          padding-top: 1.25rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.04);
+          margin-top: 1.25rem;
         }
 
         .social-btn {
           flex: 1;
           padding: 0.75rem;
-          background: #f5f5f5;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          color: #666;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
           display: flex;
           align-items: center;
           justify-content: center;
           text-decoration: none;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .social-btn:hover {
-          background: #d27836;
-          border-color: #d27836;
+          background: #f97316;
+          border-color: #f97316;
           color: white;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+          transform: translateY(-2px);
         }
 
         .store-main {
@@ -530,52 +549,54 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .store-section {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.25rem;
           padding: 2rem;
         }
 
         .store-section.warning {
-          background: #fff9e6;
-          border-color: #f59e0b;
+          background: rgba(245, 158, 11, 0.1);
+          border-color: rgba(245, 158, 11, 0.3);
           display: flex;
           align-items: center;
           gap: 1rem;
-          color: #b45309;
+          color: #f59e0b;
         }
 
         .store-section h2 {
           font-size: 1.5rem;
-          font-weight: 700;
-          margin-bottom: 1rem;
-          color: #1a1a1a;
+          font-weight: 850;
+          margin-bottom: 1.25rem;
+          color: white;
+          letter-spacing: -0.03em;
         }
 
         .store-description {
           font-size: 1rem;
-          line-height: 1.6;
-          color: #666;
+          line-height: 1.7;
+          color: #cbd5e1;
           white-space: pre-wrap;
         }
 
         .offers-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-          gap: 1rem;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 1.25rem;
         }
 
         .offer-card {
-          background: #faf8f6;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
+          background: rgba(30, 41, 59, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 1rem;
           overflow: hidden;
-          transition: all 0.2s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .offer-card:hover {
-          border-color: #d27836;
-          box-shadow: 0 2px 8px rgba(210, 120, 54, 0.15);
+          border-color: #f97316;
+          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+          transform: translateY(-4px);
         }
 
         .offer-image {
@@ -585,42 +606,46 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         }
 
         .offer-content {
-          padding: 1rem;
+          padding: 1.25rem;
         }
 
         .offer-content h4 {
-          font-size: 1rem;
-          font-weight: 600;
+          font-size: 1.1rem;
+          font-weight: 800;
           margin-bottom: 0.5rem;
-          color: #1a1a1a;
+          color: white;
+          letter-spacing: -0.02em;
         }
 
         .offer-description {
-          font-size: 0.875rem;
-          color: #666;
-          margin-bottom: 0.75rem;
+          font-size: 0.85rem;
+          color: #cbd5e1;
+          margin-bottom: 1rem;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          line-height: 1.5;
         }
 
         .offer-discount {
-          margin-bottom: 0.75rem;
+          margin-bottom: 1rem;
         }
 
         .discount-badge {
           display: inline-block;
-          padding: 0.375rem 0.75rem;
-          background: #d27836;
+          padding: 0.4rem 0.8rem;
+          background: #f97316;
           color: white;
-          border-radius: 0.25rem;
-          font-weight: 600;
-          font-size: 0.875rem;
+          border-radius: 0.5rem;
+          font-weight: 800;
+          font-size: 0.85rem;
+          box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
         }
 
         .discount-badge.free {
           background: #10b981;
+          box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
         }
 
         .offer-validity {
@@ -628,7 +653,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           align-items: center;
           gap: 0.5rem;
           font-size: 0.75rem;
-          color: #999;
+          color: #64748b;
         }
 
         .empty-offers {
@@ -636,9 +661,9 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 2rem;
+          padding: 3rem 1.5rem;
           gap: 1rem;
-          color: #999;
+          color: #64748b;
           text-align: center;
         }
 
@@ -647,12 +672,21 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             height: 250px;
           }
 
+          .hero-overlay {
+            padding: 1.5rem;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-end;
+            gap: 1rem;
+          }
+
           .hero-content h1 {
             font-size: 1.875rem;
           }
 
           .store-content {
             grid-template-columns: 1fr;
+            gap: 1.5rem;
           }
 
           .contact-card {

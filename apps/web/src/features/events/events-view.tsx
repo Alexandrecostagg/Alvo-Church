@@ -29,7 +29,7 @@ export interface EventType {
   id: string;
   name: string;
   description: string;
-  type: "conference" | "service" | "camp" | "training";
+  type: "conference" | "service" | "camp" | "training" | "celebration";
   status: "published" | "draft" | "completed";
   locationType: "onsite" | "online";
   startsAt: string;
@@ -105,7 +105,7 @@ export function EventsView() {
   const [events, setEvents] = useState<EventType[]>(initialEvents);
   const [selectedEventId, setSelectedEventId] = useState<string>("event_women_2026");
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "conference" | "service" | "camp" | "training">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "conference" | "service" | "camp" | "training" | "celebration">("all");
   
   // Gaveta lateral de Novo Evento
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -681,6 +681,7 @@ export function EventsView() {
                     <option value="service">Culto Geral</option>
                     <option value="camp">Acampamento</option>
                     <option value="training">Treinamento</option>
+                    <option value="celebration">Confraternização</option>
                   </select>
                 </div>
 
@@ -716,6 +717,54 @@ export function EventsView() {
                     onChange={(e) => setNewEvent(prev => ({ ...prev, startsAt: e.target.value }))}
                     style={{ width: "100%", padding: "0.7rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
                   />
+                  {/* Smart Quick Date Presets */}
+                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+                    {[
+                      { label: "Hoje 19:30", getVal: () => {
+                        const d = new Date(); d.setHours(19, 30, 0, 0);
+                        const offset = d.getTimezoneOffset() * 60000;
+                        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                      }},
+                      { label: "Amanhã 19:30", getVal: () => {
+                        const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(19, 30, 0, 0);
+                        const offset = d.getTimezoneOffset() * 60000;
+                        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                      }},
+                      { label: "Próx. Sáb 19:00", getVal: () => {
+                        const d = new Date(); const day = d.getDay();
+                        const diff = (6 - day + 7) % 7 || 7;
+                        d.setDate(d.getDate() + diff); d.setHours(19, 0, 0, 0);
+                        const offset = d.getTimezoneOffset() * 60000;
+                        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                      }},
+                      { label: "Próx. Dom 18:00", getVal: () => {
+                        const d = new Date(); const day = d.getDay();
+                        const diff = (7 - day) % 7 || 7;
+                        d.setDate(d.getDate() + diff); d.setHours(18, 0, 0, 0);
+                        const offset = d.getTimezoneOffset() * 60000;
+                        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+                      }}
+                    ].map(preset => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setNewEvent(prev => ({ ...prev, startsAt: preset.getVal() }))}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "6px",
+                          color: "#cbd5e1",
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -838,7 +887,7 @@ export function EventsView() {
 
           {/* Filtros de Categoria */}
           <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-            {(["all", "conference", "service", "camp"] as const).map(cat => (
+            {(["all", "conference", "service", "camp", "training", "celebration"] as const).map(cat => (
               <button
                 key={cat}
                 onClick={() => setTypeFilter(cat)}
@@ -857,6 +906,8 @@ export function EventsView() {
                 {cat === "conference" && "Conferências"}
                 {cat === "service" && "Cultos"}
                 {cat === "camp" && "Retiros"}
+                {cat === "training" && "Treinamentos"}
+                {cat === "celebration" && "Confraternização"}
               </button>
             ))}
           </div>
@@ -909,7 +960,18 @@ export function EventsView() {
               {/* Top Details Header */}
               <div className="detail-header">
                 <div className="title-area">
-                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "rgba(210, 120, 54, 0.15)", color: "#d27836" }}>{activeEvent.type}</span>
+                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "rgba(210, 120, 54, 0.15)", color: "#d27836" }}>
+                    {(() => {
+                      switch (activeEvent.type) {
+                        case "conference": return "Conferência";
+                        case "service": return "Culto Geral";
+                        case "camp": return "Retiro";
+                        case "training": return "Treinamento";
+                        case "celebration": return "Confraternização";
+                        default: return activeEvent.type;
+                      }
+                    })()}
+                  </span>
                   <h2 style={{ color: "white", fontSize: "1.75rem", fontWeight: 800, margin: "6px 0" }}>{activeEvent.name}</h2>
                   <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.95rem", lineHeight: "1.4" }}>{activeEvent.description}</p>
                   
@@ -917,6 +979,10 @@ export function EventsView() {
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <MapPin size={14} style={{ color: "#d27836" }} />
                       {activeEvent.location}
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Ticket size={14} style={{ color: "#10b981" }} />
+                      {activeEvent.isPaid ? `R$ ${activeEvent.ticketPrice?.toFixed(2).replace('.', ',')}` : "Gratuito"}
                     </span>
                   </div>
                 </div>

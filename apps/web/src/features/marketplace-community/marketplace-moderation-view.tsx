@@ -97,7 +97,7 @@ export function MarketplaceModerationView() {
           organizationId,
           ownerId: user.uid,
           name: "Getro Digital Code",
-          description: "Criação de sites premium, sistemas web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
+          description: "Criação de sites premium, systems web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
           category: "services",
           status: "pending",
           images: [],
@@ -272,7 +272,7 @@ export function MarketplaceModerationView() {
       const updatedStore: CommunityStore = {
         ...store,
         status: "suspended",
-        suspensionReason: "Suspendida pela moderação"
+        suspensionReason: "Suspensa pela moderação"
       };
 
       const log: CommunityStoreModerationLog = {
@@ -384,15 +384,14 @@ export function MarketplaceModerationView() {
             <CheckCircle size={48} opacity={0.3} />
             <p>{filterStatus === "pending" ? "Nenhuma loja aguardando aprovação!" : "Nenhuma loja neste status"}</p>
             {filterStatus === "pending" && (
-              <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px dashed #e5e5e5', borderRadius: '0.75rem', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px', margin: '1rem auto 0 auto' }}>
-                <p style={{ fontSize: '0.875rem', color: '#666', lineHeight: '1.4' }}>
+              <div className="demo-injector-box">
+                <p>
                   Para fins de teste e demonstração do sistema, você pode injetar lojas de demonstração diretamente no seu Firestore em 1 clique!
                 </p>
                 <button 
-                  className="action-btn approve"
+                  className="action-btn approve demo-btn"
                   onClick={handleGenerateDemoStores}
                   disabled={generatingDemo}
-                  style={{ alignSelf: 'center', marginTop: '0.5rem', padding: '0.5rem 1rem' }}
                 >
                   {generatingDemo ? (
                     <>
@@ -411,13 +410,15 @@ export function MarketplaceModerationView() {
             {filteredStores.map(store => (
               <div key={store.id} className="store-card">
                 <div className="store-preview">
-                  {store.bannerImageUrl && (
+                  {store.bannerImageUrl ? (
                     <img src={store.bannerImageUrl} alt={store.name} />
+                  ) : (
+                    <div className="no-image-placeholder">Marketplace</div>
                   )}
                 </div>
 
                 <div className="store-details">
-                  <div className="store-header">
+                  <div className="store-card-header">
                     <h3>{store.name}</h3>
                     <div className={`status-badge ${store.status}`}>
                       {getStatusIcon(store.status)}
@@ -546,13 +547,13 @@ export function MarketplaceModerationView() {
             {logs.slice(0, 10).map(log => (
               <div key={log.id} className="log-item">
                 <div className="log-icon" style={{
-                  background: log.action === "approved" ? "#eff6ff" :
-                             log.action === "rejected" ? "#fef2f2" :
-                             log.action === "suspended" ? "#f9fafb" : "#fffbeb"
+                  background: log.action === "approved" ? "rgba(16, 185, 129, 0.15)" :
+                             log.action === "rejected" ? "rgba(239, 68, 68, 0.15)" :
+                             log.action === "suspended" ? "rgba(100, 116, 139, 0.15)" : "rgba(245, 158, 11, 0.15)"
                 }}>
                   {log.action === "approved" && <CheckCircle size={16} color="#10b981" />}
                   {log.action === "rejected" && <XCircle size={16} color="#ef4444" />}
-                  {log.action === "suspended" && <Ban size={16} color="#6b7280" />}
+                  {log.action === "suspended" && <Ban size={16} color="#64748b" />}
                   {log.action === "created" && <Clock size={16} color="#f59e0b" />}
                 </div>
                 <div className="log-content">
@@ -575,6 +576,9 @@ export function MarketplaceModerationView() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 2rem;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
         }
 
         .moderation-container.loading {
@@ -584,13 +588,14 @@ export function MarketplaceModerationView() {
           justify-content: center;
           min-height: 50vh;
           gap: 1rem;
-          color: #999;
+          color: #64748b;
         }
 
         .spinner {
           animation: spin 1s linear infinite;
-          width: 2rem;
-          height: 2rem;
+          width: 2.5rem;
+          height: 2.5rem;
+          color: #f97316;
         }
 
         .spinner-small {
@@ -607,85 +612,95 @@ export function MarketplaceModerationView() {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem 1rem;
-          margin-bottom: 1.5rem;
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          color: #666;
+          padding: 0.75rem 1.25rem;
+          margin-bottom: 2rem;
+          background: rgba(35, 45, 65, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
           text-decoration: none;
-          font-weight: 500;
-          transition: all 0.2s;
+          font-weight: 700;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .back-link:hover {
-          border-color: #d27836;
-          color: #d27836;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.08);
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
 
         .moderation-header {
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
         }
 
         .moderation-header h1 {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 2.25rem;
+          font-weight: 950;
+          color: white;
           margin-bottom: 0.5rem;
+          letter-spacing: -0.04em;
         }
 
         .moderation-header p {
-          color: #666;
-          font-size: 1rem;
+          color: #94a3b8;
+          font-size: 1.05rem;
         }
 
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
+          gap: 1.25rem;
+          margin-bottom: 2.5rem;
         }
 
         .stat-card {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.25rem;
           padding: 1.5rem;
           text-align: center;
-          border-left: 4px solid #999;
+          border-left: 4px solid #64748b;
+          transition: all 0.2s;
         }
 
         .stat-card.pending {
-          border-left-color: #f59e0b;
+          border-left-color: #f97316;
+          box-shadow: 0 4px 20px rgba(249, 115, 22, 0.05);
         }
 
         .stat-card.approved {
           border-left-color: #10b981;
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.05);
         }
 
         .stat-card.rejected {
           border-left-color: #ef4444;
+          box-shadow: 0 4px 20px rgba(239, 68, 68, 0.05);
         }
 
         .stat-card.suspended {
-          border-left-color: #6b7280;
+          border-left-color: #64748b;
         }
 
         .stat-count {
-          font-size: 2rem;
-          font-weight: 700;
+          font-size: 2.25rem;
+          font-weight: 950;
           margin-bottom: 0.5rem;
+          letter-spacing: -0.03em;
         }
 
-        .stat-card.pending .stat-count { color: #f59e0b; }
+        .stat-card.pending .stat-count { color: #f97316; }
         .stat-card.approved .stat-count { color: #10b981; }
         .stat-card.rejected .stat-count { color: #ef4444; }
-        .stat-card.suspended .stat-count { color: #6b7280; }
+        .stat-card.suspended .stat-count { color: #64748b; }
 
         .stat-label {
-          font-size: 0.875rem;
-          color: #666;
-          font-weight: 500;
+          font-size: 0.85rem;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
         .filters {
@@ -696,34 +711,35 @@ export function MarketplaceModerationView() {
         }
 
         .filter-btn {
-          padding: 0.625rem 1rem;
-          background: white;
-          border: 2px solid #e5e5e5;
+          padding: 0.625rem 1.25rem;
+          background: rgba(35, 45, 65, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 2rem;
           font-size: 0.875rem;
-          font-weight: 500;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s;
-          color: #666;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #cbd5e1;
         }
 
         .filter-btn:hover {
-          border-color: #d27836;
-          color: #d27836;
-        }
-
-        .filter-btn.active {
-          background: #d27836;
-          border-color: #d27836;
+          border-color: #f97316;
           color: white;
         }
 
+        .filter-btn.active {
+          background: #f97316;
+          border-color: #f97316;
+          color: white;
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+        }
+
         .stores-queue {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
           padding: 2rem;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
         }
 
         .empty-queue {
@@ -731,10 +747,35 @@ export function MarketplaceModerationView() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 3rem;
-          gap: 1rem;
-          color: #999;
+          padding: 4rem 2rem;
+          gap: 1.25rem;
+          color: #64748b;
           text-align: center;
+        }
+
+        .demo-injector-box {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+          border: 1px dashed rgba(255, 255, 255, 0.1);
+          border-radius: 1rem;
+          background: rgba(15, 23, 42, 0.3);
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          max-width: 450px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .demo-injector-box p {
+          font-size: 0.9rem;
+          color: #cbd5e1;
+          line-height: 1.5;
+        }
+
+        .demo-btn {
+          align-self: center;
+          padding: 0.75rem 1.5rem !important;
         }
 
         .stores-list {
@@ -744,28 +785,31 @@ export function MarketplaceModerationView() {
         }
 
         .store-card {
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: rgba(30, 41, 59, 0.2);
+          border-radius: 1.25rem;
           overflow: hidden;
           display: grid;
           grid-template-columns: 200px 1fr auto;
-          gap: 1.5rem;
-          padding: 1rem;
+          gap: 1.75rem;
+          padding: 1.25rem;
           align-items: center;
-          transition: all 0.2s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .store-card:hover {
-          border-color: #d27836;
-          box-shadow: 0 2px 8px rgba(210, 120, 54, 0.1);
+          border-color: #f97316;
+          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+          transform: translateY(-2px);
         }
 
         .store-preview {
           width: 200px;
           height: 120px;
-          background: #f5f5f5;
-          border-radius: 0.5rem;
+          background: #0f172a;
+          border-radius: 0.75rem;
           overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .store-preview img {
@@ -774,60 +818,78 @@ export function MarketplaceModerationView() {
           object-fit: cover;
         }
 
+        .no-image-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          font-weight: 700;
+          color: #475569;
+        }
+
         .store-details {
           flex: 1;
         }
 
-        .store-header {
+        .store-card-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 1rem;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
         }
 
-        .store-header h3 {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #1a1a1a;
+        .store-card-header h3 {
+          font-size: 1.25rem;
+          font-weight: 850;
+          color: white;
+          letter-spacing: -0.02em;
         }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
           gap: 0.375rem;
-          padding: 0.375rem 0.75rem;
-          background: #f0f0f0;
-          border-radius: 0.25rem;
-          font-size: 0.75rem;
-          font-weight: 600;
+          padding: 0.4rem 0.8rem;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 2rem;
+          font-size: 0.8rem;
+          font-weight: 800;
           white-space: nowrap;
         }
 
         .status-badge.pending {
-          background: #fef3c7;
-          color: #b45309;
+          background: rgba(245, 158, 11, 0.15);
+          color: #f59e0b;
+          border-color: rgba(245, 158, 11, 0.3);
         }
 
         .status-badge.approved {
-          background: #dcfce7;
-          color: #166534;
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+          border-color: rgba(16, 185, 129, 0.3);
         }
 
         .status-badge.rejected {
-          background: #fee2e2;
-          color: #991b1b;
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+          border-color: rgba(239, 68, 68, 0.3);
         }
 
         .status-badge.suspended {
-          background: #f3f4f6;
-          color: #374151;
+          background: rgba(100, 116, 139, 0.15);
+          color: #94a3b8;
+          border-color: rgba(100, 116, 139, 0.3);
         }
 
         .store-description {
-          font-size: 0.875rem;
-          color: #666;
-          margin-bottom: 0.75rem;
+          font-size: 0.9rem;
+          color: #cbd5e1;
+          margin-bottom: 1rem;
+          line-height: 1.5;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -836,10 +898,11 @@ export function MarketplaceModerationView() {
 
         .store-info {
           display: flex;
-          gap: 1rem;
-          font-size: 0.875rem;
-          color: #666;
+          gap: 1.25rem;
+          font-size: 0.85rem;
+          color: #94a3b8;
           flex-wrap: wrap;
+          font-weight: 600;
         }
 
         .info-item {
@@ -853,155 +916,169 @@ export function MarketplaceModerationView() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 0.375rem;
-          color: #c33;
+          padding: 0.75rem 1rem;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 0.75rem;
+          color: #fca5a5;
           font-size: 0.875rem;
-          margin-top: 0.75rem;
+          margin-top: 1rem;
         }
 
         .suspension-box {
-          background: #f3f4f6;
-          border: 1px solid #d1d5db;
-          color: #374151;
+          background: rgba(100, 116, 139, 0.1);
+          border: 1px solid rgba(100, 116, 139, 0.2);
+          color: #cbd5e1;
         }
 
         .store-actions {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
+          min-width: 140px;
         }
 
         .action-btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.375rem;
-          padding: 0.625rem 1rem;
+          gap: 0.5rem;
+          padding: 0.625rem 1.25rem;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 500;
+          border-radius: 0.75rem;
+          font-weight: 700;
           font-size: 0.875rem;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-decoration: none;
           white-space: nowrap;
           border: 1px solid transparent;
         }
 
         .action-btn.view {
-          background: white;
-          border: 1px solid #e5e5e5;
-          color: #666;
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
         }
 
         .action-btn.view:hover {
-          border-color: #3b82f6;
-          color: #3b82f6;
-          background: #eff6ff;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.08);
         }
 
         .action-btn.approve {
-          background: #dcfce7;
-          color: #166534;
-          border: 1px solid #bbf7d0;
+          background: rgba(16, 185, 129, 0.2);
+          color: #10b981;
+          border-color: rgba(16, 185, 129, 0.4);
         }
 
         .action-btn.approve:hover:not(:disabled) {
-          background: #bbf7d0;
+          background: #10b981;
+          color: white;
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
         }
 
         .action-btn.reject {
-          background: white;
-          border: 1px solid #fecaca;
-          color: #991b1b;
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
         }
 
         .action-btn.reject:hover {
-          background: #fee2e2;
+          background: #ef4444;
+          color: white;
+          box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
         }
 
         .action-btn.suspend {
-          background: #f3f4f6;
-          color: #374151;
-          border: 1px solid #d1d5db;
+          background: rgba(100, 116, 139, 0.15);
+          color: #cbd5e1;
+          border-color: rgba(100, 116, 139, 0.3);
         }
 
         .action-btn.suspend:hover:not(:disabled) {
-          background: #e5e7eb;
+          background: #64748b;
+          color: white;
         }
 
         .action-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.5;
           cursor: not-allowed;
         }
 
         .rejection-form {
           grid-column: 1 / -1;
-          background: #fef3c7;
-          border: 1px solid #fde047;
-          border-radius: 0.5rem;
-          padding: 1rem;
+          background: rgba(245, 158, 11, 0.1);
+          border: 1px solid rgba(245, 158, 11, 0.25);
+          border-radius: 1rem;
+          padding: 1.25rem;
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
+          gap: 1rem;
+          margin-top: 1rem;
         }
 
         .rejection-form textarea {
           width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #fcd34d;
-          border-radius: 0.375rem;
+          padding: 0.875rem 1rem;
+          background: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: white;
           font-family: inherit;
           resize: none;
+          outline: none;
+          font-size: 0.95rem;
         }
 
         .rejection-form textarea:focus {
-          outline: none;
-          border-color: #f59e0b;
-          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+          border-color: #f97316;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
 
         .form-actions {
           display: flex;
-          gap: 0.5rem;
+          gap: 0.75rem;
         }
 
         .action-btn.confirm {
           flex: 1;
           background: #ef4444;
           color: white;
+          border: none;
         }
 
         .action-btn.confirm:hover:not(:disabled) {
           background: #dc2626;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
 
         .action-btn.cancel {
           flex: 1;
-          background: white;
-          border: 1px solid #fcd34d;
-          color: #b45309;
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.06);
+          color: #cbd5e1;
         }
 
         .action-btn.cancel:hover {
-          background: #fffbeb;
+          background: rgba(255, 255, 255, 0.08);
+          color: white;
         }
 
         .recent-logs {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
           padding: 2rem;
         }
 
         .recent-logs h2 {
-          font-size: 1.25rem;
-          font-weight: 600;
+          font-size: 1.5rem;
+          font-weight: 850;
           margin-bottom: 1.5rem;
-          color: #1a1a1a;
+          color: white;
+          letter-spacing: -0.03em;
         }
 
         .logs-list {
@@ -1013,11 +1090,11 @@ export function MarketplaceModerationView() {
         .log-item {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 1rem;
-          background: #f9fafb;
-          border-radius: 0.5rem;
-          border: 1px solid #e5e7eb;
+          gap: 1.25rem;
+          padding: 1rem 1.25rem;
+          background: rgba(30, 41, 59, 0.2);
+          border-radius: 1rem;
+          border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .log-icon {
@@ -1026,7 +1103,7 @@ export function MarketplaceModerationView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 0.5rem;
+          border-radius: 0.75rem;
           flex-shrink: 0;
         }
 
@@ -1035,15 +1112,16 @@ export function MarketplaceModerationView() {
         }
 
         .log-action {
-          font-weight: 500;
-          color: #333;
-          font-size: 0.9375rem;
+          font-weight: 700;
+          color: white;
+          font-size: 0.95rem;
         }
 
         .log-time {
           font-size: 0.75rem;
-          color: #999;
+          color: #64748b;
           margin-top: 0.25rem;
+          font-weight: 600;
         }
 
         @media (max-width: 1024px) {
@@ -1085,9 +1163,10 @@ export function MarketplaceModerationView() {
             height: 200px;
           }
 
-          .store-header {
+          .store-card-header {
             flex-direction: column;
             align-items: flex-start;
+            gap: 0.5rem;
           }
 
           .store-actions {

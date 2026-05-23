@@ -10,9 +10,7 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
-  Loader2,
-  Eye,
-  EyeOff
+  Loader2
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { saveCommunityStore } from "@alvo/firebase";
@@ -467,43 +465,50 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           max-width: 800px;
           margin: 0 auto;
           padding: 2rem;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
         }
 
         .back-link {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem 1rem;
+          padding: 0.75rem 1.25rem;
           margin-bottom: 2rem;
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          color: #666;
+          background: rgba(35, 45, 65, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
           text-decoration: none;
-          font-weight: 500;
-          transition: all 0.2s;
+          font-weight: 700;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .back-link:hover {
-          border-color: #d27836;
-          color: #d27836;
-          background: #faf8f6;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.08);
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
 
         .form-header {
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 1.5rem;
         }
 
         .form-header h1 {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 2.25rem;
+          font-weight: 950;
+          color: white;
           margin-bottom: 0.5rem;
+          letter-spacing: -0.04em;
         }
 
         .form-subtitle {
-          color: #666;
-          font-size: 1rem;
+          color: #94a3b8;
+          font-size: 1.05rem;
         }
 
         .store-form {
@@ -513,69 +518,83 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         }
 
         .form-section {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.25rem;
           padding: 2rem;
         }
 
         .form-section h2 {
           font-size: 1.25rem;
-          font-weight: 600;
-          color: #1a1a1a;
-          margin-bottom: 1rem;
+          font-weight: 850;
+          color: white;
+          margin-bottom: 1.5rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+          padding-bottom: 0.75rem;
+          letter-spacing: -0.02em;
         }
 
         .section-help {
-          font-size: 0.875rem;
-          color: #999;
-          margin-bottom: 1rem;
+          font-size: 0.85rem;
+          color: #64748b;
+          margin-bottom: 1.25rem;
+          line-height: 1.4;
         }
 
         .form-group {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.25rem;
         }
 
         .form-group:last-child {
           margin-bottom: 0;
         }
 
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-
-        .form-row .form-group {
-          margin-bottom: 0;
-        }
-
-        label {
+        .form-group label {
           display: block;
-          font-weight: 600;
-          color: #333;
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #cbd5e1;
           margin-bottom: 0.5rem;
-          font-size: 0.9375rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
-        input,
-        textarea,
-        select {
+        .form-group label .required {
+          color: #ef4444;
+          margin-left: 0.25rem;
+        }
+
+        .form-control,
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="url"],
+        select,
+        textarea {
           width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          font-size: 1rem;
-          font-family: inherit;
-          transition: all 0.2s;
+          padding: 0.875rem 1rem;
+          background: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: white;
+          font-size: 0.95rem;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          outline: none;
         }
 
-        input:focus,
-        textarea:focus,
-        select:focus {
-          outline: none;
-          border-color: #d27836;
-          box-shadow: 0 0 0 3px rgba(210, 120, 54, 0.1);
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        input[type="url"]:focus,
+        select:focus,
+        textarea:focus {
+          border-color: #f97316;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+          color: #475569;
         }
 
         textarea {
@@ -583,24 +602,14 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           min-height: 120px;
         }
 
-        .form-group small {
-          display: block;
-          margin-top: 0.25rem;
-          font-size: 0.75rem;
-          color: #999;
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1.25rem;
         }
 
         .banner-upload {
-          border: 2px dashed #e5e5e5;
-          border-radius: 0.75rem;
-          padding: 2rem;
-          text-align: center;
-          transition: all 0.2s;
-        }
-
-        .banner-upload:hover {
-          border-color: #d27836;
-          background: #faf8f6;
+          margin-bottom: 1rem;
         }
 
         .hidden-input {
@@ -608,121 +617,153 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         }
 
         .banner-upload-placeholder {
+          border: 2px dashed rgba(255, 255, 255, 0.1);
+          background: rgba(15, 23, 42, 0.4);
+          border-radius: 1rem;
+          padding: 3rem 1.5rem;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #94a3b8;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 0.75rem;
-          cursor: pointer;
-          color: #666;
+        }
+
+        .banner-upload-placeholder:hover {
+          border-color: #f97316;
+          background: rgba(249, 115, 22, 0.04);
+        }
+
+        .banner-upload-placeholder svg {
+          color: #f97316;
+        }
+
+        .banner-upload-placeholder span {
+          font-weight: 700;
+          font-size: 0.95rem;
+          color: white;
         }
 
         .banner-upload-placeholder small {
-          color: #999;
-          font-size: 0.875rem;
+          font-size: 0.75rem;
+          color: #64748b;
         }
 
         .banner-preview {
           position: relative;
-          display: inline-block;
           width: 100%;
-          max-width: 500px;
+          height: 220px;
+          border-radius: 1rem;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .banner-preview img {
           width: 100%;
-          border-radius: 0.5rem;
+          height: 100%;
+          object-fit: cover;
         }
 
         .btn-remove-banner {
           position: absolute;
-          top: 0.5rem;
-          right: 0.5rem;
-          background: rgba(0, 0, 0, 0.5);
-          border: none;
+          top: 0.75rem;
+          right: 0.75rem;
+          background: rgba(15, 23, 42, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 50%;
-          width: 2.25rem;
-          height: 2.25rem;
+          width: 2.5rem;
+          height: 2.5rem;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
           cursor: pointer;
+          color: #cbd5e1;
           transition: all 0.2s;
         }
 
         .btn-remove-banner:hover {
-          background: rgba(0, 0, 0, 0.7);
+          background: #ef4444;
+          color: white;
+          transform: scale(1.1);
         }
 
         .message-box {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 1rem;
-          border-radius: 0.5rem;
-          font-size: 0.9375rem;
+          gap: 0.75rem;
+          padding: 1rem 1.25rem;
+          border-radius: 0.75rem;
+          font-weight: 500;
+          font-size: 0.95rem;
         }
 
         .message-box.error {
-          background: #fee;
-          border: 1px solid #fcc;
-          color: #c33;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          color: #fca5a5;
         }
 
         .message-box.success {
-          background: #efe;
-          border: 1px solid #cfc;
-          color: #3c3;
+          background: rgba(16, 185, 129, 0.15);
+          border: 1px solid rgba(16, 185, 129, 0.25);
+          color: #a7f3d0;
         }
 
         .form-actions {
           display: flex;
+          justify-content: flex-end;
           gap: 1rem;
           margin-top: 2rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          padding-top: 2rem;
         }
 
-        .btn-cancel,
         .btn-submit {
-          flex: 1;
-          padding: 1rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.875rem 2rem;
+          background: #f97316;
+          color: white;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 600;
+          border-radius: 0.75rem;
+          font-weight: 800;
           font-size: 1rem;
           cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          text-decoration: none;
-        }
-
-        .btn-cancel {
-          background: white;
-          border: 1px solid #e5e5e5;
-          color: #666;
-        }
-
-        .btn-cancel:hover {
-          border-color: #d27836;
-          color: #d27836;
-          background: #faf8f6;
-        }
-
-        .btn-submit {
-          background: linear-gradient(135deg, #d27836 0%, #b8632b 100%);
-          color: white;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .btn-submit:hover:not(:disabled) {
+          background: #ea580c;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(210, 120, 54, 0.3);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
         .btn-submit:disabled {
-          opacity: 0.7;
+          opacity: 0.6;
           cursor: not-allowed;
+        }
+
+        .btn-cancel {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.875rem 2rem;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 1rem;
+          transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: white;
         }
 
         .spinner {

@@ -220,65 +220,76 @@ export function MarketplaceCommunityView() {
           padding: 2rem;
           max-width: 1400px;
           margin: 0 auto;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
         }
 
         .marketplace-community-header {
           margin-bottom: 3rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 2.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
         }
 
         .header-content {
-          margin-bottom: 2rem;
+          margin-bottom: 0.5rem;
         }
 
         .header-content .eyebrow {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          font-size: 0.875rem;
-          color: #666;
+          font-size: 0.85rem;
+          color: #f97316;
           margin-bottom: 0.5rem;
           text-transform: uppercase;
-          font-weight: 600;
+          font-weight: 800;
           letter-spacing: 0.05em;
         }
 
         .header-content h1 {
           font-size: 2.5rem;
-          font-weight: 700;
-          margin-bottom: 0.5rem;
-          color: #1a1a1a;
+          font-weight: 950;
+          margin-bottom: 0.75rem;
+          color: white;
+          letter-spacing: -0.04em;
         }
 
         .header-content p {
-          font-size: 1.125rem;
-          color: #666;
-          max-width: 600px;
+          font-size: 1.05rem;
+          color: #94a3b8;
+          max-width: 800px;
+          line-height: 1.6;
         }
 
         .search-bar-container {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
+          gap: 1.25rem;
+          margin-top: 1rem;
         }
 
         .search-input-wrapper {
           display: flex;
           align-items: center;
-          background: white;
-          border: 2px solid #e5e5e5;
-          border-radius: 0.5rem;
-          padding: 0.75rem 1rem;
-          transition: all 0.2s;
+          background: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 1rem;
+          padding: 0.875rem 1.25rem;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          max-width: 600px;
         }
 
         .search-input-wrapper:focus-within {
-          border-color: #d27836;
-          box-shadow: 0 0 0 3px rgba(210, 120, 54, 0.1);
+          border-color: #f97316;
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
         }
 
         .search-icon {
-          color: #999;
+          color: #64748b;
           margin-right: 0.75rem;
           flex-shrink: 0;
         }
@@ -286,13 +297,14 @@ export function MarketplaceCommunityView() {
         .search-input {
           flex: 1;
           border: none;
+          background: transparent;
           outline: none;
           font-size: 1rem;
-          color: #333;
+          color: white;
         }
 
         .search-input::placeholder {
-          color: #ccc;
+          color: #475569;
         }
 
         .category-pills {
@@ -302,29 +314,33 @@ export function MarketplaceCommunityView() {
         }
 
         .pill {
-          padding: 0.625rem 1rem;
-          background: white;
-          border: 2px solid #e5e5e5;
+          padding: 0.625rem 1.25rem;
+          background: rgba(30, 41, 59, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 2rem;
           font-size: 0.875rem;
-          font-weight: 500;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex;
           align-items: center;
-          gap: 0.375rem;
+          gap: 0.5rem;
+          color: #cbd5e1;
           white-space: nowrap;
         }
 
         .pill:hover {
-          border-color: #d27836;
-          color: #d27836;
+          border-color: rgba(255, 255, 255, 0.2);
+          color: white;
+          background: rgba(30, 41, 59, 0.55);
         }
 
         .pill.active {
-          background: var(--pill-accent, #d27836);
-          border-color: var(--pill-accent, #d27836);
+          background: rgba(30, 41, 59, 0.7);
+          border-color: var(--pill-accent, #f97316);
           color: white;
+          box-shadow: 0 0 12px rgba(249, 115, 22, 0.15);
+          border-width: 1.5px;
         }
 
         .pill-icon {
@@ -336,19 +352,21 @@ export function MarketplaceCommunityView() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1.5rem;
-          background: #d27836;
+          background: #f97316;
           color: white;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 600;
+          border-radius: 0.75rem;
+          font-weight: 800;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-decoration: none;
+          width: fit-content;
         }
 
         .btn-create-store:hover {
-          background: #b8632b;
+          background: #ea580c;
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
         }
 
         .loading-container {
@@ -356,15 +374,16 @@ export function MarketplaceCommunityView() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
-          gap: 1rem;
-          color: #999;
+          padding: 6rem 2rem;
+          gap: 1.25rem;
+          color: #64748b;
         }
 
         .spinner {
           animation: spin 1s linear infinite;
-          width: 2rem;
-          height: 2rem;
+          width: 2.25rem;
+          height: 2.25rem;
+          color: #f97316;
         }
 
         @keyframes spin {
@@ -376,46 +395,50 @@ export function MarketplaceCommunityView() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
+          padding: 6rem 2rem;
           gap: 1rem;
-          color: #999;
+          color: #64748b;
           text-align: center;
+          background: rgba(30, 41, 59, 0.15);
+          border: 2px dashed rgba(255, 255, 255, 0.06);
+          border-radius: 24px;
         }
 
         .empty-state h3 {
-          color: #666;
+          color: white;
           font-size: 1.25rem;
-          font-weight: 600;
+          font-weight: 800;
         }
 
         .stores-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
           gap: 2rem;
+          margin-top: 1rem;
         }
 
         .store-card {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
           overflow: hidden;
-          transition: all 0.2s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex;
           flex-direction: column;
           height: 100%;
         }
 
         .store-card:hover {
-          border-color: #d27836;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          transform: translateY(-4px);
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+          transform: translateY(-6px);
         }
 
         .store-image-header {
           position: relative;
           width: 100%;
-          height: 200px;
-          background: #f5f5f5;
+          height: 190px;
+          background: #0f172a;
           overflow: hidden;
         }
 
@@ -423,6 +446,11 @@ export function MarketplaceCommunityView() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          transition: transform 0.5s;
+        }
+
+        .store-card:hover .store-banner {
+          transform: scale(1.05);
         }
 
         .placeholder-banner {
@@ -431,7 +459,7 @@ export function MarketplaceCommunityView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
         }
 
         .store-badge-container {
@@ -447,40 +475,41 @@ export function MarketplaceCommunityView() {
           display: inline-flex;
           align-items: center;
           gap: 0.375rem;
-          padding: 0.375rem 0.75rem;
+          padding: 0.4rem 0.8rem;
           border-radius: 2rem;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 800;
           backdrop-filter: blur(10px);
         }
 
         .status-badge.approved {
-          background: rgba(16, 185, 129, 0.9);
-          color: white;
+          background: rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          color: #10b981;
         }
 
         .favorite-btn {
-          background: rgba(255, 255, 255, 0.9);
-          border: none;
-          border-radius: 2rem;
+          background: rgba(15, 23, 42, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 50%;
           width: 2.25rem;
           height: 2.25rem;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.2s;
-          color: #ccc;
+          transition: all 0.25s;
+          color: #64748b;
         }
 
         .favorite-btn:hover {
-          background: white;
-          color: #d27836;
+          background: rgba(255, 255, 255, 0.1);
+          color: #f97316;
           transform: scale(1.1);
         }
 
         .store-body {
-          padding: 1.25rem;
+          padding: 1.5rem;
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -492,77 +521,81 @@ export function MarketplaceCommunityView() {
           gap: 0.25rem;
           width: fit-content;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
         }
 
         .store-body h3 {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: white;
           margin-bottom: 0.5rem;
           line-height: 1.4;
+          letter-spacing: -0.02em;
         }
 
         .store-description {
-          font-size: 0.875rem;
-          color: #666;
-          margin-bottom: 1rem;
+          font-size: 0.9rem;
+          color: #94a3b8;
+          margin-bottom: 1.25rem;
           flex: 1;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          line-height: 1.5;
         }
 
         .store-meta {
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #f0f0f0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .meta-item {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          font-size: 0.875rem;
-          color: #666;
+          font-size: 0.85rem;
+          color: #cbd5e1;
         }
 
         .meta-item svg {
-          color: #d27836;
+          color: #f97316;
           flex-shrink: 0;
         }
 
         .store-contact {
           display: flex;
           gap: 0.75rem;
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
         }
 
         .contact-link {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 2.25rem;
-          height: 2.25rem;
-          background: #f5f5f5;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.5rem;
-          color: #666;
-          transition: all 0.2s;
+          width: 2.5rem;
+          height: 2.5rem;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-decoration: none;
         }
 
         .contact-link:hover {
-          background: #d27836;
+          background: #f97316;
           color: white;
-          border-color: #d27836;
+          border-color: #f97316;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+          transform: translateY(-2px);
         }
 
         .btn-view-store {
@@ -570,22 +603,23 @@ export function MarketplaceCommunityView() {
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          padding: 0.75rem 1rem;
-          background: linear-gradient(135deg, #d27836 0%, #b8632b 100%);
+          padding: 0.875rem 1rem;
+          background: #f97316;
           color: white;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 600;
-          font-size: 0.875rem;
+          border-radius: 0.75rem;
+          font-weight: 800;
+          font-size: 0.9rem;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-decoration: none;
           width: 100%;
         }
 
         .btn-view-store:hover {
+          background: #ea580c;
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(210, 120, 54, 0.3);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -594,7 +628,7 @@ export function MarketplaceCommunityView() {
           }
 
           .header-content h1 {
-            font-size: 1.875rem;
+            font-size: 2rem;
           }
 
           .stores-grid {

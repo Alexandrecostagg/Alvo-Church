@@ -10,7 +10,6 @@ import {
   BadgeCheck, 
   Tag, 
   ArrowRight,
-  Filter,
   Navigation,
   ExternalLink,
   Loader2
@@ -114,113 +113,145 @@ export function MarketplaceView() {
         </div>
       </header>
 
-      <section className="business-grid">
-        {filteredBusinesses.map(business => {
-          const owner = getOwnerInfo(business.ownerPersonId);
-          const benefits = getBusinessBenefits(business.id);
+      {loading ? (
+        <div className="loading-state">
+          <Loader2 className="spinner" />
+          <p>Carregando parceiros e benefícios...</p>
+        </div>
+      ) : (
+        <section className="business-grid">
+          {filteredBusinesses.map(business => {
+            const owner = getOwnerInfo(business.ownerPersonId);
+            const benefits = getBusinessBenefits(business.id);
 
-          return (
-            <article key={business.id} className="business-card antigravity-float">
-              <div className="business-image-header">
-                {business.logoUrl ? (
-                  <img src={business.logoUrl} alt={business.name} />
-                ) : (
-                  <div className="placeholder-logo">
-                    <Store size={40} opacity={0.2} />
-                  </div>
-                )}
-                {business.isMemberBusiness && (
-                  <span className="member-badge">
-                    <BadgeCheck size={14} /> Membro Alvo
-                  </span>
-                )}
-              </div>
-
-              <div className="business-body">
-                <div className="category-tag" style={{ color: categories.find(c => c.id === business.category)?.color }}>
-                  {categories.find(c => c.id === business.category)?.label}
-                </div>
-                <h3>{business.name}</h3>
-                
-                {owner && (
-                  <div className="owner-mini">
-                    <div className="owner-avatar">
-                      {owner.firstName[0]}{owner.lastName[0]}
+            return (
+              <article key={business.id} className="business-card antigravity-float">
+                <div className="business-image-header">
+                  {business.logoUrl ? (
+                    <img src={business.logoUrl} alt={business.name} />
+                  ) : (
+                    <div className="placeholder-logo">
+                      <Store size={40} opacity={0.2} />
                     </div>
-                    <span>Propriedade de <strong>{owner.firstName}</strong></span>
-                  </div>
-                )}
-
-                <div className="address-info">
-                  <MapPin size={14} />
-                  <span>{business.address?.district}, {business.address?.city}</span>
+                  )}
+                  {business.isMemberBusiness && (
+                    <span className="member-badge">
+                      <BadgeCheck size={14} /> Membro Alvo
+                    </span>
+                  )}
                 </div>
 
-                {benefits.length > 0 && (
-                  <div className="benefit-highlight">
-                    <Tag size={14} />
-                    <span>{benefits[0].discountLabel} de desconto</span>
+                <div className="business-body">
+                  <div className="category-tag" style={{ color: categories.find(c => c.id === business.category)?.color }}>
+                    {categories.find(c => c.id === business.category)?.label}
                   </div>
-                )}
+                  <h3>{business.name}</h3>
+                  
+                  {owner && (
+                    <div className="owner-mini">
+                      <div className="owner-avatar">
+                        {owner.firstName[0]}{owner.lastName[0]}
+                      </div>
+                      <span>Propriedade de <strong>{owner.firstName}</strong></span>
+                    </div>
+                  )}
 
-                <div className="business-actions">
-                  <button className="action-btn maps" title="Ver no Mapa">
-                    <Navigation size={18} />
-                  </button>
-                  {business.instagram && (
-                    <button className="action-btn social" title="Instagram">
-                      <Instagram size={18} />
-                    </button>
+                  <div className="address-info">
+                    <MapPin size={14} />
+                    <span>{business.address?.district}, {business.address?.city}</span>
+                  </div>
+
+                  {benefits.length > 0 && (
+                    <div className="benefit-highlight">
+                      <Tag size={14} />
+                      <span>{benefits[0].discountLabel} de desconto</span>
+                    </div>
                   )}
-                  {business.website && (
-                    <button className="action-btn social" title="Website">
-                      <ExternalLink size={18} />
+
+                  <div className="business-actions">
+                    <button className="action-btn maps" title="Ver no Mapa">
+                      <Navigation size={18} />
                     </button>
-                  )}
-                  <button className="primary-view-btn">
-                    Ver Detalhes <ArrowRight size={16} />
-                  </button>
+                    {business.instagram && (
+                      <button className="action-btn social" title="Instagram">
+                        <Instagram size={18} />
+                      </button>
+                    )}
+                    {business.website && (
+                      <button className="action-btn social" title="Website">
+                        <ExternalLink size={18} />
+                      </button>
+                    )}
+                    <button className="primary-view-btn">
+                      Ver Detalhes <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </article>
-          );
-        })}
-      </section>
+              </article>
+            );
+          })}
+        </section>
+      )}
 
       <style jsx>{`
         .marketplace-container {
           padding: 2rem;
           max-width: 1400px;
           margin: 0 auto;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
+        }
+
+        .loading-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 40vh;
+          gap: 1rem;
+          color: #64748b;
+        }
+
+        .spinner {
+          animation: spin 1s linear infinite;
+          width: 2.5rem;
+          height: 2.5rem;
+          color: #f97316;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         .marketplace-header {
-          margin-bottom: 3rem;
+          margin-bottom: 3.5rem;
         }
 
         .eyebrow {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          font-size: 0.875rem;
-          font-weight: 700;
-          color: var(--alvo-accent);
+          font-size: 0.85rem;
+          font-weight: 800;
+          color: #f97316;
           text-transform: uppercase;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
+          letter-spacing: 0.05em;
         }
 
         h1 {
           font-size: 3rem;
-          font-weight: 900;
-          color: var(--alvo-ink);
+          font-weight: 950;
+          color: white;
           margin-bottom: 1rem;
           letter-spacing: -0.04em;
         }
 
         .header-content p {
-          font-size: 1.25rem;
-          color: var(--alvo-ink-soft);
-          max-width: 600px;
+          font-size: 1.2rem;
+          color: #94a3b8;
+          max-width: 650px;
           line-height: 1.6;
         }
 
@@ -241,24 +272,29 @@ export function MarketplaceView() {
           left: 1.25rem;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--alvo-ink-soft);
+          color: #64748b;
         }
 
         .search-input-wrapper input {
           width: 100%;
-          padding: 1.25rem 1.25rem 1.25rem 3.5rem;
-          border-radius: 1.5rem;
-          border: 1px solid var(--alvo-line);
-          background: white;
-          font-size: 1.125rem;
+          padding: 1.1rem 1.25rem 1.1rem 3.5rem;
+          border-radius: 1.25rem;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: #0f172a;
+          color: white;
+          font-size: 1.1rem;
           outline: none;
-          transition: all 0.3s;
-          box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
         }
 
         .search-input-wrapper input:focus {
-          border-color: var(--alvo-accent);
-          box-shadow: 0 0 0 4px rgba(196, 106, 45, 0.1);
+          border-color: #f97316;
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
+        }
+
+        .search-input-wrapper input::placeholder {
+          color: #475569;
         }
 
         .category-pills {
@@ -270,23 +306,26 @@ export function MarketplaceView() {
         .pill {
           padding: 0.625rem 1.25rem;
           border-radius: 999px;
-          background: white;
-          border: 1px solid var(--alvo-line);
-          font-size: 0.9375rem;
-          font-weight: 600;
+          background: rgba(35, 45, 65, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 0.9rem;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #cbd5e1;
         }
 
         .pill:hover {
-          background: #f8fafc;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.04);
         }
 
         .pill.active {
-          background: var(--pill-accent, #111827);
+          background: var(--pill-accent, #f97316);
           color: white;
           border-color: transparent;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
         }
 
         .business-grid {
@@ -296,21 +335,23 @@ export function MarketplaceView() {
         }
 
         .business-card {
-          background: white;
-          border-radius: 2rem;
+          background: rgba(30, 41, 59, 0.2);
+          border-radius: 1.5rem;
           overflow: hidden;
-          border: 1px solid var(--alvo-line);
-          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .business-card:hover {
           transform: translateY(-8px);
+          border-color: #f97316;
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
         }
 
         .business-image-header {
           position: relative;
           height: 180px;
-          background: #f1f5f9;
+          background: #0f172a;
         }
 
         .business-image-header img {
@@ -325,23 +366,24 @@ export function MarketplaceView() {
           display: flex;
           align-items: center;
           justify-content: center;
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
         }
 
         .member-badge {
           position: absolute;
           top: 1rem;
           right: 1rem;
-          background: rgba(17, 24, 39, 0.9);
-          backdrop-filter: blur(8px);
-          color: white;
+          background: rgba(16, 185, 129, 0.2);
+          backdrop-filter: blur(10px);
+          color: #10b981;
           padding: 0.5rem 0.75rem;
           border-radius: 0.75rem;
           font-size: 0.75rem;
-          font-weight: 700;
+          font-weight: 800;
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(16, 185, 129, 0.4);
         }
 
         .business-body {
@@ -358,8 +400,8 @@ export function MarketplaceView() {
 
         h3 {
           font-size: 1.5rem;
-          font-weight: 800;
-          color: var(--alvo-ink);
+          font-weight: 850;
+          color: white;
           margin-bottom: 1rem;
           letter-spacing: -0.02em;
         }
@@ -369,15 +411,16 @@ export function MarketplaceView() {
           align-items: center;
           gap: 0.75rem;
           margin-bottom: 1.25rem;
-          padding: 0.5rem;
-          background: #f8fafc;
-          border-radius: 1rem;
+          padding: 0.5rem 0.75rem;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 0.75rem;
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .owner-avatar {
           width: 32px;
           height: 32px;
-          background: var(--alvo-accent);
+          background: #f97316;
           color: white;
           border-radius: 50%;
           display: flex;
@@ -385,32 +428,35 @@ export function MarketplaceView() {
           justify-content: center;
           font-size: 0.75rem;
           font-weight: 800;
+          box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
         }
 
         .owner-mini span {
-          font-size: 0.875rem;
-          color: var(--alvo-ink-soft);
+          font-size: 0.85rem;
+          color: #cbd5e1;
         }
 
         .address-info {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          color: var(--alvo-ink-soft);
+          color: #94a3b8;
           font-size: 0.875rem;
           margin-bottom: 0.75rem;
+          font-weight: 600;
         }
 
         .benefit-highlight {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          color: #166534;
-          background: #dcfce7;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.15);
+          border: 1px solid rgba(16, 185, 129, 0.3);
           padding: 0.5rem 0.75rem;
           border-radius: 0.75rem;
           font-size: 0.875rem;
-          font-weight: 700;
+          font-weight: 800;
           width: fit-content;
           margin-bottom: 1.5rem;
         }
@@ -424,47 +470,49 @@ export function MarketplaceView() {
           width: 44px;
           height: 44px;
           border-radius: 12px;
-          border: 1px solid var(--alvo-line);
-          background: white;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.03);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
-          color: var(--alvo-ink-soft);
+          color: #cbd5e1;
         }
 
         .action-btn:hover {
-          background: #f1f5f9;
-          color: var(--alvo-ink);
-          border-color: var(--alvo-ink-soft);
+          background: rgba(255, 255, 255, 0.08);
+          color: white;
+          border-color: #cbd5e1;
         }
 
         .primary-view-btn {
           flex: 1;
           height: 44px;
-          background: #111827;
+          background: #f97316;
           color: white;
           border: none;
           border-radius: 12px;
-          font-weight: 700;
+          font-weight: 800;
           font-size: 0.9375rem;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .primary-view-btn:hover {
-          background: #1f2937;
+          background: #ea580c;
           gap: 0.75rem;
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
         @media (max-width: 768px) {
-          h1 { font-size: 2rem; }
-          .marketplace-header { margin-bottom: 2rem; }
+          h1 { font-size: 2.25rem; }
+          .marketplace-header { margin-bottom: 2.5rem; }
+          .business-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </main>

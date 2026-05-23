@@ -244,14 +244,19 @@ export function MyStoresView() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 2rem;
+          background: #0b0f19;
+          color: #f8fafc;
+          min-height: 100vh;
         }
 
         .page-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
           gap: 2rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 2rem;
         }
 
         .header-content {
@@ -262,24 +267,25 @@ export function MyStoresView() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          font-size: 0.875rem;
-          color: #666;
+          font-size: 0.85rem;
+          color: #f97316;
           margin-bottom: 0.5rem;
           text-transform: uppercase;
-          font-weight: 600;
+          font-weight: 800;
           letter-spacing: 0.05em;
         }
 
         .header-content h1 {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 2.5rem;
+          font-weight: 950;
+          color: white;
           margin-bottom: 0.5rem;
+          letter-spacing: -0.04em;
         }
 
         .header-content p {
-          color: #666;
-          font-size: 1rem;
+          color: #94a3b8;
+          font-size: 1.05rem;
         }
 
         .btn-create {
@@ -287,78 +293,92 @@ export function MyStoresView() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1.5rem;
-          background: #d27836;
+          background: #f97316;
           color: white;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 600;
+          border-radius: 0.75rem;
+          font-weight: 800;
           cursor: pointer;
           text-decoration: none;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           white-space: nowrap;
         }
 
         .btn-create:hover {
-          background: #b8632b;
+          background: #ea580c;
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
         }
 
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
+          gap: 1.25rem;
+          margin-bottom: 2.5rem;
         }
 
         .stat-card {
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 1.25rem;
           padding: 1.5rem;
           text-align: center;
+          transition: transform 0.2s;
         }
 
+        .stat-card:hover {
+          transform: translateY(-2px);
+        }
+
+        .stat-card:nth-child(1) { border-left: 4px solid #94a3b8; }
+        .stat-card:nth-child(2) { border-left: 4px solid #10b981; }
+        .stat-card:nth-child(3) { border-left: 4px solid #f59e0b; }
+        .stat-card:nth-child(4) { border-left: 4px solid #ef4444; }
+
         .stat-value {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #d27836;
-          margin-bottom: 0.5rem;
+          font-size: 2.25rem;
+          font-weight: 900;
+          color: white;
+          margin-bottom: 0.25rem;
         }
 
         .stat-label {
-          font-size: 0.875rem;
-          color: #666;
-          font-weight: 500;
+          font-size: 0.85rem;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
         .filters {
           display: flex;
           gap: 0.75rem;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
           flex-wrap: wrap;
         }
 
         .filter-btn {
-          padding: 0.625rem 1rem;
-          background: white;
-          border: 2px solid #e5e5e5;
+          padding: 0.625rem 1.25rem;
+          background: rgba(30, 41, 59, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 2rem;
           font-size: 0.875rem;
-          font-weight: 500;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
-          color: #666;
+          color: #cbd5e1;
         }
 
         .filter-btn:hover {
-          border-color: #d27836;
-          color: #d27836;
+          border-color: rgba(255, 255, 255, 0.25);
+          color: white;
         }
 
         .filter-btn.active {
-          background: #d27836;
-          border-color: #d27836;
+          background: rgba(30, 41, 59, 0.75);
+          border-color: #f97316;
           color: white;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
 
         .loading-container {
@@ -366,15 +386,16 @@ export function MyStoresView() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
-          gap: 1rem;
-          color: #999;
+          padding: 6rem 2rem;
+          gap: 1.25rem;
+          color: #64748b;
         }
 
         .spinner {
           animation: spin 1s linear infinite;
-          width: 2rem;
-          height: 2rem;
+          width: 2.25rem;
+          height: 2.25rem;
+          color: #f97316;
         }
 
         @keyframes spin {
@@ -386,19 +407,19 @@ export function MyStoresView() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
+          padding: 6rem 2rem;
           gap: 1rem;
-          color: #999;
+          color: #64748b;
           text-align: center;
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          background: rgba(30, 41, 59, 0.15);
+          border: 2px dashed rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
         }
 
         .empty-state h3 {
-          color: #666;
+          color: white;
           font-size: 1.25rem;
-          font-weight: 600;
+          font-weight: 800;
         }
 
         .btn-create-empty {
@@ -406,50 +427,52 @@ export function MyStoresView() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1.5rem;
-          background: #d27836;
+          background: #f97316;
           color: white;
           border: none;
-          border-radius: 0.5rem;
-          font-weight: 600;
+          border-radius: 0.75rem;
+          font-weight: 800;
           text-decoration: none;
           margin-top: 1rem;
           transition: all 0.2s;
         }
 
         .btn-create-empty:hover {
-          background: #b8632b;
+          background: #ea580c;
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
         }
 
         .stores-list {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 1.25rem;
         }
 
         .store-list-item {
           display: grid;
           grid-template-columns: 200px 1fr auto;
-          gap: 1.5rem;
-          background: white;
-          border: 1px solid #e5e5e5;
-          border-radius: 0.75rem;
+          gap: 2rem;
+          background: rgba(30, 41, 59, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 1.5rem;
           overflow: hidden;
-          padding: 1rem;
-          transition: all 0.2s;
+          padding: 1.25rem;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           align-items: center;
         }
 
         .store-list-item:hover {
-          border-color: #d27836;
-          box-shadow: 0 2px 8px rgba(210, 120, 54, 0.1);
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+          transform: translateY(-4px);
         }
 
         .store-image {
           width: 200px;
           height: 120px;
-          background: #f5f5f5;
-          border-radius: 0.5rem;
+          background: #0f172a;
+          border-radius: 0.75rem;
           overflow: hidden;
         }
 
@@ -465,7 +488,7 @@ export function MyStoresView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
         }
 
         .store-info {
@@ -477,38 +500,39 @@ export function MyStoresView() {
           justify-content: space-between;
           align-items: flex-start;
           gap: 1rem;
-          margin-bottom: 1rem;
+          margin-bottom: 0.75rem;
         }
 
         .store-header h3 {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: white;
           margin-bottom: 0.25rem;
+          letter-spacing: -0.02em;
         }
 
         .store-description {
-          font-size: 0.875rem;
-          color: #666;
+          font-size: 0.9rem;
+          color: #94a3b8;
+          line-height: 1.5;
         }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
           gap: 0.375rem;
-          padding: 0.375rem 0.75rem;
-          background: #10b981;
-          color: white;
-          border-radius: 0.25rem;
+          padding: 0.4rem 0.8rem;
+          border-radius: 2rem;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 800;
           white-space: nowrap;
+          color: white;
         }
 
         .store-meta {
           display: flex;
           gap: 1.5rem;
-          font-size: 0.875rem;
+          font-size: 0.85rem;
           flex-wrap: wrap;
         }
 
@@ -519,12 +543,14 @@ export function MyStoresView() {
         }
 
         .meta-item .label {
-          color: #999;
-          font-weight: 500;
+          color: #64748b;
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 0.75rem;
         }
 
         .meta-item .value {
-          color: #666;
+          color: #cbd5e1;
           font-weight: 500;
         }
 
@@ -532,13 +558,14 @@ export function MyStoresView() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.75rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 0.375rem;
-          color: #c33;
-          font-size: 0.875rem;
+          padding: 0.75rem 1rem;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 0.75rem;
+          color: #fca5a5;
+          font-size: 0.85rem;
           margin-top: 0.75rem;
+          width: fit-content;
         }
 
         .store-actions {
@@ -552,36 +579,40 @@ export function MyStoresView() {
           align-items: center;
           gap: 0.375rem;
           padding: 0.625rem 1rem;
-          border: 1px solid #e5e5e5;
-          background: white;
-          border-radius: 0.5rem;
-          font-weight: 500;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 0.75rem;
+          font-weight: 700;
           font-size: 0.875rem;
           cursor: pointer;
           text-decoration: none;
-          transition: all 0.2s;
-          color: #666;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #cbd5e1;
           white-space: nowrap;
         }
 
         .btn-view:hover,
         .btn-edit:hover {
-          border-color: #d27836;
-          color: #d27836;
-          background: #faf8f6;
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.1);
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+          transform: translateY(-2px);
         }
 
         .btn-edit {
-          background: #faf8f6;
+          background: rgba(255, 255, 255, 0.05);
         }
 
         @media (max-width: 1024px) {
           .store-list-item {
             grid-template-columns: 150px 1fr auto;
+            gap: 1.25rem;
           }
 
           .store-image {
             width: 150px;
+            height: 100px;
           }
         }
 
@@ -599,14 +630,17 @@ export function MyStoresView() {
           .store-list-item {
             grid-template-columns: 1fr;
             padding: 1.25rem;
+            gap: 1.25rem;
           }
 
           .store-header {
             flex-direction: column;
+            gap: 0.5rem;
           }
 
           .store-image {
             width: 100%;
+            height: 160px;
           }
 
           .store-actions {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   ClipboardList,
   Map as MapIcon,
@@ -664,25 +665,35 @@ export function JourneysView() {
     <main className="form-page journeys-page animate-entrance" style={{ maxWidth: 1440, padding: "2rem" }}>
       
       {/* Hero Central de Acolhimento */}
-      <section className="journeys-hero" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "2rem" }}>
+      <section className="journeys-hero" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
         <div>
-          <Link className="back-link" href="/" style={{ color: "#f97316" }}>
-            Voltar ao painel
+          <Link className="back-link" href="/">
+            <ArrowLeft size={14} style={{ marginRight: 6 }} /> Voltar ao painel
           </Link>
           <p className="eyebrow" style={{ color: "#f97316" }}>Painel de Integração</p>
-          <h1>Jornadas de Integração & Triagem Pastoral</h1>
-          <p>
+          <h1 style={{ fontSize: "2.75rem", fontWeight: 950, color: "white", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
+          <p style={{ color: "#94a3b8", fontSize: "1.1rem", maxWidth: 750, lineHeight: 1.6 }}>
             Raciocínio profundo para o cuidado de almas: gerencie gargalos ativos, acompanhe a evolução de visitantes
             para a aliança de membresia e monitore a inserção em células.
           </p>
         </div>
-        <aside className="journey-health-card antigravity-float" style={{ backgroundColor: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: "1.5rem" }}>
-          <AlertTriangle size={24} style={{ color: "#f59e0b" }} />
-          <strong style={{ fontSize: "2rem", display: "block", color: "white", marginTop: 8 }}>
+        <aside className="journey-health-card active-bottleneck-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: 24, padding: "1.5rem", minWidth: 260, boxShadow: "0 0 15px rgba(245, 158, 11, 0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <AlertTriangle size={24} style={{ color: "#f59e0b", filter: "drop-shadow(0 0 5px rgba(245, 158, 11, 0.5))" }} />
+            <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 800 }}>ALERTAS CRÍTICOS</span>
+          </div>
+          <strong style={{ fontSize: "2.5rem", display: "block", color: "white", marginTop: 8, fontWeight: 950, letterSpacing: "-0.02em" }}>
             {visitorsWithoutContact.length + aspirantsWithoutCell.length + membersWithoutCell.length}
           </strong>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Gargalos de cuidado ativos</span>
-          <p style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 8 }}>{status}</p>
+          <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 700 }}>Gargalos de cuidado ativos</span>
+          
+          {/* Firestore Pulsing Sync Radar */}
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
+            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
+            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: configured && firebaseReady ? '#10b981' : '#f59e0b', letterSpacing: "0.03em" }}>
+              {configured && firebaseReady ? 'ONLINE / FIRESTORE ACTIVE' : 'MODO SIMULADO / OFFLINE'}
+            </span>
+          </div>
         </aside>
       </section>
 
@@ -718,7 +729,7 @@ export function JourneysView() {
       <section className="journey-command-panel" style={{ marginTop: "3rem" }}>
         
         {/* Chips de Filtro Rápido */}
-        <div className="journey-filter-bar" style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem" }}>
+        <div className="journey-filter-bar" style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem", flexWrap: "wrap" }}>
           {journeyFilters.map((filter) => (
             <button
               className={focusFilter === filter.value ? "journey-filter-chip is-active" : "journey-filter-chip"}
@@ -726,17 +737,22 @@ export function JourneysView() {
               onClick={() => setFocusFilter(filter.value)}
               type="button"
               style={{
-                backgroundColor: focusFilter === filter.value ? "#f97316" : "rgba(30, 41, 59, 0.3)",
-                border: focusFilter === filter.value ? "1px solid #ea580c" : "1px solid rgba(255,255,255,0.05)",
-                padding: "8px 16px",
-                borderRadius: 12,
+                backgroundColor: focusFilter === filter.value ? "#f97316" : "rgba(30, 41, 59, 0.2)",
+                border: focusFilter === filter.value ? "1px solid #ea580c" : "1px solid rgba(255,255,255,0.06)",
+                padding: "10px 18px",
+                borderRadius: 14,
                 color: "white",
                 cursor: "pointer",
-                fontWeight: 700
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                transition: "all 0.2s"
               }}
             >
-              <span style={{ marginRight: 8 }}>{filter.label}</span>
-              <strong style={{ backgroundColor: "rgba(255,255,255,0.15)", padding: "2px 6px", borderRadius: 8, fontSize: "0.8rem" }}>
+              <span>{filter.label}</span>
+              <strong style={{ backgroundColor: "rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 8, fontSize: "0.75rem" }}>
                 {getFilterCount(filter.value, {
                   aspirantsWithoutCell,
                   membersWithoutCell,
@@ -751,24 +767,24 @@ export function JourneysView() {
         </div>
 
         {/* Toolbar de Busca */}
-        <div className="directory-toolbar" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "1rem", backgroundColor: "rgba(30, 41, 59, 0.2)", padding: "1.25rem", borderRadius: 20, border: "1px solid rgba(255,255,255,0.05)" }}>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+        <div className="directory-toolbar" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "1rem", backgroundColor: "rgba(30, 41, 59, 0.15)", padding: "1.25rem", borderRadius: 24, border: "1px solid rgba(255,255,255,0.06)" }}>
+          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
             Buscar Pessoa
             <input
               aria-label="Buscar pessoa em jornadas"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Nome, e-mail ou telefone..."
               value={query}
-              style={{ width: "100%", padding: "10px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", marginTop: 6 }}
+              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "white", marginTop: 6, outline: "none" }}
             />
           </label>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
             Célula Sugerida
             <select
               aria-label="Célula sugerida"
               onChange={() => undefined}
               value={suggestedGroup?.id ?? ""}
-              style={{ width: "100%", padding: "10px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", marginTop: 6 }}
+              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "white", marginTop: 6, outline: "none" }}
             >
               {suggestedGroup ? (
                 <option value={suggestedGroup.id}>{suggestedGroup.name}</option>
@@ -777,12 +793,12 @@ export function JourneysView() {
               )}
             </select>
           </label>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
             Status de Sincronia
             <input 
               readOnly 
               value={status} 
-              style={{ width: "100%", padding: "10px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, color: "#94a3b8", marginTop: 6 }} 
+              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, color: "#94a3b8", marginTop: 6, outline: "none" }} 
             />
           </label>
         </div>
@@ -794,8 +810,8 @@ export function JourneysView() {
               className="journey-lane" 
               key={lane.key} 
               style={{ 
-                backgroundColor: "rgba(30, 41, 59, 0.25)", 
-                border: "1px solid rgba(255,255,255,0.04)", 
+                backgroundColor: "rgba(30, 41, 59, 0.15)", 
+                border: "1px solid rgba(255,255,255,0.06)", 
                 borderRadius: 24, 
                 padding: "1.25rem",
                 borderTop: `4px solid ${lane.color}`
@@ -804,8 +820,8 @@ export function JourneysView() {
               <div className="journey-lane-heading" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem" }}>
                 <div style={{ color: lane.color }}><lane.icon size={20} /></div>
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: "white", display: "block", fontSize: "1rem" }}>{lane.title}</strong>
-                  <span style={{ color: "#64748b", fontSize: "0.7rem", display: "block", lineHeight: "0.9rem", marginTop: 2 }}>{lane.description}</span>
+                  <strong style={{ color: "white", display: "block", fontSize: "1rem", fontWeight: 800 }}>{lane.title}</strong>
+                  <span style={{ color: "#64748b", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
                 </div>
                 <span style={{ background: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
                   {lane.people.length}
@@ -837,7 +853,7 @@ export function JourneysView() {
                         style={{
                           width: "100%",
                           textAlign: "left",
-                          backgroundColor: isSelected ? "rgba(249, 115, 22, 0.12)" : "rgba(30, 41, 59, 0.4)",
+                          backgroundColor: isSelected ? "rgba(249, 115, 22, 0.12)" : "rgba(30, 41, 59, 0.3)",
                           border: isSelected ? "1px solid #f97316" : "1px solid rgba(255,255,255,0.05)",
                           borderRadius: 16,
                           padding: "1rem",
@@ -853,11 +869,11 @@ export function JourneysView() {
                         <div style={{ flex: 1 }}>
                           <span 
                             style={{ 
-                              fontSize: "0.6rem", 
-                              fontWeight: 800, 
+                              fontSize: "0.65rem", 
+                              fontWeight: 900, 
                               textTransform: "uppercase", 
                               color: signal.level === "urgent" ? "#ef4444" : signal.level === "attention" ? "#f59e0b" : "#10b981",
-                              backgroundColor: signal.level === "urgent" ? "rgba(239,68,68,0.1)" : signal.level === "attention" ? "rgba(245,158,11,0.1)" : "rgba(16,185,129,0.1)",
+                              backgroundColor: signal.level === "urgent" ? "rgba(239,68,68,0.15)" : signal.level === "attention" ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.15)",
                               padding: "2px 6px",
                               borderRadius: 6,
                               display: "inline-block",
@@ -889,7 +905,7 @@ export function JourneysView() {
       <section className="journey-detail-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem", marginTop: "3rem" }}>
         
         {/* Painel Central do Membro Selecionado */}
-        <article className="journey-detail-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 24, padding: "2rem" }}>
+        <article className="journey-detail-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: 24, padding: "2.5rem" }}>
           
           {selectedPerson ? (
             <>
@@ -901,7 +917,7 @@ export function JourneysView() {
                     {getFullName(selectedPerson)}
                   </h2>
                 </div>
-                <Link className="soft-pill" href={`/members/${selectedPerson.id}`} style={{ backgroundColor: "rgba(249,115,22,0.15)", color: "#f97316", padding: "8px 16px", borderRadius: 12, fontWeight: 700, fontSize: "0.85rem" }}>
+                <Link className="soft-pill" href={`/members/${selectedPerson.id}`} style={{ backgroundColor: "rgba(249,115,22,0.15)", color: "#f97316", padding: "8px 16px", borderRadius: 12, fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}>
                   Abrir Ficha Completa
                 </Link>
               </div>
@@ -920,14 +936,14 @@ export function JourneysView() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ 
-                      width: 40, 
-                      height: 40, 
-                      borderRadius: 10, 
-                      backgroundColor: selectedCareSignal.level === "urgent" ? "#ef4444" : selectedCareSignal.level === "attention" ? "#f59e0b" : "#10b981",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white"
+                       width: 40, 
+                       height: 40, 
+                       borderRadius: 10, 
+                       backgroundColor: selectedCareSignal.level === "urgent" ? "#ef4444" : selectedCareSignal.level === "attention" ? "#f59e0b" : "#10b981",
+                       display: "flex",
+                       alignItems: "center",
+                       justifyContent: "center",
+                       color: "white"
                     }}>
                       <Flame size={20} />
                     </div>
@@ -955,7 +971,7 @@ export function JourneysView() {
                 </div>
 
                 {/* Seleção de Templates */}
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
                   {messageTemplates.map((template, idx) => (
                     <button
                       key={idx}
@@ -1045,7 +1061,7 @@ export function JourneysView() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2.5rem" }}>
                 
                 {/* Linha do Tempo */}
-                <div style={{ backgroundColor: "rgba(30,41,59,0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "1.5rem" }}>
+                <div style={{ backgroundColor: "rgba(30,41,59,0.15)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "1.5rem" }}>
                   <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Evolução de Estágio</span>
                   <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 4, marginBottom: "1rem" }}>Passos Concluídos</h4>
                   
@@ -1077,7 +1093,7 @@ export function JourneysView() {
                 {/* Prontidão para Membresia Checklist */}
                 {selectedReadiness && (
                   <div style={{ 
-                    backgroundColor: selectedReadiness.percent === 100 ? "rgba(16,185,129,0.05)" : "rgba(30,41,59,0.2)", 
+                    backgroundColor: selectedReadiness.percent === 100 ? "rgba(16,185,129,0.05)" : "rgba(30,41,59,0.15)", 
                     border: selectedReadiness.percent === 100 ? "1.5px solid #10b981" : "1px solid rgba(255,255,255,0.05)", 
                     borderRadius: 20, 
                     padding: "1.5rem" 
@@ -1134,7 +1150,7 @@ export function JourneysView() {
                       </div>
 
                       {step.actionKind === "link" ? (
-                        <Link className="ghost-button compact" href={step.href} style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8 }}>
+                        <Link className="ghost-button compact" href={step.href} style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, textDecoration: "none", color: "white", border: "1px solid rgba(255,255,255,0.1)" }}>
                           {step.actionLabel}
                         </Link>
                       ) : step.actionKind === "none" ? (
@@ -1175,7 +1191,7 @@ export function JourneysView() {
                       )
                     }
                     value={selectedPerson.memberStatus}
-                    style={{ padding: "8px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white", fontSize: "0.75rem" }}
+                    style={{ padding: "8px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white", fontSize: "0.75rem", outline: "none" }}
                   >
                     {memberStatusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1201,8 +1217,10 @@ export function JourneysView() {
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
-                      justifyContent: "center"
+                      justifyContent: "center",
+                      transition: "all 0.2s"
                     }}
+                    className="hover-glow"
                   >
                     <MapIcon size={12} />
                     Avançar Etapa
@@ -1276,102 +1294,408 @@ export function JourneysView() {
 
         </article>
 
-        {/* LADO DIREITO: TAREFAS DE JORNADA ABERTAS */}
-        <aside style={{ backgroundColor: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 24, padding: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-            <div>
-              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Pendências</span>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "white", marginTop: 2 }}>Tarefas de Acompanhamento</h3>
+        {/* LADO DIREITO: TAREFAS DE JORNADA ABERTAS & WHATSAPP PHONE PREVIEW */}
+        <aside style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          
+          {/* ACOMPANHAMENTO TASKS */}
+          <div style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: 24, padding: "2rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+              <div>
+                <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Pendências</span>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "white", marginTop: 2 }}>Tarefas de Acompanhamento</h3>
+              </div>
+              <span style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+                {selectedOpenTasks.length}
+              </span>
             </div>
-            <span style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
-              {selectedOpenTasks.length}
-            </span>
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {selectedOpenTasks.length ? (
-              selectedOpenTasks.map((task) => (
-                <div 
-                  key={task.id} 
-                  style={{ 
-                    backgroundColor: "rgba(30, 41, 59, 0.4)", 
-                    padding: "1rem", 
-                    borderRadius: 16, 
-                    border: "1px solid rgba(255,255,255,0.03)" 
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <div>
-                      <strong style={{ color: "white", fontSize: "0.85rem", display: "block" }}>{task.title}</strong>
-                      <span style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 2, display: "block" }}>
-                        Canal: {getTaskTypeLabel(task.type)}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {selectedOpenTasks.length ? (
+                selectedOpenTasks.map((task) => (
+                  <div 
+                    key={task.id} 
+                    style={{ 
+                      backgroundColor: "rgba(30, 41, 59, 0.3)", 
+                      padding: "1rem", 
+                      borderRadius: 16, 
+                      border: "1px solid rgba(255,255,255,0.04)" 
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div>
+                        <strong style={{ color: "white", fontSize: "0.85rem", display: "block" }}>{task.title}</strong>
+                        <span style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 2, display: "block" }}>
+                          Canal: {getTaskTypeLabel(task.type)}
+                        </span>
+                      </div>
+                      <span style={{ 
+                        fontSize: "0.65rem", 
+                        backgroundColor: "rgba(249,115,22,0.1)", 
+                        color: "#f97316", 
+                        padding: "2px 6px", 
+                        borderRadius: 6,
+                        fontWeight: 700 
+                      }}>
+                        Aguardando
                       </span>
                     </div>
-                    <span style={{ 
-                      fontSize: "0.65rem", 
-                      backgroundColor: "rgba(249,115,22,0.1)", 
-                      color: "#f97316", 
-                      padding: "2px 6px", 
-                      borderRadius: 6,
-                      fontWeight: 700 
-                    }}>
-                      Aguardando
-                    </span>
-                  </div>
 
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {task.status === "open" ? (
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      {task.status === "open" ? (
+                        <button
+                          onClick={() => void handleTaskStatusChange(task, "in_progress")}
+                          style={{
+                            flex: 1,
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: 8,
+                            color: "white",
+                            padding: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Iniciar
+                        </button>
+                      ) : null}
                       <button
-                        onClick={() => void handleTaskStatusChange(task, "in_progress")}
+                        onClick={() => void handleTaskStatusChange(task, "completed")}
                         style={{
                           flex: 1,
-                          backgroundColor: "rgba(255,255,255,0.05)",
-                          border: "1px solid rgba(255,255,255,0.1)",
+                          backgroundColor: "#10b981",
+                          border: "none",
                           borderRadius: 8,
                           color: "white",
                           padding: "6px",
                           fontSize: "0.75rem",
-                          fontWeight: 700,
+                          fontWeight: 800,
                           cursor: "pointer"
                         }}
                       >
-                        Iniciar
+                        ✓ Concluir
                       </button>
-                    ) : null}
-                    <button
-                      onClick={() => void handleTaskStatusChange(task, "completed")}
-                      style={{
-                        flex: 1,
-                        backgroundColor: "#10b981",
-                        border: "none",
-                        borderRadius: 8,
-                        color: "white",
-                        padding: "6px",
-                        fontSize: "0.75rem",
-                        fontWeight: 800,
-                        cursor: "pointer"
-                      }}
-                    >
-                      ✓ Concluir
-                    </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: "center", padding: "3rem", border: "1px dashed rgba(255,255,255,0.05)", borderRadius: 16 }}>
+                  <Clock size={24} style={{ color: "#64748b", margin: "0 auto 10px" }} />
+                  <strong style={{ color: "white", fontSize: "0.8rem", display: "block" }}>Tudo em Dia!</strong>
+                  <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>
+                    Nenhum follow-up pendente para esta pessoa no momento.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SIMULATED SMARTPHONE FOR WHATSAPP ACTIVE COPILOT INTEGRATION */}
+          {selectedPerson && (
+            <div className="whatsapp-phone-mockup">
+              <div className="phone-notch"></div>
+              <div className="phone-screen-frame">
+                {/* Phone Top Status Bar */}
+                <div className="phone-status-bar">
+                  <span className="phone-time">12:00</span>
+                  <div className="phone-icons">
+                    <span>📶</span>
+                    <span>🔋 100%</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div style={{ textAlign: "center", padding: "3rem", border: "1px dashed rgba(255,255,255,0.05)", borderRadius: 16 }}>
-                <Clock size={24} style={{ color: "#64748b", margin: "0 auto 10px" }} />
-                <strong style={{ color: "white", fontSize: "0.8rem", display: "block" }}>Tudo em Dia!</strong>
-                <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>
-                  Nenhum follow-up pendente para esta pessoa no momento.
-                </p>
+                
+                {/* Chat Header */}
+                <div className="phone-chat-header">
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f97316", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.75rem", fontWeight: 700 }}>
+                    {getInitials(getFullName(selectedPerson))}
+                  </div>
+                  <div style={{ flex: 1, marginLeft: 8 }}>
+                    <strong style={{ display: "block", color: "white", fontSize: "0.75rem" }}>{getFullName(selectedPerson)}</strong>
+                    <span style={{ fontSize: "0.6rem", color: "#10b981", display: "block" }}>online</span>
+                  </div>
+                  <span style={{ fontSize: "0.8rem" }}>📞 ⚙️</span>
+                </div>
+
+                {/* Chat Conversation Area */}
+                <div className="phone-chat-body">
+                  <div className="chat-day-separator">HOJE</div>
+                  <div className="chat-bubble-received">
+                    Olá! Fui no culto no último domingo, gostei muito da recepção... 😊
+                    <span className="chat-bubble-time">10:45</span>
+                  </div>
+                  {whatsappMessageDraft && (
+                    <div className="chat-bubble-sent">
+                      {whatsappMessageDraft}
+                      <span className="chat-bubble-time">12:00 ✓✓</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chat Input Bar */}
+                <div className="phone-chat-input-bar">
+                  <span style={{ fontSize: "0.9rem" }}>😊</span>
+                  <div className="phone-chat-input-field">Mensagem...</div>
+                  <span style={{ fontSize: "0.9rem" }}>📎 📷 🎤</span>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </aside>
 
       </section>
 
+      {/* Global & Page level overrides */}
+      <style jsx global>{`
+        body, .main-content, .app-container {
+          background-color: #0b0f19 !important;
+        }
+      `}</style>
+
+      <style jsx>{`
+        .journeys-page {
+          background: #0b0f19 !important;
+          color: #f8fafc !important;
+          min-height: 100vh;
+        }
+
+        .back-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.625rem 1.25rem;
+          margin-bottom: 2rem;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 0.75rem;
+          color: #cbd5e1;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 0.875rem;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .back-link:hover {
+          border-color: #f97316;
+          color: white;
+          background: rgba(249, 115, 22, 0.08);
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+        }
+
+        .eyebrow {
+          font-size: 0.85rem;
+          font-weight: 800;
+          color: #f97316;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 0.5rem;
+        }
+
+        .journey-filter-chip {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .journey-filter-chip:hover {
+          border-color: #f97316 !important;
+          background: rgba(249, 115, 22, 0.1) !important;
+        }
+
+        .journey-person-card {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        .journey-person-card:hover {
+          border-color: #f97316 !important;
+          background: rgba(249, 115, 22, 0.06) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .journey-person-card.is-selected {
+          border-color: #f97316 !important;
+          background: rgba(249, 115, 22, 0.12) !important;
+          box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+        }
+
+        /* Pulsing Sync Radar */
+        .sync-pulse {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+          position: relative;
+        }
+
+        .sync-pulse.active {
+          background-color: #10b981;
+          box-shadow: 0 0 8px #10b981;
+          animation: pulse-green 1.5s infinite;
+        }
+
+        .sync-pulse.simulated {
+          background-color: #f59e0b;
+          box-shadow: 0 0 8px #f59e0b;
+          animation: pulse-amber 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes pulse-amber {
+          0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+          70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        /* Simulated Smartphone Preview */
+        .whatsapp-phone-mockup {
+          background: #1e293b;
+          border: 8px solid rgba(255,255,255,0.08);
+          border-radius: 36px;
+          padding: 6px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249, 115, 22, 0.05);
+          width: 100%;
+          max-width: 320px;
+          margin: 0 auto;
+          position: relative;
+          aspect-ratio: 9 / 19;
+          overflow: hidden;
+        }
+
+        .phone-notch {
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 110px;
+          height: 18px;
+          background: #0f172a;
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 12px;
+          z-index: 10;
+        }
+
+        .phone-screen-frame {
+          background: #0b0f19;
+          border-radius: 28px;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .phone-status-bar {
+          padding: 8px 16px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.65rem;
+          color: rgba(255,255,255,0.6);
+          font-weight: 700;
+          background: #0b0f19;
+          z-index: 5;
+        }
+
+        .phone-chat-header {
+          background: #1e293b;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          padding: 8px 12px;
+          display: flex;
+          align-items: center;
+          color: white;
+          z-index: 5;
+        }
+
+        .phone-chat-body {
+          flex: 1;
+          padding: 12px;
+          background-image: radial-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 0);
+          background-size: 10px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          overflow-y: auto;
+        }
+
+        .chat-day-separator {
+          text-align: center;
+          font-size: 0.55rem;
+          color: #64748b;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          margin: 4px 0;
+        }
+
+        .chat-bubble-received {
+          background: #1e293b;
+          color: white;
+          padding: 8px 12px;
+          border-radius: 12px;
+          border-top-left-radius: 4px;
+          font-size: 0.725rem;
+          line-height: 1.2;
+          max-width: 85%;
+          align-self: flex-start;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chat-bubble-sent {
+          background: #10b981;
+          color: white;
+          padding: 8px 12px;
+          border-radius: 12px;
+          border-top-right-radius: 4px;
+          font-size: 0.725rem;
+          line-height: 1.2;
+          max-width: 85%;
+          align-self: flex-end;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        .chat-bubble-time {
+          display: block;
+          text-align: right;
+          font-size: 0.5rem;
+          color: rgba(255,255,255,0.6);
+          margin-top: 3px;
+        }
+
+        .phone-chat-input-bar {
+          background: #1e293b;
+          padding: 8px 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .phone-chat-input-field {
+          flex: 1;
+          background: rgba(0,0,0,0.2);
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 14px;
+          padding: 4px 10px;
+          font-size: 0.65rem;
+          color: #94a3b8;
+        }
+
+        .hover-glow:hover {
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+        }
+
+        @media (max-width: 1024px) {
+          .journey-detail-grid {
+            grid-template-columns: 1fr;
+          }
+          .whatsapp-phone-mockup {
+            max-width: 100%;
+          }
+        }
+      `}</style>
     </main>
   );
 }
