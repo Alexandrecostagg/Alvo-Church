@@ -336,30 +336,33 @@ export function EventsView() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.95)",
+            backgroundColor: "rgba(15, 23, 42, 0.4)",
             zIndex: 100,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backdropFilter: "blur(10px)"
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)"
           }}
           className="animate-entrance"
         >
           <div
             style={{
-              background: "#1e293b",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
+              background: "rgba(255, 255, 255, 0.75)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid var(--glass-border)",
               borderRadius: 24,
               padding: "2.5rem",
               width: "100%",
               maxWidth: 500,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              boxShadow: "var(--alvo-shadow-airy-strong)",
               textAlign: "center"
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
-                <QrCode size={20} style={{ color: "#d27836" }} />
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--alvo-ink)", display: "flex", alignItems: "center", gap: 8 }}>
+                <QrCode size={20} style={{ color: "var(--alvo-accent)" }} />
                 Simulador de Check-In QR Code
               </h3>
               <button 
@@ -368,7 +371,8 @@ export function EventsView() {
                   setScanResult(null);
                   setSelectedScanAttendeeId("");
                 }} 
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", transition: "var(--alvo-transition-creamy)" }}
+                className="hover-scale"
               >
                 <X size={20} />
               </button>
@@ -380,59 +384,59 @@ export function EventsView() {
                 width: "100%",
                 aspectRatio: "1/1",
                 borderRadius: 16,
-                backgroundColor: "#090d16",
-                border: scanning ? "2px solid #d27836" : "2px dashed #94a3b8",
+                backgroundColor: "rgba(9, 13, 22, 0.05)",
+                border: scanning ? "2px solid var(--alvo-accent)" : "2px dashed var(--alvo-line)",
                 position: "relative",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "1.5rem"
+                marginBottom: "1.5rem",
+                boxShadow: "inset 0 2px 8px rgba(15, 23, 42, 0.04)"
               }}
             >
               {/* Linha laser de scanner ativa */}
               {scanning && (
                 <div 
-                  className="antigravity-float"
                   style={{
                     position: "absolute",
                     left: 0,
                     width: "100%",
-                    height: "4px",
-                    backgroundColor: "#d27836",
-                    boxShadow: "0 0 15px #d27836",
+                    height: "3px",
+                    backgroundColor: "var(--alvo-accent)",
+                    boxShadow: "0 0 12px var(--alvo-accent)",
                     zIndex: 10,
                     top: "30%",
-                    animation: "scanLine 2s linear infinite"
+                    animation: "scanLine 2.5s linear infinite"
                   }}
                 />
               )}
 
               {scanning ? (
                 <>
-                  <Camera size={48} style={{ color: "#d27836", opacity: 0.8 }} />
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: 8 }}>Escaneando código de barras...</p>
+                  <Camera size={44} style={{ color: "var(--alvo-accent)", opacity: 0.8 }} />
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 8, fontWeight: 600 }}>Escaneando código de barras...</p>
                 </>
               ) : scanResult ? (
                 <div style={{ padding: "2rem" }}>
-                  <div style={{ display: "inline-block", padding: "1rem", borderRadius: "50%", backgroundColor: scanResult.success ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", marginBottom: "1rem" }}>
+                  <div style={{ display: "inline-block", padding: "1rem", borderRadius: "50%", backgroundColor: scanResult.success ? "var(--alvo-green-soft)" : "var(--alvo-red-soft)", marginBottom: "1rem", border: scanResult.success ? "1px solid rgba(22, 163, 74, 0.15)" : "1px solid rgba(220, 38, 38, 0.15)" }}>
                     {scanResult.success ? (
-                      <CheckCircle2 size={40} style={{ color: "#10b981" }} />
+                      <CheckCircle2 size={36} style={{ color: "var(--alvo-green)" }} />
                     ) : (
-                      <X size={40} style={{ color: "#ef4444" }} />
+                      <X size={36} style={{ color: "var(--alvo-red)" }} />
                     )}
                   </div>
-                  <strong style={{ display: "block", color: "white", fontSize: "1.1rem", marginBottom: 6 }}>
+                  <strong style={{ display: "block", color: "var(--alvo-ink)", fontSize: "1.1rem", marginBottom: 6, fontWeight: 800 }}>
                     {scanResult.success ? "Ingresso Lido!" : "Falha na Leitura"}
                   </strong>
-                  <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem" }}>{scanResult.message}</p>
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", lineHeight: 1.4 }}>{scanResult.message}</p>
                 </div>
               ) : (
                 <>
-                  <QrCode size={80} style={{ color: "rgba(255,255,255,0.2)" }} />
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: 12, padding: "0 2rem" }}>
-                    Selecione um ingresso abaixo para simular o escaneamento físico com o leitor da portaria.
+                  <QrCode size={70} style={{ color: "rgba(15, 23, 42, 0.12)" }} />
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 12, padding: "0 2rem", lineHeight: 1.45 }}>
+                    Selecione um inscrito abaixo para simular o escaneamento físico com o leitor da portaria.
                   </p>
                 </>
               )}
@@ -440,23 +444,25 @@ export function EventsView() {
 
             {/* Seletor de credencial de teste */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", textAlign: "left" }}>
-              <label style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 700 }}>Selecione o Inscrito para Testar:</label>
+              <label style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", fontWeight: 700 }}>Selecione o Inscrito para Testar:</label>
               <select
                 value={selectedScanAttendeeId}
                 onChange={(e) => setSelectedScanAttendeeId(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "0.75rem",
-                  backgroundColor: "rgba(9, 13, 22, 0.4)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: "white",
+                  border: "1px solid var(--alvo-line)",
                   borderRadius: 12,
-                  color: "white",
-                  outline: "none"
+                  color: "var(--alvo-ink)",
+                  outline: "none",
+                  boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                  transition: "var(--alvo-transition-creamy)"
                 }}
               >
-                <option value="">-- Escolha um inscrito para o teste --</option>
+                <option value="" style={{ color: "var(--alvo-ink)" }}>-- Escolha um inscrito para o teste --</option>
                 {activeAttendees.map(att => (
-                  <option key={att.id} value={att.id}>
+                  <option key={att.id} value={att.id} style={{ color: "var(--alvo-ink)" }}>
                     {att.firstName} {att.lastName} ({att.checkedIn ? "✓ Já Fez" : "⏳ Pendente"})
                   </option>
                 ))}
@@ -467,15 +473,21 @@ export function EventsView() {
                 disabled={scanning || !selectedScanAttendeeId}
                 className="primary-button"
                 style={{
-                  backgroundColor: "#d27836",
+                  backgroundColor: "var(--alvo-accent)",
                   color: "white",
                   padding: "0.85rem",
                   borderRadius: 12,
                   fontWeight: 700,
-                  marginTop: "0.5rem"
+                  marginTop: "0.5rem",
+                  width: "100%",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8
                 }}
               >
-                Disparar Escaneamento (QR Code)
+                <QrCode size={16} /> Disparar Escaneamento (QR Code)
               </button>
             </div>
           </div>
@@ -491,31 +503,36 @@ export function EventsView() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.9)",
+            backgroundColor: "rgba(15, 23, 42, 0.4)",
             zIndex: 100,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backdropFilter: "blur(8px)"
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)"
           }}
           className="animate-entrance"
         >
           <div
             style={{
-              background: "white",
+              background: "rgba(255, 255, 255, 0.8)",
+              backdropFilter: "blur(25px)",
+              WebkitBackdropFilter: "blur(25px)",
+              border: "1px solid rgba(255, 255, 255, 0.5)",
               borderRadius: 24,
               padding: "2.5rem",
               width: "100%",
               maxWidth: 420,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-              color: "#1e293b",
+              boxShadow: "var(--alvo-shadow-airy-strong)",
+              color: "var(--alvo-ink)",
               textAlign: "center"
             }}
           >
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "-1rem" }}>
               <button 
                 onClick={() => setInspectedAttendee(null)}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", transition: "var(--alvo-transition-creamy)" }}
+                className="hover-scale"
               >
                 <X size={20} />
               </button>
@@ -524,56 +541,84 @@ export function EventsView() {
             {/* Ticket Card */}
             <div 
               style={{
-                border: "2px solid #e2e8f0",
-                borderRadius: 16,
+                border: "1px solid rgba(255, 255, 255, 0.6)",
+                borderRadius: 20,
                 padding: "2rem 1.5rem",
-                background: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)",
+                background: "linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.7) 100%)",
                 position: "relative",
                 overflow: "hidden",
-                marginTop: "1rem"
+                marginTop: "1.25rem",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05)"
               }}
             >
+              {/* Detalhes Visuais do Bilhete */}
+              <div 
+                style={{
+                  position: "absolute",
+                  left: -10,
+                  top: "50%",
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.5)",
+                  borderRight: "1px solid rgba(255, 255, 255, 0.6)"
+                }}
+              />
+              <div 
+                style={{
+                  position: "absolute",
+                  right: -10,
+                  top: "50%",
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.5)",
+                  borderLeft: "1px solid rgba(255, 255, 255, 0.6)"
+                }}
+              />
+
               {/* Header do Ticket */}
-              <div style={{ borderBottom: "1px dashed #cbd5e1", paddingBottom: "1rem", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "0.75rem", letterSpacing: 2, fontWeight: 800, color: "#d27836", textTransform: "uppercase" }}>ALVO EVENTOS</span>
-                <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1e293b", margin: "4px 0" }}>{activeEvent.name}</h4>
+              <div style={{ borderBottom: "1px dashed rgba(15, 23, 42, 0.12)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+                <span style={{ fontSize: "0.75rem", letterSpacing: 2, fontWeight: 900, color: "var(--alvo-accent)", textTransform: "uppercase" }}>ALVO EVENTOS</span>
+                <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "6px 0 0 0", lineHeight: 1.3 }}>{activeEvent.name}</h4>
               </div>
 
               {/* QR Code Simulado */}
               <div 
                 style={{
-                  width: 140,
-                  height: 140,
-                  margin: "0 auto 1rem auto",
+                  width: 130,
+                  height: 130,
+                  margin: "0 auto 1.25rem auto",
                   backgroundColor: "white",
-                  padding: 8,
-                  borderRadius: 12,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                  padding: 10,
+                  borderRadius: 14,
+                  boxShadow: "0 4px 15px rgba(15, 23, 42, 0.04)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center"
+                  justifyContent: "center",
+                  border: "1px solid rgba(15, 23, 42, 0.04)"
                 }}
               >
-                <QrCode size={120} style={{ color: "#0f172a" }} />
+                <QrCode size={110} style={{ color: "#0f172a" }} />
               </div>
 
               {/* Detalhes do Membro */}
               <div>
-                <strong style={{ fontSize: "1.25rem", color: "#0f172a", display: "block" }}>
+                <strong style={{ fontSize: "1.25rem", color: "var(--alvo-ink)", display: "block", fontWeight: 800 }}>
                   {inspectedAttendee.firstName} {inspectedAttendee.lastName}
                 </strong>
-                <span style={{ fontSize: "0.8rem", color: "#64748b", display: "block", marginTop: 2 }}>
+                <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 4, fontWeight: 500 }}>
                   {inspectedAttendee.email}
                 </span>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1.25rem", textAlign: "left", fontSize: "0.8rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1.25rem", textAlign: "left", fontSize: "0.8rem", borderTop: "1px solid rgba(15, 23, 42, 0.08)", paddingTop: "1rem" }}>
                   <div>
-                    <span style={{ color: "#64748b", display: "block" }}>Código do Ingresso</span>
-                    <strong style={{ color: "#0f172a" }}>{inspectedAttendee.ticketCode}</strong>
+                    <span style={{ color: "var(--alvo-ink-soft)", display: "block", fontWeight: 600 }}>CÓDIGO INGRESSO</span>
+                    <strong style={{ color: "var(--alvo-ink)", fontWeight: 700 }}>{inspectedAttendee.ticketCode}</strong>
                   </div>
                   <div>
-                    <span style={{ color: "#64748b", display: "block" }}>Status do Check-In</span>
-                    <strong style={{ color: inspectedAttendee.checkedIn ? "#10b981" : "#eab308" }}>
+                    <span style={{ color: "var(--alvo-ink-soft)", display: "block", fontWeight: 600 }}>STATUS ENTRADA</span>
+                    <strong style={{ color: inspectedAttendee.checkedIn ? "var(--alvo-green)" : "var(--alvo-accent)" }}>
                       {inspectedAttendee.checkedIn ? `✓ Confirmado às ${inspectedAttendee.checkedInAt}` : "⏳ Pendente"}
                     </strong>
                   </div>
@@ -587,12 +632,14 @@ export function EventsView() {
               className="primary-button"
               style={{
                 width: "100%",
-                backgroundColor: "#1e293b",
+                backgroundColor: "var(--alvo-ink)",
                 color: "white",
                 padding: "0.85rem",
                 borderRadius: 14,
                 fontWeight: 700,
-                marginTop: "1.5rem"
+                marginTop: "1.5rem",
+                border: "none",
+                transition: "var(--alvo-transition-creamy)"
               }}
             >
               Concluir Inspeção
@@ -610,11 +657,12 @@ export function EventsView() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.6)",
+            backgroundColor: "rgba(15, 23, 42, 0.3)",
             zIndex: 90,
             display: "flex",
             justifyContent: "flex-end",
-            backdropFilter: "blur(4px)"
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)"
           }}
           className="animate-entrance"
         >
@@ -622,25 +670,29 @@ export function EventsView() {
             style={{
               width: "100%",
               maxWidth: 460,
-              background: "#1e293b",
-              borderLeft: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255, 255, 255, 0.85)",
+              backdropFilter: "blur(30px)",
+              WebkitBackdropFilter: "blur(30px)",
+              borderLeft: "1px solid rgba(255, 255, 255, 0.4)",
               height: "100%",
-              boxShadow: "-10px 0 30px rgba(0,0,0,0.5)",
+              boxShadow: "var(--alvo-shadow-airy-strong)",
               padding: "2.5rem 2rem",
               display: "flex",
               flexDirection: "column",
               gap: "1.5rem",
-              overflowY: "auto"
+              overflowY: "auto",
+              color: "var(--alvo-ink)"
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <span style={{ color: "#d27836", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>NOVO COMPROMISSO</span>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: 800, color: "white", margin: "2px 0 0 0" }}>Cadastrar Evento</h3>
+                <span style={{ color: "var(--alvo-accent)", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>NOVO COMPROMISSO</span>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "2px 0 0 0" }}>Cadastrar Evento</h3>
               </div>
               <button 
                 onClick={() => setShowAddDrawer(false)}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", transition: "var(--alvo-transition-creamy)" }}
+                className="hover-scale"
               >
                 <X size={24} />
               </button>
@@ -648,34 +700,67 @@ export function EventsView() {
 
             <form onSubmit={handleCreateEvent} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Nome do Evento *</label>
+                <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Nome do Evento *</label>
                 <input
                   required
                   placeholder="Ex: Conferência de Jovens Alvo"
                   value={newEvent.name}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, name: e.target.value }))}
-                  style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                  style={{ 
+                    width: "100%", 
+                    padding: "0.75rem 1rem", 
+                    backgroundColor: "white", 
+                    border: "1px solid var(--alvo-line)", 
+                    borderRadius: 12, 
+                    color: "var(--alvo-ink)", 
+                    outline: "none",
+                    boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                    transition: "var(--alvo-transition-creamy)"
+                  }}
+                  className="interactive-input"
                 />
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Descrição Curta</label>
+                <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Descrição Curta</label>
                 <textarea
                   placeholder="Explique resumidamente os objetivos e a visão do evento..."
                   value={newEvent.description}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none", fontFamily: "inherit" }}
+                  style={{ 
+                    width: "100%", 
+                    padding: "0.75rem 1rem", 
+                    backgroundColor: "white", 
+                    border: "1px solid var(--alvo-line)", 
+                    borderRadius: 12, 
+                    color: "var(--alvo-ink)", 
+                    outline: "none", 
+                    fontFamily: "inherit",
+                    boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                    transition: "var(--alvo-transition-creamy)"
+                  }}
+                  className="interactive-input"
                 />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Categoria</label>
+                  <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Categoria</label>
                   <select
                     value={newEvent.type}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, type: e.target.value as EventType["type"] }))}
-                    style={{ width: "100%", padding: "0.75rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                    style={{ 
+                      width: "100%", 
+                      padding: "0.75rem", 
+                      backgroundColor: "white", 
+                      border: "1px solid var(--alvo-line)", 
+                      borderRadius: 12, 
+                      color: "var(--alvo-ink)", 
+                      outline: "none",
+                      boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                      transition: "var(--alvo-transition-creamy)"
+                    }}
                   >
                     <option value="conference">Conferência</option>
                     <option value="service">Culto Geral</option>
@@ -686,23 +771,44 @@ export function EventsView() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Capacidade</label>
+                  <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Capacidade</label>
                   <input
                     type="number"
                     value={newEvent.capacity}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, capacity: Number(e.target.value) }))}
-                    style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                    style={{ 
+                      width: "100%", 
+                      padding: "0.75rem 1rem", 
+                      backgroundColor: "white", 
+                      border: "1px solid var(--alvo-line)", 
+                      borderRadius: 12, 
+                      color: "var(--alvo-ink)", 
+                      outline: "none",
+                      boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                      transition: "var(--alvo-transition-creamy)"
+                    }}
+                    className="interactive-input"
                   />
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Tipo de Local</label>
+                  <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Tipo de Local</label>
                   <select
                     value={newEvent.locationType}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, locationType: e.target.value as EventType["locationType"] }))}
-                    style={{ width: "100%", padding: "0.75rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                    style={{ 
+                      width: "100%", 
+                      padding: "0.75rem", 
+                      backgroundColor: "white", 
+                      border: "1px solid var(--alvo-line)", 
+                      borderRadius: 12, 
+                      color: "var(--alvo-ink)", 
+                      outline: "none",
+                      boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                      transition: "var(--alvo-transition-creamy)"
+                    }}
                   >
                     <option value="onsite">Presencial</option>
                     <option value="online">Online</option>
@@ -710,15 +816,26 @@ export function EventsView() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Data e Hora de Início</label>
+                  <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Início</label>
                   <input
                     type="datetime-local"
                     value={newEvent.startsAt}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, startsAt: e.target.value }))}
-                    style={{ width: "100%", padding: "0.7rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                    style={{ 
+                      width: "100%", 
+                      padding: "0.7rem 1rem", 
+                      backgroundColor: "white", 
+                      border: "1px solid var(--alvo-line)", 
+                      borderRadius: 12, 
+                      color: "var(--alvo-ink)", 
+                      outline: "none",
+                      boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                      transition: "var(--alvo-transition-creamy)"
+                    }}
+                    className="interactive-input"
                   />
                   {/* Smart Quick Date Presets */}
-                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.35rem" }}>
                     {[
                       { label: "Hoje 19:30", getVal: () => {
                         const d = new Date(); d.setHours(19, 30, 0, 0);
@@ -751,15 +868,17 @@ export function EventsView() {
                         onClick={() => setNewEvent(prev => ({ ...prev, startsAt: preset.getVal() }))}
                         style={{
                           padding: "0.25rem 0.5rem",
-                          background: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          background: "white",
+                          border: "1px solid var(--alvo-line)",
                           borderRadius: "6px",
-                          color: "#cbd5e1",
+                          color: "var(--alvo-ink-soft)",
                           fontSize: "0.7rem",
                           fontWeight: 700,
                           cursor: "pointer",
-                          transition: "all 0.2s"
+                          transition: "var(--alvo-transition-creamy)",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                         }}
+                        className="hover-card"
                       >
                         {preset.label}
                       </button>
@@ -769,38 +888,60 @@ export function EventsView() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Local / Link de Transmissão</label>
+                <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Local / Link de Transmissão</label>
                 <input
                   placeholder="Ex: Auditório Kids Alvo Church"
                   value={newEvent.location}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
-                  style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                  style={{ 
+                    width: "100%", 
+                    padding: "0.75rem 1rem", 
+                    backgroundColor: "white", 
+                    border: "1px solid var(--alvo-line)", 
+                    borderRadius: 12, 
+                    color: "var(--alvo-ink)", 
+                    outline: "none",
+                    boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                    transition: "var(--alvo-transition-creamy)"
+                  }}
+                  className="interactive-input"
                 />
               </div>
 
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.25rem" }}>
+              <div style={{ borderTop: "1px solid var(--alvo-line)", paddingTop: "1.25rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                   <div>
-                    <strong style={{ color: "white", fontSize: "0.9rem", display: "block" }}>Evento Pago (Venda de Ingressos)</strong>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Habilitar cobrança de entrada para custos</span>
+                    <strong style={{ color: "var(--alvo-ink)", fontSize: "0.9rem", display: "block", fontWeight: 700 }}>Evento Pago (Venda de Ingressos)</strong>
+                    <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 500 }}>Habilitar cobrança de entrada para custos</span>
                   </div>
                   <input
                     type="checkbox"
                     checked={newEvent.isPaid}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, isPaid: e.target.checked }))}
-                    style={{ width: 20, height: 20, accentColor: "#d27836" }}
+                    style={{ width: 18, height: 18, accentColor: "var(--alvo-accent)", cursor: "pointer" }}
                   />
                 </div>
 
                 {newEvent.isPaid && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }} className="animate-entrance">
-                    <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Valor do Ingresso (R$)</label>
+                    <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Valor do Ingresso (R$)</label>
                     <input
                       type="number"
                       placeholder="Ex: 85"
                       value={newEvent.ticketPrice}
                       onChange={(e) => setNewEvent(prev => ({ ...prev, ticketPrice: Number(e.target.value) }))}
-                      style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
+                      style={{ 
+                        width: "100%", 
+                        padding: "0.75rem 1rem", 
+                        backgroundColor: "white", 
+                        border: "1px solid var(--alvo-line)", 
+                        borderRadius: 12, 
+                        color: "var(--alvo-ink)", 
+                        outline: "none",
+                        boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)",
+                        transition: "var(--alvo-transition-creamy)"
+                      }}
+                      className="interactive-input"
                     />
                   </div>
                 )}
@@ -810,15 +951,15 @@ export function EventsView() {
                 <button
                   type="button"
                   onClick={() => setShowAddDrawer(false)}
-                  className="secondary-button"
-                  style={{ width: "50%", padding: "0.85rem" }}
+                  className="ghost-button"
+                  style={{ width: "50%", padding: "0.85rem", borderRadius: 12, border: "1px solid var(--alvo-line)", background: "transparent" }}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   className="primary-button"
-                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "#d27836", color: "white" }}
+                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "var(--alvo-accent)", color: "white", borderRadius: 12, border: "none" }}
                 >
                   Salvar Evento
                 </button>
@@ -831,15 +972,15 @@ export function EventsView() {
       {/* Main Header */}
       <header className="topbar">
         <div className="topbar-content">
-          <p className="eyebrow" style={{ color: "#d27836" }}>Agenda Geral da Igreja</p>
+          <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Agenda Geral da Igreja</p>
           <h1>Agenda Estratégica</h1>
-          <p>Coordene retiros, conferências e eventos unificados com check-in automatizado.</p>
+          <p>Coordene retiros, conferências e cultos unificados com check-in automatizado.</p>
         </div>
         <div className="topbar-actions">
            <button 
              onClick={() => setShowAddDrawer(true)} 
              className="primary-button compact"
-             style={{ backgroundColor: "#d27836", color: "white", padding: "0.75rem 1.25rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}
+             style={{ backgroundColor: "var(--alvo-accent)", color: "white", padding: "0.75rem 1.25rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, border: "none" }}
            >
              <Plus size={16} /> Cadastrar Evento
            </button>
@@ -848,23 +989,23 @@ export function EventsView() {
 
       {/* Dashboard Mini-KPI Counters */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem", margin: "1.5rem 0" }}>
-        <div style={{ padding: "1.25rem", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, background: "rgba(30, 41, 59, 0.3)" }}>
-          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", fontWeight: 700, textTransform: "uppercase" }}>Total de Eventos</span>
-          <strong style={{ fontSize: "1.75rem", color: "white", display: "block", marginTop: 4 }}>{events.length}</strong>
+        <div className="metric-card" style={{ padding: "1.25rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total de Eventos</span>
+          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-ink)", display: "block", marginTop: 4, fontWeight: 850 }}>{events.length}</strong>
         </div>
-        <div style={{ padding: "1.25rem", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, background: "rgba(30, 41, 59, 0.3)" }}>
-          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", fontWeight: 700, textTransform: "uppercase" }}>Inscritos Totais</span>
-          <strong style={{ fontSize: "1.75rem", color: "#d27836", display: "block", marginTop: 4 }}>
+        <div className="metric-card" style={{ padding: "1.25rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Inscritos Totais</span>
+          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-accent)", display: "block", marginTop: 4, fontWeight: 850 }}>
             {Object.values(attendeesMap).reduce((acc, curr) => acc + curr.length, 0)}
           </strong>
         </div>
-        <div style={{ padding: "1.25rem", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, background: "rgba(30, 41, 59, 0.3)" }}>
-          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", fontWeight: 700, textTransform: "uppercase" }}>Padrão Financeiro</span>
-          <strong style={{ fontSize: "1.75rem", color: "#10b981", display: "block", marginTop: 4 }}>R$ 18.520</strong>
+        <div className="metric-card" style={{ padding: "1.25rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Padrão Financeiro</span>
+          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-green)", display: "block", marginTop: 4, fontWeight: 850 }}>R$ 18.520</strong>
         </div>
-        <div style={{ padding: "1.25rem", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, background: "rgba(30, 41, 59, 0.3)" }}>
-          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", fontWeight: 700, textTransform: "uppercase" }}>Taxa de Presença</span>
-          <strong style={{ fontSize: "1.75rem", color: "white", display: "block", marginTop: 4 }}>62%</strong>
+        <div className="metric-card" style={{ padding: "1.25rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Taxa de Presença</span>
+          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-ink)", display: "block", marginTop: 4, fontWeight: 850 }}>62%</strong>
         </div>
       </section>
 
@@ -872,21 +1013,21 @@ export function EventsView() {
       <section className="events-grid">
         
         {/* Lado Esquerdo: Agenda de Navegação e Filtros */}
-        <aside className="events-sidebar" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 24 }}>
+        <aside className="events-sidebar panel" style={{ padding: "1.5rem" }}>
           
           {/* Busca por Evento */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.08)", padding: "0.6rem 1rem", borderRadius: 12, marginBottom: "1rem" }}>
-            <Search size={16} style={{ color: "#94a3b8" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "white", border: "1px solid var(--alvo-line)", padding: "0.6rem 1rem", borderRadius: 12, marginBottom: "1.25rem", boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)" }}>
+            <Search size={16} style={{ color: "var(--alvo-ink-soft)" }} />
             <input 
               placeholder="Buscar evento..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: "none", background: "transparent", outline: "none", fontSize: "0.85rem", color: "white", width: "100%" }}
+              style={{ border: "none", background: "transparent", outline: "none", fontSize: "0.85rem", color: "var(--alvo-ink)", width: "100%", fontWeight: 500 }}
             />
           </div>
 
           {/* Filtros de Categoria */}
-          <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
             {(["all", "conference", "service", "camp", "training", "celebration"] as const).map(cat => (
               <button
                 key={cat}
@@ -898,16 +1039,19 @@ export function EventsView() {
                   fontWeight: 700,
                   border: "none",
                   cursor: "pointer",
-                  background: typeFilter === cat ? "#d27836" : "rgba(255,255,255,0.05)",
-                  color: typeFilter === cat ? "white" : "rgba(255,255,255,0.6)"
+                  background: typeFilter === cat ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.04)",
+                  color: typeFilter === cat ? "white" : "var(--alvo-ink-soft)",
+                  transition: "var(--alvo-transition-creamy)",
+                  boxShadow: typeFilter === cat ? "0 4px 10px rgba(249, 115, 22, 0.2)" : "none"
                 }}
+                className="hover-scale"
               >
                 {cat === "all" && "Todos"}
                 {cat === "conference" && "Conferências"}
                 {cat === "service" && "Cultos"}
                 {cat === "camp" && "Retiros"}
-                {cat === "training" && "Treinamentos"}
-                {cat === "celebration" && "Confraternização"}
+                {cat === "training" && "Treinos"}
+                {cat === "celebration" && "Festa"}
               </button>
             ))}
           </div>
@@ -918,7 +1062,7 @@ export function EventsView() {
           
           <div className="event-list-scroll">
             {filteredEvents.length === 0 ? (
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>Nenhum evento encontrado.</p>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", textAlign: "center", padding: "1.5rem 0", fontWeight: 500 }}>Nenhum evento encontrado.</p>
             ) : (
               filteredEvents.map(event => {
                 const isSelected = selectedEventId === event.id;
@@ -932,19 +1076,21 @@ export function EventsView() {
                       setGuestSearchQuery("");
                     }}
                     style={{
-                      background: isSelected ? "linear-gradient(135deg, rgba(210, 120, 54, 0.15), rgba(30, 41, 59, 0.5))" : "transparent",
-                      borderColor: isSelected ? "#d27836" : "transparent",
+                      background: isSelected ? "linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%)" : "transparent",
+                      borderColor: isSelected ? "rgba(249, 115, 22, 0.25)" : "transparent",
                       borderWidth: "1px",
-                      borderStyle: "solid"
+                      borderStyle: "solid",
+                      boxShadow: isSelected ? "inset 0 0 0 1px rgba(249, 115, 22, 0.1)" : "none",
+                      transform: isSelected ? "translateX(4px)" : "none"
                     }}
                   >
-                    <div className="event-date-box" style={{ background: isSelected ? "#d27836" : "#090d16" }}>
-                      <strong style={{ color: "white" }}>{date.getDate()}</strong>
-                      <span style={{ color: isSelected ? "white" : "rgba(255,255,255,0.5)" }}>{date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
+                    <div className="event-date-box" style={{ background: isSelected ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.05)" }}>
+                      <strong style={{ color: isSelected ? "white" : "var(--alvo-ink)" }}>{date.getDate()}</strong>
+                      <span style={{ color: isSelected ? "white" : "var(--alvo-ink-soft)" }}>{date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
                     </div>
                     <div className="event-info">
-                      <strong style={{ color: isSelected ? "#d27836" : "white" }}>{event.name}</strong>
-                      <p style={{ color: "rgba(255,255,255,0.4)" }}>{event.locationType === 'onsite' ? '📍 Presencial' : '📺 Online'}</p>
+                      <strong style={{ color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink)" }}>{event.name}</strong>
+                      <p style={{ color: "var(--alvo-ink-soft)" }}>{event.locationType === 'onsite' ? '📍 Presencial' : '📺 Online'}</p>
                     </div>
                   </div>
                 );
@@ -954,13 +1100,13 @@ export function EventsView() {
         </aside>
 
         {/* Lado Direito: Visualizador de Painel Detalhado e Check-in */}
-        <article className="event-detail-panel antigravity-float" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 24, boxShadow: "none" }}>
+        <article className="event-detail-panel panel" style={{ boxShadow: "var(--alvo-shadow-airy)" }}>
           {activeEvent ? (
             <>
               {/* Top Details Header */}
               <div className="detail-header">
-                <div className="title-area">
-                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "rgba(210, 120, 54, 0.15)", color: "#d27836" }}>
+                <div className="title-area" style={{ flex: 1 }}>
+                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "rgba(249, 115, 22, 0.1)", color: "var(--alvo-accent)" }}>
                     {(() => {
                       switch (activeEvent.type) {
                         case "conference": return "Conferência";
@@ -972,90 +1118,108 @@ export function EventsView() {
                       }
                     })()}
                   </span>
-                  <h2 style={{ color: "white", fontSize: "1.75rem", fontWeight: 800, margin: "6px 0" }}>{activeEvent.name}</h2>
-                  <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.95rem", lineHeight: "1.4" }}>{activeEvent.description}</p>
+                  <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.75rem", fontWeight: 850, margin: "6px 0 10px 0", letterSpacing: "-0.02em" }}>{activeEvent.name}</h2>
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.95rem", lineHeight: "1.55", fontWeight: 500 }}>{activeEvent.description}</p>
                   
-                  <div style={{ display: "flex", gap: "1rem", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginTop: 12 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <MapPin size={14} style={{ color: "#d27836" }} />
+                  <div style={{ display: "flex", gap: "1rem", color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 14, flexWrap: "wrap" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                      <MapPin size={14} style={{ color: "var(--alvo-accent)" }} />
                       {activeEvent.location}
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <Ticket size={14} style={{ color: "#10b981" }} />
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                      <Ticket size={14} style={{ color: "var(--alvo-green)" }} />
                       {activeEvent.isPaid ? `R$ ${activeEvent.ticketPrice?.toFixed(2).replace('.', ',')}` : "Gratuito"}
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                      <Calendar size={14} style={{ color: "var(--alvo-blue)" }} />
+                      {new Date(activeEvent.startsAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                     </span>
                   </div>
                 </div>
 
-                <div className="checkin-quick-btn">
-                   <button onClick={() => setShowScanner(true)} className="scan-mode-btn" style={{ backgroundColor: "#d27836", color: "white", borderRadius: 14 }}>
+                <div className="checkin-quick-btn" style={{ marginLeft: "1.5rem" }}>
+                   <button 
+                     onClick={() => setShowScanner(true)} 
+                     className="scan-mode-btn hover-scale" 
+                     style={{ 
+                       backgroundColor: "var(--alvo-accent)", 
+                       color: "white", 
+                       borderRadius: 14, 
+                       border: "none", 
+                       boxShadow: "0 4px 15px rgba(249, 115, 22, 0.25)",
+                       transition: "var(--alvo-transition-creamy)"
+                     }}
+                   >
                      <QrCode size={18} /> Iniciar Check-in QR
                    </button>
                 </div>
               </div>
 
               {/* KPIs & Performance Panel */}
-              <div className="detail-stats-row" style={{ marginTop: "1rem" }}>
-                 <div className="stat-box" style={{ background: "rgba(9, 13, 22, 0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20 }}>
-                   <Users size={20} style={{ color: "#d27836" }} />
+              <div className="detail-stats-row" style={{ marginTop: "1rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.25rem", marginBottom: "2rem" }}>
+                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                   <Users size={20} style={{ color: "var(--alvo-accent)" }} />
                    <div>
-                     <strong style={{ color: "white" }}>{stats.total} / {activeEvent.capacity || '∞'}</strong>
-                     <span style={{ color: "rgba(255,255,255,0.5)" }}>Inscritos Totais</span>
+                     <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.total} / {activeEvent.capacity || '∞'}</strong>
+                     <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Inscritos Totais</span>
                    </div>
                  </div>
-                 <div className="stat-box" style={{ background: "rgba(9, 13, 22, 0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20 }}>
-                   <Ticket size={20} style={{ color: "#10b981" }} />
+                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                   <Ticket size={20} style={{ color: "var(--alvo-green)" }} />
                    <div>
-                     <strong style={{ color: "white" }}>{stats.paymentPercent}%</strong>
-                     <span style={{ color: "rgba(255,255,255,0.5)" }}>Confirmações Pagas</span>
+                     <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.paymentPercent}%</strong>
+                     <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Confirmações Pagas</span>
                    </div>
                  </div>
-                 <div className="stat-box" style={{ background: "rgba(9, 13, 22, 0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20 }}>
-                   <Clock size={20} style={{ color: "#3b82f6" }} />
+                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                   <Clock size={20} style={{ color: "var(--alvo-blue)" }} />
                    <div>
-                     <strong style={{ color: "white" }}>{stats.checkinPercent}%</strong>
-                     <span style={{ color: "rgba(255,255,255,0.5)" }}>Taxa de Entrada</span>
+                     <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.checkinPercent}%</strong>
+                     <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Taxa de Entrada</span>
                    </div>
                  </div>
               </div>
 
               {/* Registrations List and Quick Registration */}
-              <div className="registrations-section" style={{ borderTopColor: "rgba(255,255,255,0.08)" }}>
+              <div className="registrations-section" style={{ borderTop: "1px solid var(--alvo-line)", paddingTop: "1.75rem" }}>
                  
-                 <div className="section-header-compact" style={{ marginBottom: "1rem" }}>
+                 <div className="section-header-compact" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <h3 style={{ color: "white", fontSize: "1.1rem", fontWeight: 800 }}>Membros Inscritos</h3>
-                      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>Gestão de presenças e credenciamento de ingressos</p>
+                      <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.1rem", fontWeight: 850 }}>Membros Inscritos</h3>
+                      <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", margin: 0, fontWeight: 500 }}>Gestão de presenças e credenciamento de ingressos</p>
                     </div>
 
-                    <div style={{ display: "flex", gap: "0.75rem" }}>
-                      <div className="search-mini" style={{ background: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
-                        <Search size={14} style={{ color: "#94a3b8" }} />
+                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                      <div className="search-mini" style={{ background: "white", border: "1px solid var(--alvo-line)", borderRadius: 10, boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" }}>
+                        <Search size={14} style={{ color: "var(--alvo-ink-soft)" }} />
                         <input 
                           placeholder="Buscar inscrito..." 
                           value={guestSearchQuery}
                           onChange={(e) => setGuestSearchQuery(e.target.value)}
-                          style={{ color: "white" }}
+                          style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", fontWeight: 500 }}
                         />
                       </div>
 
                       <button
                         onClick={() => setShowAddGuestForm(!showAddGuestForm)}
                         style={{
-                          backgroundColor: "rgba(255,255,255,0.05)",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          backgroundColor: "white",
+                          border: "1px solid var(--alvo-line)",
                           borderRadius: 10,
                           padding: "0.5rem 1rem",
-                          color: "white",
+                          color: "var(--alvo-ink)",
                           fontSize: "0.8rem",
                           fontWeight: 700,
                           display: "flex",
                           alignItems: "center",
                           gap: 6,
-                          cursor: "pointer"
+                          cursor: "pointer",
+                          transition: "var(--alvo-transition-creamy)",
+                          boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
                         }}
+                        className="hover-card"
                       >
-                        <UserPlus size={14} />
+                        <UserPlus size={14} style={{ color: "var(--alvo-accent)" }} />
                         Registrar Convidado
                       </button>
                     </div>
@@ -1067,8 +1231,8 @@ export function EventsView() {
                      onSubmit={handleAddGuest}
                      className="animate-entrance"
                      style={{
-                       background: "rgba(9, 13, 22, 0.2)",
-                       border: "1px dashed rgba(255,255,255,0.1)",
+                       background: "rgba(255, 255, 255, 0.35)",
+                       border: "1px dashed rgba(15, 23, 42, 0.12)",
                        borderRadius: 16,
                        padding: "1.25rem",
                        marginBottom: "1.5rem",
@@ -1079,40 +1243,70 @@ export function EventsView() {
                      }}
                    >
                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>Nome</label>
+                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>NOME</label>
                        <input 
                          required 
                          placeholder="Ex: Carlos"
                          value={newGuest.firstName}
                          onChange={(e) => setNewGuest(prev => ({ ...prev, firstName: e.target.value }))}
-                         style={{ padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(9,13,22,0.4)", borderRadius: 8, color: "white", fontSize: "0.85rem", outline: "none" }}
+                         style={{ 
+                           padding: "0.5rem 0.75rem", 
+                           border: "1px solid var(--alvo-line)", 
+                           background: "white", 
+                           borderRadius: 8, 
+                           color: "var(--alvo-ink)", 
+                           fontSize: "0.85rem", 
+                           outline: "none",
+                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                         }}
+                         className="interactive-input"
                        />
                      </div>
                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>Sobrenome</label>
+                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>SOBRENOME</label>
                        <input 
                          required 
                          placeholder="Ex: Santos"
                          value={newGuest.lastName}
                          onChange={(e) => setNewGuest(prev => ({ ...prev, lastName: e.target.value }))}
-                         style={{ padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(9,13,22,0.4)", borderRadius: 8, color: "white", fontSize: "0.85rem", outline: "none" }}
+                         style={{ 
+                           padding: "0.5rem 0.75rem", 
+                           border: "1px solid var(--alvo-line)", 
+                           background: "white", 
+                           borderRadius: 8, 
+                           color: "var(--alvo-ink)", 
+                           fontSize: "0.85rem", 
+                           outline: "none",
+                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                         }}
+                         className="interactive-input"
                        />
                      </div>
                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>E-mail</label>
+                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>E-MAIL</label>
                        <input 
                          required 
                          type="email"
                          placeholder="carlos@gmail.com"
                          value={newGuest.email}
                          onChange={(e) => setNewGuest(prev => ({ ...prev, email: e.target.value }))}
-                         style={{ padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(9,13,22,0.4)", borderRadius: 8, color: "white", fontSize: "0.85rem", outline: "none" }}
+                         style={{ 
+                           padding: "0.5rem 0.75rem", 
+                           border: "1px solid var(--alvo-line)", 
+                           background: "white", 
+                           borderRadius: 8, 
+                           color: "var(--alvo-ink)", 
+                           fontSize: "0.85rem", 
+                           outline: "none",
+                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                         }}
+                         className="interactive-input"
                        />
                      </div>
                      <button 
                        type="submit" 
                        className="primary-button" 
-                       style={{ padding: "0.6rem 1.25rem", borderRadius: 8, backgroundColor: "#d27836", color: "white", fontWeight: 700 }}
+                       style={{ padding: "0.6rem 1.25rem", borderRadius: 8, backgroundColor: "var(--alvo-accent)", color: "white", fontWeight: 700, border: "none" }}
                      >
                        Adicionar
                      </button>
@@ -1120,11 +1314,11 @@ export function EventsView() {
                  )}
 
                  {/* Lista Principal de Inscritos */}
-                 <div className="registrations-list">
+                 <div className="registrations-list" style={{ display: "grid", gap: "0.75rem" }}>
                     {filteredAttendees.length === 0 ? (
-                      <div style={{ padding: "3rem 0", textAlign: "center", color: "rgba(255,255,255,0.4)" }}>
-                        <Users size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                        <p style={{ fontSize: "0.9rem" }}>Nenhum convidado inscrito ou localizado na busca.</p>
+                      <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
+                        <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
+                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum convidado inscrito ou localizado na busca.</p>
                       </div>
                     ) : (
                       filteredAttendees.map(att => (
@@ -1132,10 +1326,11 @@ export function EventsView() {
                           key={att.id} 
                           className="reg-item" 
                           style={{ 
-                            background: "rgba(9, 13, 22, 0.2)", 
-                            border: "1px solid rgba(255,255,255,0.03)", 
+                            background: "rgba(255, 255, 255, 0.35)", 
+                            border: "1px solid rgba(255, 255, 255, 0.5)", 
                             borderRadius: 16,
-                            transition: "all 0.2s"
+                            transition: "var(--alvo-transition-creamy)",
+                            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.01)"
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -1146,36 +1341,39 @@ export function EventsView() {
                                 width: 42, 
                                 height: 42, 
                                 borderRadius: "50%", 
-                                backgroundColor: att.checkedIn ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.05)", 
-                                border: att.checkedIn ? "1px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                                backgroundColor: att.checkedIn ? "var(--alvo-green-soft)" : "rgba(15, 23, 42, 0.04)", 
+                                border: att.checkedIn ? "1px solid rgba(22, 163, 74, 0.2)" : "1px solid rgba(15, 23, 42, 0.06)",
                                 display: "flex", 
                                 alignItems: "center", 
                                 justifyContent: "center", 
-                                color: att.checkedIn ? "#10b981" : "white",
-                                fontWeight: 700,
-                                fontSize: "0.9rem",
-                                cursor: "pointer"
+                                color: att.checkedIn ? "var(--alvo-green)" : "var(--alvo-ink)",
+                                fontWeight: 750,
+                                fontSize: "0.85rem",
+                                cursor: "pointer",
+                                transition: "var(--alvo-transition-creamy)"
                               }}
+                              className="hover-scale"
                             >
                               {att.firstName[0]}{att.lastName[0]}
                             </div>
                             <div className="reg-person" onClick={() => setInspectedAttendee(att)} style={{ cursor: "pointer" }}>
-                              <strong style={{ color: "white" }}>{att.firstName} {att.lastName}</strong>
-                              <span style={{ color: "rgba(255,255,255,0.4)" }}>Inscrito em {att.registrationDate} · {att.ticketCode}</span>
+                              <strong style={{ color: "var(--alvo-ink)", fontWeight: 750, fontSize: "0.9375rem" }}>{att.firstName} {att.lastName}</strong>
+                              <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 500 }}>Inscrito em {att.registrationDate} · <span style={{ fontFamily: "monospace" }}>{att.ticketCode}</span></span>
                             </div>
                           </div>
 
-                          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
                             {/* Badges de pagamentos */}
                             <span 
                               style={{ 
                                 fontSize: "0.7rem", 
-                                fontWeight: 700, 
+                                fontWeight: 800, 
                                 padding: "4px 8px", 
                                 borderRadius: 6,
                                 textTransform: "uppercase",
-                                backgroundColor: att.paymentStatus === "paid" ? "rgba(16,185,129,0.15)" : att.paymentStatus === "free" ? "rgba(59,130,246,0.15)" : "rgba(234,179,8,0.15)",
-                                color: att.paymentStatus === "paid" ? "#10b981" : att.paymentStatus === "free" ? "#3b82f6" : "#eab308"
+                                backgroundColor: att.paymentStatus === "paid" ? "var(--alvo-green-soft)" : att.paymentStatus === "free" ? "var(--alvo-blue-soft)" : "rgba(234, 179, 8, 0.12)",
+                                color: att.paymentStatus === "paid" ? "var(--alvo-green)" : att.paymentStatus === "free" ? "var(--alvo-blue)" : "#d97706",
+                                border: att.paymentStatus === "paid" ? "1px solid rgba(22, 163, 74, 0.15)" : att.paymentStatus === "free" ? "1px solid rgba(37, 99, 235, 0.15)" : "1px solid rgba(234, 179, 8, 0.15)"
                               }}
                             >
                               {att.paymentStatus === "paid" && "Pago"}
@@ -1185,7 +1383,7 @@ export function EventsView() {
 
                             {/* Status de Check-in + Ações rápidas */}
                             {att.checkedIn ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#10b981", fontSize: "0.85rem", fontWeight: 700 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--alvo-green)", fontSize: "0.85rem", fontWeight: 750 }}>
                                 <CheckCircle2 size={16} />
                                 <span>Entrou {att.checkedInAt}</span>
                               </div>
@@ -1193,15 +1391,16 @@ export function EventsView() {
                               <button
                                 onClick={() => handleQuickCheckin(att.id)}
                                 style={{
-                                  backgroundColor: "rgba(210,120,54,0.1)",
-                                  border: "1px solid rgba(210,120,54,0.25)",
+                                  backgroundColor: "white",
+                                  border: "1px solid var(--alvo-line)",
                                   borderRadius: 8,
                                   padding: "0.4rem 0.85rem",
-                                  color: "#d27836",
+                                  color: "var(--alvo-ink)",
                                   fontSize: "0.75rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
-                                  transition: "all 0.2s"
+                                  transition: "var(--alvo-transition-creamy)",
+                                  boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
                                 }}
                                 className="hover-card"
                               >
@@ -1211,7 +1410,8 @@ export function EventsView() {
 
                             <button 
                               onClick={() => setInspectedAttendee(att)}
-                              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", display: "flex", alignItems: "center" }}
+                              style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", transition: "var(--alvo-transition-creamy)" }}
+                              className="hover-scale"
                             >
                               <ArrowRight size={16} />
                             </button>
@@ -1224,8 +1424,8 @@ export function EventsView() {
             </>
           ) : (
             <div className="empty-selection">
-              <CalendarDays size={48} opacity={0.2} />
-              <p>Selecione um evento para gerenciar</p>
+              <CalendarDays size={48} style={{ opacity: 0.25, color: "var(--alvo-accent)", marginBottom: 12 }} />
+              <p style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Selecione um evento para gerenciar</p>
             </div>
           )}
         </article>
@@ -1235,42 +1435,60 @@ export function EventsView() {
         .events-workbench { padding: 2rem; max-width: 1200px; margin: 0 auto; }
         .events-grid { display: grid; grid-template-columns: 320px 1fr; gap: 2rem; margin-top: 2rem; }
         
-        .events-sidebar { background: white; border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--alvo-line); height: fit-content; }
+        .events-sidebar { height: fit-content; }
         .event-list-scroll { display: grid; gap: 0.75rem; margin-top: 1rem; }
-        .event-mini-card { display: flex; gap: 1rem; padding: 1rem; border-radius: 1.25rem; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-        .event-mini-card:hover { background: rgba(255,255,255,0.03); }
-        .event-mini-card.is-selected { background: #fff7ed; border-color: #fdba74; }
+        .event-mini-card { display: flex; gap: 1rem; padding: 1rem; border-radius: 1.25rem; cursor: pointer; transition: var(--alvo-transition-creamy); border: 1px solid transparent; }
+        .event-mini-card:hover { background: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.4); transform: translateY(-1px); }
         
-        .event-date-box { width: 50px; height: 50px; background: #111827; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; }
+        .event-date-box { width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; transition: var(--alvo-transition-creamy); }
         .event-date-box strong { font-size: 1.25rem; line-height: 1; }
         .event-date-box span { font-size: 0.65rem; font-weight: 800; }
         
-        .event-info strong { display: block; font-size: 0.9375rem; margin-bottom: 2px; }
-        .event-info p { font-size: 0.75rem; color: var(--alvo-ink-soft); }
+        .event-info strong { display: block; font-size: 0.9375rem; margin-bottom: 2px; transition: var(--alvo-transition-creamy); }
+        .event-info p { font-size: 0.75rem; font-weight: 600; }
 
-        .event-detail-panel { background: white; border-radius: 2.5rem; padding: 2.5rem; border: 1px solid var(--alvo-line); box-shadow: var(--alvo-shadow-strong); min-height: 500px; }
-        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2.5rem; }
-        .event-type-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; display: inline-block; }
+        .event-detail-panel { min-height: 500px; }
+        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+        .event-type-badge { padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; display: inline-block; }
         
-        .detail-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
-        .stat-box { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px solid #f1f5f9; border-radius: 1.5rem; }
+        .stat-box { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; transition: var(--alvo-transition-creamy); }
+        .stat-box:hover { transform: translateY(-2px); border-color: var(--alvo-accent-soft); }
         .stat-box strong { display: block; font-size: 1.25rem; }
-        .stat-box span { font-size: 0.75rem; color: var(--alvo-ink-soft); }
-        .stat-box svg { color: var(--alvo-accent); }
+        .stat-box span { font-size: 0.75rem; }
 
-        .registrations-section { border-top: 1px solid #f1f5f9; padding-top: 2rem; }
-        .section-header-compact { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .search-mini { display: flex; align-items: center; gap: 0.5rem; background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 10px; }
-        .search-mini input { border: none; background: transparent; outline: none; font-size: 0.8125rem; }
+        .registrations-section { }
+        .search-mini { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; }
+        .search-mini input { border: none; background: transparent; outline: none; }
         
-        .registrations-list { display: grid; gap: 0.75rem; }
-        .reg-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8fafc; border-radius: 1.25rem; }
-        .reg-person strong { display: block; font-size: 0.9375rem; }
-        .reg-person span { font-size: 0.75rem; color: var(--alvo-ink-soft); }
-        .status-pill-reg { padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
-        .status-pill-reg.confirmed { background: #dcfce7; color: #166534; }
+        .reg-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; }
+        .reg-item:hover { background: rgba(255, 255, 255, 0.5) !important; border-color: rgba(255, 255, 255, 0.75) !important; transform: translateY(-1.5px); }
+        .reg-person strong { display: block; }
+        .reg-person span { font-size: 0.75rem; }
 
-        .scan-mode-btn { background: #111827; color: white; border: none; padding: 12px 20px; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; font-weight: 700; cursor: pointer; }
+        .scan-mode-btn { color: white; border: none; padding: 12px 20px; border-radius: 14px; display: flex; align-items: center; gap: 0.75rem; font-weight: 800; cursor: pointer; }
+        
+        /* Utility animations & styles */
+        .hover-scale { transition: var(--alvo-transition-creamy); }
+        .hover-scale:hover { transform: scale(1.03); }
+        .hover-card { transition: var(--alvo-transition-creamy); }
+        .hover-card:hover { transform: translateY(-1.5px); border-color: var(--glass-border-hover) !important; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important; }
+        
+        .interactive-input {
+          transition: var(--alvo-transition-creamy);
+        }
+        .interactive-input:focus {
+          border-color: var(--alvo-accent) !important;
+          box-shadow: 0 0 0 3px var(--alvo-field-ring) !important;
+        }
+
+        .empty-selection {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 400px;
+          text-align: center;
+        }
         
         @keyframes scanLine {
           0% { top: 15%; }
@@ -1280,7 +1498,7 @@ export function EventsView() {
 
         @media (max-width: 1024px) {
           .events-grid { grid-template-columns: 1fr; }
-          .detail-stats-row { grid-template-columns: 1fr; }
+          .detail-stats-row { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </main>
