@@ -424,71 +424,71 @@ export function ServingView() {
   };
 
   return (
-    <main className="form-page serving-page" style={{ background: "#0b0f19", color: "#f8fafc", minHeight: "100vh", padding: "2rem" }}>
+    <main className="form-page serving-page" style={{ padding: "2rem" }}>
       
-      {/* HEADER CONTROLE CENTRAL (Tema Deep Space Slate) */}
-      <section className="serving-hero" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "2.5rem", marginBottom: "2rem" }}>
+      {/* HEADER CONTROLE CENTRAL */}
+      <section className="serving-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2.5rem", marginBottom: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "2rem" }}>
           <div>
-            <Link className="back-link" href="/" style={{ color: "#f97316", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
+            <Link className="back-link" href="/" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
               ← Voltar ao painel principal
             </Link>
-            <p className="eyebrow" style={{ color: "#f97316", marginTop: "1rem" }}>Controle Central de Escalas</p>
-            <h1 style={{ color: "white", fontSize: "2.5rem", fontWeight: 950, letterSpacing: "-0.04em", margin: "8px 0" }}>
+            <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Controle Central de Escalas</p>
+            <h1 style={{ color: "var(--alvo-ink)", fontSize: "2.5rem", fontWeight: 950, letterSpacing: "-0.04em", margin: "8px 0" }}>
               Quem serve também precisa de clareza.
             </h1>
-            <p style={{ color: "#94a3b8", fontSize: "1.05rem", maxWidth: "750px", lineHeight: "1.6rem" }}>
+            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.05rem", maxWidth: "750px", lineHeight: "1.6rem" }}>
               Gerencie voluntários com inteligência baseada em Tribos, envie lembretes rápidos via WhatsApp e acompanhe a cobertura de voluntários em tempo real.
             </p>
           </div>
           
-          <aside className="serving-status-card" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "24px", padding: "1.5rem", width: "260px" }}>
+          <aside className="panel serving-status-card" style={{ padding: "1.5rem", width: "260px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Handshake size={28} style={{ color: "#f97316" }} />
+              <Handshake size={28} style={{ color: "var(--alvo-accent)" }} />
               <div>
-                <strong style={{ display: "block", fontSize: "1.75rem", color: "white" }}>{coverage}%</strong>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>cobertura confirmada</span>
+                <strong style={{ display: "block", fontSize: "1.75rem", color: "var(--alvo-ink)" }}>{coverage}%</strong>
+                <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>cobertura confirmada</span>
               </div>
             </div>
-            <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "12px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "8px" }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: "12px", borderTop: "1px solid var(--alvo-line)", paddingTop: "8px" }}>
               {status}
             </p>
           </aside>
         </div>
       </section>
 
-      {/* KPI METRICAS HARMONIOSAS (Evitando excesso de cores agressivas) */}
+      {/* KPI METRICAS */}
       <section className="serving-metric-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
-        <article style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #f97316" }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Confirmados</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "white", marginTop: 4 }}>{confirmedCount}</strong>
-          <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>presença garantida nos cultos</p>
+        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #f97316" }}>
+          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Confirmados</span>
+          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{confirmedCount}</strong>
+          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>presença garantida nos cultos</p>
         </article>
-        <article style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #94a3b8" }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Aguardando</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "white", marginTop: 4 }}>{pendingCount}</strong>
-          <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>lembretes prontos para envio</p>
+        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #94a3b8" }}>
+          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Aguardando</span>
+          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{pendingCount}</strong>
+          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>lembretes prontos para envio</p>
         </article>
-        <article style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #ef4444" }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Justificados/Riscos</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "white", marginTop: 4 }}>{declinedCount}</strong>
-          <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>impossibilidades ou faltas declaradas</p>
+        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #ef4444" }}>
+          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Justificados/Riscos</span>
+          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{declinedCount}</strong>
+          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>impossibilidades ou faltas declaradas</p>
         </article>
-        <article style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #10b981" }}>
-          <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Banco de Voluntários</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "white", marginTop: 4 }}>{availablePeople.length || people.length}</strong>
-          <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>membros ativos elegíveis</p>
+        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #10b981" }}>
+          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Banco de Voluntários</span>
+          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{availablePeople.length || people.length}</strong>
+          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>membros ativos elegíveis</p>
         </article>
       </section>
 
       {/* MATRIX DE DATAS E CULTOS INTERATIVA */}
-      <section style={{ background: "rgba(30, 41, 59, 0.2)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2.5rem" }}>
+      <section style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Calendar size={20} style={{ color: "#f97316" }} />
-            <h3 style={{ fontSize: "1.1rem", color: "white", margin: 0, fontWeight: 800 }}>Matriz de Escalas por Culto</h3>
+            <Calendar size={20} style={{ color: "var(--alvo-accent)" }} />
+            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Matriz de Escalas por Culto</h3>
           </div>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Clique em um domingo para ver e gerenciar a escala respectiva</span>
+          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Clique em um domingo para ver e gerenciar a escala respectiva</span>
         </div>
         <div style={{ display: "flex", gap: "1rem" }}>
           <button 
@@ -497,16 +497,16 @@ export function ServingView() {
               flex: 1, 
               padding: "1rem", 
               borderRadius: "16px", 
-              border: selectedDateFilter === "2026-05-24" ? "2.5px solid #f97316" : "1px solid rgba(255,255,255,0.08)",
-              background: selectedDateFilter === "2026-05-24" ? "rgba(249, 115, 22, 0.08)" : "rgba(30, 41, 59, 0.3)",
-              color: "white",
+              border: selectedDateFilter === "2026-05-24" ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
+              background: selectedDateFilter === "2026-05-24" ? "rgba(249, 115, 22, 0.08)" : "rgba(255, 255, 255, 0.35)",
+              color: "var(--alvo-ink)",
               textAlign: "left",
               cursor: "pointer"
             }}
           >
-            <span style={{ display: "block", fontSize: "0.75rem", color: "#f97316", fontWeight: 800 }}>PRÓXIMO DOMINGO</span>
-            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4 }}>24 de Maio</strong>
-            <span style={{ fontSize: "0.7rem", color: "#64748b", display: "block", marginTop: 2 }}>Culto Geral às 18:30</span>
+            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 800 }}>PRÓXIMO DOMINGO</span>
+            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>24 de Maio</strong>
+            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>Culto Geral às 18:30</span>
           </button>
 
           <button 
@@ -515,16 +515,16 @@ export function ServingView() {
               flex: 1, 
               padding: "1rem", 
               borderRadius: "16px", 
-              border: selectedDateFilter === "2026-05-31" ? "2.5px solid #f97316" : "1px solid rgba(255,255,255,0.08)",
-              background: selectedDateFilter === "2026-05-31" ? "rgba(249, 115, 22, 0.08)" : "rgba(30, 41, 59, 0.3)",
-              color: "white",
+              border: selectedDateFilter === "2026-05-31" ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
+              background: selectedDateFilter === "2026-05-31" ? "rgba(249, 115, 22, 0.08)" : "rgba(255, 255, 255, 0.35)",
+              color: "var(--alvo-ink)",
               textAlign: "left",
               cursor: "pointer"
             }}
           >
-            <span style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", fontWeight: 800 }}>DOMINGO SEGUINTE</span>
-            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4 }}>31 de Maio</strong>
-            <span style={{ fontSize: "0.7rem", color: "#64748b", display: "block", marginTop: 2 }}>Culto de Missões às 18:30</span>
+            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 800 }}>DOMINGO SEGUINTE</span>
+            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>31 de Maio</strong>
+            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>Culto de Missões às 18:30</span>
           </button>
         </div>
       </section>
@@ -533,8 +533,8 @@ export function ServingView() {
       <section style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
         
         {/* COLUNA ESQUERDA: LISTA DE MINISTÉRIOS */}
-        <aside style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "white", fontWeight: 800, marginBottom: "1rem" }}>Ministérios</h2>
+        <aside className="panel" style={{ padding: "1.5rem" }}>
+          <h2 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Ministérios</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {ministryTeams.map((team) => {
               const teamAssignments = assignments.filter((assignment) => assignment.ministryCode === team.code && assignment.serviceDate.startsWith(selectedDateFilter));
@@ -549,22 +549,22 @@ export function ServingView() {
                   onClick={() => setSelectedMinistryCode(team.code)}
                   style={{
                     background: isSelected ? "rgba(249, 115, 22, 0.06)" : "transparent",
-                    border: isSelected ? "1px solid #f97316" : "1px solid rgba(255,255,255,0.06)",
+                    border: isSelected ? "1px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
                     borderRadius: "16px",
                     padding: "1rem",
                     textAlign: "left",
-                    color: "white",
+                    color: "var(--alvo-ink)",
                     cursor: "pointer",
                     transition: "all 0.2s"
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong style={{ fontSize: "0.95rem", color: isSelected ? "#f97316" : "white" }}>{team.name}</strong>
-                    <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: "8px", color: "#94a3b8" }}>
+                    <strong style={{ fontSize: "0.95rem", color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink)" }}>{team.name}</strong>
+                    <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", padding: "2px 8px", borderRadius: "8px", color: "var(--alvo-ink-soft)" }}>
                       {teamConfirmed}/{team.target}
                     </span>
                   </div>
-                  <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4, lineHeight: "1.1rem" }}>{team.summary}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: 4, lineHeight: "1.1rem" }}>{team.summary}</p>
                 </button>
               );
             })}
@@ -572,11 +572,11 @@ export function ServingView() {
         </aside>
 
         {/* COLUNA CENTRAL: DETALHE DA ESCALA SELECIONADA */}
-        <article style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
+        <article className="panel" style={{ padding: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
             <div>
-              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Escala de Serviço</span>
-              <h2 style={{ fontSize: "1.5rem", color: "white", fontWeight: 900, marginTop: 4 }}>{selectedMinistry.name}</h2>
+              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Escala de Serviço</span>
+              <h2 style={{ fontSize: "1.5rem", color: "var(--alvo-ink)", fontWeight: 900, marginTop: 4 }}>{selectedMinistry.name}</h2>
             </div>
             {selectedMinistry.code === "worship" && (
               <Link href="/serving/worship" style={{ background: "#8b5cf6", color: "white", padding: "6px 12px", borderRadius: "10px", textDecoration: "none", fontSize: "0.8rem", fontWeight: 700 }}>
@@ -585,9 +585,9 @@ export function ServingView() {
             )}
           </div>
 
-          <div style={{ background: "rgba(30, 41, 59, 0.2)", border: "1px solid rgba(255, 255, 255, 0.04)", borderRadius: "16px", padding: "1rem", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-            <span style={{ color: "#f97316", fontWeight: 800, display: "block" }}>Ação Recomendada:</span>
-            <p style={{ color: "#cbd5e1", margin: "4px 0 0" }}>{nextActionLabel}</p>
+          <div style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "16px", padding: "1rem", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+            <span style={{ color: "var(--alvo-accent)", fontWeight: 800, display: "block" }}>Ação Recomendada:</span>
+            <p style={{ color: "var(--alvo-ink-soft)", margin: "4px 0 0" }}>{nextActionLabel}</p>
           </div>
 
           {/* LISTA DE ESCALADOS NA GRID PREMIUM */}
@@ -601,8 +601,8 @@ export function ServingView() {
                   <div 
                     key={assignment.id} 
                     style={{ 
-                      background: "rgba(30, 41, 59, 0.25)", 
-                      border: "1px solid rgba(255, 255, 255, 0.05)", 
+                      background: "rgba(255, 255, 255, 0.35)", 
+                      border: "1px solid var(--alvo-line)", 
                       borderRadius: "16px", 
                       padding: "1.25rem",
                       display: "flex",
@@ -612,7 +612,7 @@ export function ServingView() {
                   >
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <strong style={{ color: "white", fontSize: "1.05rem" }}>
+                        <strong style={{ color: "var(--alvo-ink)", fontSize: "1.05rem" }}>
                           {person ? getFullName(person) : assignment.personId}
                         </strong>
                         
@@ -625,17 +625,17 @@ export function ServingView() {
                           display: "inline-block" 
                         }} />
 
-                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                        <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>
                           ({getAssignmentStatusLabel(assignment.status)})
                         </span>
                       </div>
                       
-                      <p style={{ color: "#f97316", fontSize: "0.8rem", margin: "4px 0 0" }}>
+                      <p style={{ color: "var(--alvo-accent)", fontSize: "0.8rem", margin: "4px 0 0" }}>
                         Função: {assignment.role}
                       </p>
 
                       {person?.tribePrimaryCode && (
-                        <span style={{ display: "inline-block", background: "rgba(255,255,255,0.05)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px", color: "#94a3b8", marginTop: 6 }}>
+                        <span style={{ display: "inline-block", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px", color: "var(--alvo-ink-soft)", marginTop: 6 }}>
                           Tribo: {getTribeDisplayLabel(person.tribePrimaryCode)}
                         </span>
                       )}
@@ -645,7 +645,7 @@ export function ServingView() {
                       {isPending && (
                         <button 
                           onClick={() => setSelectedAssignmentForReminder(assignment)}
-                          style={{ background: "rgba(249, 115, 22, 0.15)", border: "none", color: "#f97316", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                          style={{ background: "rgba(249, 115, 22, 0.15)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
                         >
                           <MessageSquare size={13} /> Lembrar
                         </button>
@@ -653,7 +653,7 @@ export function ServingView() {
                       
                       <button 
                         onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")}
-                        style={{ background: "rgba(255,255,255,0.05)", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                        style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
                       >
                         Confirmar
                       </button>
@@ -669,27 +669,27 @@ export function ServingView() {
                 );
               })
             ) : (
-              <div style={{ textAlign: "center", padding: "3rem", background: "rgba(30, 41, 59, 0.15)", border: "2px dashed rgba(255,255,255,0.06)", borderRadius: "20px" }}>
-                <Handshake size={36} style={{ color: "#64748b", opacity: 0.5, margin: "0 auto 12px" }} />
-                <strong style={{ display: "block", color: "white" }}>Nenhum escalado para este dia</strong>
-                <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: 4 }}>Selecione sugestões por Tribo de Dons abaixo para escalar voluntários.</p>
+              <div style={{ textAlign: "center", padding: "3rem", background: "rgba(255, 255, 255, 0.35)", border: "2px dashed var(--alvo-line)", borderRadius: "20px" }}>
+                <Handshake size={36} style={{ color: "var(--alvo-ink-soft)", opacity: 0.5, margin: "0 auto 12px" }} />
+                <strong style={{ display: "block", color: "var(--alvo-ink)" }}>Nenhum escalado para este dia</strong>
+                <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.8rem", marginTop: 4 }}>Selecione sugestões por Tribo de Dons abaixo para escalar voluntários.</p>
               </div>
             )}
           </div>
 
           {/* SUGESTÕES POR TRIBO DE DONS */}
           {suggestedPeople.length > 0 && (
-            <div style={{ marginTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
+            <div style={{ marginTop: "2rem", borderTop: "1px solid var(--alvo-line)", paddingTop: "1.5rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-                <Sparkles size={16} style={{ color: "#f97316" }} />
-                <h4 style={{ fontSize: "0.95rem", color: "white", margin: 0, fontWeight: 800 }}>Sugestões Inteligentes por Tribos</h4>
+                <Sparkles size={16} style={{ color: "var(--alvo-accent)" }} />
+                <h4 style={{ fontSize: "0.95rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Sugestões Inteligentes por Tribos</h4>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
                 {suggestedPeople.map((p) => (
-                  <div key={p.id} style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: "12px", padding: "10px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div key={p.id} style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "12px", padding: "10px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <div>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "white" }}>{getFullName(p)}</strong>
-                      <span style={{ fontSize: "0.7rem", color: "#f97316", fontWeight: 700 }}>
+                      <strong style={{ display: "block", fontSize: "0.85rem", color: "var(--alvo-ink)" }}>{getFullName(p)}</strong>
+                      <span style={{ fontSize: "0.7rem", color: "var(--alvo-accent)", fontWeight: 700 }}>
                         Tribo {getTribeDisplayLabel(p.tribePrimaryCode!)}
                       </span>
                     </div>
@@ -706,15 +706,15 @@ export function ServingView() {
           )}
 
           {/* BUSCA MANUAL NA BASE */}
-          <div style={{ marginTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
-            <h4 style={{ fontSize: "0.95rem", color: "white", fontWeight: 800, marginBottom: "1rem" }}>Buscar e Escalar da Base</h4>
+          <div style={{ marginTop: "2rem", borderTop: "1px solid var(--alvo-line)", paddingTop: "1.5rem" }}>
+            <h4 style={{ fontSize: "0.95rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Buscar e Escalar da Base</h4>
             <div style={{ position: "relative", marginBottom: "1rem" }}>
-              <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+              <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
               <input 
                 placeholder="Buscar voluntário pelo nome..." 
                 value={memberSearch}
                 onChange={e => setMemberSearch(e.target.value)}
-                style={{ width: "100%", padding: "10px 12px 10px 36px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "white", outline: "none", fontSize: "0.85rem" }}
+                style={{ width: "100%", padding: "10px 12px 10px 36px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
               />
             </div>
 
@@ -723,7 +723,7 @@ export function ServingView() {
                 <button 
                   key={p.id} 
                   onClick={() => handleQuickAssign(p)}
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "6px 12px", borderRadius: "20px", color: "white", fontSize: "0.75rem", cursor: "pointer", display: "flex", gap: 6, alignItems: "center" }}
+                  style={{ background: "white", border: "1px solid var(--alvo-line)", padding: "6px 12px", borderRadius: "20px", color: "var(--alvo-ink)", fontSize: "0.75rem", cursor: "pointer", display: "flex", gap: 6, alignItems: "center" }}
                 >
                   + {getFullName(p)}
                 </button>
@@ -736,38 +736,38 @@ export function ServingView() {
         <aside style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           
           {/* PAINEL DE ADICIONAR PESSOA */}
-          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1.1rem", color: "white", fontWeight: 800, marginBottom: "1rem" }}>Novo Voluntário</h3>
+          <div className="panel" style={{ padding: "1.5rem" }}>
+            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Novo Voluntário</h3>
             <form onSubmit={handleServantRegistration} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Nome Completo
                 <input
                   required
                   placeholder="Nome do voluntário"
                   value={servantDraft.name}
                   onChange={e => setServantDraft(prev => ({ ...prev, name: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 WhatsApp
                 <input
                   required
                   placeholder="(00) 00000-0000"
                   value={servantDraft.phone}
                   onChange={e => setServantDraft(prev => ({ ...prev, phone: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Função da Escala
                 <input
                   placeholder="Ex: Recepção Lateral"
                   value={servantDraft.role}
                   onChange={e => setServantDraft(prev => ({ ...prev, role: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
@@ -781,16 +781,16 @@ export function ServingView() {
           </div>
 
           {/* HISTÓRICO DE AUDITORIA DE ESCALAS (Scale Activity Audit Trail) */}
-          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "1.5rem" }}>
+          <div className="panel" style={{ padding: "1.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-              <FileText size={16} style={{ color: "#f97316" }} />
-              <h3 style={{ fontSize: "1.1rem", color: "white", fontWeight: 800, margin: 0 }}>Histórico da Escala</h3>
+              <FileText size={16} style={{ color: "var(--alvo-accent)" }} />
+              <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, margin: 0 }}>Histórico da Escala</h3>
             </div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "250px", overflowY: "auto", paddingRight: 4 }}>
               {auditLogs.map((log, idx) => (
-                <div key={idx} style={{ fontSize: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "6px" }}>
-                  <span style={{ color: "#f97316", fontWeight: 800 }}>{log.time}</span> - <span style={{ color: "#cbd5e1" }}>{log.text}</span>
+                <div key={idx} style={{ fontSize: "0.75rem", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "6px" }}>
+                  <span style={{ color: "var(--alvo-accent)", fontWeight: 800 }}>{log.time}</span> - <span style={{ color: "var(--alvo-ink-soft)" }}>{log.text}</span>
                 </div>
               ))}
             </div>
@@ -801,38 +801,38 @@ export function ServingView() {
 
       {/* WHATSAPP REMINDER DRAWER / MODAL SIMULATOR */}
       {selectedAssignmentForReminder && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "2rem" }}>
-          <div style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "24px", padding: "2rem", maxWidth: "500px", width: "100%", margin: "auto" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(15, 23, 42, 0.35)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "2rem" }}>
+          <div style={{ background: "rgba(255, 255, 255, 0.8)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.5)", borderRadius: "24px", padding: "2rem", maxWidth: "500px", width: "100%", margin: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h3 style={{ color: "white", fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
+              <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
                 Disparador de Lembrete WhatsApp
               </h3>
               <button 
                 onClick={() => setSelectedAssignmentForReminder(null)}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", cursor: "pointer", borderRadius: "8px", padding: "4px" }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
               Personalize a mensagem abaixo antes de disparar o WhatsApp automático para o voluntário pendente.
             </p>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, color: "#cbd5e1", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 6, color: "var(--alvo-ink)", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
               Template da Mensagem
               <textarea 
                 value={whatsappTemplate}
                 onChange={e => setWhatsappTemplate(e.target.value)}
                 rows={4}
-                style={{ width: "100%", padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none", resize: "none" }}
+                style={{ width: "100%", padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none", resize: "none" }}
               />
             </label>
 
             <div style={{ display: "flex", gap: "1rem" }}>
               <button 
                 onClick={() => setSelectedAssignmentForReminder(null)}
-                style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "10px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                style={{ flex: 1, background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "10px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
               >
                 Cancelar
               </button>

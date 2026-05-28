@@ -172,16 +172,16 @@ export function KidsLeaderView() {
   const activeCheckedInCount = kidsList.filter(k => k.status === "checked_in").length;
 
   return (
-    <main className="kids-leader-workbench" style={{ background: "#070c14", color: "#f8fafc", minHeight: "100vh", padding: "2rem" }}>
+    <main className="kids-leader-workbench" style={{ minHeight: "100vh", padding: "2rem" }}>
       
       {/* HEADER TOPBAR (Futuristic Security Style) */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <Link href="/" style={{ color: "#f97316", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
+          <Link href="/" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
             ← Voltar ao painel principal
           </Link>
-          <p className="eyebrow" style={{ color: "#f97316", marginTop: "1rem" }}>Lounge Kids & Segurança Ativa</p>
-          <h1 style={{ color: "white", fontSize: "2rem", fontWeight: 950, letterSpacing: "-0.03em", margin: "4px 0" }}>
+          <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Lounge Kids &amp; Segurança Ativa</p>
+          <h1 style={{ color: "var(--alvo-ink)", fontSize: "2rem", fontWeight: 950, letterSpacing: "-0.03em", margin: "4px 0" }}>
             Operação Kids Alvo
           </h1>
         </div>
@@ -199,30 +199,30 @@ export function KidsLeaderView() {
           
           {/* STATS & QUICK ACTIONS ROW */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
-            <div style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Presentes Agora</span>
-              <strong style={{ fontSize: "2rem", color: "white" }}>{activeCheckedInCount}</strong>
-              <p style={{ color: "#64748b", fontSize: "0.7rem" }}>crianças sob cuidado pastoral</p>
+            <div className="panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Presentes Agora</span>
+              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{activeCheckedInCount}</strong>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>crianças sob cuidado pastoral</p>
             </div>
             
-            <div style={{ background: "rgba(30, 41, 59, 0.25)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Vagas das Salas</span>
-              <strong style={{ fontSize: "2rem", color: "white" }}>15</strong>
-              <p style={{ color: "#64748b", fontSize: "0.7rem" }}>capacidade técnica recomendada</p>
+            <div className="panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Vagas das Salas</span>
+              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>15</strong>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>capacidade técnica recomendada</p>
             </div>
 
             <button 
               onClick={() => setView("checkin")}
-              style={{ background: "rgba(249, 115, 22, 0.15)", border: "1px solid rgba(249, 115, 22, 0.25)", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
+              style={{ background: "rgba(249, 115, 22, 0.1)", border: "1px solid rgba(249, 115, 22, 0.25)", color: "var(--alvo-ink)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer", backdropFilter: "blur(20px)", boxShadow: "var(--alvo-shadow-airy)" }}
             >
-              <Plus size={24} style={{ color: "#f97316" }} />
+              <Plus size={24} style={{ color: "var(--alvo-accent)" }} />
               <strong style={{ fontSize: "1.1rem", marginTop: 4 }}>Check-in Lounge</strong>
-              <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Cadastrar nova criança de entrada</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>Cadastrar nova criança de entrada</span>
             </button>
 
             <button 
               onClick={handleStartScan}
-              style={{ background: "#f97316", border: "none", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
+              style={{ background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
             >
               <Scan size={24} />
               <strong style={{ fontSize: "1.1rem", marginTop: 4 }}>Escanear Token QR</strong>
@@ -233,16 +233,16 @@ export function KidsLeaderView() {
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
             
             {/* TABELA DE PRESENTES */}
-            <article style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "2rem" }}>
+            <article className="panel" style={{ padding: "2rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
-                <h2 style={{ fontSize: "1.25rem", color: "white", fontWeight: 800, margin: 0 }}>Crianças Ativas nas Salas</h2>
+                <h2 style={{ fontSize: "1.25rem", color: "var(--alvo-ink)", fontWeight: 800, margin: 0 }}>Crianças Ativas nas Salas</h2>
                 <div style={{ position: "relative" }}>
-                  <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                  <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
                   <input 
                     placeholder="Filtrar criança ou responsável..." 
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    style={{ padding: "6px 10px 6px 30px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "white", fontSize: "0.8rem", outline: "none" }}
+                    style={{ padding: "6px 10px 6px 30px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
               </div>
@@ -253,8 +253,8 @@ export function KidsLeaderView() {
                     <div 
                       key={kid.id} 
                       style={{ 
-                        background: kid.status === "checked_out" ? "rgba(255,255,255,0.02)" : "rgba(30, 41, 59, 0.2)", 
-                        border: "1px solid rgba(255, 255, 255, 0.05)", 
+                        background: kid.status === "checked_out" ? "rgba(15, 23, 42, 0.03)" : "rgba(15, 23, 42, 0.04)", 
+                        border: "1px solid var(--alvo-line)", 
                         borderRadius: "16px", 
                         padding: "1rem 1.25rem",
                         display: "flex",
@@ -264,8 +264,8 @@ export function KidsLeaderView() {
                     >
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <strong style={{ color: kid.status === "checked_out" ? "#64748b" : "white", fontSize: "1rem" }}>{kid.name}</strong>
-                          <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>({kid.age} anos)</span>
+                          <strong style={{ color: kid.status === "checked_out" ? "var(--alvo-ink-soft)" : "var(--alvo-ink)", fontSize: "1rem" }}>{kid.name}</strong>
+                          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>({kid.age} anos)</span>
                           
                           {/* Alert marker for lactose/peanut allergies */}
                           {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
@@ -275,8 +275,8 @@ export function KidsLeaderView() {
                           )}
                         </div>
 
-                        <p style={{ color: "#64748b", fontSize: "0.75rem", margin: "4px 0 0" }}>
-                          Responsável: <strong style={{ color: "#cbd5e1" }}>{kid.parentName}</strong> • Entrada: {kid.checkInTime}
+                        <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", margin: "4px 0 0" }}>
+                          Responsável: <strong style={{ color: "var(--alvo-ink)" }}>{kid.parentName}</strong> • Entrada: {kid.checkInTime}
                         </p>
 
                         {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
@@ -293,18 +293,18 @@ export function KidsLeaderView() {
                               setScannedChild(kid);
                               setView("checkout");
                             }}
-                            style={{ background: "#f97316", border: "none", color: "white", padding: "6px 12px", borderRadius: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+                            style={{ background: "var(--alvo-accent)", border: "none", color: "white", padding: "6px 12px", borderRadius: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
                           >
                             Retirada Segura
                           </button>
                         ) : (
-                          <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 700 }}>✓ Entregue</span>
+                          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>✓ Entregue</span>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div style={{ textAlign: "center", padding: "3rem", background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "20px", color: "#64748b" }}>
+                  <div style={{ textAlign: "center", padding: "3rem", background: "rgba(15, 23, 42, 0.03)", border: "1px dashed var(--alvo-line)", borderRadius: "20px", color: "var(--alvo-ink-soft)" }}>
                     Nenhuma criança cadastrada nas salas no momento.
                   </div>
                 )}
@@ -312,15 +312,15 @@ export function KidsLeaderView() {
             </article>
 
             {/* AUDITORIA DE SEGURANÇA (Kids Security Audit Trail) */}
-            <aside style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "24px", padding: "1.5rem" }}>
+            <aside className="panel" style={{ padding: "1.5rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.25rem" }}>
-                <Activity size={16} style={{ color: "#f97316" }} />
-                <h3 style={{ fontSize: "1.1rem", color: "white", fontWeight: 800, margin: 0 }}>Histórico de Movimentação</h3>
+                <Activity size={16} style={{ color: "var(--alvo-accent)" }} />
+                <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, margin: 0 }}>Histórico de Movimentação</h3>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "350px", overflowY: "auto", paddingRight: 4 }}>
                 {securityLogs.map((log, index) => (
-                  <div key={index} style={{ fontSize: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "8px" }}>
-                    <span style={{ color: "#f97316", fontWeight: 700 }}>{log.time}</span> - <span style={{ color: "#cbd5e1" }}>{log.text}</span>
+                  <div key={index} style={{ fontSize: "0.75rem", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "8px" }}>
+                    <span style={{ color: "var(--alvo-accent)", fontWeight: 700 }}>{log.time}</span> - <span style={{ color: "var(--alvo-ink)" }}>{log.text}</span>
                   </div>
                 ))}
               </div>
@@ -332,28 +332,28 @@ export function KidsLeaderView() {
       {/* VIEW: CHECK-IN LOUNGE TERMINAL */}
       {view === "checkin" && (
         <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255,255,255,0.08)", padding: "2.5rem", borderRadius: "24px", width: "100%", maxWidth: "550px" }}>
-            <h2 style={{ color: "white", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
+            <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
               👶 Lounge de Entrada Expressa
             </h2>
-            <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
               Cadastre a criança na recepção de entrada. Especifique qualquer necessidade alimentar, médica ou restrição de entrega de familiares.
             </p>
 
             <form onSubmit={handleCheckinSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Nome da Criança
                 <input 
                   required
                   placeholder="Nome completo"
                   value={newKidDraft.name}
                   onChange={e => setNewKidDraft(prev => ({ ...prev, name: e.target.value }))}
-                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Idade
                   <input 
                     required
@@ -361,39 +361,39 @@ export function KidsLeaderView() {
                     placeholder="Ex: 5"
                     value={newKidDraft.age}
                     onChange={e => setNewKidDraft(prev => ({ ...prev, age: e.target.value }))}
-                    style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                    style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                   />
                 </label>
 
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Responsável pela Entrada
                   <input 
                     required
                     placeholder="Nome do Pai/Mãe"
                     value={newKidDraft.parentName}
                     onChange={e => setNewKidDraft(prev => ({ ...prev, parentName: e.target.value }))}
-                    style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                    style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                   />
                 </label>
               </div>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Alergias / Necessidades Médicas
                 <input 
                   placeholder="Ex: Alergia severa a amendoim (deixar em branco se nenhuma)"
                   value={newKidDraft.allergies}
                   onChange={e => setNewKidDraft(prev => ({ ...prev, allergies: e.target.value }))}
-                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "#94a3b8" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Restrições de Retirada (Segurança)
                 <input 
                   placeholder="Ex: Tio Ricardo não está autorizado a retirar"
                   value={newKidDraft.securityRestrictions}
                   onChange={e => setNewKidDraft(prev => ({ ...prev, securityRestrictions: e.target.value }))}
-                  style={{ padding: "10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", color: "white", outline: "none" }}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
               </label>
 
@@ -401,15 +401,15 @@ export function KidsLeaderView() {
                 <button 
                   type="button"
                   onClick={() => setView("list")}
-                  style={{ flex: 1, padding: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "white", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                  style={{ flex: 1, padding: "12px", border: "1px solid var(--alvo-line)", background: "white", color: "var(--alvo-ink)", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  style={{ flex: 1, padding: "12px", background: "#f97316", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
+                  style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                 >
-                  Imprimir Crachá & Check-in
+                  Imprimir Crachá &amp; Check-in
                 </button>
               </div>
             </form>
@@ -420,9 +420,9 @@ export function KidsLeaderView() {
       {/* VIEW: SIMULADOR DE SCANNER QR CODE COM ANIMAÇÕES */}
       {view === "scan" && (
         <section style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 0" }}>
-          <div style={{ background: "#0a0f1d", border: "2px solid rgba(255,255,255,0.1)", borderRadius: "24px", padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
+          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
             
-            <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "black", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid rgba(249, 115, 22, 0.3)" }}>
+            <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", backgroundColor: "rgba(15, 23, 42, 0.04)", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--alvo-line)" }}>
               
               {/* Target Scan Laser */}
               {isScanning && (
@@ -431,17 +431,17 @@ export function KidsLeaderView() {
                   left: 0, 
                   width: "100%", 
                   height: "3px", 
-                  background: "#f97316", 
-                  boxShadow: "0 0 15px #f97316",
+                  background: "var(--alvo-accent)", 
+                  boxShadow: "0 0 15px var(--alvo-accent)",
                   animation: "scanLineAnim 2s infinite"
                 }}></div>
               )}
 
               {isScanning ? (
                 <div>
-                  <Camera size={40} style={{ color: "#64748b", margin: "0 auto 12px" }} />
-                  <p style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>Ajustando o foco da câmera do terminal...</p>
-                  <p style={{ color: "#f97316", fontSize: "0.75rem", marginTop: 4, fontWeight: 700 }}>Posicione o QR Code da pulseira/smartphone dos pais</p>
+                  <Camera size={40} style={{ color: "var(--alvo-ink-soft)", margin: "0 auto 12px" }} />
+                  <p style={{ color: "var(--alvo-ink)", fontSize: "0.85rem" }}>Ajustando o foco da câmera do terminal...</p>
+                  <p style={{ color: "var(--alvo-accent)", fontSize: "0.75rem", marginTop: 4, fontWeight: 700 }}>Posicione o QR Code da pulseira/smartphone dos pais</p>
                 </div>
               ) : scannedChild ? (
                 <div style={{ padding: "2rem" }}>
@@ -453,14 +453,14 @@ export function KidsLeaderView() {
                   )}
 
                   <CheckCircle2 size={54} style={{ color: "#10b981", margin: "0 auto 12px" }} />
-                  <h3 style={{ color: "white", fontSize: "1.2rem", fontWeight: 800 }}>Token Seguro Confirmado</h3>
-                  <p style={{ color: "#cbd5e1", fontSize: "0.85rem", marginTop: 4 }}>
-                    Criança identificada: <strong style={{ color: "white" }}>{scannedChild.name}</strong>
+                  <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.2rem", fontWeight: 800 }}>Token Seguro Confirmado</h3>
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 4 }}>
+                    Criança identificada: <strong style={{ color: "var(--alvo-ink)" }}>{scannedChild.name}</strong>
                   </p>
                   
                   <button 
                     onClick={() => setView("checkout")}
-                    style={{ background: "#f97316", border: "none", color: "white", padding: "10px 20px", borderRadius: "10px", fontSize: "0.85rem", fontWeight: 800, marginTop: 20, cursor: "pointer" }}
+                    style={{ background: "var(--alvo-accent)", border: "none", color: "white", padding: "10px 20px", borderRadius: "10px", fontSize: "0.85rem", fontWeight: 800, marginTop: 20, cursor: "pointer" }}
                   >
                     Abrir Protocolo de Retirada →
                   </button>
@@ -470,7 +470,7 @@ export function KidsLeaderView() {
 
             <button 
               onClick={() => setView("list")}
-              style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "8px 20px", borderRadius: "10px", fontSize: "0.8rem", marginTop: 20, cursor: "pointer" }}
+              style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 20px", borderRadius: "10px", fontSize: "0.8rem", marginTop: 20, cursor: "pointer" }}
             >
               Cancelar Scanner
             </button>
@@ -489,31 +489,31 @@ export function KidsLeaderView() {
       {/* VIEW: PROTOCOLO DE RETIRADA RIGIDO (CHECKOUT) */}
       {view === "checkout" && scannedChild && (
         <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-          <div style={{ background: "rgba(30, 41, 59, 0.3)", border: "1px solid rgba(255,255,255,0.08)", padding: "2.5rem", borderRadius: "24px", width: "100%", maxWidth: "550px" }}>
+          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
             
-            <div style={{ textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
-              <ShieldCheck size={40} style={{ color: "#f97316", margin: "0 auto 8px" }} />
-              <h2 style={{ color: "white", fontSize: "1.5rem", fontWeight: 900, margin: 0 }}>Protocolo de Retirada Rígido</h2>
-              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Código do Token de Segurança: SEC-MATCH-092-29</span>
+            <div style={{ textAlign: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
+              <ShieldCheck size={40} style={{ color: "var(--alvo-accent)", margin: "0 auto 8px" }} />
+              <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.5rem", fontWeight: 900, margin: 0 }}>Protocolo de Retirada Rígido</h2>
+              <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Código do Token de Segurança: SEC-MATCH-092-29</span>
             </div>
 
             {/* Entity Child summary */}
             <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Criança</span>
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px", borderRadius: "16px", display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
-                <Baby size={28} style={{ color: "#f97316" }} />
+              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Criança</span>
+              <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px 16px", borderRadius: "16px", display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
+                <Baby size={28} style={{ color: "var(--alvo-accent)" }} />
                 <div>
-                  <strong style={{ color: "white", display: "block" }}>{scannedChild.name}</strong>
-                  <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>{scannedChild.age} anos • Sala de Escolinha 02</span>
+                  <strong style={{ color: "var(--alvo-ink)", display: "block" }}>{scannedChild.name}</strong>
+                  <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem" }}>{scannedChild.age} anos • Sala de Escolinha 02</span>
                 </div>
               </div>
             </div>
 
             {/* Authorized Guardians with simulated match confirmation */}
             <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Pais / Responsáveis Autorizados</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Pais / Responsáveis Autorizados</span>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: 6 }}>
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1.5px dashed rgba(255,255,255,0.1)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: "0.9rem" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1.5px dashed var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
                   <UserCheck size={16} style={{ color: "#10b981" }} />
                   <div>
                     <strong>{scannedChild.parentName}</strong>
@@ -527,7 +527,7 @@ export function KidsLeaderView() {
             {scannedChild.allergies && scannedChild.allergies !== "Nenhuma" && (
               <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
                 <span style={{ color: "#ef4444", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>ATENÇÃO MÉDICA CRÍTICA:</span>
-                <p style={{ color: "#cbd5e1", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.allergies}</p>
+                <p style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.allergies}</p>
               </div>
             )}
 
@@ -535,7 +535,7 @@ export function KidsLeaderView() {
             {scannedChild.securityRestrictions && scannedChild.securityRestrictions !== "Nenhuma" && (
               <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
                 <span style={{ color: "#f59e0b", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>RESTRIÇÃO DE SEGURANÇA ATIVA:</span>
-                <p style={{ color: "#cbd5e1", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.securityRestrictions}</p>
+                <p style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.securityRestrictions}</p>
               </div>
             )}
 
@@ -553,7 +553,7 @@ export function KidsLeaderView() {
                       setView("list");
                       setScannedChild(null);
                     }}
-                    style={{ flex: 1, padding: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "white", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                    style={{ flex: 1, padding: "12px", border: "1px solid var(--alvo-line)", background: "white", color: "var(--alvo-ink)", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
                   >
                     Cancelar
                   </button>
@@ -561,7 +561,7 @@ export function KidsLeaderView() {
                   <button 
                     onClick={handleCheckout}
                     disabled={checkoutStatus === "pending"}
-                    style={{ flex: 1, padding: "12px", background: "#f97316", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
+                    style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                   >
                     {checkoutStatus === "pending" ? "Validando Token..." : "Confirmar Liberação"}
                   </button>
