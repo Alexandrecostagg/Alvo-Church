@@ -22,11 +22,16 @@
   --alvo-field-bg-focus: #ffffff;
   --alvo-field-ring: rgba(249, 115, 22, 0.26);
 
-  /* New Premium Tokens */
-  --glow-accent: rgba(249, 115, 22, 0.4);
-  --glow-blue: rgba(37, 99, 235, 0.35);
-  --glass-bg: rgba(255, 255, 255, 0.72);
+  /* New Premium Tokens for Glassmorphism & UX */
+  --glow-accent: rgba(249, 115, 22, 0.15);
+  --glow-accent-strong: rgba(249, 115, 22, 0.3);
+  --glow-blue: rgba(37, 99, 235, 0.15);
+  --glass-bg: rgba(255, 255, 255, 0.45);
   --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-border-hover: rgba(249, 115, 22, 0.25);
+  --alvo-shadow-airy: 0 12px 30px -4px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02);
+  --alvo-shadow-airy-strong: 0 20px 40px -4px rgba(15, 23, 42, 0.08), 0 8px 20px -4px rgba(15, 23, 42, 0.04);
+  --alvo-transition-creamy: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -98,14 +103,15 @@ code {
   position: sticky;
   top: 0;
   height: 100vh;
-  padding: 22px 18px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border-right: 1px solid var(--alvo-line);
+  gap: 28px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 4px 0 30px rgba(15, 23, 42, 0.02);
   z-index: 50;
 }
 
@@ -142,29 +148,64 @@ code {
 }
 
 .app-nav-item {
-  min-height: 42px;
+  position: relative;
+  min-height: 44px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 0 14px;
   border-radius: 10px;
   color: var(--alvo-ink-soft);
   font-size: 14px;
   font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--alvo-transition-creamy);
+}
+
+.app-nav-item svg {
+  transition: var(--alvo-transition-creamy);
+}
+
+.app-nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 3px;
+  background: var(--alvo-accent);
+  border-radius: 99px;
+  transform: scaleY(0);
+  opacity: 0;
+  transition: var(--alvo-transition-creamy);
 }
 
 .app-nav-item.is-active {
-  background: #111827;
-  color: #ffffff;
-  box-shadow: 0 10px 20px -5px rgba(17, 24, 39, 0.3);
-  transform: translateX(4px);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.09) 0%, rgba(37, 99, 235, 0.03) 100%);
+  color: var(--alvo-accent-dark);
+  box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.12);
+  transform: translateX(6px);
+}
+
+.app-nav-item.is-active::before {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.app-nav-item.is-active svg {
+  color: var(--alvo-accent);
+  filter: drop-shadow(0 2px 8px rgba(249, 115, 22, 0.25));
+  transform: scale(1.05);
 }
 
 .app-nav-item:not(.is-active):hover {
-  background: rgba(17, 24, 39, 0.05);
+  background: rgba(249, 115, 22, 0.04);
   color: var(--alvo-ink);
-  transform: translateX(2px);
+  transform: translateX(3px);
+}
+
+.app-nav-item:not(.is-active):hover svg {
+  color: var(--alvo-accent);
+  transform: scale(1.1);
 }
 
 .sidebar-status {
@@ -522,21 +563,22 @@ code {
 .momentum-card,
 .panel,
 .metric-card {
-  border: 1px solid var(--alvo-line);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 24px;
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: var(--alvo-shadow);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--alvo-shadow-airy);
+  transition: var(--alvo-transition-creamy);
 }
 
 .mission-board:hover,
 .momentum-card:hover,
 .panel:hover,
 .metric-card:hover {
-  box-shadow: var(--alvo-shadow-strong);
-  border-color: rgba(249, 115, 22, 0.2);
+  box-shadow: var(--alvo-shadow-airy-strong), 0 0 0 1px rgba(249, 115, 22, 0.1);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
 }
 
 .antigravity-float {

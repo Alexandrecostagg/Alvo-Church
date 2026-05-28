@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { KidsLeaderView } from "../../../../src/features/kids/kids-leader-view";
 
 export default function KidsScanPage() {

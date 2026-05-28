@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { WorshipView } from "../../../../src/features/serving/worship-view";
 
 export default function Page() {

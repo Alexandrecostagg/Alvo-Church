@@ -1,7 +1,11 @@
 "use client";
 
-export const runtime = 'edge';
-import { DashboardView } from "../../src/features/dashboard/dashboard-view";
+import dynamic from "next/dynamic";
+
+const DashboardView = dynamic(
+  () => import("../../src/features/dashboard/dashboard-view").then((mod) => mod.DashboardView),
+  { ssr: false }
+);
 
 export default function HomePage() {
   return <DashboardView />;

@@ -8,17 +8,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import {
-  createFirebaseWebRuntimeConfigFromEnv,
-  ensureTenantUserAccess,
-  fetchTenantRuntimeSnapshot,
-  isFirebaseWebRuntimeConfigured,
-  signInWithFirebaseEmailPassword,
-  signOutFromFirebase,
-  subscribeToFirebaseAuthState,
-  type FirebaseAuthUser,
-  type FirebaseWebRuntimeConfig
-} from "@alvo/firebase";
+import type { FirebaseAuthUser, FirebaseWebRuntimeConfig } from "@alvo/firebase";
 import type { TenantRuntimeSnapshot } from "@alvo/types";
 
 interface AuthContextValue {
@@ -36,6 +26,26 @@ interface AuthContextValue {
 const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Local, server-safe versions of Firebase config helpers to avoid loading SDK at module evaluation
+function createFirebaseWebRuntimeConfigFromEnv(
+  env: Record<string, string | undefined>
+): FirebaseWebRuntimeConfig {
+  return {
+    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
+  };
+}
+
+function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
+  const fields = ["apiKey", "authDomain", "projectId", "storageBucket"] as const;
+  return fields.every((field) => !!config[field]);
+}
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
@@ -68,12 +78,26 @@ export function AppProviders({ children }: { children: ReactNode }) {
       return;
     }
 
-    const unsubscribe = subscribeToFirebaseAuthState(firebaseConfig, (nextUser) => {
-      setUser(nextUser);
-      setFirebaseReady(true);
-    });
+    let unsubscribe: (() => void) | null = null;
+    let active = true;
 
-    return () => unsubscribe();
+    async function init() {
+      const sdk = await import("@alvo/firebase");
+      if (!active) return;
+      unsubscribe = sdk.subscribeToFirebaseAuthState(firebaseConfig, (nextUser) => {
+        setUser(nextUser);
+        setFirebaseReady(true);
+      });
+    }
+
+    void init();
+
+    return () => {
+      active = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [configured, firebaseConfig]);
 
   useEffect(() => {
@@ -88,14 +112,17 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
     async function loadTenantRuntime() {
       try {
-        await ensureTenantUserAccess(firebaseConfig, {
+        const sdk = await import("@alvo/firebase");
+        if (cancelled) return;
+
+        await sdk.ensureTenantUserAccess(firebaseConfig, {
           organizationId,
           userId: currentUser.uid,
           email: currentUser.email ?? "",
           roles: ["church_admin"]
         });
 
-        const snapshot = await fetchTenantRuntimeSnapshot(firebaseConfig, {
+        const snapshot = await sdk.fetchTenantRuntimeSnapshot(firebaseConfig, {
           organizationId
         });
 
@@ -135,7 +162,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
             throw new Error("Firebase nao configurado.");
           }
 
-          await signInWithFirebaseEmailPassword({
+          const sdk = await import("@alvo/firebase");
+          await sdk.signInWithFirebaseEmailPassword({
             config: firebaseConfig,
             email,
             password
@@ -146,7 +174,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
             return;
           }
 
-          await signOutFromFirebase(firebaseConfig);
+          const sdk = await import("@alvo/firebase");
+          await sdk.signOutFromFirebase(firebaseConfig);
         }
       }}
     >
