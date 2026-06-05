@@ -905,19 +905,19 @@ export function JourneysView() {
       <section className="journey-detail-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem", marginTop: "3rem" }}>
         
         {/* Painel Central do Membro Selecionado */}
-        <article className="journey-detail-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: 24, padding: "2.5rem" }}>
+        <article className="journey-detail-card" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2.5rem" }}>
           
           {selectedPerson ? (
             <>
               {/* Header do Membro */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
                 <div>
-                  <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Membro em Foco</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Membro em Foco</span>
                   <h2 style={{ fontSize: "1.75rem", fontWeight: 900, color: "white", marginTop: 4 }}>
                     {getFullName(selectedPerson)}
                   </h2>
                 </div>
-                <Link className="soft-pill" href={`/members/${selectedPerson.id}`} style={{ backgroundColor: "rgba(249,115,22,0.15)", color: "#f97316", padding: "8px 16px", borderRadius: 12, fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}>
+                <Link className="soft-pill" href={`/members/${selectedPerson.id}`} style={{ backgroundColor: "var(--alvo-blue-soft)", color: "var(--alvo-blue)", padding: "8px 16px", borderRadius: 12, fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}>
                   Abrir Ficha Completa
                 </Link>
               </div>
@@ -959,10 +959,10 @@ export function JourneysView() {
               )}
 
               {/* 💬 COPILOTO DE WHATSAPP (Live Script Editor) */}
-              <div style={{ backgroundColor: "#0f172a", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
+              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                   <div>
-                    <span style={{ fontSize: "0.7rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Copiloto de Mensagens</span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Copiloto de Mensagens</span>
                     <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "white", marginTop: 2 }}>Disparar Acolhimento Reativo</h3>
                   </div>
                   <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -970,14 +970,14 @@ export function JourneysView() {
                   </span>
                 </div>
 
-                {/* Seleção de Templates */}
+                {/* Editor reativo da mensagem */}
                 <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
                   {messageTemplates.map((template, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedTemplateIndex(idx)}
                       style={{
-                        backgroundColor: selectedTemplateIndex === idx ? "#f97316" : "rgba(255,255,255,0.05)",
+                        backgroundColor: selectedTemplateIndex === idx ? "var(--alvo-blue)" : "rgba(255,255,255,0.05)",
                         border: "none",
                         borderRadius: 8,
                         padding: "6px 12px",
@@ -1061,8 +1061,8 @@ export function JourneysView() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2.5rem" }}>
                 
                 {/* Linha do Tempo */}
-                <div style={{ backgroundColor: "rgba(30,41,59,0.15)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "1.5rem" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Evolução de Estágio</span>
+                <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Evolução de Estágio</span>
                   <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 4, marginBottom: "1rem" }}>Passos Concluídos</h4>
                   
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -1072,7 +1072,7 @@ export function JourneysView() {
                           width: 18, 
                           height: 18, 
                           borderRadius: "50%", 
-                          backgroundColor: step.state === "done" ? "#10b981" : step.state === "active" ? "#f97316" : "#1e293b",
+                          backgroundColor: step.state === "done" ? "#10b981" : step.state === "active" ? "var(--alvo-blue)" : "rgba(255,255,255,0.1)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1093,19 +1093,19 @@ export function JourneysView() {
                 {/* Prontidão para Membresia Checklist */}
                 {selectedReadiness && (
                   <div style={{ 
-                    backgroundColor: selectedReadiness.percent === 100 ? "rgba(16,185,129,0.05)" : "rgba(30,41,59,0.15)", 
-                    border: selectedReadiness.percent === 100 ? "1.5px solid #10b981" : "1px solid rgba(255,255,255,0.05)", 
+                    backgroundColor: selectedReadiness.percent === 100 ? "rgba(16,185,129,0.05)" : "var(--glass-bg)", 
+                    border: selectedReadiness.percent === 100 ? "1.5px solid #10b981" : "1px solid var(--alvo-line)", 
                     borderRadius: 20, 
                     padding: "1.5rem" 
                   }}>
-                    <span style={{ fontSize: "0.75rem", color: selectedReadiness.percent === 100 ? "#10b981" : "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Prontidão de Membresia</span>
+                    <span style={{ fontSize: "0.75rem", color: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Prontidão de Membresia</span>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
                       <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}>Cópia da Ficha</h4>
-                      <strong style={{ color: selectedReadiness.percent === 100 ? "#10b981" : "#f97316" }}>{selectedReadiness.percent}%</strong>
+                      <strong style={{ color: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)" }}>{selectedReadiness.percent}%</strong>
                     </div>
                     {/* Meter */}
                     <div style={{ width: "100%", height: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden", marginTop: 10, marginBottom: 12 }}>
-                      <div style={{ width: `${selectedReadiness.percent}%`, height: "100%", backgroundColor: selectedReadiness.percent === 100 ? "#10b981" : "#f97316" }} />
+                      <div style={{ width: `${selectedReadiness.percent}%`, height: "100%", backgroundColor: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)" }} />
                     </div>
 
                     <div style={{ maxHeight: 90, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1121,8 +1121,8 @@ export function JourneysView() {
               </div>
 
               {/* Plano Recomendado & Próximos Passos */}
-              <div style={{ backgroundColor: "rgba(30,41,59,0.15)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
-                <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Ações Sugeridas</span>
+              <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Ações Sugeridas</span>
                 <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 4, marginBottom: "1rem" }}>Próximas Intervenções Recomendadas</h4>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -1133,10 +1133,10 @@ export function JourneysView() {
                         display: "flex", 
                         justifyContent: "space-between", 
                         alignItems: "center", 
-                        backgroundColor: "rgba(30,41,59,0.4)", 
+                        backgroundColor: "rgba(255,255,255,0.02)", 
                         padding: "10px 16px", 
                         borderRadius: 12,
-                        border: "1px solid rgba(255,255,255,0.03)"
+                        border: "1px solid var(--alvo-line)"
                       }}
                     >
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -1159,9 +1159,9 @@ export function JourneysView() {
                         <button
                           onClick={() => void handleCarePlanAction(step)}
                           style={{
-                            backgroundColor: "rgba(249,115,22,0.1)",
-                            border: "1px solid rgba(249,115,22,0.2)",
-                            color: "#f97316",
+                            backgroundColor: "var(--alvo-blue-soft)",
+                            border: "1px solid rgba(6, 182, 212, 0.2)",
+                            color: "var(--alvo-blue)",
                             padding: "6px 12px",
                             borderRadius: 8,
                             fontSize: "0.75rem",
@@ -1206,7 +1206,7 @@ export function JourneysView() {
                   <button 
                     onClick={() => void handleAdvanceJourney()} 
                     style={{ 
-                      backgroundColor: "#f97316", 
+                      backgroundColor: "var(--alvo-blue)", 
                       color: "white", 
                       border: "none", 
                       borderRadius: 8, 
@@ -1298,10 +1298,10 @@ export function JourneysView() {
         <aside style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           
           {/* ACOMPANHAMENTO TASKS */}
-          <div style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: 24, padding: "2rem" }}>
+          <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <div>
-                <span style={{ fontSize: "0.75rem", color: "#f97316", textTransform: "uppercase", fontWeight: 800 }}>Pendências</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Pendências</span>
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "white", marginTop: 2 }}>Tarefas de Acompanhamento</h3>
               </div>
               <span style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
@@ -1315,10 +1315,10 @@ export function JourneysView() {
                   <div 
                     key={task.id} 
                     style={{ 
-                      backgroundColor: "rgba(30, 41, 59, 0.3)", 
+                      backgroundColor: "rgba(255, 255, 255, 0.02)", 
                       padding: "1rem", 
                       borderRadius: 16, 
-                      border: "1px solid rgba(255,255,255,0.04)" 
+                      border: "1px solid var(--alvo-line)" 
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -1330,8 +1330,8 @@ export function JourneysView() {
                       </div>
                       <span style={{ 
                         fontSize: "0.65rem", 
-                        backgroundColor: "rgba(249,115,22,0.1)", 
-                        color: "#f97316", 
+                        backgroundColor: "var(--alvo-blue-soft)", 
+                        color: "var(--alvo-blue)", 
                         padding: "2px 6px", 
                         borderRadius: 6,
                         fontWeight: 700 
@@ -1406,12 +1406,12 @@ export function JourneysView() {
                 
                 {/* Chat Header */}
                 <div className="phone-chat-header">
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f97316", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.75rem", fontWeight: 700 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--alvo-blue)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.75rem", fontWeight: 700 }}>
                     {getInitials(getFullName(selectedPerson))}
                   </div>
                   <div style={{ flex: 1, marginLeft: 8 }}>
                     <strong style={{ display: "block", color: "white", fontSize: "0.75rem" }}>{getFullName(selectedPerson)}</strong>
-                    <span style={{ fontSize: "0.6rem", color: "#10b981", display: "block" }}>online</span>
+                    <span style={{ fontSize: "0.6", color: "#10b981", display: "block" }}>online</span>
                   </div>
                   <span style={{ fontSize: "0.8rem" }}>📞 ⚙️</span>
                 </div>
@@ -1445,16 +1445,15 @@ export function JourneysView() {
 
       </section>
 
-      {/* Global & Page level overrides */}
       <style jsx global>{`
         body, .main-content, .app-container {
-          background-color: #0b0f19 !important;
+          background-color: transparent !important;
         }
       `}</style>
 
       <style jsx>{`
         .journeys-page {
-          background: #0b0f19 !important;
+          background: transparent !important;
           color: #f8fafc !important;
           min-height: 100vh;
         }
@@ -1476,16 +1475,16 @@ export function JourneysView() {
         }
 
         .back-link:hover {
-          border-color: #f97316;
+          border-color: var(--alvo-blue);
           color: white;
-          background: rgba(249, 115, 22, 0.08);
-          box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+          background: var(--alvo-blue-soft);
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
         }
 
         .eyebrow {
           font-size: 0.85rem;
           font-weight: 800;
-          color: #f97316;
+          color: var(--alvo-blue);
           text-transform: uppercase;
           letter-spacing: 0.05em;
           margin-bottom: 0.5rem;
@@ -1496,8 +1495,8 @@ export function JourneysView() {
         }
 
         .journey-filter-chip:hover {
-          border-color: #f97316 !important;
-          background: rgba(249, 115, 22, 0.1) !important;
+          border-color: var(--alvo-blue) !important;
+          background: var(--alvo-blue-soft) !important;
         }
 
         .journey-person-card {
@@ -1505,16 +1504,16 @@ export function JourneysView() {
         }
 
         .journey-person-card:hover {
-          border-color: #f97316 !important;
-          background: rgba(249, 115, 22, 0.06) !important;
+          border-color: var(--alvo-blue) !important;
+          background: rgba(6, 182, 212, 0.06) !important;
           transform: translateY(-2px);
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .journey-person-card.is-selected {
-          border-color: #f97316 !important;
-          background: rgba(249, 115, 22, 0.12) !important;
-          box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+          border-color: var(--alvo-blue) !important;
+          background: rgba(6, 182, 212, 0.12) !important;
+          box-shadow: 0 0 12px rgba(6, 182, 212, 0.2);
         }
 
         /* Pulsing Sync Radar */
@@ -1556,7 +1555,7 @@ export function JourneysView() {
           border: 8px solid rgba(255,255,255,0.08);
           border-radius: 36px;
           padding: 6px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249, 115, 22, 0.05);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(6, 182, 212, 0.05);
           width: 100%;
           max-width: 320px;
           margin: 0 auto;
@@ -1613,7 +1612,7 @@ export function JourneysView() {
         .phone-chat-body {
           flex: 1;
           padding: 12px;
-          background-image: radial-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 0);
+          background-image: radial-gradient(rgba(6, 182, 212, 0.02) 1px, transparent 0);
           background-size: 10px 10px;
           display: flex;
           flex-direction: column;
@@ -1684,7 +1683,7 @@ export function JourneysView() {
         }
 
         .hover-glow:hover {
-          box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
         }
 
         @media (max-width: 1024px) {
@@ -1714,8 +1713,8 @@ function BottleneckCard({
   return (
     <article 
       style={{ 
-        backgroundColor: "rgba(30, 41, 59, 0.25)", 
-        border: "1px solid rgba(255,255,255,0.05)", 
+        backgroundColor: "var(--glass-bg)", 
+        border: "1px solid var(--alvo-line)", 
         borderRadius: 20, 
         padding: "1.25rem",
         borderLeft: `4px solid ${color}`

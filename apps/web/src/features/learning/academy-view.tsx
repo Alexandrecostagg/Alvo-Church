@@ -21,23 +21,35 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { MOCK_COURSES, MOCK_COURSE_MODULES, MOCK_LESSONS, MOCK_MEMBER_COURSE_PROGRESS } from "../../lib/mock-data";
+import { useAppAuth } from "../../../app/providers";
+import { 
+  fetchCourses, 
+  fetchCourseModules, 
+  fetchCourseLessons, 
+  fetchMemberCourseProgress, 
+  saveMemberCourseProgress, 
+  saveCourse, 
+  saveCourseModule, 
+  saveLesson, 
+  saveMemberBadge, 
+  isFirebaseWebRuntimeConfigured 
+} from "@alvo/firebase";
+import type { Course, CourseModule, Lesson, MemberCourseProgress, MemberBadge } from "@alvo/types";
 
 export function AcademyView() {
-  const [courses] = useState(MOCK_COURSES);
-  const [modules] = useState(MOCK_COURSE_MODULES);
-  const [lessons] = useState(MOCK_LESSONS);
-  
-  // Progresso persistido localmente e reativo
-  const [progress, setProgress] = useState(() => {
-    return MOCK_MEMBER_COURSE_PROGRESS[0] ?? {
-      id: "prog_temp",
-      organizationId: "demo",
-      memberId: "person_1",
-      courseId: "course_1",
-      completedLessons: [],
-      isCompleted: false,
-      updatedAt: new Date().toISOString()
-    };
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [status, setStatus] = useState("Sincronizando com Firestore...");
+  const [progress, setProgress] = useState<MemberCourseProgress>({
+    id: `progress_temp`,
+    organizationId: "demo",
+    memberId: "person_1",
+    courseId: "course_1",
+    completedLessons: [],
+    isCompleted: false,
+    updatedAt: new Date().toISOString()
   });
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("course_1");
@@ -47,6 +59,100 @@ export function AcademyView() {
   const [showBadgeUnlock, setShowBadgeUnlock] = useState(false);
   const [unlockedBadge, setUnlockedBadge] = useState<{ id: string; title: string } | null>(null);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
+
+  useEffect(() => {
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setCourses(MOCK_COURSES as Course[]);
+      setModules(MOCK_COURSE_MODULES as CourseModule[]);
+      setLessons(MOCK_LESSONS as Lesson[]);
+      setProgress(MOCK_MEMBER_COURSE_PROGRESS[0] as MemberCourseProgress);
+      setStatus("Exibindo cursos em modo offline.");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadLmsData() {
+      if (!user) return;
+      try {
+        setStatus("Sincronizando com o Firestore...");
+        let dbCourses = await fetchCourses(firebaseConfig, { organizationId });
+        if (cancelled) return;
+
+        if (dbCourses.length === 0) {
+          setStatus("Inicializando cursos padrões no Firestore...");
+          // Seed EAD courses, modules, and lessons
+          await Promise.all(
+            MOCK_COURSES.map(async (c) => {
+              await saveCourse(firebaseConfig, { organizationId }, { ...c, organizationId });
+            })
+          );
+          await Promise.all(
+            MOCK_COURSE_MODULES.map(async (m) => {
+              await saveCourseModule(firebaseConfig, { organizationId }, { ...m, organizationId });
+            })
+          );
+          await Promise.all(
+            MOCK_LESSONS.map(async (l) => {
+              await saveLesson(firebaseConfig, { organizationId }, { ...l, organizationId });
+            })
+          );
+
+          if (cancelled) return;
+          dbCourses = await fetchCourses(firebaseConfig, { organizationId });
+          if (cancelled) return;
+        }
+
+        const [dbModules, dbLessons] = await Promise.all([
+          Promise.all(dbCourses.map(c => fetchCourseModules(firebaseConfig, { organizationId }, c.id))),
+          Promise.all(dbCourses.map(c => fetchCourseLessons(firebaseConfig, { organizationId }, c.id)))
+        ]);
+
+        if (cancelled) return;
+
+        setCourses(dbCourses);
+        setModules(dbModules.flat());
+        setLessons(dbLessons.flat());
+
+        // Load progress for selected course
+        const dbProgress = await fetchMemberCourseProgress(firebaseConfig, { organizationId }, user.uid, selectedCourseId);
+        if (cancelled) return;
+
+        if (dbProgress) {
+          setProgress(dbProgress);
+        } else {
+          // Initialize empty progress for this course
+          const initialProg: MemberCourseProgress = {
+            id: `progress_${user.uid}_${selectedCourseId}`,
+            organizationId,
+            memberId: user.uid,
+            courseId: selectedCourseId,
+            completedLessons: [],
+            isCompleted: false,
+            updatedAt: new Date().toISOString()
+          };
+          setProgress(initialProg);
+        }
+
+        setStatus("EAD Sincronizado.");
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setCourses(MOCK_COURSES as Course[]);
+          setModules(MOCK_COURSE_MODULES as CourseModule[]);
+          setLessons(MOCK_LESSONS as Lesson[]);
+          setProgress(MOCK_MEMBER_COURSE_PROGRESS[0] as MemberCourseProgress);
+          setStatus("Erro ao sincronizar. Usando modo de demonstração.");
+        }
+      }
+    }
+
+    void loadLmsData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user, selectedCourseId]);
 
   const selectedCourse = useMemo(() => {
     return courses.find(c => c.id === selectedCourseId) ?? courses[0];
@@ -112,7 +218,7 @@ export function AcademyView() {
   };
 
   // Alterna conclusão da aula e checa se destrava Badge/Certificado
-  const handleToggleLesson = (lessonId: string) => {
+  const handleToggleLesson = async (lessonId: string) => {
     const isCompleted = progress.completedLessons.includes(lessonId);
     let nextCompleted = [...progress.completedLessons];
 
@@ -126,12 +232,22 @@ export function AcademyView() {
     const completedInCourse = courseLessons.filter(l => nextCompleted.includes(l.id)).length;
     const allCompleted = completedInCourse === courseLessons.length;
 
-    setProgress(current => ({
-      ...current,
+    const nextProgress: MemberCourseProgress = {
+      ...progress,
       completedLessons: nextCompleted,
       isCompleted: allCompleted,
       updatedAt: new Date().toISOString()
-    }));
+    };
+
+    setProgress(nextProgress);
+
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      try {
+        await saveMemberCourseProgress(firebaseConfig, { organizationId }, nextProgress);
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
     // Se completou 100% e não estava marcado como concluído antes, destrava animação da Badge!
     if (allCompleted && !progress.isCompleted && selectedCourse.badgeUnlockedId) {
@@ -140,6 +256,21 @@ export function AcademyView() {
         title: selectedCourse.title
       });
       setShowBadgeUnlock(true);
+
+      if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+        try {
+          const badgeToAward: MemberBadge = {
+            id: `mb_${user.uid}_${selectedCourse.badgeUnlockedId}`,
+            organizationId,
+            personId: user.uid,
+            badgeId: selectedCourse.badgeUnlockedId,
+            awardedAt: new Date().toISOString()
+          };
+          await saveMemberBadge(firebaseConfig, { organizationId }, badgeToAward);
+        } catch (err) {
+          console.error("Failed to save member badge:", err);
+        }
+      }
     }
   };
 
@@ -281,7 +412,7 @@ export function AcademyView() {
             <div 
               className="printable-certificate"
               style={{
-                border: "12px double #d27836",
+                border: "12px double var(--alvo-blue)",
                 padding: "3rem 2rem",
                 textAlign: "center",
                 background: "#fdfbfa",
@@ -293,12 +424,12 @@ export function AcademyView() {
             >
               {/* Selo no fundo */}
               <div style={{ position: "absolute", bottom: "2rem", right: "2rem", opacity: 0.15 }}>
-                <GraduationCap size={150} style={{ color: "#d27836" }} />
+                <GraduationCap size={150} style={{ color: "var(--alvo-blue)" }} />
               </div>
 
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <GraduationCap size={32} style={{ color: "#d27836" }} />
+                  <GraduationCap size={32} style={{ color: "var(--alvo-blue)" }} />
                   <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase", color: "#1e293b" }}>ALVO CHURCH ACADEMY</span>
                 </div>
               </div>
@@ -310,7 +441,7 @@ export function AcademyView() {
                 Este documento certifica com honras e mérito que
               </p>
 
-              <h2 style={{ fontSize: "2.25rem", color: "#d27836", fontWeight: 800, margin: "1.5rem 0", fontFamily: "Helvetica, Arial, sans-serif", borderBottom: "2px solid #e2e8f0", display: "inline-block", paddingBottom: "0.5rem", minWidth: "300px" }}>
+              <h2 style={{ fontSize: "2.25rem", color: "var(--alvo-blue)", fontWeight: 800, margin: "1.5rem 0", fontFamily: "Helvetica, Arial, sans-serif", borderBottom: "2px solid #e2e8f0", display: "inline-block", paddingBottom: "0.5rem", minWidth: "300px" }}>
                 Lucas Costa
               </h2>
 
@@ -328,12 +459,12 @@ export function AcademyView() {
 
               <div style={{ display: "flex", justifyContent: "space-around", marginTop: "3rem", borderTop: "1px dashed #cbd5e1", paddingTop: "1.5rem" }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ height: "40px", fontStyle: "italic", color: "#d27836", fontSize: "1.2rem", fontWeight: 600 }}>Getro Costa</div>
+                  <div style={{ height: "40px", fontStyle: "italic", color: "var(--alvo-blue)", fontSize: "1.2rem", fontWeight: 600 }}>Getro Costa</div>
                   <div style={{ width: "200px", height: "1px", backgroundColor: "#94a3b8", margin: "0.25rem 0" }} />
                   <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b" }}>Pr. Getro Costa · Diretor Geral</span>
                 </div>
                 <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <Award size={36} style={{ color: "#d27836" }} />
+                  <Award size={36} style={{ color: "var(--alvo-blue)" }} />
                   <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", marginTop: 8 }}>Selo de Excelência Alvo</span>
                 </div>
               </div>
@@ -351,7 +482,7 @@ export function AcademyView() {
               <button
                 onClick={handlePrintCertificate}
                 className="primary-button"
-                style={{ backgroundColor: "#d27836", color: "white", padding: "0.75rem 1.5rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}
+                style={{ backgroundColor: "var(--alvo-blue)", color: "white", padding: "0.75rem 1.5rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}
               >
                 <Printer size={16} />
                 Imprimir ou Salvar PDF
@@ -367,11 +498,17 @@ export function AcademyView() {
           <Link className="back-link" href="/">
             Voltar ao painel
           </Link>
-          <p className="eyebrow" style={{ color: "#d27836" }}>LMS / Escola de Discipulado</p>
+          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>LMS / Escola de Discipulado</p>
           <h1>Escola de Líderes Alvo</h1>
           <p>
             Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
           </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: configured && firebaseReady ? 'var(--alvo-blue)' : '#f59e0b', letterSpacing: "0.03em" }}>
+              {status.toUpperCase()}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -400,15 +537,16 @@ export function AcademyView() {
                 style={{
                   width: "100%",
                   textAlign: "left",
-                  background: isSelected ? "linear-gradient(135deg, rgba(210, 120, 54, 0.15), rgba(30, 41, 59, 0.5))" : "rgba(30, 41, 59, 0.5)",
-                  border: isSelected ? "2px solid #d27836" : "1px solid rgba(255,255,255,0.05)",
+                  background: isSelected ? "linear-gradient(135deg, var(--alvo-blue-soft), var(--glass-bg))" : "var(--glass-bg)",
+                  border: isSelected ? "2px solid var(--alvo-blue)" : "1px solid var(--alvo-line)",
                   borderRadius: 20,
                   padding: "1.5rem",
                   cursor: "pointer",
                   display: "flex",
                   gap: "1.25rem",
                   transition: "all 0.3s",
-                  boxShadow: isSelected ? "0 10px 25px -10px rgba(210, 120, 54, 0.25)" : "none"
+                  boxShadow: isSelected ? "0 10px 25px -10px rgba(6, 182, 212, 0.25)" : "none",
+                  whiteSpace: "normal"
                 }}
               >
                 <div
@@ -429,7 +567,7 @@ export function AcademyView() {
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <strong style={{ color: "white", fontSize: "1rem", display: "block", fontWeight: 700 }}>{course.title}</strong>
@@ -438,11 +576,11 @@ export function AcademyView() {
                   </div>
                   <div style={{ marginTop: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: 4, fontWeight: 700 }}>
-                      <span style={{ color: isSelected ? "#d27836" : "white" }}>Progresso</span>
+                      <span style={{ color: isSelected ? "var(--alvo-blue)" : "white" }}>Progresso</span>
                       <span>{currentCoursePercent}%</span>
                     </div>
                     <div style={{ width: "100%", height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" }}>
-                      <div style={{ width: `${currentCoursePercent}%`, height: "100%", backgroundColor: isDone ? "#10b981" : "#d27836", borderRadius: 3 }} />
+                      <div style={{ width: `${currentCoursePercent}%`, height: "100%", backgroundColor: isDone ? "#10b981" : "var(--alvo-blue)", borderRadius: 3 }} />
                     </div>
                   </div>
                 </div>
@@ -473,7 +611,7 @@ export function AcademyView() {
                 }}
               >
                 {/* Efeito luminoso de fundo */}
-                <div style={{ position: "absolute", width: "100%", height: "100%", background: "radial-gradient(circle at center, rgba(210, 120, 54, 0.08) 0%, transparent 70%)", pointerEvents: "none", zIndex: 1 }} />
+                <div style={{ position: "absolute", width: "100%", height: "100%", background: "radial-gradient(circle at center, rgba(6, 182, 212, 0.08) 0%, transparent 70%)", pointerEvents: "none", zIndex: 1 }} />
 
                 <iframe
                   src={`${selectedLesson.videoUrl}?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479`}
@@ -494,8 +632,8 @@ export function AcademyView() {
               {/* Título e Ação rápida abaixo do Player */}
               <div
                 style={{
-                  background: "rgba(30, 41, 59, 0.4)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--alvo-line)",
                   borderRadius: 24,
                   padding: "1.75rem 2rem",
                   display: "flex",
@@ -505,7 +643,7 @@ export function AcademyView() {
                 }}
               >
                 <div>
-                  <span className="eyebrow" style={{ color: "#d27836", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+                  <span className="eyebrow" style={{ color: "var(--alvo-blue)", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
                     <GraduationCap size={14} />
                     EXIBINDO AGORA
                   </span>
@@ -526,7 +664,7 @@ export function AcademyView() {
                   onClick={() => handleToggleLesson(selectedLesson.id)}
                   className="primary-button"
                   style={{
-                    backgroundColor: progress.completedLessons.includes(selectedLesson.id) ? "#10b981" : "#d27836",
+                    backgroundColor: progress.completedLessons.includes(selectedLesson.id) ? "#10b981" : "var(--alvo-blue)",
                     color: "white",
                     padding: "0.85rem 1.5rem",
                     borderRadius: 14,
@@ -546,8 +684,8 @@ export function AcademyView() {
               {/* Sistema de Abas Premium (Tabs) */}
               <div
                 style={{
-                  background: "rgba(30, 41, 59, 0.3)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--alvo-line)",
                   borderRadius: 24,
                   padding: "2rem",
                   marginTop: "0.5rem"
@@ -559,9 +697,9 @@ export function AcademyView() {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: 10,
-                      background: activeTab === "about" ? "rgba(210, 120, 54, 0.15)" : "transparent",
+                      background: activeTab === "about" ? "var(--alvo-blue-soft)" : "transparent",
                       border: "none",
-                      color: activeTab === "about" ? "#d27836" : "rgba(255,255,255,0.6)",
+                      color: activeTab === "about" ? "var(--alvo-blue)" : "rgba(255,255,255,0.6)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: "0.9rem",
@@ -575,9 +713,9 @@ export function AcademyView() {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: 10,
-                      background: activeTab === "materials" ? "rgba(210, 120, 54, 0.15)" : "transparent",
+                      background: activeTab === "materials" ? "var(--alvo-blue-soft)" : "transparent",
                       border: "none",
-                      color: activeTab === "materials" ? "#d27836" : "rgba(255,255,255,0.6)",
+                      color: activeTab === "materials" ? "var(--alvo-blue)" : "rgba(255,255,255,0.6)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: "0.9rem",
@@ -591,9 +729,9 @@ export function AcademyView() {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: 10,
-                      background: activeTab === "notes" ? "rgba(210, 120, 54, 0.15)" : "transparent",
+                      background: activeTab === "notes" ? "var(--alvo-blue-soft)" : "transparent",
                       border: "none",
-                      color: activeTab === "notes" ? "#d27836" : "rgba(255,255,255,0.6)",
+                      color: activeTab === "notes" ? "var(--alvo-blue)" : "rgba(255,255,255,0.6)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: "0.9rem",
@@ -607,9 +745,9 @@ export function AcademyView() {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: 10,
-                      background: activeTab === "instructor" ? "rgba(210, 120, 54, 0.15)" : "transparent",
+                      background: activeTab === "instructor" ? "var(--alvo-blue-soft)" : "transparent",
                       border: "none",
-                      color: activeTab === "instructor" ? "#d27836" : "rgba(255,255,255,0.6)",
+                      color: activeTab === "instructor" ? "var(--alvo-blue)" : "rgba(255,255,255,0.6)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: "0.9rem",
@@ -623,9 +761,9 @@ export function AcademyView() {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: 10,
-                      background: activeTab === "certificate" ? "rgba(210, 120, 54, 0.15)" : "transparent",
+                      background: activeTab === "certificate" ? "var(--alvo-blue-soft)" : "transparent",
                       border: "none",
-                      color: activeTab === "certificate" ? "#d27836" : "rgba(255,255,255,0.6)",
+                      color: activeTab === "certificate" ? "var(--alvo-blue)" : "rgba(255,255,255,0.6)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: "0.9rem",
@@ -671,8 +809,8 @@ export function AcademyView() {
                           style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white", transition: "all 0.2s" }}
                           className="hover-card"
                         >
-                          <div style={{ padding: "0.5rem", background: "rgba(210, 120, 54, 0.15)", borderRadius: 10 }}>
-                            <FileText size={20} style={{ color: "#d27836" }} />
+                          <div style={{ padding: "0.5rem", background: "var(--alvo-blue-soft)", borderRadius: 10 }}>
+                            <FileText size={20} style={{ color: "var(--alvo-blue)" }} />
                           </div>
                           <div>
                             <span style={{ fontSize: "0.85rem", fontWeight: 700, display: "block" }}>Guia de Leitura DNA.pdf</span>
@@ -704,7 +842,7 @@ export function AcademyView() {
                         <label style={{ color: "white", fontSize: "0.95rem", fontWeight: 700 }}>Caderno de Anotações Privado</label>
                         <button
                           onClick={handleExportNote}
-                          style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: 6, color: "#d27836", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                          style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: 6, color: "var(--alvo-blue)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                         >
                           <Download size={14} />
                           Exportar em TXT
@@ -743,13 +881,13 @@ export function AcademyView() {
                           backgroundImage: "url(https://images.unsplash.com/photo-1542103749-8ef59b94f4d3?q=80&w=200&auto=format&fit=crop)", 
                           backgroundSize: "cover",
                           backgroundPosition: "center",
-                          border: "2px solid #d27836",
+                          border: "2px solid var(--alvo-blue)",
                           flexShrink: 0
                         }} 
                       />
                       <div>
                         <strong style={{ color: "white", fontSize: "1.1rem", display: "block" }}>Pastor Getro Costa</strong>
-                        <span style={{ color: "#d27836", fontSize: "0.85rem", fontWeight: 700 }}>Pastor Presidente · Doutor em Teologia</span>
+                        <span style={{ color: "var(--alvo-blue)", fontSize: "0.85rem", fontWeight: 700 }}>Pastor Presidente · Doutor em Teologia</span>
                         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", marginTop: 8, lineHeight: "1.4" }}>
                           Há mais de 20 anos pastoreando e formando líderes para expansão ministerial saudável. Especialista em crescimento de pequenos grupos e teologia prática.
                         </p>
@@ -771,7 +909,7 @@ export function AcademyView() {
                           <button
                             onClick={() => setShowCertificateModal(true)}
                             className="primary-button"
-                            style={{ backgroundColor: "#d27836", color: "white", padding: "0.85rem 2rem", borderRadius: 14, fontWeight: 800, marginTop: "0.5rem" }}
+                            style={{ backgroundColor: "var(--alvo-blue)", color: "white", padding: "0.85rem 2rem", borderRadius: 14, fontWeight: 800, marginTop: "0.5rem" }}
                           >
                             Visualizar e Imprimir Certificado
                           </button>
@@ -786,7 +924,7 @@ export function AcademyView() {
                             Conclua todas as aulas pendentes deste curso para atingir 100% de progresso e habilitar a emissão do seu diploma de capacitação oficial.
                           </p>
                           <div style={{ width: "100%", maxWidth: "300px", height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginTop: 8 }}>
-                            <div style={{ width: `${coursePercent}%`, height: "100%", backgroundColor: "#d27836" }} />
+                            <div style={{ width: `${coursePercent}%`, height: "100%", backgroundColor: "var(--alvo-blue)" }} />
                           </div>
                         </>
                       )}
@@ -804,7 +942,7 @@ export function AcademyView() {
         </article>
 
         {/* Lado Direito: Estrutura Modular das Aulas */}
-        <aside className="serving-panel" style={{ padding: "1.75rem", display: "flex", flexDirection: "column", gap: "1.25rem", height: "fit-content", background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24 }}>
+        <aside className="serving-panel" style={{ padding: "1.75rem", display: "flex", flexDirection: "column", gap: "1.25rem", height: "fit-content", background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24 }}>
           <div>
             <p className="eyebrow">Grade Curricular</p>
             <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "white", margin: 0 }}>Módulos e Aulas</h3>
@@ -837,13 +975,14 @@ export function AcademyView() {
                             textAlign: "left",
                             padding: "0.85rem 1rem",
                             borderRadius: 14,
-                            backgroundColor: isPlaying ? "rgba(210, 120, 54, 0.15)" : "transparent",
-                            border: isPlaying ? "1px solid rgba(210, 120, 54, 0.4)" : "1px solid transparent",
+                            backgroundColor: isPlaying ? "var(--alvo-blue-soft)" : "transparent",
+                            border: isPlaying ? "1px solid rgba(6, 182, 212, 0.4)" : "1px solid transparent",
                             display: "flex",
                             alignItems: "center",
                             gap: "0.75rem",
                             cursor: "pointer",
-                            transition: "all 0.2s"
+                            transition: "all 0.2s",
+                            whiteSpace: "normal"
                           }}
                           type="button"
                         >
@@ -857,13 +996,13 @@ export function AcademyView() {
                               <Circle size={18} style={{ color: "rgba(255,255,255,0.25)" }} />
                             )}
                           </span>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ fontSize: "0.85rem", color: isPlaying ? "#d27836" : "white", fontWeight: isPlaying ? 700 : 500, display: "block" }}>
                               {lesson.title}
                             </span>
                             <span style={{ fontSize: "0.75rem", opacity: 0.4, display: "block", marginTop: 2 }}>⏱️ {lesson.durationMinutes} min</span>
                           </div>
-                          {isPlaying && <ChevronRight size={16} style={{ color: "#d27836" }} />}
+                          {isPlaying && <ChevronRight size={16} style={{ color: "var(--alvo-blue)" }} />}
                         </button>
                       );
                     })}

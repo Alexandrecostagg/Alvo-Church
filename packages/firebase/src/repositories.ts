@@ -54,7 +54,12 @@ import type {
   Course,
   CourseModule,
   Lesson,
-  MemberCourseProgress
+  MemberCourseProgress,
+  ScheduleSwapRequest,
+  MemberJourneyProfile,
+  JourneyMission,
+  Badge,
+  MemberBadge
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -97,7 +102,12 @@ import {
   getCoursesCollectionPath,
   getCourseModulesCollectionPath,
   getLessonsCollectionPath,
-  getMemberCourseProgressCollectionPath
+  getMemberCourseProgressCollectionPath,
+  getScheduleSwapRequestsCollectionPath,
+  getJourneyProfilesCollectionPath,
+  getJourneyMissionsCollectionPath,
+  getBadgesCollectionPath,
+  getMemberBadgesCollectionPath
 } from "./index";
 
 
@@ -2289,6 +2299,227 @@ export async function saveMemberCourseProgress(
   await setDoc(
     doc(firestore, getMemberCourseProgressCollectionPath(context, progress.memberId), progress.courseId),
     cleanFirestoreData(progress),
+    { merge: true }
+  );
+}
+
+export async function saveCourse(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  course: Course
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getCoursesCollectionPath(context), course.id),
+    cleanFirestoreData(course),
+    { merge: true }
+  );
+}
+
+export async function saveCourseModule(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  module: CourseModule
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getCourseModulesCollectionPath(context, module.courseId), module.id),
+    cleanFirestoreData(module),
+    { merge: true }
+  );
+}
+
+export async function saveLesson(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  lesson: Lesson
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getLessonsCollectionPath(context, lesson.courseId), lesson.id),
+    cleanFirestoreData(lesson),
+    { merge: true }
+  );
+}
+
+// --- NEW MAPPERS ---
+
+function toScheduleSwapRequest(documentId: string, data: DocumentData): ScheduleSwapRequest {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    campusId: data.campusId ? String(data.campusId) : undefined,
+    assignmentId: String(data.assignmentId ?? ""),
+    requestorPersonId: String(data.requestorPersonId ?? ""),
+    targetPersonId: data.targetPersonId ? String(data.targetPersonId) : undefined,
+    proposedReplacementPersonId: data.proposedReplacementPersonId ? String(data.proposedReplacementPersonId) : undefined,
+    status: (data.status as ScheduleSwapRequest["status"]) ?? "pending",
+    note: data.note ? String(data.note) : undefined,
+    createdAt: String(data.createdAt ?? ""),
+    updatedAt: String(data.updatedAt ?? "")
+  };
+}
+
+function toMemberJourneyProfile(documentId: string, data: DocumentData): MemberJourneyProfile {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    personId: String(data.personId ?? ""),
+    currentJourneyKind: (data.currentJourneyKind as MemberJourneyProfile["currentJourneyKind"]) ?? "belonging",
+    currentStage: (data.currentStage as MemberJourneyProfile["currentStage"]) ?? "exploring",
+    progressPercent: Number(data.progressPercent ?? 0),
+    readinessLevel: (data.readinessLevel as MemberJourneyProfile["readinessLevel"]) ?? "medium"
+  };
+}
+
+function toJourneyMission(documentId: string, data: DocumentData): JourneyMission {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    journeyProfileId: String(data.journeyProfileId ?? ""),
+    title: String(data.title ?? ""),
+    description: data.description ? String(data.description) : undefined,
+    kind: (data.kind as JourneyMission["kind"]) ?? "automatic",
+    status: (data.status as JourneyMission["status"]) ?? "locked",
+    dueAt: data.dueAt ? String(data.dueAt) : undefined
+  };
+}
+
+function toBadge(documentId: string, data: DocumentData): Badge {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    code: String(data.code ?? ""),
+    name: String(data.name ?? ""),
+    category: (data.category as Badge["category"]) ?? "journey",
+    description: data.description ? String(data.description) : undefined
+  };
+}
+
+function toMemberBadge(documentId: string, data: DocumentData): MemberBadge {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    personId: String(data.personId ?? ""),
+    badgeId: String(data.badgeId ?? ""),
+    awardedAt: String(data.awardedAt ?? "")
+  };
+}
+
+// --- NEW REPOSITORY METHODS ---
+
+// Módulo 2: Troca de Escalas (Swaps)
+export async function fetchScheduleSwapRequests(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<ScheduleSwapRequest[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getScheduleSwapRequestsCollectionPath(context)));
+  return snap.docs.map((d) => toScheduleSwapRequest(d.id, d.data()));
+}
+
+export async function saveScheduleSwapRequest(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  request: ScheduleSwapRequest
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getScheduleSwapRequestsCollectionPath(context), request.id),
+    cleanFirestoreData(request),
+    { merge: true }
+  );
+}
+
+// Módulo 3: Jornadas, Missões e Badges
+export async function fetchMemberJourneyProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string
+): Promise<MemberJourneyProfile | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getJourneyProfilesCollectionPath(context), personId));
+  if (!snap.exists()) return null;
+  return toMemberJourneyProfile(snap.id, snap.data());
+}
+
+export async function saveMemberJourneyProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  profile: MemberJourneyProfile
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getJourneyProfilesCollectionPath(context), profile.id),
+    cleanFirestoreData(profile),
+    { merge: true }
+  );
+}
+
+export async function fetchJourneyMissions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  journeyProfileId: string
+): Promise<JourneyMission[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getJourneyMissionsCollectionPath(context, journeyProfileId)));
+  return snap.docs.map((d) => toJourneyMission(d.id, d.data()));
+}
+
+export async function saveJourneyMission(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  mission: JourneyMission
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getJourneyMissionsCollectionPath(context, mission.journeyProfileId), mission.id),
+    cleanFirestoreData(mission),
+    { merge: true }
+  );
+}
+
+export async function fetchBadges(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<Badge[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getBadgesCollectionPath(context)));
+  return snap.docs.map((d) => toBadge(d.id, d.data()));
+}
+
+export async function saveBadge(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  badge: Badge
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getBadgesCollectionPath(context), badge.id),
+    cleanFirestoreData(badge),
+    { merge: true }
+  );
+}
+
+export async function fetchMemberBadges(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string
+): Promise<MemberBadge[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getMemberBadgesCollectionPath(context, personId)));
+  return snap.docs.map((d) => toMemberBadge(d.id, d.data()));
+}
+
+export async function saveMemberBadge(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  memberBadge: MemberBadge
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getMemberBadgesCollectionPath(context, memberBadge.personId), memberBadge.id),
+    cleanFirestoreData(memberBadge),
     { merge: true }
   );
 }

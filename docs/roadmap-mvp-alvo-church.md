@@ -192,6 +192,7 @@ Produto:
 - grupos
 - eventos
 - app inicial
+- validação de concorrência e conflitos de horários em escalas de voluntários
 
 Técnico:
 
@@ -200,6 +201,7 @@ Técnico:
 - Cloudflare base
 - design system inicial
 - deploy inicial web e mobile
+- regras de negócio de escalas de domínio
 
 ## Onda 2. Engajamento inicial
 
@@ -208,13 +210,15 @@ Produto:
 - jornadas básicas
 - missões básicas
 - badges de onboarding
-- serviço inicial
+- serviço inicial (escalas e solicitações de trocas assistidas no app)
+- módulo de louvor e repertório (Worship) para gestão de cifras, setlists e mídias
 
 Técnico:
 
 - estruturas de jornada
 - notificações
 - permissões refinadas
+- repositório Firestore para `ScheduleSwapRequest`, `WorshipSong` e `WorshipSetlist`
 
 ## Onda 3. Tribos
 
@@ -224,26 +228,30 @@ Produto:
 - classificação
 - trilhas por tribo
 - reclassificação
+- planos de leitura bíblica diários e devocionais no app do membro integrados à jornada
 
 Técnico:
 
 - módulo de tribos
 - scoring engine
 - histórico e auditoria
+- controle devocional no banco de dados
 
-## Onda 4. IA
+## Onda 4. IA & Backoffice
 
 Produto:
 
 - copiloto de liderança
 - resumos
 - recomendações inteligentes
+- controle de patrimônio físico e inventário de bens por campus
 
 Técnico:
 
 - camada de orquestração de IA
 - fallback entre provedores
 - logs e guardrails
+- esquema Firestore para `PatrimonyItem`
 
 ## 11. Prioridade por persona
 
@@ -290,19 +298,22 @@ Técnico:
 
 - jornadas
 - badges
-- serviço inicial
+- serviço inicial (escalas, prevenção de conflitos e trocas assistidas)
+- repertório de louvor básico (Worship)
 
 ### Etapa 5
 
 - módulo de tribos
 - questionário
 - reclassificação
+- devocionais e planos de leitura no app
 
 ### Etapa 6
 
 - IA inicial
 - resumos
 - recomendações
+- controle patrimonial e inventário de bens
 
 ## 13. MVP técnico recomendado
 

@@ -658,20 +658,20 @@ export function ReceptionView() {
           <Link className="back-link" href="/">
             Voltar ao painel
           </Link>
-          <p className="eyebrow" style={{ color: "#f97316" }}>Recepção Inteligente</p>
+          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>Recepção Inteligente</p>
           <h1>Integração e Boas-vindas</h1>
           <p>
             Uma tela rápida para tablet, celular ou notebook na entrada: captura o
             visitante, inicia a jornada pastoral e aciona follow-ups e altar.
           </p>
           <div className="module-return-links" style={{ marginTop: "1rem" }}>
-            <Link className="ghost-button" href="/" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
+            <Link className="ghost-button" href="/" style={{ border: "1px solid var(--alvo-line)", borderRadius: 10 }}>
               Painel Geral
             </Link>
-            <Link className="ghost-button" href="/members" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
+            <Link className="ghost-button" href="/members" style={{ border: "1px solid var(--alvo-line)", borderRadius: 10 }}>
               Base de Membros
             </Link>
-            <Link className="ghost-button" href="/members/new" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
+            <Link className="ghost-button" href="/members/new" style={{ border: "1px solid var(--alvo-line)", borderRadius: 10 }}>
               Cadastrar Membro
             </Link>
           </div>
@@ -680,15 +680,15 @@ export function ReceptionView() {
            <button
              onClick={() => setKioskMode(true)}
              className="ghost-button compact"
-             style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, display: "flex", alignItems: "center", gap: 6 }}
+             style={{ border: "1px solid var(--alvo-line)", borderRadius: 12, display: "flex", alignItems: "center", gap: 6 }}
            >
-             <TabletIcon size={16} style={{ color: "#f97316" }} />
+             <TabletIcon size={16} style={{ color: "var(--alvo-blue)" }} />
              Modo Totem
            </button>
            <button
              onClick={() => setPulpitMode(true)}
              className="primary-button compact"
-             style={{ backgroundColor: "#8b5cf6", color: "white", borderRadius: 12, display: "flex", alignItems: "center", gap: 6 }}
+             style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "white", borderRadius: 12, display: "flex", alignItems: "center", gap: 6, border: "none" }}
            >
              <Tv size={16} />
              Painel do Pastor
@@ -698,39 +698,39 @@ export function ReceptionView() {
 
       {/* KPI Cards Strip */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem", marginTop: "2rem" }}>
-        <div style={{ backgroundColor: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: 20 }}>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Total de Visitantes</span>
+        <div style={{ backgroundColor: "var(--glass-bg)", border: "1px solid var(--alvo-line)", padding: "1.5rem", borderRadius: 20 }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Total de Visitantes</span>
           <strong style={{ display: "block", fontSize: "1.75rem", color: "white", marginTop: 4 }}>
             {capturedVisitors.length + visitorIntakes.length}
           </strong>
-          <small style={{ color: "#10b981", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+          <small style={{ color: "var(--alvo-green)", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
              Novas jornadas criadas hoje
           </small>
         </div>
-        <div style={{ backgroundColor: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: 20 }}>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Aguardando WhatsApp</span>
-          <strong style={{ display: "block", fontSize: "1.75rem", color: "#f97316", marginTop: 4 }}>
+        <div style={{ backgroundColor: "var(--glass-bg)", border: "1px solid var(--alvo-line)", padding: "1.5rem", borderRadius: 20 }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Aguardando WhatsApp</span>
+          <strong style={{ display: "block", fontSize: "1.75rem", color: "var(--alvo-accent)", marginTop: 4 }}>
             {pendingCommunicationVisitors.length}
           </strong>
-          <small style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+          <small style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
              Contatos ainda não iniciados
           </small>
         </div>
-        <div style={{ backgroundColor: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: 20 }}>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Para Saudar no Altar</span>
+        <div style={{ backgroundColor: "var(--glass-bg)", border: "1px solid var(--alvo-line)", padding: "1.5rem", borderRadius: 20 }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Para Saudar no Altar</span>
           <strong style={{ display: "block", fontSize: "1.75rem", color: "#a855f7", marginTop: 4 }}>
             {celebrationGreetingVisitors.length}
           </strong>
-          <small style={{ color: "#94a3b8", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+          <small style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
              Nomes prontos no teleprompter
           </small>
         </div>
-        <div style={{ backgroundColor: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: 20 }}>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Jornadas Integradas (30d)</span>
-          <strong style={{ display: "block", fontSize: "1.75rem", color: "#10b981", marginTop: 4 }}>
+        <div style={{ backgroundColor: "var(--glass-bg)", border: "1px solid var(--alvo-line)", padding: "1.5rem", borderRadius: 20 }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Jornadas Integradas (30d)</span>
+          <strong style={{ display: "block", fontSize: "1.75rem", color: "var(--alvo-green)", marginTop: 4 }}>
             {visitorJourneys.length || 8}
           </strong>
-          <small style={{ color: "#10b981", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+          <small style={{ color: "var(--alvo-green)", fontSize: "0.75rem", display: "block", marginTop: 4 }}>
              Taxa de retenção: 65%
           </small>
         </div>
@@ -740,20 +740,21 @@ export function ReceptionView() {
       <section className="reception-command-grid" style={{ marginTop: "2.5rem" }}>
         
         {/* Lado Esquerdo: Ficha de Entrada de Visitante */}
-        <form className="visitor-form reception-capture-card" onSubmit={handleVisitorCaptureSubmit} style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
-          <p className="eyebrow" style={{ color: "#f97316" }}>Entrada Rápida</p>
+        <form className="visitor-form reception-capture-card" onSubmit={handleVisitorCaptureSubmit} style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>Entrada Rápida</p>
           <h2 style={{ color: "white" }}>Registrar Visitante</h2>
           
           <label style={{ color: "rgba(255,255,255,0.8)" }}>
             Nome Completo do Visitante *
             <input
               aria-label="Nome do visitante"
+              required
               onChange={(event) =>
                 setVisitorDraft((draft) => ({ ...draft, name: event.target.value }))
               }
               placeholder="Ex: João Pereira"
               value={visitorDraft.name}
-              style={{ backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, color: "white" }}
+              style={{ backgroundColor: "rgba(3, 7, 18, 0.6)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "white" }}
             />
           </label>
           <label style={{ color: "rgba(255,255,255,0.8)" }}>
@@ -765,7 +766,7 @@ export function ReceptionView() {
               }
               placeholder="(00) 90000-0000"
               value={visitorDraft.phone}
-              style={{ backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, color: "white" }}
+              style={{ backgroundColor: "rgba(3, 7, 18, 0.6)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "white" }}
             />
           </label>
           
@@ -778,7 +779,7 @@ export function ReceptionView() {
                   setVisitorDraft((draft) => ({ ...draft, source: event.target.value }))
                 }
                 value={visitorDraft.source}
-                style={{ backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, color: "white" }}
+                style={{ backgroundColor: "rgba(3, 7, 18, 0.6)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "white" }}
               >
                 <option>Convite de membro</option>
                 <option>WhatsApp</option>
@@ -793,20 +794,20 @@ export function ReceptionView() {
                 placeholder="Ex: Convidado por Patrícia"
                 value={visitorDraft.note}
                 onChange={(e) => setVisitorDraft(draft => ({ ...draft, note: e.target.value }))}
-                style={{ backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 12, color: "white" }}
+                style={{ backgroundColor: "rgba(3, 7, 18, 0.6)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "white" }}
               />
             </label>
           </div>
 
-          <button className="primary-button compact" type="submit" style={{ backgroundColor: "#f97316", color: "white", borderRadius: 12, height: 48, marginTop: "1rem" }}>
+          <button className="primary-button compact" type="submit" style={{ color: "white", borderRadius: 12, height: 48, marginTop: "1rem" }}>
             <UserPlus size={17} />
             Iniciar Jornada Pastoral
           </button>
-          <p className="form-status" style={{ color: "#a855f7" }}>✨ {status}</p>
+          <p className="form-status" style={{ color: "var(--alvo-blue)" }}>✨ {status}</p>
         </form>
 
         {/* Lado Direito: Banner de Fluxo e Success Alert */}
-        <article className="reception-route-card" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
+        <article className="reception-route-card" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
           <div className="section-heading">
             <div>
               <p className="eyebrow">Acolhimento Estruturado</p>
@@ -816,7 +817,7 @@ export function ReceptionView() {
           </div>
           <div className="reception-step-lane">
             <div>
-              <QrCode size={20} style={{ color: "#f97316" }} />
+              <QrCode size={20} style={{ color: "var(--alvo-blue)" }} />
               <strong>1. Capturar</strong>
               <p>Voluntário ou Totem de entrada registra dados.</p>
             </div>
@@ -826,19 +827,19 @@ export function ReceptionView() {
               <p>Boas-vindas públicas no púlpito pelo pastor.</p>
             </div>
             <div>
-              <Smartphone size={20} style={{ color: "#0ea5e9" }} />
+              <Smartphone size={20} style={{ color: "var(--alvo-accent)" }} />
               <strong>3. Conectar</strong>
               <p>Acolhimento envia WhatsApp personalizado.</p>
             </div>
             <div>
-              <MessageSquareText size={20} style={{ color: "#10b981" }} />
+              <MessageSquareText size={20} style={{ color: "var(--alvo-green)" }} />
               <strong>4. Integrar</strong>
               <p>Membro acompanha e encaminha para célula.</p>
             </div>
           </div>
           {lastCreated ? (
-            <div className="reception-success-card antigravity-float animate-entrance" style={{ background: "rgba(249, 115, 22, 0.1)", border: "1px solid rgba(249, 115, 22, 0.2)" }}>
-              <div className="success-icon" style={{ backgroundColor: "#f97316" }}>
+            <div className="reception-success-card antigravity-float animate-entrance" style={{ background: "rgba(6, 182, 212, 0.1)", border: "1px solid rgba(6, 182, 212, 0.2)" }}>
+              <div className="success-icon" style={{ backgroundColor: "var(--alvo-blue)" }}>
                 <CheckCircle2 size={24} strokeWidth={3} />
               </div>
               <div className="success-content">
@@ -849,7 +850,7 @@ export function ReceptionView() {
                     : lastCreated.status}
                 </p>
                 {lastCreated.personId ? (
-                  <Link className="primary-pill compact" href={`/members/${lastCreated.personId}`} style={{ backgroundColor: "#f97316" }}>
+                  <Link className="primary-pill compact" href={`/members/${lastCreated.personId}`} style={{ backgroundColor: "var(--alvo-blue)" }}>
                     Ver Perfil Completo
                   </Link>
                 ) : (
@@ -865,7 +866,7 @@ export function ReceptionView() {
       <section className="reception-workbench page-workbench" style={{ marginTop: "2.5rem" }}>
         
         {/* Fila de Mensagens WhatsApp */}
-        <div className="queue-panel" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
+        <div className="queue-panel" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
           <div className="queue-heading" style={{ borderBottomColor: "rgba(255,255,255,0.08)" }}>
             <MessageSquareText size={18} style={{ color: "#25d366" }} />
             <strong style={{ color: "white" }}>Fila de Comunicação</strong>
@@ -901,7 +902,7 @@ export function ReceptionView() {
         </div>
 
         {/* Fila de Cumprimentos do Altar */}
-        <div className="queue-panel" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
+        <div className="queue-panel" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
           <div className="queue-heading" style={{ borderBottomColor: "rgba(255,255,255,0.08)" }}>
             <Megaphone size={18} style={{ color: "#8b5cf6" }} />
             <strong style={{ color: "white" }}>Fila de Boas-vindas Altar</strong>
@@ -941,7 +942,7 @@ export function ReceptionView() {
       <section className="reception-live-grid" style={{ marginTop: "2.5rem" }}>
         
         {/* Entradas Reais do Firestore */}
-        <article className="directory-panel" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
+        <article className="directory-panel" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
           <div className="section-heading" style={{ borderBottomColor: "rgba(255,255,255,0.08)", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <div>
               <p className="eyebrow" style={{ color: "#0ea5e9" }}>Nuvem Firestore</p>
@@ -974,7 +975,7 @@ export function ReceptionView() {
         </article>
 
         {/* Jornadas Pastorais Ativas */}
-        <article className="directory-panel" style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24, padding: "2rem" }}>
+        <article className="directory-panel" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
           <div className="section-heading" style={{ borderBottomColor: "rgba(255,255,255,0.08)", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <div>
               <p className="eyebrow" style={{ color: "#10b981" }}>Monitor de Funil</p>

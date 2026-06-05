@@ -1,3 +1,5 @@
+declare var process: any;
+
 type FirebaseClientHandles = {
   auth?: any;
   firestore?: any;

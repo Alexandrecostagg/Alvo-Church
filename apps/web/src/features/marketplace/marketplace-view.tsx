@@ -198,7 +198,7 @@ export function MarketplaceView() {
           padding: 2rem;
           max-width: 1400px;
           margin: 0 auto;
-          background: #0b0f19;
+          background: transparent;
           color: #f8fafc;
           min-height: 100vh;
         }
@@ -217,7 +217,7 @@ export function MarketplaceView() {
           animation: spin 1s linear infinite;
           width: 2.5rem;
           height: 2.5rem;
-          color: #f97316;
+          color: var(--alvo-blue);
         }
 
         @keyframes spin {
@@ -234,7 +234,7 @@ export function MarketplaceView() {
           gap: 0.5rem;
           font-size: 0.85rem;
           font-weight: 800;
-          color: #f97316;
+          color: var(--alvo-blue);
           text-transform: uppercase;
           margin-bottom: 0.75rem;
           letter-spacing: 0.05em;
@@ -279,8 +279,8 @@ export function MarketplaceView() {
           width: 100%;
           padding: 1.1rem 1.25rem 1.1rem 3.5rem;
           border-radius: 1.25rem;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: #0f172a;
+          border: 1px solid var(--alvo-line);
+          background: var(--glass-bg);
           color: white;
           font-size: 1.1rem;
           outline: none;
@@ -289,8 +289,8 @@ export function MarketplaceView() {
         }
 
         .search-input-wrapper input:focus {
-          border-color: #f97316;
-          box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
+          border-color: var(--alvo-blue);
+          box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
         }
 
         .search-input-wrapper input::placeholder {
@@ -306,8 +306,8 @@ export function MarketplaceView() {
         .pill {
           padding: 0.625rem 1.25rem;
           border-radius: 999px;
-          background: rgba(35, 45, 65, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: var(--glass-bg);
+          border: 1px solid var(--alvo-line);
           font-size: 0.9rem;
           font-weight: 700;
           cursor: pointer;
@@ -316,16 +316,16 @@ export function MarketplaceView() {
         }
 
         .pill:hover {
-          border-color: #f97316;
+          border-color: var(--alvo-blue);
           color: white;
-          background: rgba(249, 115, 22, 0.04);
+          background: rgba(6, 182, 212, 0.04);
         }
 
         .pill.active {
-          background: var(--pill-accent, #f97316);
+          background: var(--pill-accent, var(--alvo-blue));
           color: white;
           border-color: transparent;
-          box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
+          box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
         }
 
         .business-grid {
@@ -335,16 +335,16 @@ export function MarketplaceView() {
         }
 
         .business-card {
-          background: rgba(30, 41, 59, 0.2);
+          background: var(--glass-bg);
           border-radius: 1.5rem;
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--alvo-line);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .business-card:hover {
           transform: translateY(-8px);
-          border-color: #f97316;
+          border-color: var(--alvo-blue);
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
         }
 
@@ -420,7 +420,7 @@ export function MarketplaceView() {
         .owner-avatar {
           width: 32px;
           height: 32px;
-          background: #f97316;
+          background: var(--alvo-blue);
           color: white;
           border-radius: 50%;
           display: flex;
@@ -428,7 +428,7 @@ export function MarketplaceView() {
           justify-content: center;
           font-size: 0.75rem;
           font-weight: 800;
-          box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
+          box-shadow: 0 4px 10px rgba(6, 182, 212, 0.2);
         }
 
         .owner-mini span {
@@ -489,7 +489,7 @@ export function MarketplaceView() {
         .primary-view-btn {
           flex: 1;
           height: 44px;
-          background: #f97316;
+          background: var(--alvo-blue);
           color: white;
           border: none;
           border-radius: 12px;
@@ -504,9 +504,9 @@ export function MarketplaceView() {
         }
 
         .primary-view-btn:hover {
-          background: #ea580c;
+          background: var(--alvo-accent);
           gap: 0.75rem;
-          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
         }
 
         @media (max-width: 768px) {

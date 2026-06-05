@@ -14,21 +14,26 @@ import {
   ShieldCheck,
   Star,
   Baby,
-  Handshake
+  Handshake,
+  Award
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createFirebaseWebRuntimeConfigFromEnv,
   fetchPeople,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
+  fetchMemberBadges,
+  fetchMemberJourneyProfile
 } from "@alvo/firebase";
-import type { Person, TribeCode } from "@alvo/types";
+import type { Person, TribeCode, MemberBadge, MemberJourneyProfile } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
 export function MemberProfileView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [person, setPerson] = useState<Person | null>(null);
   const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState<MemberBadge[]>([]);
+  const [journeyProfile, setJourneyProfile] = useState<MemberJourneyProfile | null>(null);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -42,6 +47,15 @@ export function MemberProfileView() {
         // Find person by email or some mapping (in demo, we match first person or by email)
         const currentPerson = people.find(p => p.email === user?.email) || people[0];
         setPerson(currentPerson);
+
+        if (currentPerson) {
+          const [memberBadges, jp] = await Promise.all([
+            fetchMemberBadges(firebaseConfig, { organizationId }, currentPerson.id).catch(() => []),
+            fetchMemberJourneyProfile(firebaseConfig, { organizationId }, currentPerson.id).catch(() => null)
+          ]);
+          setBadges(memberBadges);
+          setJourneyProfile(jp);
+        }
       } catch (error) {
         console.error("Failed to load member profile:", error);
       } finally {
@@ -178,20 +192,61 @@ export function MemberProfileView() {
         </div>
         <div className="progress-content">
           <div className="progress-label">
-            <span>Membro em Desenvolvimento</span>
-            <b style={{ color: tribeAccent.dark }}>72%</b>
+            <span>
+              {journeyProfile ? (
+                journeyProfile.currentStage === "exploring" ? "Explorando a fé" :
+                journeyProfile.currentStage === "connecting" ? "Conectando em Célula" :
+                journeyProfile.currentStage === "grounding" ? "Consolidando a Caminhada" :
+                journeyProfile.currentStage === "serving" ? "Membro em Serviço" :
+                journeyProfile.currentStage === "developing" ? "Membro em Desenvolvimento" :
+                journeyProfile.currentStage === "leading" ? "Líder de Célula/Ministério" :
+                journeyProfile.currentStage
+              ) : "Membro em Desenvolvimento"}
+            </span>
+            <b style={{ color: tribeAccent.dark }}>{journeyProfile ? journeyProfile.progressPercent : 72}%</b>
           </div>
           <div className="progress-bar-container">
             <div 
               className="progress-bar-fill" 
               style={{ 
-                width: "72%", 
+                width: `${journeyProfile ? journeyProfile.progressPercent : 72}%`, 
                 background: `linear-gradient(90deg, ${tribeAccent.dark}, ${tribeAccent.main})` 
               }} 
             />
           </div>
         </div>
       </section>
+
+      {badges.length > 0 && (
+        <section className="journey-progress-card animate-entrance" style={{ animationDelay: "0.55s", marginTop: "1rem" }}>
+          <div className="card-header">
+            <Award size={18} style={{ color: "#facc15" }} />
+            <strong>Minhas Conquistas (Badges)</strong>
+          </div>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", padding: "10px 0" }}>
+            {badges.map((b) => (
+              <div 
+                key={b.id} 
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 6, 
+                  background: "rgba(250, 204, 21, 0.15)", 
+                  border: "1px solid #facc15", 
+                  borderRadius: "12px", 
+                  padding: "6px 12px",
+                  fontSize: "0.8rem",
+                  color: "#facc15",
+                  fontWeight: 700 
+                }}
+              >
+                <Award size={14} />
+                <span>{b.badgeId.replace("badge_", "").replace(/_/g, " ").toUpperCase()}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="member-footer-actions">
         <button className="member-action-button logout">

@@ -650,6 +650,26 @@ export interface ServiceAssignment {
   updatedAt: string;
 }
 
+export type ScheduleSwapRequestStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled";
+
+export interface ScheduleSwapRequest {
+  id: string;
+  organizationId: string;
+  campusId?: string;
+  assignmentId: string;
+  requestorPersonId: string;
+  targetPersonId?: string;
+  proposedReplacementPersonId?: string;
+  status: ScheduleSwapRequestStatus;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type EventType =
   | "service"
   | "conference"

@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { ArrowLeft, Plus, Music, Play, ExternalLink, HelpCircle, Save, Sparkles } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { transposeChordsText } from "@alvo/domain";
 import type { WorshipSong, WorshipSetlist } from "@alvo/types";
 import { MOCK_WORSHIP_SONGS, MOCK_WORSHIP_SETLISTS } from "../../lib/mock-data";
+import { useAppAuth } from "../../../app/providers";
+import { fetchWorshipSongs, saveWorshipSong, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 
 const CHROMATIC_SCALE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 export function WorshipView() {
-  const [songs, setSongs] = useState<WorshipSong[]>(MOCK_WORSHIP_SONGS);
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const [songs, setSongs] = useState<WorshipSong[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string>("song_2");
   const [selectedKey, setSelectedKey] = useState<string>("D");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [status, setStatus] = useState("Sincronizando com Firestore...");
   const [newSong, setNewSong] = useState({
     title: "",
     artist: "",
@@ -23,6 +27,56 @@ export function WorshipView() {
     spotifyUrl: "",
     youtubeUrl: ""
   });
+
+  // Carrega e sincroniza músicas do Firestore
+  useEffect(() => {
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setSongs(MOCK_WORSHIP_SONGS);
+      setStatus("Exibindo louvores de demonstração offline.");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSongs() {
+      try {
+        setStatus("Sincronizando com Firestore...");
+        const dbSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
+        if (cancelled) return;
+
+        if (dbSongs.length === 0) {
+          setStatus("Inicializando repertório padrão no Firestore...");
+          // Seed mock songs
+          await Promise.all(
+            MOCK_WORSHIP_SONGS.map(async (song) => {
+              const toSave = { ...song, organizationId };
+              await saveWorshipSong(firebaseConfig, { organizationId }, toSave);
+            })
+          );
+          if (cancelled) return;
+          const freshSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
+          if (cancelled) return;
+          setSongs(freshSongs);
+          setStatus("Repertório padrão inicializado.");
+        } else {
+          setSongs(dbSongs);
+          setStatus("Repertório carregado.");
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setSongs(MOCK_WORSHIP_SONGS);
+          setStatus("Erro ao conectar ao Firestore. Exibindo demonstração.");
+        }
+      }
+    }
+
+    void loadSongs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const selectedSong = useMemo(() => {
     return songs.find(s => s.id === selectedSongId) ?? songs[0];
@@ -48,13 +102,13 @@ export function WorshipView() {
   }, [selectedSong, selectedKey]);
 
   // Trata submissão de nova música
-  const handleAddSong = (e: React.FormEvent) => {
+  const handleAddSong = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSong.title || !newSong.artist) return;
 
     const added: WorshipSong = {
       id: `song_${Date.now()}`,
-      organizationId: "org_alvo_demo",
+      organizationId: organizationId || "org_alvo_demo",
       title: newSong.title,
       artist: newSong.artist,
       originalKey: newSong.originalKey,
@@ -64,6 +118,18 @@ export function WorshipView() {
       chordsLyrics: newSong.chordsLyrics || "[A] Exemplo de cifra",
       createdAt: new Date().toISOString()
     };
+
+    // Salva no Firestore
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Salvando no Firestore...");
+      try {
+        await saveWorshipSong(firebaseConfig, { organizationId }, added);
+        setStatus("Música salva.");
+      } catch (err) {
+        console.error(err);
+        setStatus("Erro ao salvar no Firestore. Salvo apenas localmente.");
+      }
+    }
 
     setSongs(current => [...current, added]);
     setSelectedSongId(added.id);
@@ -93,6 +159,12 @@ export function WorshipView() {
           <p>
             Gerencie o repertório da igreja, transponha tons dinamicamente para os ministros e acesse links de streaming.
           </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: configured && firebaseReady ? '#a78bfa' : '#f59e0b', letterSpacing: "0.03em" }}>
+              {status.toUpperCase()}
+            </span>
+          </div>
         </div>
       </section>
 

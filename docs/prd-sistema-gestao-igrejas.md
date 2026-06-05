@@ -182,6 +182,8 @@ Capacidades:
 - escalas
 - confirmação de presença
 - troca e substituição
+- prevenção inteligente de conflitos de horários (conflito de escala)
+- solicitação de substituição/troca direta de escalas entre voluntários (self-service)
 - trilha de treinamento
 - requisitos obrigatórios
 - avaliação de carga e frequência de serviço
@@ -217,6 +219,7 @@ Capacidades:
 - conciliação
 - recibos e declarações
 - dashboards financeiros
+- controle de patrimônio físico, bens e inventário de equipamentos por campus
 - integração com meios de pagamento
 - suporte futuro a PIX e gateways locais
 
@@ -235,6 +238,7 @@ Capacidades:
 - campanhas segmentadas
 - jornadas automáticas
 - mensagens por célula, ministério, evento e estágio
+- planos de leitura bíblica diários e devocionais interativos no app do membro
 
 ### Módulo 10. Pastoral, cuidado e oração
 
@@ -267,6 +271,19 @@ Capacidades:
 - alertas automáticos
 - regras baseadas em eventos
 - exportação para BI
+
+### Módulo 12. Louvor e Repertório (Worship)
+
+Função:
+Gerenciar repertório musical, setlists e mídias integradas para ensaio de voluntários.
+
+Capacidades:
+
+- cadastro de músicas
+- gerenciamento de cifras, tonalidades e letras
+- vinculação de setlists de louvor a eventos e cultos
+- integração com links de mídias externas (YouTube, Spotify, PDFs de partituras)
+- acesso direto aos arquivos de ensaio via app do voluntário
 
 ## 7. Personas principais
 
@@ -401,7 +418,8 @@ O MVP deve focar no que gera valor rápido e diferenciação forte.
 ### MVP fase 2
 
 - jovens e discipulado
-- voluntariado e escalas
+- voluntariado e escalas com detecção de conflitos e trocas de escala (self-service)
+- repertório de louvor básico (Worship)
 - app ou portal do membro
 - automações
 - relatórios avançados
@@ -411,6 +429,7 @@ O MVP deve focar no que gera valor rápido e diferenciação forte.
 - doações e campanhas
 - pastoral confidencial
 - financeiro mais profundo
+- inventário de patrimônio físico por campus
 - BI e inteligência operacional
 
 ## 10. Requisitos não funcionais
@@ -483,6 +502,7 @@ O MVP deve focar no que gera valor rápido e diferenciação forte.
 - pagamentos e finanças
 - comunicação
 - pastoral
+- louvor e repertório (worship)
 - analytics
 
 ### Entidades centrais
@@ -499,6 +519,10 @@ O MVP deve focar no que gera valor rápido e diferenciação forte.
 - `Registration`
 - `VolunteerProfile`
 - `ServingSchedule`
+- `ScheduleSwapRequest`
+- `WorshipSong`
+- `WorshipSetlist`
+- `PatrimonyItem`
 - `Donation`
 - `Fund`
 - `PastoralCareRecord`

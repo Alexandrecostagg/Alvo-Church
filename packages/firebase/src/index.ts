@@ -275,3 +275,7 @@ export function getLessonsCollectionPath(context: TenantContext, courseId: strin
 export function getMemberCourseProgressCollectionPath(context: TenantContext, memberId: string) {
   return `organizations/${context.organizationId}/people/${memberId}/courseProgress`;
 }
+
+export function getScheduleSwapRequestsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/scheduleSwapRequests`;
+}

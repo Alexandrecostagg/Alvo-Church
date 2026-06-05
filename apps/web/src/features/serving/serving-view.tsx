@@ -28,11 +28,13 @@ import {
   savePersonProfile,
   fetchServiceAssignments,
   fetchPeople,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
+  fetchScheduleSwapRequests,
+  saveScheduleSwapRequest
 } from "@alvo/firebase";
-import { getTribeDisplayLabel } from "@alvo/domain";
+import { getTribeDisplayLabel, checkScheduleConflict, processScheduleSwap } from "@alvo/domain";
 import { recentPeople } from "../../lib/mock-data";
-import type { Person, ServiceAssignment, ServiceAssignmentStatus } from "@alvo/types";
+import type { Person, ServiceAssignment, ServiceAssignmentStatus, ScheduleSwapRequest } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
 const ministryTeams = [
@@ -123,6 +125,7 @@ export function ServingView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [assignments, setAssignments] = useState<ServiceAssignment[]>(initialAssignments);
+  const [swapRequests, setSwapRequests] = useState<ScheduleSwapRequest[]>([]);
   
   // Custom tracking for audit trail log
   const [auditLogs, setAuditLogs] = useState<Array<{ time: string; text: string; type: "success" | "info" | "warning" }>>([
@@ -151,6 +154,11 @@ export function ServingView() {
     role: "Apoio"
   });
 
+  // Swap Form States
+  const [requestingSwapForAssignmentId, setRequestingSwapForAssignmentId] = useState<string | null>(null);
+  const [swapReplacementPersonId, setSwapReplacementPersonId] = useState<string>("");
+  const [swapNote, setSwapNote] = useState<string>("");
+
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setPeople(recentPeople as unknown as Person[]);
@@ -164,9 +172,10 @@ export function ServingView() {
       setStatus("Sincronizando pessoas para montar escalas...");
 
       try {
-        const [nextPeople, nextAssignments] = await Promise.all([
+        const [nextPeople, nextAssignments, nextSwaps] = await Promise.all([
           fetchPeople(firebaseConfig, { organizationId }, 160),
-          fetchServiceAssignments(firebaseConfig, { organizationId }, 160)
+          fetchServiceAssignments(firebaseConfig, { organizationId }, 160),
+          fetchScheduleSwapRequests(firebaseConfig, { organizationId }).catch(() => [] as ScheduleSwapRequest[])
         ]);
 
         if (cancelled) return;
@@ -176,6 +185,7 @@ export function ServingView() {
 
         setPeople(finalPeople);
         setAssignments(finalAssignments);
+        setSwapRequests(nextSwaps);
         
         setStatus(
           nextAssignments.length
@@ -301,6 +311,18 @@ export function ServingView() {
       createdAt: now,
       updatedAt: now
     };
+
+    const conflict = checkScheduleConflict(assignments, newAssignment);
+    if (conflict) {
+      const conflictingTeam = ministryTeams.find(t => t.code === conflict.ministryCode)?.name || conflict.ministryCode;
+      const confirmAssign = window.confirm(
+        `ALERTA DE CONFLITO: ${getFullName(person)} já está escalado(a) no ministério "${conflictingTeam}" nesta mesma data (${selectedDateFilter}). Deseja escalar mesmo assim?`
+      );
+      if (!confirmAssign) {
+        return;
+      }
+    }
+
     setAssignments((currentAssignments) => [newAssignment, ...currentAssignments]);
     
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -423,6 +445,124 @@ export function ServingView() {
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  async function handleRequestSwap(assignmentId: string, replacementPersonId: string, note?: string) {
+    if (!assignmentId || !replacementPersonId) return;
+
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (!assignment) return;
+
+    const newSwap: ScheduleSwapRequest = {
+      id: `swap_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      organizationId: organizationId || "demo_org",
+      assignmentId,
+      requestorPersonId: assignment.personId,
+      proposedReplacementPersonId: replacementPersonId,
+      status: "pending",
+      note,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setSwapRequests(prev => [newSwap, ...prev]);
+
+    const requestor = people.find(p => p.id === assignment.personId);
+    const replacement = people.find(p => p.id === replacementPersonId);
+    const requestorName = requestor ? getFullName(requestor) : "Voluntário";
+    const replacementName = replacement ? getFullName(replacement) : "Substituto";
+
+    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    setAuditLogs(prev => [
+      { time: timeString, text: `Solicitada troca: ${requestorName} por ${replacementName}.`, type: "info" },
+      ...prev
+    ]);
+
+    setStatus(`Solicitação de troca enviada para aprovação.`);
+
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      try {
+        await saveScheduleSwapRequest(firebaseConfig, { organizationId }, newSwap);
+      } catch (err) {
+        console.error(err);
+        setStatus("Solicitação salva apenas localmente.");
+      }
+    }
+
+    setRequestingSwapForAssignmentId(null);
+    setSwapReplacementPersonId("");
+    setSwapNote("");
+  }
+
+  async function handleAcceptSwap(swapId: string) {
+    const swap = swapRequests.find(s => s.id === swapId);
+    if (!swap) return;
+
+    try {
+      const { requestorAssignment } = processScheduleSwap(swap, assignments);
+
+      setAssignments(current => current.map(a => a.id === requestorAssignment.id ? requestorAssignment : a));
+
+      const updatedSwap: ScheduleSwapRequest = {
+        ...swap,
+        status: "accepted",
+        updatedAt: new Date().toISOString()
+      };
+      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
+
+      const requestor = people.find(p => p.id === swap.requestorPersonId);
+      const replacement = people.find(p => p.id === (swap.proposedReplacementPersonId || swap.targetPersonId));
+      const requestorName = requestor ? getFullName(requestor) : "Voluntário";
+      const replacementName = replacement ? getFullName(replacement) : "Substituto";
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+      setAuditLogs(prev => [
+        { time: timeString, text: `Troca aprovada: ${replacementName} assume o lugar de ${requestorName}.`, type: "success" },
+        ...prev
+      ]);
+      setStatus("Troca aprovada com sucesso.");
+
+      if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+        await Promise.all([
+          saveServiceAssignment(firebaseConfig, { organizationId }, requestorAssignment),
+          saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap)
+        ]);
+        setStatus("Troca aprovada e sincronizada no Firebase.");
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus(error instanceof Error ? error.message : "Erro ao processar troca.");
+    }
+  }
+
+  async function handleDeclineSwap(swapId: string) {
+    const swap = swapRequests.find(s => s.id === swapId);
+    if (!swap) return;
+
+    const updatedSwap: ScheduleSwapRequest = {
+      ...swap,
+      status: "declined",
+      updatedAt: new Date().toISOString()
+    };
+    setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
+
+    const requestor = people.find(p => p.id === swap.requestorPersonId);
+    const requestorName = requestor ? getFullName(requestor) : "Voluntário";
+    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    setAuditLogs(prev => [
+      { time: timeString, text: `Troca recusada para a escala de ${requestorName}.`, type: "warning" },
+      ...prev
+    ]);
+    setStatus("Troca recusada.");
+
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      try {
+        await saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
+
   return (
     <main className="form-page serving-page" style={{ padding: "2rem" }}>
       
@@ -480,6 +620,59 @@ export function ServingView() {
           <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>membros ativos elegíveis</p>
         </article>
       </section>
+
+      {/* SOLICITAÇÕES DE TROCA DE ESCALAS PENDENTES */}
+      {swapRequests.filter(s => s.status === "pending").length > 0 && (
+        <section style={{ background: "rgba(139, 92, 246, 0.1)", border: "1px solid rgba(139, 92, 246, 0.3)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
+            <Sparkles size={20} style={{ color: "#8b5cf6" }} />
+            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Solicitações de Troca Pendentes</h3>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {swapRequests.filter(s => s.status === "pending").map((swap) => {
+              const requestor = people.find(p => p.id === swap.requestorPersonId);
+              const replacement = people.find(p => p.id === (swap.proposedReplacementPersonId || swap.targetPersonId));
+              const assignment = assignments.find(a => a.id === swap.assignmentId);
+              
+              const requestorName = requestor ? getFullName(requestor) : swap.requestorPersonId;
+              const replacementName = replacement ? getFullName(replacement) : "Substituto";
+              const teamName = assignment ? (ministryTeams.find(t => t.code === assignment.ministryCode)?.name || assignment.ministryCode) : "Ministério";
+
+              return (
+                <div key={swap.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", padding: "1rem", borderRadius: "16px", border: "1px solid var(--alvo-line)" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--alvo-ink)", fontWeight: 700 }}>
+                      {requestorName} solicita substituição por {replacementName}
+                    </p>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                      Ministério: {teamName} {assignment ? `| Função: ${assignment.role}` : ""}
+                    </p>
+                    {swap.note && (
+                      <p style={{ margin: "4px 0 0", fontSize: "0.8rem", fontStyle: "italic", color: "var(--alvo-ink-soft)" }}>
+                        Motivo: "{swap.note}"
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button 
+                      onClick={() => void handleAcceptSwap(swap.id)}
+                      style={{ background: "#10b981", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Aprovar Troca
+                    </button>
+                    <button 
+                      onClick={() => void handleDeclineSwap(swap.id)}
+                      style={{ background: "#ef4444", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* MATRIX DE DATAS E CULTOS INTERATIVA */}
       <section style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2.5rem" }}>
@@ -606,65 +799,117 @@ export function ServingView() {
                       borderRadius: "16px", 
                       padding: "1.25rem",
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
+                      flexDirection: "column",
+                      alignItems: "stretch",
+                      gap: "0.75rem"
                     }}
                   >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <strong style={{ color: "var(--alvo-ink)", fontSize: "1.05rem" }}>
-                          {person ? getFullName(person) : assignment.personId}
-                        </strong>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <strong style={{ color: "var(--alvo-ink)", fontSize: "1.05rem" }}>
+                            {person ? getFullName(person) : assignment.personId}
+                          </strong>
+                          
+                          {/* Glow status dot instead of heavy badge */}
+                          <span style={{ 
+                            width: 8, 
+                            height: 8, 
+                            borderRadius: "50%", 
+                            backgroundColor: assignment.status === "confirmed" || assignment.status === "present" ? "#10b981" : assignment.status === "declined" ? "#ef4444" : "#f59e0b",
+                            display: "inline-block" 
+                          }} />
+
+                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>
+                            ({getAssignmentStatusLabel(assignment.status)})
+                          </span>
+                        </div>
                         
-                        {/* Glow status dot instead of heavy badge */}
-                        <span style={{ 
-                          width: 8, 
-                          height: 8, 
-                          borderRadius: "50%", 
-                          backgroundColor: assignment.status === "confirmed" || assignment.status === "present" ? "#10b981" : assignment.status === "declined" ? "#ef4444" : "#f59e0b",
-                          display: "inline-block" 
-                        }} />
+                        <p style={{ color: "var(--alvo-accent)", fontSize: "0.8rem", margin: "4px 0 0" }}>
+                          Função: {assignment.role}
+                        </p>
 
-                        <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>
-                          ({getAssignmentStatusLabel(assignment.status)})
-                        </span>
+                        {person?.tribePrimaryCode && (
+                          <span style={{ display: "inline-block", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px", color: "var(--alvo-ink-soft)", marginTop: 6 }}>
+                            Tribo: {getTribeDisplayLabel(person.tribePrimaryCode)}
+                          </span>
+                        )}
                       </div>
-                      
-                      <p style={{ color: "var(--alvo-accent)", fontSize: "0.8rem", margin: "4px 0 0" }}>
-                        Função: {assignment.role}
-                      </p>
 
-                      {person?.tribePrimaryCode && (
-                        <span style={{ display: "inline-block", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px", color: "var(--alvo-ink-soft)", marginTop: 6 }}>
-                          Tribo: {getTribeDisplayLabel(person.tribePrimaryCode)}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      {isPending && (
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        {isPending && (
+                          <button 
+                            onClick={() => setSelectedAssignmentForReminder(assignment)}
+                            style={{ background: "rgba(249, 115, 22, 0.15)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                          >
+                            <MessageSquare size={13} /> Lembrar
+                          </button>
+                        )}
+                        
                         <button 
-                          onClick={() => setSelectedAssignmentForReminder(assignment)}
-                          style={{ background: "rgba(249, 115, 22, 0.15)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                          onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")}
+                          style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
                         >
-                          <MessageSquare size={13} /> Lembrar
+                          Confirmar
                         </button>
-                      )}
-                      
-                      <button 
-                        onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")}
-                        style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                      >
-                        Confirmar
-                      </button>
 
-                      <button 
-                        onClick={() => void handleAssignmentStatus(assignment.id, "present")}
-                        style={{ background: "#f97316", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                      >
-                        Presença
-                      </button>
+                        <button 
+                          onClick={() => void handleAssignmentStatus(assignment.id, "present")}
+                          style={{ background: "#f97316", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Presença
+                        </button>
+
+                        <button 
+                          onClick={() => setRequestingSwapForAssignmentId(assignment.id)}
+                          style={{ background: "rgba(139, 92, 246, 0.15)", border: "none", color: "#8b5cf6", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Trocar
+                        </button>
+                      </div>
                     </div>
+
+                    {requestingSwapForAssignmentId === assignment.id && (
+                      <div style={{ padding: "1rem", backgroundColor: "rgba(255, 255, 255, 0.5)", borderRadius: "12px", border: "1px solid var(--alvo-line)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--alvo-ink)" }}>Solicitar Troca Assistida</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--alvo-ink-soft)" }}>Selecione o Voluntário de Substituição:</label>
+                          <select 
+                            value={swapReplacementPersonId}
+                            onChange={(e) => setSwapReplacementPersonId(e.target.value)}
+                            style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid var(--alvo-line)", outline: "none", fontSize: "0.85rem", background: "white", color: "var(--alvo-ink)" }}
+                          >
+                            <option value="">Escolha um voluntário...</option>
+                            {people.filter(p => p.id !== assignment.personId).map(p => (
+                              <option key={p.id} value={p.id}>{getFullName(p)}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--alvo-ink-soft)" }}>Observação / Motivo:</label>
+                          <input 
+                            placeholder="Ex: Viajará no final de semana."
+                            value={swapNote}
+                            onChange={(e) => setSwapNote(e.target.value)}
+                            style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid var(--alvo-line)", outline: "none", fontSize: "0.85rem", background: "white", color: "var(--alvo-ink)" }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", gap: "0.5rem", marginTop: 4 }}>
+                          <button 
+                            onClick={() => void handleRequestSwap(assignment.id, swapReplacementPersonId, swapNote)}
+                            style={{ background: "#8b5cf6", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Confirmar Solicitação
+                          </button>
+                          <button 
+                            onClick={() => setRequestingSwapForAssignmentId(null)}
+                            style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

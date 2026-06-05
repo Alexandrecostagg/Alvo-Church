@@ -1,8 +1,15 @@
-export const runtime = 'edge';
 
-import { StoreDetailView } from "../../../../src/features/marketplace-community/store-detail-view";
+"use client";
 
-export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
-  const { storeId } = await params;
+import { use } from "react";
+import dynamic from "next/dynamic";
+
+const StoreDetailView = dynamic(
+  () => import("../../../../src/features/marketplace-community/store-detail-view").then((mod) => mod.StoreDetailView),
+  { ssr: false }
+);
+
+export default function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = use(params);
   return <StoreDetailView storeId={storeId} />;
 }

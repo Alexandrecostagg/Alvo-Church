@@ -30,6 +30,8 @@ import type {
   PeopleDashboardSnapshot,
   PeopleListItem,
   Person,
+  ServiceAssignment,
+  ScheduleSwapRequest,
   TenantContext,
   TribeAnswer,
   TribeAssessment,
@@ -1062,4 +1064,57 @@ export function transposeChordsText(lyricsWithChords: string, originalKey: strin
       return match;
     }
   });
+}
+
+/**
+ * Verifica se um voluntário possui concorrência de horários de escalas.
+ * Retorna o ServiceAssignment conflitante se houver, ou null caso contrário.
+ */
+export function checkScheduleConflict(
+  assignments: readonly ServiceAssignment[],
+  newAssignment: Pick<ServiceAssignment, "personId" | "serviceDate" | "id">
+): ServiceAssignment | null {
+  return (
+    assignments.find(
+      (assignment) =>
+        assignment.personId === newAssignment.personId &&
+        assignment.serviceDate === newAssignment.serviceDate &&
+        assignment.id !== newAssignment.id &&
+        assignment.status !== "declined"
+    ) || null
+  );
+}
+
+/**
+ * Processa a aceitação de uma troca de escala.
+ * Retorna as atualizações necessárias nas escalas envolvidas.
+ */
+export function processScheduleSwap(
+  request: ScheduleSwapRequest,
+  assignments: readonly ServiceAssignment[]
+): {
+  requestorAssignment: ServiceAssignment;
+  replacementAssignment?: ServiceAssignment;
+} {
+  const reqAssignment = assignments.find((a) => a.id === request.assignmentId);
+  if (!reqAssignment) {
+    throw new Error("Escala de origem não encontrada.");
+  }
+
+  const replacementPersonId = request.proposedReplacementPersonId || request.targetPersonId;
+  if (!replacementPersonId) {
+    throw new Error("Nenhum voluntário de substituição definido.");
+  }
+
+  // Cria a escala atualizada com o novo voluntário
+  const requestorAssignment: ServiceAssignment = {
+    ...reqAssignment,
+    personId: replacementPersonId,
+    status: "confirmed",
+    updatedAt: new Date().toISOString()
+  };
+
+  return {
+    requestorAssignment
+  };
 }

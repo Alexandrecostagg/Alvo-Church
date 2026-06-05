@@ -62,7 +62,7 @@ export function OrganizationNewView() {
       brandMode: getFormValue(form, "brandMode") as OrganizationBrandingSettings["brandMode"],
       publicProductName: getFormValue(form, "productName") || "Getro Church",
       publicShortName: getFormValue(form, "shortName") || "Getro",
-      primaryColor: getFormValue(form, "primaryColor") || "#d27836",
+      primaryColor: getFormValue(form, "primaryColor") || "#06b6d4",
       secondaryColor: "#1c2433",
       accentColor: "#e8dcc7",
       surfaceColor: "#f7f3ea",
@@ -208,7 +208,7 @@ export function OrganizationNewView() {
               </label>
               <label>
                 Cor Primária
-                <input name="primaryColor" type="color" defaultValue="#d27836" />
+                <input name="primaryColor" type="color" defaultValue="#06b6d4" />
               </label>
             </div>
             <label>
@@ -233,20 +233,20 @@ export function OrganizationNewView() {
           .onboarding-form { max-width: 900px; margin: 0 auto; }
           .premium-onboarding { display: flex; justify-content: space-between; align-items: center; padding: 4rem 0; max-width: 900px; margin: 0 auto; }
           .hero-stats-mini { display: flex; gap: 1rem; }
-          .mini-card-saas { background: white; padding: 1.25rem; border-radius: 1.25rem; border: 1px solid var(--alvo-line); text-align: center; min-width: 130px; box-shadow: var(--alvo-shadow); }
-          .mini-card-saas strong { display: block; font-size: 1.5rem; color: var(--alvo-accent); letter-spacing: -0.04em; }
+          .mini-card-saas { background: var(--glass-bg); padding: 1.25rem; border-radius: 1.25rem; border: 1px solid var(--alvo-line); text-align: center; min-width: 130px; box-shadow: var(--alvo-shadow); }
+          .mini-card-saas strong { display: block; font-size: 1.5rem; color: var(--alvo-blue); letter-spacing: -0.04em; }
           .mini-card-saas span { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--alvo-ink-soft); }
 
-          .premium-fieldset { border: none; background: white; padding: 2.5rem; border-radius: 2.5rem; border: 1px solid var(--alvo-line); margin-bottom: 2.5rem; box-shadow: var(--alvo-shadow-strong); }
-          .premium-fieldset legend { font-weight: 950; font-size: 1.5rem; margin-bottom: 2rem; letter-spacing: -0.05em; color: var(--alvo-ink); background: white; padding: 0 1rem; }
+          .premium-fieldset { border: none; background: var(--glass-bg); padding: 2.5rem; border-radius: 2.5rem; border: 1px solid var(--alvo-line); margin-bottom: 2.5rem; box-shadow: var(--alvo-shadow-strong); }
+          .premium-fieldset legend { font-weight: 950; font-size: 1.5rem; margin-bottom: 2rem; letter-spacing: -0.05em; color: var(--alvo-blue); background: transparent; padding: 0; }
           .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
           .field-hint { font-size: 0.8125rem; color: var(--alvo-ink-soft); margin-top: 0.5rem; }
 
           .modules-grid-selection { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
           .checkbox-tile { position: relative; cursor: pointer; display: block; }
           .checkbox-tile input { position: absolute; opacity: 0; }
-          .tile-content { border: 2px solid #f1f5f9; padding: 1.5rem; border-radius: 1.5rem; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-          .checkbox-tile input:checked + .tile-content { border-color: var(--alvo-accent); background: #fff7ed; transform: scale(1.02); }
+          .tile-content { border: 1px solid var(--alvo-line); padding: 1.5rem; border-radius: 1.5rem; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+          .checkbox-tile input:checked + .tile-content { border-color: var(--alvo-blue); background: var(--alvo-blue-soft); transform: scale(1.02); }
           .tile-content strong { display: block; font-size: 1rem; color: var(--alvo-ink); }
           .tile-content span { font-size: 0.8125rem; color: var(--alvo-ink-soft); }
 
