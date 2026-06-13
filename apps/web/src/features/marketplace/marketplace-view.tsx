@@ -14,7 +14,7 @@ import {
   ExternalLink,
   Loader2
 } from "lucide-react";
-import { recentPeople } from "../../lib/mock-data";
+import { recentPeople, partnerOrganizations, partnerBenefits } from "../../lib/mock-data";
 import type { PartnerOrganization, PartnerBenefit, Person, TenantContext } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { fetchPartnerOrganizations, fetchPartnerBenefits } from "@alvo/firebase";
@@ -29,7 +29,12 @@ export function MarketplaceView() {
 
   useEffect(() => {
     async function loadData() {
-      if (!firebaseReady || !tenantReady) return;
+      if (!firebaseReady || !tenantReady) {
+        setBusinesses(partnerOrganizations as PartnerOrganization[]);
+        setBenefits(partnerBenefits as unknown as PartnerBenefit[]);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
@@ -37,10 +42,12 @@ export function MarketplaceView() {
           fetchPartnerOrganizations(firebaseConfig, context),
           fetchPartnerBenefits(firebaseConfig, context)
         ]);
-        setBusinesses(orgs);
-        setBenefits(bens);
+        setBusinesses(orgs.length > 0 ? orgs : (partnerOrganizations as PartnerOrganization[]));
+        setBenefits(bens.length > 0 ? bens : (partnerBenefits as unknown as PartnerBenefit[]));
       } catch (error) {
         console.error("Error loading marketplace data:", error);
+        setBusinesses(partnerOrganizations as PartnerOrganization[]);
+        setBenefits(partnerBenefits as unknown as PartnerBenefit[]);
       } finally {
         setLoading(false);
       }
@@ -199,7 +206,7 @@ export function MarketplaceView() {
           max-width: 1400px;
           margin: 0 auto;
           background: transparent;
-          color: #f8fafc;
+          color: var(--alvo-ink);
           min-height: 100vh;
         }
 
@@ -210,7 +217,7 @@ export function MarketplaceView() {
           justify-content: center;
           min-height: 40vh;
           gap: 1rem;
-          color: #64748b;
+          color: var(--alvo-ink-soft);
         }
 
         .spinner {
@@ -243,14 +250,14 @@ export function MarketplaceView() {
         h1 {
           font-size: 3rem;
           font-weight: 950;
-          color: white;
+          color: var(--alvo-ink);
           margin-bottom: 1rem;
           letter-spacing: -0.04em;
         }
 
         .header-content p {
           font-size: 1.2rem;
-          color: #94a3b8;
+          color: var(--alvo-ink-soft);
           max-width: 650px;
           line-height: 1.6;
         }
@@ -272,7 +279,7 @@ export function MarketplaceView() {
           left: 1.25rem;
           top: 50%;
           transform: translateY(-50%);
-          color: #64748b;
+          color: var(--alvo-ink-soft);
         }
 
         .search-input-wrapper input {
@@ -281,11 +288,11 @@ export function MarketplaceView() {
           border-radius: 1.25rem;
           border: 1px solid var(--alvo-line);
           background: var(--glass-bg);
-          color: white;
+          color: var(--alvo-ink);
           font-size: 1.1rem;
           outline: none;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+          box-shadow: var(--alvo-shadow);
         }
 
         .search-input-wrapper input:focus {
@@ -294,7 +301,8 @@ export function MarketplaceView() {
         }
 
         .search-input-wrapper input::placeholder {
-          color: #475569;
+          color: var(--alvo-ink-soft);
+          opacity: 0.7;
         }
 
         .category-pills {
@@ -312,12 +320,12 @@ export function MarketplaceView() {
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #cbd5e1;
+          color: var(--alvo-ink-soft);
         }
 
         .pill:hover {
           border-color: var(--alvo-blue);
-          color: white;
+          color: var(--alvo-ink);
           background: rgba(6, 182, 212, 0.04);
         }
 
@@ -345,13 +353,13 @@ export function MarketplaceView() {
         .business-card:hover {
           transform: translateY(-8px);
           border-color: var(--alvo-blue);
-          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+          box-shadow: var(--alvo-shadow-strong);
         }
 
         .business-image-header {
           position: relative;
           height: 180px;
-          background: #0f172a;
+          background: var(--alvo-surface-muted);
         }
 
         .business-image-header img {
@@ -366,14 +374,14 @@ export function MarketplaceView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.05) 0%, rgba(15, 23, 42, 0.1) 100%);
         }
 
         .member-badge {
           position: absolute;
           top: 1rem;
           right: 1rem;
-          background: rgba(16, 185, 129, 0.2);
+          background: rgba(16, 185, 129, 0.1);
           backdrop-filter: blur(10px);
           color: #10b981;
           padding: 0.5rem 0.75rem;
@@ -383,7 +391,7 @@ export function MarketplaceView() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          border: 1px solid rgba(16, 185, 129, 0.4);
+          border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
         .business-body {
@@ -401,7 +409,7 @@ export function MarketplaceView() {
         h3 {
           font-size: 1.5rem;
           font-weight: 850;
-          color: white;
+          color: var(--alvo-ink);
           margin-bottom: 1rem;
           letter-spacing: -0.02em;
         }
@@ -412,9 +420,9 @@ export function MarketplaceView() {
           gap: 0.75rem;
           margin-bottom: 1.25rem;
           padding: 0.5rem 0.75rem;
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(0, 0, 0, 0.03);
           border-radius: 0.75rem;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--alvo-line);
         }
 
         .owner-avatar {
@@ -433,14 +441,14 @@ export function MarketplaceView() {
 
         .owner-mini span {
           font-size: 0.85rem;
-          color: #cbd5e1;
+          color: var(--alvo-ink-soft);
         }
 
         .address-info {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          color: #94a3b8;
+          color: var(--alvo-ink-soft);
           font-size: 0.875rem;
           margin-bottom: 0.75rem;
           font-weight: 600;
@@ -450,9 +458,9 @@ export function MarketplaceView() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          color: #10b981;
-          background: rgba(16, 185, 129, 0.15);
-          border: 1px solid rgba(16, 185, 129, 0.3);
+          color: #16a34a;
+          background: var(--alvo-green-soft);
+          border: 1px solid rgba(22, 163, 74, 0.2);
           padding: 0.5rem 0.75rem;
           border-radius: 0.75rem;
           font-size: 0.875rem;
@@ -470,20 +478,20 @@ export function MarketplaceView() {
           width: 44px;
           height: 44px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid var(--alvo-line);
+          background: var(--alvo-surface);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
-          color: #cbd5e1;
+          color: var(--alvo-ink-soft);
         }
 
         .action-btn:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: white;
-          border-color: #cbd5e1;
+          background: var(--alvo-surface-muted);
+          color: var(--alvo-ink);
+          border-color: var(--alvo-ink-soft);
         }
 
         .primary-view-btn {

@@ -22,6 +22,45 @@ import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStoreById, fetchCommunityOffers } from "@alvo/firebase";
 import type { CommunityStore, CommunityOffer, TenantContext } from "@alvo/types";
 
+const mockStore: CommunityStore = {
+  id: "store_1",
+  organizationId: "org_alvo_demo",
+  ownerId: "user_admin_demo",
+  name: "Doces & Travessuras",
+  description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+  category: "food",
+  status: "approved",
+  images: [],
+  bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+  contact: {
+    email: "doces@alvo.app",
+    phone: "(91) 99999-9991",
+    address: { street: "Av. Gentil Bittencourt", number: "123", city: "Belém", state: "PA" }
+  },
+  socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+const mockOffers: CommunityOffer[] = [
+  {
+    id: "offer_1",
+    organizationId: "org_alvo_demo",
+    storeId: "store_1",
+    title: "15% de desconto em bolos inteiros",
+    description: "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Getro Pass.",
+    type: "percentage",
+    discountPercentage: 15,
+    status: "active",
+    images: ["https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop"],
+    validFrom: new Date().toISOString(),
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy: "user_admin_demo"
+  }
+];
+
 interface StoreDetailViewProps {
   storeId: string;
 }
@@ -35,20 +74,29 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
 
   useEffect(() => {
     async function loadData() {
-      if (!firebaseReady || !tenantReady) return;
+      if (!firebaseReady || !tenantReady) {
+        setStore(mockStore);
+        setOffers(mockOffers);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
         const storeData = await fetchCommunityStoreById(firebaseConfig, context, storeId);
-        setStore(storeData);
+        setStore(storeData || mockStore);
         
-        if (storeData.status === "approved") {
+        if (storeData && storeData.status === "approved") {
           const offersData = await fetchCommunityOffers(firebaseConfig, context, storeId, 50);
-          setOffers(offersData.filter(o => o.status === "active"));
+          setOffers(offersData.length > 0 ? offersData.filter(o => o.status === "active") : mockOffers);
+        } else {
+          setOffers(mockOffers);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Erro ao carregar loja");
         console.error("Error loading store:", err);
+        setStore(mockStore);
+        setOffers(mockOffers);
       } finally {
         setLoading(false);
       }

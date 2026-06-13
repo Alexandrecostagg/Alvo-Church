@@ -17,6 +17,24 @@ import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
 import type { CommunityStore, TenantContext } from "@alvo/types";
 
+const mockStores: CommunityStore[] = [
+  {
+    id: "store_1",
+    organizationId: "org_alvo_demo",
+    ownerId: "user_admin_demo",
+    name: "Doces & Travessuras",
+    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+    category: "food",
+    status: "approved",
+    images: [],
+    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+    contact: { address: { city: "Belém", state: "PA" } },
+    socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 export function MyStoresView() {
   const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
   const [stores, setStores] = useState<CommunityStore[]>([]);
@@ -25,7 +43,13 @@ export function MyStoresView() {
 
   useEffect(() => {
     async function loadStores() {
-      if (!firebaseReady || !tenantReady || !user) return;
+      if (!firebaseReady || !tenantReady || !user) {
+        // Fallback to mock stores when offline
+        const ownerId = user?.uid || "user_admin_demo";
+        setStores(mockStores.map(s => ({ ...s, ownerId })));
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
@@ -35,9 +59,10 @@ export function MyStoresView() {
         const myStores = allStores.filter(store => 
           store.ownerId === user.uid
         );
-        setStores(myStores);
+        setStores(myStores.length > 0 ? myStores : mockStores.map(s => ({ ...s, ownerId: user.uid })));
       } catch (error) {
         console.error("Error loading stores:", error);
+        setStores(mockStores.map(s => ({ ...s, ownerId: user.uid })));
       } finally {
         setLoading(false);
       }

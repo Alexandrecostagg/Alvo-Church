@@ -77,9 +77,9 @@ export function StarfieldBackground() {
         // Desenhar estrela
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha * 0.65})`;
+        ctx.fillStyle = `rgba(59, 130, 246, ${star.alpha * 0.28})`;
         ctx.shadowBlur = star.size * 2;
-        ctx.shadowColor = "rgba(59, 130, 246, 0.4)";
+        ctx.shadowColor = "rgba(59, 130, 246, 0.12)";
         ctx.fill();
         ctx.shadowBlur = 0; // reset shadow for performance
 
@@ -90,7 +90,7 @@ export function StarfieldBackground() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < connectionDistance * 1.5) {
-            const mouseAlpha = (1 - dist / (connectionDistance * 1.5)) * 0.18;
+            const mouseAlpha = (1 - dist / (connectionDistance * 1.5)) * 0.12;
             ctx.beginPath();
             ctx.moveTo(star.x, star.y);
             ctx.lineTo(mouse.x, mouse.y);
@@ -112,7 +112,7 @@ export function StarfieldBackground() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < connectionDistance) {
-            const alpha = (1 - dist / connectionDistance) * 0.06;
+            const alpha = (1 - dist / connectionDistance) * 0.05;
             ctx.beginPath();
             ctx.moveTo(star.x, star.y);
             ctx.lineTo(other.x, other.y);

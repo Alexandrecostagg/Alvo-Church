@@ -662,17 +662,97 @@ export function JourneysView() {
   }
 
   return (
-    <main className="form-page journeys-page animate-entrance" style={{ maxWidth: 1440, padding: "2rem" }}>
+    <main 
+      className="form-page journeys-page animate-entrance" 
+      style={{ 
+        maxWidth: 1440, 
+        padding: "2rem",
+        ["--alvo-accent" as string]: "#2563eb",
+        ["--alvo-accent-soft" as string]: "rgba(37, 99, 235, 0.08)",
+        ["--alvo-accent-dark" as string]: "#1e3a8a",
+        ["--alvo-blue" as string]: "#2563eb",
+        ["--alvo-blue-soft" as string]: "rgba(37, 99, 235, 0.08)",
+        ["--alvo-green" as string]: "#10b981",
+        ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)"
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        .journeys-page .journey-lane {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+        }
+        .journeys-page .journey-person-card {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01) !important;
+        }
+        .journeys-page .journey-person-card strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journey-person-card small {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .journey-detail-card {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -4px rgba(0, 0, 0, 0.03) !important;
+        }
+        .journeys-page .journey-detail-card h2,
+        .journeys-page .journey-detail-card h3,
+        .journeys-page .journey-detail-card h4,
+        .journeys-page .journey-detail-card strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journey-detail-card span,
+        .journeys-page .journey-detail-card p,
+        .journeys-page .journey-detail-card small {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .journey-health-card {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+        }
+        .journeys-page .journey-health-card strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journey-health-card span {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .directory-toolbar {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+        }
+        .journeys-page .directory-toolbar label {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .directory-toolbar input,
+        .journeys-page .directory-toolbar select {
+          background: #f8fafc !important;
+          border: 1px solid var(--alvo-line) !important;
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .task-card {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+        }
+        .journeys-page .task-card strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .task-card span {
+          color: var(--alvo-ink-soft) !important;
+        }
+      `}} />
       
       {/* Hero Central de Acolhimento */}
-      <section className="journeys-hero" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
+      <section className="journeys-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
         <div>
           <Link className="back-link" href="/">
             <ArrowLeft size={14} style={{ marginRight: 6 }} /> Voltar ao painel
           </Link>
-          <p className="eyebrow" style={{ color: "#f97316" }}>Painel de Integração</p>
-          <h1 style={{ fontSize: "2.75rem", fontWeight: 950, color: "white", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
-          <p style={{ color: "#94a3b8", fontSize: "1.1rem", maxWidth: 750, lineHeight: 1.6 }}>
+          <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Painel de Integração</p>
+          <h1 style={{ fontSize: "2.75rem", fontWeight: 950, color: "var(--alvo-ink)", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
+          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.1rem", maxWidth: 750, lineHeight: 1.6 }}>
             Raciocínio profundo para o cuidado de almas: gerencie gargalos ativos, acompanhe a evolução de visitantes
             para a aliança de membresia e monitore a inserção em células.
           </p>
@@ -737,11 +817,11 @@ export function JourneysView() {
               onClick={() => setFocusFilter(filter.value)}
               type="button"
               style={{
-                backgroundColor: focusFilter === filter.value ? "#f97316" : "rgba(30, 41, 59, 0.2)",
-                border: focusFilter === filter.value ? "1px solid #ea580c" : "1px solid rgba(255,255,255,0.06)",
+                backgroundColor: focusFilter === filter.value ? "var(--alvo-accent)" : "rgba(255, 255, 255, 0.35)",
+                border: focusFilter === filter.value ? "1px solid var(--alvo-accent-dark)" : "1px solid var(--alvo-line)",
                 padding: "10px 18px",
                 borderRadius: 14,
-                color: "white",
+                color: focusFilter === filter.value ? "white" : "var(--alvo-ink)",
                 cursor: "pointer",
                 fontWeight: 800,
                 fontSize: "0.85rem",
@@ -853,8 +933,8 @@ export function JourneysView() {
                         style={{
                           width: "100%",
                           textAlign: "left",
-                          backgroundColor: isSelected ? "rgba(249, 115, 22, 0.12)" : "rgba(30, 41, 59, 0.3)",
-                          border: isSelected ? "1px solid #f97316" : "1px solid rgba(255,255,255,0.05)",
+                          backgroundColor: isSelected ? "var(--alvo-accent-soft)" : "#ffffff",
+                          border: isSelected ? "1px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
                           borderRadius: 16,
                           padding: "1rem",
                           cursor: "pointer",
@@ -910,10 +990,10 @@ export function JourneysView() {
           {selectedPerson ? (
             <>
               {/* Header do Membro */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Membro em Foco</span>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: 900, color: "white", marginTop: 4 }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: 950, color: "var(--alvo-ink)", marginTop: 4, letterSpacing: "-0.03em" }}>
                     {getFullName(selectedPerson)}
                   </h2>
                 </div>
@@ -959,13 +1039,13 @@ export function JourneysView() {
               )}
 
               {/* 💬 COPILOTO DE WHATSAPP (Live Script Editor) */}
-              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
+              <div style={{ background: "#f8fafc", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                   <div>
                     <span style={{ fontSize: "0.7rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Copiloto de Mensagens</span>
-                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "white", marginTop: 2 }}>Disparar Acolhimento Reativo</h3>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", marginTop: 2 }}>Disparar Acolhimento Reativo</h3>
                   </div>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>
                     WhatsApp: <strong>{selectedPerson.whatsappPhone || selectedPerson.mobilePhone || "Não informado"}</strong>
                   </span>
                 </div>
@@ -977,11 +1057,11 @@ export function JourneysView() {
                       key={idx}
                       onClick={() => setSelectedTemplateIndex(idx)}
                       style={{
-                        backgroundColor: selectedTemplateIndex === idx ? "var(--alvo-blue)" : "rgba(255,255,255,0.05)",
+                        backgroundColor: selectedTemplateIndex === idx ? "var(--alvo-blue)" : "rgba(0,0,0,0.05)",
                         border: "none",
                         borderRadius: 8,
                         padding: "6px 12px",
-                        color: "white",
+                        color: selectedTemplateIndex === idx ? "white" : "var(--alvo-ink)",
                         fontSize: "0.75rem",
                         fontWeight: 700,
                         cursor: "pointer"
@@ -999,10 +1079,10 @@ export function JourneysView() {
                   style={{
                     width: "100%",
                     height: 90,
-                    backgroundColor: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid var(--alvo-line)",
                     borderRadius: 12,
-                    color: "white",
+                    color: "var(--alvo-ink)",
                     padding: "10px",
                     fontSize: "0.85rem",
                     lineHeight: "1.25rem",
@@ -1016,11 +1096,11 @@ export function JourneysView() {
                   <button 
                     onClick={handleCopyCareScript}
                     style={{
-                      background: "none",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "#ffffff",
+                      border: "1px solid var(--alvo-line)",
                       borderRadius: 10,
                       padding: "8px 16px",
-                      color: "white",
+                      color: "var(--alvo-ink)",
                       fontSize: "0.8rem",
                       fontWeight: 700,
                       cursor: "pointer"
@@ -1072,7 +1152,7 @@ export function JourneysView() {
                           width: 18, 
                           height: 18, 
                           borderRadius: "50%", 
-                          backgroundColor: step.state === "done" ? "#10b981" : step.state === "active" ? "var(--alvo-blue)" : "rgba(255,255,255,0.1)",
+                          backgroundColor: step.state === "done" ? "#10b981" : step.state === "active" ? "var(--alvo-blue)" : "rgba(0,0,0,0.08)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1082,7 +1162,7 @@ export function JourneysView() {
                         }}>
                           {step.state === "done" ? "✓" : idx + 1}
                         </div>
-                        <span style={{ color: step.state === "done" ? "white" : "#94a3b8", fontWeight: step.state === "done" ? 700 : 400 }}>
+                        <span style={{ color: step.state === "done" ? "var(--alvo-ink)" : "var(--alvo-ink-soft)", fontWeight: step.state === "done" ? 700 : 400 }}>
                           {step.label} · <small style={{ color: "#64748b" }}>{step.detail}</small>
                         </span>
                       </div>
@@ -1110,8 +1190,8 @@ export function JourneysView() {
 
                     <div style={{ maxHeight: 90, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
                       {selectedReadiness.items.map((item) => (
-                        <div key={item.label} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.7rem", color: item.done ? "#cbd5e1" : "#64748b" }}>
-                          <CheckCircle2 size={12} style={{ color: item.done ? "#10b981" : "#1e293b" }} />
+                        <div key={item.label} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.7rem", color: item.done ? "var(--alvo-ink)" : "var(--alvo-ink-soft)" }}>
+                          <CheckCircle2 size={12} style={{ color: item.done ? "#10b981" : "var(--alvo-line)" }} />
                           <span>{item.label}</span>
                         </div>
                       ))}
@@ -1133,7 +1213,7 @@ export function JourneysView() {
                         display: "flex", 
                         justifyContent: "space-between", 
                         alignItems: "center", 
-                        backgroundColor: "rgba(255,255,255,0.02)", 
+                        backgroundColor: "#f8fafc", 
                         padding: "10px 16px", 
                         borderRadius: 12,
                         border: "1px solid var(--alvo-line)"
@@ -1150,11 +1230,11 @@ export function JourneysView() {
                       </div>
 
                       {step.actionKind === "link" ? (
-                        <Link className="ghost-button compact" href={step.href} style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, textDecoration: "none", color: "white", border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <Link className="ghost-button compact" href={step.href} style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, textDecoration: "none", color: "var(--alvo-ink)", border: "1px solid var(--alvo-line)" }}>
                           {step.actionLabel}
                         </Link>
                       ) : step.actionKind === "none" ? (
-                        <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{step.actionLabel}</span>
+                        <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>{step.actionLabel}</span>
                       ) : (
                         <button
                           onClick={() => void handleCarePlanAction(step)}
@@ -1181,7 +1261,7 @@ export function JourneysView() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.5rem" }}>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Mudar Status</strong>
+                  <strong style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Mudar Status</strong>
                   <select
                     aria-label="Mudar status pastoral"
                     onChange={(event) =>
@@ -1191,10 +1271,10 @@ export function JourneysView() {
                       )
                     }
                     value={selectedPerson.memberStatus}
-                    style={{ padding: "8px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white", fontSize: "0.75rem", outline: "none" }}
+                    style={{ padding: "8px", backgroundColor: "#ffffff", border: "1px solid var(--alvo-line)", borderRadius: 8, color: "var(--alvo-ink)", fontSize: "0.75rem", outline: "none" }}
                   >
                     {memberStatusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
+                      <option key={option.value} value={option.value} style={{ color: "var(--alvo-ink)" }}>
                         {option.label}
                       </option>
                     ))}
@@ -1228,13 +1308,13 @@ export function JourneysView() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Lançar Cuidado Rápido</strong>
+                  <strong style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Lançar Cuidado Rápido</strong>
                   <button 
                     onClick={() => void handleCreateTask(selectedPerson, taskTemplates[4])}
                     style={{ 
-                      backgroundColor: "rgba(255,255,255,0.05)", 
-                      color: "white", 
-                      border: "1px solid rgba(255,255,255,0.1)", 
+                      backgroundColor: "#ffffff", 
+                      color: "var(--alvo-ink)", 
+                      border: "1px solid var(--alvo-line)", 
                       borderRadius: 8, 
                       padding: "8px 12px", 
                       fontSize: "0.75rem", 
@@ -1713,16 +1793,17 @@ function BottleneckCard({
   return (
     <article 
       style={{ 
-        backgroundColor: "var(--glass-bg)", 
+        backgroundColor: "#ffffff", 
         border: "1px solid var(--alvo-line)", 
         borderRadius: 20, 
         padding: "1.25rem",
-        borderLeft: `4px solid ${color}`
+        borderLeft: `4px solid ${color}`,
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.03)"
       }}
     >
-      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{label}</span>
-      <strong style={{ display: "block", fontSize: "2rem", color: "white", marginTop: 4 }}>{value}</strong>
-      <p style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 4 }}>{detail}</p>
+      <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>{label}</span>
+      <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{value}</strong>
+      <p style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", marginTop: 4 }}>{detail}</p>
     </article>
   );
 }

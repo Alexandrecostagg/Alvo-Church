@@ -53,6 +53,26 @@ export interface Attendee {
   ticketCode: string;
 }
 
+export interface VolunteerAssignment {
+  id: string;
+  role: string;
+  volunteerName: string;
+  status: "confirmed" | "pending" | "declined";
+  teamName: string;
+}
+
+export interface WorshipSong {
+  id: string;
+  title: string;
+  artist: string;
+  key: string;
+  links: {
+    chords?: string;
+    youtube?: string;
+    spotify?: string;
+  }
+}
+
 // Inicializadores de Lojas/Eventos de Teste
 const initialEvents: EventType[] = [
   {
@@ -98,6 +118,43 @@ const initialEvents: EventType[] = [
   }
 ];
 
+const mockScheduleMap: Record<string, VolunteerAssignment[]> = {
+  event_women_2026: [
+    { id: "v1", role: "Líder de Recepção", volunteerName: "Ana Silva", status: "confirmed", teamName: "Acolhimento" },
+    { id: "v2", role: "Operador de Som", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
+    { id: "v3", role: "Câmera 1", volunteerName: "Rodrigo Melo", status: "pending", teamName: "Mídia/Som" },
+    { id: "v4", role: "Apoio Diaconato", volunteerName: "Matheus Costa", status: "confirmed", teamName: "Ordem e Protocolo" },
+    { id: "v5", role: "Recepcionista Portal", volunteerName: "Clara Santos", status: "pending", teamName: "Acolhimento" },
+  ],
+  event_baptism_may: [
+    { id: "v10", role: "Apoio Batismo", volunteerName: "Matheus Costa", status: "confirmed", teamName: "Ordem e Protocolo" },
+    { id: "v11", role: "Operador de Som", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
+    { id: "v12", role: "Fotógrafo", volunteerName: "Júlia Reis", status: "confirmed", teamName: "Mídia/Som" },
+  ],
+  event_leadership_camp: [
+    { id: "v20", role: "Coordenador Geral", volunteerName: "Marina Souza", status: "confirmed", teamName: "Liderança" },
+    { id: "v21", role: "Som & Iluminação", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
+    { id: "v22", role: "Socorrista", volunteerName: "Dra. Patrícia Lima", status: "confirmed", teamName: "Saúde" },
+    { id: "v23", role: "Logística Sítio", volunteerName: "Carlos Silveira", status: "pending", teamName: "Infraestrutura" },
+  ]
+};
+
+const mockWorshipMap: Record<string, WorshipSong[]> = {
+  event_women_2026: [
+    { id: "s1", title: "Águas Profundas", artist: "Alvo Worship", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+    { id: "s2", title: "O Lindo Nome", artist: "Hillsong Em Português", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+    { id: "s3", title: "Yeshua", artist: "Alessandro Vilas Boas", key: "Am", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+  ],
+  event_baptism_may: [
+    { id: "s10", title: "Fará Ele Outra Vez", artist: "Elevation Worship", key: "G", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com" } },
+    { id: "s11", title: "A Ele a Glória", artist: "Diante do Trono", key: "C", links: { chords: "https://cifraclub.com.br", spotify: "https://spotify.com" } },
+  ],
+  event_leadership_camp: [
+    { id: "s20", title: "Tua Presença é o Meu Bem", artist: "Alvo Worship", key: "E", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+    { id: "s21", title: "Ruach", artist: "Comunidade da Zona Sul", key: "F#m", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com" } },
+  ]
+};
+
 export function EventsView() {
   const { configured } = useAppAuth();
   
@@ -106,6 +163,73 @@ export function EventsView() {
   const [selectedEventId, setSelectedEventId] = useState<string>("event_women_2026");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "conference" | "service" | "camp" | "training" | "celebration">("all");
+  
+  // Novos estados para Abas e Calendário
+  const [activeTab, setActiveTab] = useState<"attendees" | "schedule" | "worship">("attendees");
+  const [sidebarMode, setSidebarMode] = useState<"list" | "calendar">("list");
+  const [notifiedAttendeeId, setNotifiedAttendeeId] = useState<string | null>(null);
+  const [notificationBanner, setNotificationBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2026, 5, 1)); // Junho 2026
+
+  // Sincroniza o mês do calendário com o evento selecionado
+  useEffect(() => {
+    const active = events.find(e => e.id === selectedEventId);
+    if (active) {
+      const d = new Date(active.startsAt);
+      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+  }, [selectedEventId, events]);
+
+  // Helpers para o Mini-Calendário
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    const days: Array<{ dayNumber: number | null; hasEvent: boolean; isSelected: boolean }> = [];
+    
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push({ dayNumber: null, hasEvent: false, isSelected: false });
+    }
+    
+    const active = events.find(e => e.id === selectedEventId);
+    for (let day = 1; day <= totalDays; day++) {
+      const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dayHasEvent = events.some(e => e.startsAt.startsWith(dateString));
+      
+      let dayIsSelected = false;
+      if (active) {
+        const activeDate = new Date(active.startsAt);
+        dayIsSelected = activeDate.getFullYear() === year &&
+                        activeDate.getMonth() === month &&
+                        activeDate.getDate() === day;
+      }
+      
+      days.push({ dayNumber: day, hasEvent: dayHasEvent, isSelected: dayIsSelected });
+    }
+    
+    return days;
+  }, [currentMonth, events, selectedEventId]);
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleDayClick = (dayNumber: number) => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+    const dayEvent = events.find(e => e.startsAt.startsWith(dateString));
+    if (dayEvent) {
+      setSelectedEventId(dayEvent.id);
+    }
+  };
   
   // Gaveta lateral de Novo Evento
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -264,6 +388,18 @@ export function EventsView() {
       [activeEvent.id]: [guest, ...(prev[activeEvent.id] ?? [])]
     }));
 
+    if (activeEvent.isPaid) {
+      setNotificationBanner({
+        message: `Inscrição para ${newGuest.firstName} realizada! Uma notificação de cobrança (PIX) no valor de R$ ${(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')} foi enviada ao app pessoal dele.`,
+        type: "success"
+      });
+    } else {
+      setNotificationBanner({
+        message: `Inscrição gratuita para ${newGuest.firstName} realizada! A credencial foi enviada ao app pessoal dele.`,
+        type: "info"
+      });
+    }
+
     setNewGuest({ firstName: "", lastName: "", email: "" });
     setShowAddGuestForm(false);
   };
@@ -325,7 +461,14 @@ export function EventsView() {
   };
 
   return (
-    <main className="events-workbench animate-entrance">
+    <main 
+      className="events-workbench animate-entrance"
+      style={{
+        ["--alvo-accent" as string]: "#2563eb",
+        ["--alvo-accent-soft" as string]: "rgba(37, 99, 235, 0.08)",
+        ["--alvo-accent-dark" as string]: "#1e3a8a"
+      }}
+    >
       
       {/* 1. Simulador de Scanner QR Code de Check-In */}
       {showScanner && (
@@ -525,7 +668,9 @@ export function EventsView() {
               maxWidth: 420,
               boxShadow: "var(--alvo-shadow-airy-strong)",
               color: "var(--alvo-ink)",
-              textAlign: "center"
+              textAlign: "center",
+              maxHeight: "90vh",
+              overflowY: "auto"
             }}
           >
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "-1rem" }}>
@@ -623,6 +768,105 @@ export function EventsView() {
                     </strong>
                   </div>
                 </div>
+
+                {/* Logística de Cobrança e Notificação do App Getro */}
+                {activeEvent.isPaid && (
+                  <div style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(15, 23, 42, 0.08)", paddingTop: "1.25rem", textAlign: "left" }}>
+                    <h5 style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "0 0 0.75rem 0" }}>💰 Cobrança & Integração App</h5>
+                    
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.75rem" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Status Pagamento:</span>
+                      <span style={{ 
+                        fontSize: "0.75rem", 
+                        fontWeight: 700, 
+                        padding: "2px 8px", 
+                        borderRadius: 6,
+                        backgroundColor: inspectedAttendee.paymentStatus === "paid" ? "var(--alvo-green-soft)" : "rgba(234, 179, 8, 0.12)",
+                        color: inspectedAttendee.paymentStatus === "paid" ? "var(--alvo-green)" : "#d97706"
+                      }}>
+                        {inspectedAttendee.paymentStatus === "paid" ? "Pago (PIX)" : "Aguardando Pagamento"}
+                      </span>
+                    </div>
+
+                    {inspectedAttendee.paymentStatus !== "paid" && (
+                      <div style={{ background: "rgba(15, 23, 42, 0.03)", padding: "0.85rem", borderRadius: 12, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        
+                        {/* QR Code de Pagamento PIX */}
+                        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                          <div style={{ background: "white", padding: "4px", borderRadius: 8, border: "1px solid var(--alvo-line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <QrCode size={50} style={{ color: "#0f172a" }} />
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>PIX COPIA E COLA / QR CODE</span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--alvo-ink)", fontWeight: 500 }}>R$ {(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')}</span>
+                          </div>
+                        </div>
+
+                        {/* Chave PIX */}
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>CHAVE PIX</span>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+                            <code style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 700 }}>financeiro@alvo.church</code>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText("financeiro@alvo.church");
+                                alert("Chave PIX copiada!");
+                              }}
+                              style={{ padding: "2px 6px", fontSize: "0.65rem", background: "white", border: "1px solid var(--alvo-line)", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Dados Bancários */}
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>DADOS BANCÁRIOS</span>
+                          <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", color: "var(--alvo-ink)", lineHeight: 1.3 }}>
+                            Banco Cora (403) • Ag. 0001<br />
+                            C/C: 128456-9 • Alvo Church
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notificação Push no App */}
+                    <div style={{ marginTop: "0.75rem", background: "var(--alvo-accent-soft)", border: "1px solid rgba(37, 99, 235, 0.12)", padding: "0.85rem", borderRadius: 12 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--alvo-accent-dark)", display: "block" }}>
+                        📲 Notificação no App Getro
+                      </span>
+                      <p style={{ margin: "4px 0 0 0", fontSize: "0.72rem", color: "var(--alvo-ink-soft)", lineHeight: 1.3 }}>
+                        A cobrança está ativa na área pessoal do membro e pode ser paga diretamente via aplicativo.
+                      </p>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifiedAttendeeId(inspectedAttendee.id);
+                          setTimeout(() => {
+                            alert(`Notificação push de cobrança reenviada para o smartphone de ${inspectedAttendee.firstName}!`);
+                          }, 100);
+                        }}
+                        style={{
+                          marginTop: "0.75rem",
+                          width: "100%",
+                          padding: "0.45rem",
+                          backgroundColor: notifiedAttendeeId === inspectedAttendee.id ? "var(--alvo-green)" : "var(--alvo-accent)",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 8,
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {notifiedAttendeeId === inspectedAttendee.id ? "✓ Cobrança Notificada no Celular!" : "🔔 Reenviar Notificação no Celular"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -926,10 +1170,14 @@ export function EventsView() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }} className="animate-entrance">
                     <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Valor do Ingresso (R$)</label>
                     <input
-                      type="number"
-                      placeholder="Ex: 85"
-                      value={newEvent.ticketPrice}
-                      onChange={(e) => setNewEvent(prev => ({ ...prev, ticketPrice: Number(e.target.value) }))}
+                      type="text"
+                      placeholder="R$ 0,00"
+                      value={newEvent.ticketPrice !== undefined ? newEvent.ticketPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : ""}
+                      onChange={(e) => {
+                        const cleanVal = e.target.value.replace(/\D/g, "");
+                        const numericVal = cleanVal ? parseFloat(cleanVal) / 100 : undefined;
+                        setNewEvent(prev => ({ ...prev, ticketPrice: numericVal }));
+                      }}
                       style={{ 
                         width: "100%", 
                         padding: "0.75rem 1rem", 
@@ -1015,88 +1263,190 @@ export function EventsView() {
         {/* Lado Esquerdo: Agenda de Navegação e Filtros */}
         <aside className="events-sidebar panel" style={{ padding: "1.5rem" }}>
           
-          {/* Busca por Evento */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "white", border: "1px solid var(--alvo-line)", padding: "0.6rem 1rem", borderRadius: 12, marginBottom: "1.25rem", boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)" }}>
-            <Search size={16} style={{ color: "var(--alvo-ink-soft)" }} />
-            <input 
-              placeholder="Buscar evento..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: "none", background: "transparent", outline: "none", fontSize: "0.85rem", color: "var(--alvo-ink)", width: "100%", fontWeight: 500 }}
-            />
+          {/* Alternador de Visualização da Sidebar */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.25rem", padding: "3px", background: "var(--alvo-surface-muted)", borderRadius: 10 }}>
+            <button
+              onClick={() => setSidebarMode("list")}
+              style={{
+                padding: "0.5rem",
+                borderRadius: 8,
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                background: sidebarMode === "list" ? "var(--alvo-surface)" : "transparent",
+                color: sidebarMode === "list" ? "var(--alvo-accent)" : "var(--alvo-ink-soft)",
+                boxShadow: sidebarMode === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
+                transition: "var(--alvo-transition-creamy)"
+              }}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setSidebarMode("calendar")}
+              style={{
+                padding: "0.5rem",
+                borderRadius: 8,
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                background: sidebarMode === "calendar" ? "var(--alvo-surface)" : "transparent",
+                color: sidebarMode === "calendar" ? "var(--alvo-accent)" : "var(--alvo-ink-soft)",
+                boxShadow: sidebarMode === "calendar" ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
+                transition: "var(--alvo-transition-creamy)"
+              }}
+            >
+              Calendário
+            </button>
           </div>
 
-          {/* Filtros de Categoria */}
-          <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
-            {(["all", "conference", "service", "camp", "training", "celebration"] as const).map(cat => (
-              <button
-                key={cat}
-                onClick={() => setTypeFilter(cat)}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  borderRadius: 8,
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  border: "none",
-                  cursor: "pointer",
-                  background: typeFilter === cat ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.04)",
-                  color: typeFilter === cat ? "white" : "var(--alvo-ink-soft)",
-                  transition: "var(--alvo-transition-creamy)",
-                  boxShadow: typeFilter === cat ? "0 4px 10px rgba(249, 115, 22, 0.2)" : "none"
-                }}
-                className="hover-scale"
-              >
-                {cat === "all" && "Todos"}
-                {cat === "conference" && "Conferências"}
-                {cat === "service" && "Cultos"}
-                {cat === "camp" && "Retiros"}
-                {cat === "training" && "Treinos"}
-                {cat === "celebration" && "Festa"}
-              </button>
-            ))}
-          </div>
+          {sidebarMode === "list" ? (
+            <>
+              {/* Busca por Evento */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "white", border: "1px solid var(--alvo-line)", padding: "0.6rem 1rem", borderRadius: 12, marginBottom: "1.25rem", boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)" }}>
+                <Search size={16} style={{ color: "var(--alvo-ink-soft)" }} />
+                <input 
+                  placeholder="Buscar evento..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ border: "none", background: "transparent", outline: "none", fontSize: "0.85rem", color: "var(--alvo-ink)", width: "100%", fontWeight: 500 }}
+                />
+              </div>
 
-          <div className="section-heading compact">
-            <h2>Agenda de Eventos</h2>
-          </div>
-          
-          <div className="event-list-scroll">
-            {filteredEvents.length === 0 ? (
-              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", textAlign: "center", padding: "1.5rem 0", fontWeight: 500 }}>Nenhum evento encontrado.</p>
-            ) : (
-              filteredEvents.map(event => {
-                const isSelected = selectedEventId === event.id;
-                const date = new Date(event.startsAt);
-                return (
-                  <div 
-                    key={event.id} 
-                    className={`event-mini-card ${isSelected ? 'is-selected' : ''}`}
-                    onClick={() => {
-                      setSelectedEventId(event.id);
-                      setGuestSearchQuery("");
-                    }}
+              {/* Filtros de Categoria */}
+              <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+                {(["all", "conference", "service", "camp", "training", "celebration"] as const).map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setTypeFilter(cat)}
                     style={{
-                      background: isSelected ? "linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%)" : "transparent",
-                      borderColor: isSelected ? "rgba(249, 115, 22, 0.25)" : "transparent",
-                      borderWidth: "1px",
-                      borderStyle: "solid",
-                      boxShadow: isSelected ? "inset 0 0 0 1px rgba(249, 115, 22, 0.1)" : "none",
-                      transform: isSelected ? "translateX(4px)" : "none"
+                      padding: "0.35rem 0.65rem",
+                      borderRadius: 8,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      background: typeFilter === cat ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.04)",
+                      color: typeFilter === cat ? "white" : "var(--alvo-ink-soft)",
+                      transition: "var(--alvo-transition-creamy)",
+                      boxShadow: typeFilter === cat ? "0 4px 10px rgba(37, 99, 235, 0.15)" : "none"
                     }}
+                    className="hover-scale"
                   >
-                    <div className="event-date-box" style={{ background: isSelected ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.05)" }}>
-                      <strong style={{ color: isSelected ? "white" : "var(--alvo-ink)" }}>{date.getDate()}</strong>
-                      <span style={{ color: isSelected ? "white" : "var(--alvo-ink-soft)" }}>{date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
-                    </div>
-                    <div className="event-info">
-                      <strong style={{ color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink)" }}>{event.name}</strong>
-                      <p style={{ color: "var(--alvo-ink-soft)" }}>{event.locationType === 'onsite' ? '📍 Presencial' : '📺 Online'}</p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                    {cat === "all" && "Todos"}
+                    {cat === "conference" && "Conferências"}
+                    {cat === "service" && "Cultos"}
+                    {cat === "camp" && "Retiros"}
+                    {cat === "training" && "Treinos"}
+                    {cat === "celebration" && "Festa"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="section-heading compact">
+                <h2>Agenda de Eventos</h2>
+              </div>
+              
+              <div className="event-list-scroll">
+                {filteredEvents.length === 0 ? (
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", textAlign: "center", padding: "1.5rem 0", fontWeight: 500 }}>Nenhum evento encontrado.</p>
+                ) : (
+                  filteredEvents.map(event => {
+                    const isSelected = selectedEventId === event.id;
+                    const date = new Date(event.startsAt);
+                    return (
+                      <div 
+                        key={event.id} 
+                        className={`event-mini-card ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedEventId(event.id);
+                          setGuestSearchQuery("");
+                        }}
+                        style={{
+                          background: isSelected ? "linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0.01) 100%)" : "var(--alvo-surface)",
+                          borderColor: isSelected ? "var(--alvo-accent)" : "var(--alvo-line)",
+                          borderWidth: "1px",
+                          borderStyle: "solid",
+                          boxShadow: isSelected ? "0 4px 12px rgba(37, 99, 235, 0.04)" : "0 2px 4px rgba(15, 23, 42, 0.02)",
+                          transform: isSelected ? "translateX(4px)" : "none"
+                        }}
+                      >
+                        <div className="event-date-box" style={{ background: isSelected ? "var(--alvo-accent)" : "rgba(15, 23, 42, 0.05)" }}>
+                          <strong style={{ color: isSelected ? "white" : "var(--alvo-ink)" }}>{date.getDate()}</strong>
+                          <span style={{ color: isSelected ? "white" : "var(--alvo-ink-soft)" }}>{date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}</span>
+                        </div>
+                        <div className="event-info">
+                          <strong style={{ color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink)" }}>{event.name}</strong>
+                          <p style={{ color: "var(--alvo-ink-soft)" }}>{event.locationType === 'onsite' ? '📍 Presencial' : '📺 Online'}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="mini-calendar-container animate-entrance" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <strong style={{ color: "var(--alvo-ink)", fontSize: "0.9rem", textTransform: "capitalize" }}>
+                  {currentMonth.toLocaleString("pt-BR", { month: "long", year: "numeric" })}
+                </strong>
+                <div style={{ display: "flex", gap: "0.25rem" }}>
+                  <button onClick={handlePrevMonth} style={{ border: "1px solid var(--alvo-line)", background: "var(--alvo-surface)", borderRadius: "6px", width: "26px", height: "26px", cursor: "pointer", color: "var(--alvo-ink)", fontWeight: "bold" }}>&lt;</button>
+                  <button onClick={handleNextMonth} style={{ border: "1px solid var(--alvo-line)", background: "var(--alvo-surface)", borderRadius: "6px", width: "26px", height: "26px", cursor: "pointer", color: "var(--alvo-ink)", fontWeight: "bold" }}>&gt;</button>
+                </div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", textAlign: "center" }}>
+                {["D", "S", "T", "Q", "Q", "S", "S"].map(d => (
+                  <small key={d} style={{ color: "var(--alvo-ink-soft)", fontWeight: 800, fontSize: "0.7rem" }}>{d}</small>
+                ))}
+                {calendarDays.map((day, idx) => {
+                  if (day.dayNumber === null) {
+                    return <div key={`empty-${idx}`} />;
+                  }
+                  const isDaySelected = day.isSelected;
+                  const hasEvent = day.hasEvent;
+                  
+                  return (
+                    <button
+                      key={`day-${day.dayNumber}`}
+                      onClick={() => handleDayClick(day.dayNumber!)}
+                      disabled={!hasEvent}
+                      style={{
+                        border: "none",
+                        borderRadius: "8px",
+                        aspectRatio: "1",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        cursor: hasEvent ? "pointer" : "default",
+                        background: isDaySelected
+                          ? "var(--alvo-accent)"
+                          : hasEvent
+                          ? "var(--alvo-accent-soft)"
+                          : "transparent",
+                        color: isDaySelected
+                          ? "white"
+                          : hasEvent
+                          ? "var(--alvo-accent)"
+                          : "var(--alvo-ink-soft)",
+                        position: "relative",
+                        transition: "var(--alvo-transition-creamy)",
+                        opacity: hasEvent ? 1 : 0.4
+                      }}
+                      className={hasEvent ? "hover-scale" : ""}
+                    >
+                      {day.dayNumber}
+                      {hasEvent && !isDaySelected && (
+                        <span style={{ position: "absolute", bottom: "3px", left: "50%", transform: "translateX(-50%)", width: "4px", height: "4px", borderRadius: "50%", background: "var(--alvo-accent)" }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* Lado Direito: Visualizador de Painel Detalhado e Check-in */}
@@ -1106,7 +1456,7 @@ export function EventsView() {
               {/* Top Details Header */}
               <div className="detail-header">
                 <div className="title-area" style={{ flex: 1 }}>
-                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "rgba(249, 115, 22, 0.1)", color: "var(--alvo-accent)" }}>
+                  <span className={`event-type-badge ${activeEvent.type}`} style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent)" }}>
                     {(() => {
                       switch (activeEvent.type) {
                         case "conference": return "Conferência";
@@ -1128,7 +1478,7 @@ export function EventsView() {
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
                       <Ticket size={14} style={{ color: "var(--alvo-green)" }} />
-                      {activeEvent.isPaid ? `R$ ${activeEvent.ticketPrice?.toFixed(2).replace('.', ',')}` : "Gratuito"}
+                      {activeEvent.isPaid ? `R$ ${(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')}` : "Gratuito"}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
                       <Calendar size={14} style={{ color: "var(--alvo-blue)" }} />
@@ -1146,7 +1496,7 @@ export function EventsView() {
                        color: "white", 
                        borderRadius: 14, 
                        border: "none", 
-                       boxShadow: "0 4px 15px rgba(249, 115, 22, 0.25)",
+                       boxShadow: "0 4px 15px rgba(37, 99, 235, 0.2)",
                        transition: "var(--alvo-transition-creamy)"
                      }}
                    >
@@ -1157,21 +1507,21 @@ export function EventsView() {
 
               {/* KPIs & Performance Panel */}
               <div className="detail-stats-row" style={{ marginTop: "1rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.25rem", marginBottom: "2rem" }}>
-                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                 <div className="stat-box" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 20, boxShadow: "0 2px 6px rgba(15, 23, 42, 0.02)" }}>
                    <Users size={20} style={{ color: "var(--alvo-accent)" }} />
                    <div>
                      <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.total} / {activeEvent.capacity || '∞'}</strong>
                      <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Inscritos Totais</span>
                    </div>
                  </div>
-                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                 <div className="stat-box" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 20, boxShadow: "0 2px 6px rgba(15, 23, 42, 0.02)" }}>
                    <Ticket size={20} style={{ color: "var(--alvo-green)" }} />
                    <div>
                      <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.paymentPercent}%</strong>
                      <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Confirmações Pagas</span>
                    </div>
                  </div>
-                 <div className="stat-box" style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.6)", borderRadius: 20, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.01)" }}>
+                 <div className="stat-box" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 20, boxShadow: "0 2px 6px rgba(15, 23, 42, 0.02)" }}>
                    <Clock size={20} style={{ color: "var(--alvo-blue)" }} />
                    <div>
                      <strong style={{ color: "var(--alvo-ink)", fontWeight: 800 }}>{stats.checkinPercent}%</strong>
@@ -1180,247 +1530,506 @@ export function EventsView() {
                  </div>
               </div>
 
-              {/* Registrations List and Quick Registration */}
-              <div className="registrations-section" style={{ borderTop: "1px solid var(--alvo-line)", paddingTop: "1.75rem" }}>
-                 
-                 <div className="section-header-compact" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.1rem", fontWeight: 850 }}>Membros Inscritos</h3>
-                      <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", margin: 0, fontWeight: 500 }}>Gestão de presenças e credenciamento de ingressos</p>
-                    </div>
+              {/* Tabs Navigation */}
+              <div style={{ display: "flex", borderBottom: "1px solid var(--alvo-line)", marginBottom: "1.5rem" }}>
+                {[
+                  { id: "attendees", label: "Inscritos (Check-in)" },
+                  { id: "schedule", label: "Escala de Serviço" },
+                  { id: "worship", label: "Repertório (Worship)" }
+                ].map(tab => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      style={{
+                        padding: "0.75rem 1.25rem",
+                        border: "none",
+                        background: "none",
+                        borderBottom: isActive ? "2px solid var(--alvo-accent)" : "2px solid transparent",
+                        color: isActive ? "var(--alvo-accent)" : "var(--alvo-ink-soft)",
+                        fontWeight: 700,
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        transition: "var(--alvo-transition-creamy)",
+                        marginBottom: "-1px"
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                      <div className="search-mini" style={{ background: "white", border: "1px solid var(--alvo-line)", borderRadius: 10, boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" }}>
-                        <Search size={14} style={{ color: "var(--alvo-ink-soft)" }} />
-                        <input 
-                          placeholder="Buscar inscrito..." 
-                          value={guestSearchQuery}
-                          onChange={(e) => setGuestSearchQuery(e.target.value)}
-                          style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", fontWeight: 500 }}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => setShowAddGuestForm(!showAddGuestForm)}
-                        style={{
-                          backgroundColor: "white",
-                          border: "1px solid var(--alvo-line)",
-                          borderRadius: 10,
-                          padding: "0.5rem 1rem",
-                          color: "var(--alvo-ink)",
-                          fontSize: "0.8rem",
-                          fontWeight: 700,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          cursor: "pointer",
-                          transition: "var(--alvo-transition-creamy)",
-                          boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
-                        }}
-                        className="hover-card"
-                      >
-                        <UserPlus size={14} style={{ color: "var(--alvo-accent)" }} />
-                        Registrar Convidado
-                      </button>
-                    </div>
-                 </div>
-
-                 {/* Formulário Inline de Cadastro Rápido de Participante */}
-                 {showAddGuestForm && (
-                   <form 
-                     onSubmit={handleAddGuest}
-                     className="animate-entrance"
-                     style={{
-                       background: "rgba(255, 255, 255, 0.35)",
-                       border: "1px dashed rgba(15, 23, 42, 0.12)",
-                       borderRadius: 16,
-                       padding: "1.25rem",
-                       marginBottom: "1.5rem",
-                       display: "grid",
-                       gridTemplateColumns: "1fr 1fr 1.2fr auto",
-                       gap: "0.75rem",
-                       alignItems: "end"
-                     }}
-                   >
-                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>NOME</label>
-                       <input 
-                         required 
-                         placeholder="Ex: Carlos"
-                         value={newGuest.firstName}
-                         onChange={(e) => setNewGuest(prev => ({ ...prev, firstName: e.target.value }))}
-                         style={{ 
-                           padding: "0.5rem 0.75rem", 
-                           border: "1px solid var(--alvo-line)", 
-                           background: "white", 
-                           borderRadius: 8, 
-                           color: "var(--alvo-ink)", 
-                           fontSize: "0.85rem", 
-                           outline: "none",
-                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
-                         }}
-                         className="interactive-input"
-                       />
-                     </div>
-                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>SOBRENOME</label>
-                       <input 
-                         required 
-                         placeholder="Ex: Santos"
-                         value={newGuest.lastName}
-                         onChange={(e) => setNewGuest(prev => ({ ...prev, lastName: e.target.value }))}
-                         style={{ 
-                           padding: "0.5rem 0.75rem", 
-                           border: "1px solid var(--alvo-line)", 
-                           background: "white", 
-                           borderRadius: 8, 
-                           color: "var(--alvo-ink)", 
-                           fontSize: "0.85rem", 
-                           outline: "none",
-                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
-                         }}
-                         className="interactive-input"
-                       />
-                     </div>
-                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                       <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>E-MAIL</label>
-                       <input 
-                         required 
-                         type="email"
-                         placeholder="carlos@gmail.com"
-                         value={newGuest.email}
-                         onChange={(e) => setNewGuest(prev => ({ ...prev, email: e.target.value }))}
-                         style={{ 
-                           padding: "0.5rem 0.75rem", 
-                           border: "1px solid var(--alvo-line)", 
-                           background: "white", 
-                           borderRadius: 8, 
-                           color: "var(--alvo-ink)", 
-                           fontSize: "0.85rem", 
-                           outline: "none",
-                           boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
-                         }}
-                         className="interactive-input"
-                       />
-                     </div>
-                     <button 
-                       type="submit" 
-                       className="primary-button" 
-                       style={{ padding: "0.6rem 1.25rem", borderRadius: 8, backgroundColor: "var(--alvo-accent)", color: "white", fontWeight: 700, border: "none" }}
+              {activeTab === "attendees" && (
+                <div className="registrations-section animate-entrance" style={{ paddingTop: "0.5rem" }}>
+                   {notificationBanner && (
+                     <div 
+                       style={{ 
+                         display: "flex", 
+                         alignItems: "center", 
+                         justifyContent: "space-between", 
+                         padding: "0.75rem 1rem", 
+                         background: notificationBanner.type === "success" ? "var(--alvo-green-soft)" : "var(--alvo-accent-soft)", 
+                         border: `1px solid ${notificationBanner.type === "success" ? "rgba(22, 163, 74, 0.2)" : "rgba(37, 99, 235, 0.2)"}`, 
+                         borderRadius: 12, 
+                         color: notificationBanner.type === "success" ? "var(--alvo-green)" : "var(--alvo-accent-dark)", 
+                         fontSize: "0.8rem", 
+                         fontWeight: 600, 
+                         marginBottom: "1rem" 
+                       }}
                      >
-                       Adicionar
-                     </button>
-                   </form>
-                 )}
-
-                 {/* Lista Principal de Inscritos */}
-                 <div className="registrations-list" style={{ display: "grid", gap: "0.75rem" }}>
-                    {filteredAttendees.length === 0 ? (
-                      <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
-                        <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
-                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum convidado inscrito ou localizado na busca.</p>
+                       <span>{notificationBanner.message}</span>
+                       <button 
+                         type="button"
+                         onClick={() => setNotificationBanner(null)} 
+                         style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", display: "flex", alignItems: "center" }}
+                       >
+                         <X size={14} />
+                       </button>
+                     </div>
+                   )}
+                   <div className="section-header-compact" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.1rem", fontWeight: 850 }}>Membros Inscritos</h3>
+                        <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", margin: 0, fontWeight: 500 }}>Gestão de presenças e credenciamento de ingressos</p>
                       </div>
-                    ) : (
-                      filteredAttendees.map(att => (
-                        <div 
-                          key={att.id} 
-                          className="reg-item" 
-                          style={{ 
-                            background: "rgba(255, 255, 255, 0.35)", 
-                            border: "1px solid rgba(255, 255, 255, 0.5)", 
-                            borderRadius: 16,
+
+                      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                        <div className="search-mini" style={{ background: "white", border: "1px solid var(--alvo-line)", borderRadius: 10, boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" }}>
+                          <Search size={14} style={{ color: "var(--alvo-ink-soft)" }} />
+                          <input 
+                            placeholder="Buscar inscrito..." 
+                            value={guestSearchQuery}
+                            onChange={(e) => setGuestSearchQuery(e.target.value)}
+                            style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", fontWeight: 500 }}
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => setShowAddGuestForm(!showAddGuestForm)}
+                          style={{
+                            backgroundColor: "white",
+                            border: "1px solid var(--alvo-line)",
+                            borderRadius: 10,
+                            padding: "0.5rem 1rem",
+                            color: "var(--alvo-ink)",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            cursor: "pointer",
                             transition: "var(--alvo-transition-creamy)",
-                            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.01)"
+                            boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
                           }}
+                          className="hover-card"
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                            {/* Iniciais do nome como Avatar */}
-                            <div 
-                              onClick={() => setInspectedAttendee(att)}
-                              style={{ 
-                                width: 42, 
-                                height: 42, 
-                                borderRadius: "50%", 
-                                backgroundColor: att.checkedIn ? "var(--alvo-green-soft)" : "rgba(15, 23, 42, 0.04)", 
-                                border: att.checkedIn ? "1px solid rgba(22, 163, 74, 0.2)" : "1px solid rgba(15, 23, 42, 0.06)",
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center", 
-                                color: att.checkedIn ? "var(--alvo-green)" : "var(--alvo-ink)",
-                                fontWeight: 750,
-                                fontSize: "0.85rem",
-                                cursor: "pointer",
-                                transition: "var(--alvo-transition-creamy)"
-                              }}
-                              className="hover-scale"
-                            >
-                              {att.firstName[0]}{att.lastName[0]}
+                          <UserPlus size={14} style={{ color: "var(--alvo-accent)" }} />
+                          Registrar Convidado
+                        </button>
+                      </div>
+                   </div>
+
+                   {/* Formulário Inline de Cadastro Rápido de Participante */}
+                   {showAddGuestForm && (
+                     <form 
+                       onSubmit={handleAddGuest}
+                       className="animate-entrance"
+                       style={{
+                         background: "var(--alvo-surface)",
+                         border: "1px dashed var(--alvo-line)",
+                         borderRadius: 16,
+                         padding: "1.25rem",
+                         marginBottom: "1.5rem",
+                         display: "grid",
+                         gridTemplateColumns: "1fr 1fr 1.2fr auto",
+                         gap: "0.75rem",
+                         alignItems: "end"
+                       }}
+                     >
+                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                         <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>NOME</label>
+                         <input 
+                           required 
+                           placeholder="Ex: Carlos"
+                           value={newGuest.firstName}
+                           onChange={(e) => setNewGuest(prev => ({ ...prev, firstName: e.target.value }))}
+                           style={{ 
+                             padding: "0.5rem 0.75rem", 
+                             border: "1px solid var(--alvo-line)", 
+                             background: "white", 
+                             borderRadius: 8, 
+                             color: "var(--alvo-ink)", 
+                             fontSize: "0.85rem", 
+                             outline: "none",
+                             boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                           }}
+                           className="interactive-input"
+                         />
+                       </div>
+                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                         <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>SOBRENOME</label>
+                         <input 
+                           required 
+                           placeholder="Ex: Santos"
+                           value={newGuest.lastName}
+                           onChange={(e) => setNewGuest(prev => ({ ...prev, lastName: e.target.value }))}
+                           style={{ 
+                             padding: "0.5rem 0.75rem", 
+                             border: "1px solid var(--alvo-line)", 
+                             background: "white", 
+                             borderRadius: 8, 
+                             color: "var(--alvo-ink)", 
+                             fontSize: "0.85rem", 
+                             outline: "none",
+                             boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                           }}
+                           className="interactive-input"
+                         />
+                       </div>
+                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                         <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>E-MAIL</label>
+                         <input 
+                           required 
+                           type="email"
+                           placeholder="carlos@gmail.com"
+                           value={newGuest.email}
+                           onChange={(e) => setNewGuest(prev => ({ ...prev, email: e.target.value }))}
+                           style={{ 
+                             padding: "0.5rem 0.75rem", 
+                             border: "1px solid var(--alvo-line)", 
+                             background: "white", 
+                             borderRadius: 8, 
+                             color: "var(--alvo-ink)", 
+                             fontSize: "0.85rem", 
+                             outline: "none",
+                             boxShadow: "0 2px 4px rgba(15, 23, 42, 0.01)" 
+                           }}
+                           className="interactive-input"
+                         />
+                       </div>
+                       <button 
+                         type="submit" 
+                         className="primary-button" 
+                         style={{ padding: "0.6rem 1.25rem", borderRadius: 8, backgroundColor: "var(--alvo-accent)", color: "white", fontWeight: 700, border: "none" }}
+                       >
+                         Adicionar
+                       </button>
+                     </form>
+                   )}
+
+                   {/* Lista Principal de Inscritos */}
+                   <div className="registrations-list" style={{ display: "grid", gap: "0.75rem" }}>
+                      {filteredAttendees.length === 0 ? (
+                        <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
+                          <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
+                          <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum convidado inscrito ou localizado na busca.</p>
+                        </div>
+                      ) : (
+                        filteredAttendees.map(att => (
+                          <div 
+                            key={att.id} 
+                            className="reg-item" 
+                            style={{ 
+                              background: "var(--alvo-surface)", 
+                              border: "1px solid var(--alvo-line)", 
+                              borderRadius: 16,
+                              transition: "var(--alvo-transition-creamy)",
+                              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)"
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                              {/* Iniciais do nome como Avatar */}
+                              <div 
+                                onClick={() => setInspectedAttendee(att)}
+                                style={{ 
+                                  width: 42, 
+                                  height: 42, 
+                                  borderRadius: "50%", 
+                                  backgroundColor: att.checkedIn ? "var(--alvo-green-soft)" : "rgba(15, 23, 42, 0.04)", 
+                                  border: att.checkedIn ? "1px solid rgba(22, 163, 74, 0.2)" : "1px solid rgba(15, 23, 42, 0.06)",
+                                  display: "flex", 
+                                  alignItems: "center", 
+                                  justifyContent: "center", 
+                                  color: att.checkedIn ? "var(--alvo-green)" : "var(--alvo-ink)",
+                                  fontWeight: 750,
+                                  fontSize: "0.85rem",
+                                  cursor: "pointer",
+                                  transition: "var(--alvo-transition-creamy)"
+                                }}
+                                className="hover-scale"
+                              >
+                                {att.firstName[0]}{att.lastName[0]}
+                              </div>
+                              <div className="reg-person" onClick={() => setInspectedAttendee(att)} style={{ cursor: "pointer" }}>
+                                <strong style={{ color: "var(--alvo-ink)", fontWeight: 750, fontSize: "0.9375rem" }}>{att.firstName} {att.lastName}</strong>
+                                <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 500 }}>Inscrito em {att.registrationDate} · <span style={{ fontFamily: "monospace" }}>{att.ticketCode}</span></span>
+                              </div>
                             </div>
-                            <div className="reg-person" onClick={() => setInspectedAttendee(att)} style={{ cursor: "pointer" }}>
-                              <strong style={{ color: "var(--alvo-ink)", fontWeight: 750, fontSize: "0.9375rem" }}>{att.firstName} {att.lastName}</strong>
-                              <span style={{ color: "var(--alvo-ink-soft)", fontWeight: 500 }}>Inscrito em {att.registrationDate} · <span style={{ fontFamily: "monospace" }}>{att.ticketCode}</span></span>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                              {/* Badges de pagamentos */}
+                              <span 
+                                style={{ 
+                                  fontSize: "0.7rem", 
+                                  fontWeight: 800, 
+                                  padding: "4px 8px", 
+                                  borderRadius: 6,
+                                  textTransform: "uppercase",
+                                  backgroundColor: att.paymentStatus === "paid" ? "var(--alvo-green-soft)" : att.paymentStatus === "free" ? "var(--alvo-blue-soft)" : "rgba(234, 179, 8, 0.12)",
+                                  color: att.paymentStatus === "paid" ? "var(--alvo-green)" : att.paymentStatus === "free" ? "var(--alvo-blue)" : "#d97706",
+                                  border: att.paymentStatus === "paid" ? "1px solid rgba(22, 163, 74, 0.15)" : att.paymentStatus === "free" ? "1px solid rgba(37, 99, 235, 0.15)" : "1px solid rgba(234, 179, 8, 0.15)"
+                                }}
+                              >
+                                {att.paymentStatus === "paid" && "Pago"}
+                                {att.paymentStatus === "free" && "Gratuito"}
+                                {att.paymentStatus === "pending" && "Pendente"}
+                              </span>
+
+                              {/* Status de Check-in + Ações rápidas */}
+                              {att.checkedIn ? (
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--alvo-green)", fontSize: "0.85rem", fontWeight: 750 }}>
+                                  <CheckCircle2 size={16} />
+                                  <span>Entrou {att.checkedInAt}</span>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleQuickCheckin(att.id)}
+                                  style={{
+                                    backgroundColor: "white",
+                                    border: "1px solid var(--alvo-line)",
+                                    borderRadius: 8,
+                                    padding: "0.4rem 0.85rem",
+                                    color: "var(--alvo-ink)",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    transition: "var(--alvo-transition-creamy)",
+                                    boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
+                                  }}
+                                  className="hover-card"
+                                >
+                                  Check-in Manual
+                                </button>
+                              )}
+
+                              <button 
+                                onClick={() => setInspectedAttendee(att)}
+                                style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", transition: "var(--alvo-transition-creamy)" }}
+                                className="hover-scale"
+                              >
+                                <ArrowRight size={16} />
+                              </button>
                             </div>
                           </div>
+                        ))
+                      )}
+                   </div>
+                </div>
+              )}
 
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-                            {/* Badges de pagamentos */}
-                            <span 
-                              style={{ 
-                                fontSize: "0.7rem", 
-                                fontWeight: 800, 
-                                padding: "4px 8px", 
-                                borderRadius: 6,
-                                textTransform: "uppercase",
-                                backgroundColor: att.paymentStatus === "paid" ? "var(--alvo-green-soft)" : att.paymentStatus === "free" ? "var(--alvo-blue-soft)" : "rgba(234, 179, 8, 0.12)",
-                                color: att.paymentStatus === "paid" ? "var(--alvo-green)" : att.paymentStatus === "free" ? "var(--alvo-blue)" : "#d97706",
-                                border: att.paymentStatus === "paid" ? "1px solid rgba(22, 163, 74, 0.15)" : att.paymentStatus === "free" ? "1px solid rgba(37, 99, 235, 0.15)" : "1px solid rgba(234, 179, 8, 0.15)"
-                              }}
-                            >
-                              {att.paymentStatus === "paid" && "Pago"}
-                              {att.paymentStatus === "free" && "Gratuito"}
-                              {att.paymentStatus === "pending" && "Pendente"}
-                            </span>
+              {activeTab === "schedule" && (
+                <div className="schedule-section animate-entrance" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.1rem", fontWeight: 850, margin: 0 }}>Escala de Serviço</h3>
+                    <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", margin: "4px 0 0 0", fontWeight: 500 }}>Voluntários escalados para este evento e status de confirmação</p>
+                  </div>
+                  
+                  <div style={{ display: "grid", gap: "0.75rem" }}>
+                    {(!mockScheduleMap[activeEvent.id] || mockScheduleMap[activeEvent.id].length === 0) ? (
+                      <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
+                        <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
+                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum voluntário escalado para este evento.</p>
+                      </div>
+                    ) : (
+                      mockScheduleMap[activeEvent.id].map(assignment => (
+                        <div
+                          key={assignment.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "1rem",
+                            background: "var(--alvo-surface)",
+                            border: "1px solid var(--alvo-line)",
+                            borderRadius: 16,
+                            boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
+                          }}
+                        >
+                          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                            <div style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 10,
+                              background: "var(--alvo-surface-muted)",
+                              border: "1px solid var(--alvo-line)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "var(--alvo-accent)",
+                              fontWeight: 800,
+                              fontSize: "0.8rem"
+                            }}>
+                              {assignment.role.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong style={{ color: "var(--alvo-ink)", fontSize: "0.9rem", fontWeight: 750, display: "block" }}>{assignment.volunteerName}</strong>
+                              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", fontWeight: 600 }}>{assignment.role} · <code style={{ color: "var(--alvo-accent)" }}>{assignment.teamName}</code></span>
+                            </div>
+                          </div>
+                          
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 800,
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                              textTransform: "uppercase",
+                              backgroundColor: assignment.status === "confirmed" ? "var(--alvo-green-soft)" : assignment.status === "pending" ? "rgba(234, 179, 8, 0.12)" : "var(--alvo-red-soft)",
+                              color: assignment.status === "confirmed" ? "var(--alvo-green)" : assignment.status === "pending" ? "#d97706" : "var(--alvo-red)",
+                              border: assignment.status === "confirmed" ? "1px solid rgba(22, 163, 74, 0.15)" : assignment.status === "pending" ? "1px solid rgba(234, 179, 8, 0.15)" : "1px solid rgba(220, 38, 38, 0.15)"
+                            }}
+                          >
+                            {assignment.status === "confirmed" ? "Confirmado" : assignment.status === "pending" ? "Pendente" : "Recusado"}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
 
-                            {/* Status de Check-in + Ações rápidas */}
-                            {att.checkedIn ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--alvo-green)", fontSize: "0.85rem", fontWeight: 750 }}>
-                                <CheckCircle2 size={16} />
-                                <span>Entrou {att.checkedInAt}</span>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleQuickCheckin(att.id)}
+              {activeTab === "worship" && (
+                <div className="worship-section animate-entrance" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.1rem", fontWeight: 850, margin: 0 }}>Setlist & Repertório</h3>
+                    <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", margin: "4px 0 0 0", fontWeight: 500 }}>Músicas selecionadas para o culto/evento e materiais de ensaio</p>
+                  </div>
+                  
+                  <div style={{ display: "grid", gap: "0.75rem" }}>
+                    {(!mockWorshipMap[activeEvent.id] || mockWorshipMap[activeEvent.id].length === 0) ? (
+                      <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
+                        <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
+                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhuma música cadastrada no setlist deste evento.</p>
+                      </div>
+                    ) : (
+                      mockWorshipMap[activeEvent.id].map(song => (
+                        <div
+                          key={song.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "1rem",
+                            background: "var(--alvo-surface)",
+                            border: "1px solid var(--alvo-line)",
+                            borderRadius: 16,
+                            boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
+                          }}
+                        >
+                          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                            <div style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 10,
+                              background: "var(--alvo-accent-soft)",
+                              border: "1px solid var(--alvo-line)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "var(--alvo-accent)",
+                              fontWeight: 850,
+                              fontSize: "0.8rem"
+                            }}>
+                              Tom: {song.key}
+                            </div>
+                            <div>
+                              <strong style={{ color: "var(--alvo-ink)", fontSize: "0.9rem", fontWeight: 750, display: "block" }}>{song.title}</strong>
+                              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", fontWeight: 600 }}>{song.artist}</span>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            {song.links.chords && (
+                              <a
+                                href={song.links.chords}
+                                target="_blank"
+                                rel="noreferrer"
                                 style={{
-                                  backgroundColor: "white",
-                                  border: "1px solid var(--alvo-line)",
+                                  padding: "0.4rem 0.75rem",
                                   borderRadius: 8,
-                                  padding: "0.4rem 0.85rem",
-                                  color: "var(--alvo-ink)",
+                                  background: "var(--alvo-surface)",
+                                  border: "1px solid var(--alvo-line)",
                                   fontSize: "0.75rem",
                                   fontWeight: 700,
-                                  cursor: "pointer",
-                                  transition: "var(--alvo-transition-creamy)",
-                                  boxShadow: "0 2px 4px rgba(15, 23, 42, 0.02)"
+                                  color: "var(--alvo-ink)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  textDecoration: "none"
                                 }}
                                 className="hover-card"
                               >
-                                Check-in Manual
-                              </button>
+                                <FileText size={12} style={{ color: "var(--alvo-accent)" }} />
+                                Cifra
+                              </a>
                             )}
-
-                            <button 
-                              onClick={() => setInspectedAttendee(att)}
-                              style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", transition: "var(--alvo-transition-creamy)" }}
-                              className="hover-scale"
-                            >
-                              <ArrowRight size={16} />
-                            </button>
+                            {song.links.youtube && (
+                              <a
+                                href={song.links.youtube}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "0.4rem 0.75rem",
+                                  borderRadius: 8,
+                                  background: "var(--alvo-surface)",
+                                  border: "1px solid var(--alvo-line)",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  color: "var(--alvo-ink)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  textDecoration: "none"
+                                }}
+                                className="hover-card"
+                              >
+                                <ArrowRight size={12} style={{ color: "var(--alvo-red)" }} />
+                                YouTube
+                              </a>
+                            )}
+                            {song.links.spotify && (
+                              <a
+                                href={song.links.spotify}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "0.4rem 0.75rem",
+                                  borderRadius: 8,
+                                  background: "var(--alvo-surface)",
+                                  border: "1px solid var(--alvo-line)",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  color: "var(--alvo-ink)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  textDecoration: "none"
+                                }}
+                                className="hover-card"
+                              >
+                                <Check size={12} style={{ color: "var(--alvo-green)" }} />
+                                Spotify
+                              </a>
+                            )}
                           </div>
                         </div>
                       ))
                     )}
-                 </div>
-              </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="empty-selection">
@@ -1437,8 +2046,8 @@ export function EventsView() {
         
         .events-sidebar { height: fit-content; }
         .event-list-scroll { display: grid; gap: 0.75rem; margin-top: 1rem; }
-        .event-mini-card { display: flex; gap: 1rem; padding: 1rem; border-radius: 1.25rem; cursor: pointer; transition: var(--alvo-transition-creamy); border: 1px solid transparent; }
-        .event-mini-card:hover { background: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.4); transform: translateY(-1px); }
+        .event-mini-card { display: flex; gap: 1rem; padding: 1rem; border-radius: 1.25rem; cursor: pointer; transition: var(--alvo-transition-creamy); border: 1px solid var(--alvo-line); background: var(--alvo-surface); box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02); }
+        .event-mini-card:hover { border-color: rgba(37, 99, 235, 0.25); background: var(--alvo-surface-muted); transform: translateY(-1.5px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
         
         .event-date-box { width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; transition: var(--alvo-transition-creamy); }
         .event-date-box strong { font-size: 1.25rem; line-height: 1; }
@@ -1452,7 +2061,7 @@ export function EventsView() {
         .event-type-badge { padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem; display: inline-block; }
         
         .stat-box { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; transition: var(--alvo-transition-creamy); }
-        .stat-box:hover { transform: translateY(-2px); border-color: var(--alvo-accent-soft); }
+        .stat-box:hover { transform: translateY(-2px); border-color: rgba(37, 99, 235, 0.25); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
         .stat-box strong { display: block; font-size: 1.25rem; }
         .stat-box span { font-size: 0.75rem; }
 
@@ -1461,7 +2070,7 @@ export function EventsView() {
         .search-mini input { border: none; background: transparent; outline: none; }
         
         .reg-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; }
-        .reg-item:hover { background: rgba(255, 255, 255, 0.5) !important; border-color: rgba(255, 255, 255, 0.75) !important; transform: translateY(-1.5px); }
+        .reg-item:hover { background: var(--alvo-surface) !important; border-color: rgba(37, 99, 235, 0.3) !important; transform: translateY(-1.5px); box-shadow: 0 6px 15px rgba(15, 23, 42, 0.06) !important; }
         .reg-person strong { display: block; }
         .reg-person span { font-size: 0.75rem; }
 

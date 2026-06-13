@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -1509,6 +1510,17 @@ export async function saveServiceAssignment(
   );
 
   return assignment;
+}
+
+export async function deleteServiceAssignment(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  assignmentId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(
+    doc(firestore, getServiceAssignmentsCollectionPath(context), assignmentId)
+  );
 }
 
 export async function fetchEvents(

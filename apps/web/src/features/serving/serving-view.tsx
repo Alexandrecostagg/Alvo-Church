@@ -30,7 +30,8 @@ import {
   fetchPeople,
   isFirebaseWebRuntimeConfigured,
   fetchScheduleSwapRequests,
-  saveScheduleSwapRequest
+  saveScheduleSwapRequest,
+  deleteServiceAssignment
 } from "@alvo/firebase";
 import { getTribeDisplayLabel, checkScheduleConflict, processScheduleSwap } from "@alvo/domain";
 import { recentPeople } from "../../lib/mock-data";
@@ -124,12 +125,44 @@ const initialAssignments: ServiceAssignment[] = [
 export function ServingView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
-  const [assignments, setAssignments] = useState<ServiceAssignment[]>(initialAssignments);
+  
+  // Dynamic calculation of the next 4 Sundays
+  const nextSundays = useMemo(() => {
+    const list = [];
+    const today = new Date();
+    const day = today.getDay();
+    const diff = (7 - day) % 7;
+    const nextSunday = new Date(today);
+    nextSunday.setDate(today.getDate() + diff);
+    
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(nextSunday);
+      d.setDate(nextSunday.getDate() + i * 7);
+      
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const dateString = `${yyyy}-${mm}-${dd}`;
+      
+      const label = d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+      list.push({ dateString, label, rawDate: d });
+    }
+    return list;
+  }, []);
+
+  const [assignments, setAssignments] = useState<ServiceAssignment[]>(() => {
+    const nextSundayString = nextSundays[0]?.dateString ?? "2026-06-14";
+    return initialAssignments.map(ass => ({
+      ...ass,
+      serviceDate: `${nextSundayString}T08:30:00.000Z`
+    }));
+  });
+  
   const [swapRequests, setSwapRequests] = useState<ScheduleSwapRequest[]>([]);
   
   // Custom tracking for audit trail log
   const [auditLogs, setAuditLogs] = useState<Array<{ time: string; text: string; type: "success" | "info" | "warning" }>>([
-    { time: "18:42", text: "Escala para o culto de 24/05/2026 inicializada.", type: "info" },
+    { time: "18:42", text: `Escala para o primeiro culto dinâmica inicializada.`, type: "info" },
     { time: "18:43", text: "Ana Silva confirmou recepção via link automático.", type: "success" }
   ]);
 
@@ -142,7 +175,12 @@ export function ServingView() {
   const [whatsappTemplate, setWhatsappTemplate] = useState("Olá [Nome]! Confirmando a sua escala no ministério de [Ministerio] para o dia [Data] no papel de [Role]. Confirma sua presença?");
 
   // Schedule matrix selected day (Sunday 24/05/2026 or 31/05/2026)
-  const [selectedDateFilter, setSelectedDateFilter] = useState("2026-05-24");
+  const [selectedDateFilter, setSelectedDateFilter] = useState(() => {
+    return nextSundays[0]?.dateString ?? "2026-06-14";
+  });
+  
+  // Search state and custom role selection
+  const [customRoleInput, setCustomRoleInput] = useState("");
   
   // Search state for members
   const [memberSearch, setMemberSearch] = useState("");
@@ -563,8 +601,81 @@ export function ServingView() {
     }
   }
 
+  async function handleRemoveAssignment(assignmentId: string) {
+    const confirmRemove = window.confirm("Deseja realmente remover este voluntário desta escala?");
+    if (!confirmRemove) return;
+
+    const currentAssignment = assignments.find((assignment) => assignment.id === assignmentId);
+    if (!currentAssignment) return;
+
+    const person = people.find(p => p.id === currentAssignment.personId);
+    const personName = person ? getFullName(person) : "Voluntário";
+
+    setAssignments(current => current.filter(a => a.id !== assignmentId));
+
+    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    setAuditLogs(prev => [
+      { time: timeString, text: `${personName} foi removido(a) da escala.`, type: "warning" },
+      ...prev
+    ]);
+
+    setStatus(`${personName} removido da escala.`);
+
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      try {
+        await deleteServiceAssignment(firebaseConfig, { organizationId }, assignmentId);
+        setStatus(`${personName} removido da escala e sincronizado no Firebase.`);
+      } catch (error) {
+        setStatus(
+          error instanceof Error
+            ? `Escala removida localmente, mas falhou no Firebase: ${error.message}`
+            : "Escala removida localmente, mas falhou ao sincronizar no Firebase."
+        );
+      }
+    }
+  }
+
   return (
-    <main className="form-page serving-page" style={{ padding: "2rem" }}>
+    <main 
+      className="form-page serving-page" 
+      style={{ 
+        padding: "2rem",
+        ["--alvo-accent" as string]: "#2563eb",
+        ["--alvo-accent-soft" as string]: "rgba(37, 99, 235, 0.08)",
+        ["--alvo-accent-dark" as string]: "#1e3a8a",
+        ["--alvo-green" as string]: "#10b981",
+        ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)"
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        .serving-page .panel {
+          border: 1px solid var(--alvo-line) !important;
+          background: #ffffff !important;
+          border-radius: 20px !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+          transition: all 0.2s ease;
+        }
+        .serving-page .panel:hover {
+          box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.05), 0 4px 6px -4px rgba(37, 99, 235, 0.05) !important;
+          border-color: var(--alvo-accent) !important;
+        }
+        .serving-page .serving-metric-grid article {
+          border: 1px solid var(--alvo-line) !important;
+          background: #ffffff !important;
+          border-radius: 20px !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+          transition: all 0.2s ease;
+        }
+        .serving-page .serving-metric-grid article:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+        }
+        .serving-page .hover-card:hover {
+          border-color: rgba(37, 99, 235, 0.25) !important;
+          background-color: var(--alvo-accent-soft) !important;
+          transform: translateY(-1.5px);
+        }
+      `}} />
       
       {/* HEADER CONTROLE CENTRAL */}
       <section className="serving-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2.5rem", marginBottom: "2rem" }}>
@@ -599,7 +710,7 @@ export function ServingView() {
 
       {/* KPI METRICAS */}
       <section className="serving-metric-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
-        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #f97316" }}>
+        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid var(--alvo-green)" }}>
           <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Confirmados</span>
           <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{confirmedCount}</strong>
           <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>presença garantida nos cultos</p>
@@ -683,47 +794,81 @@ export function ServingView() {
           </div>
           <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Clique em um domingo para ver e gerenciar a escala respectiva</span>
         </div>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <button 
-            onClick={() => setSelectedDateFilter("2026-05-24")}
-            style={{ 
-              flex: 1, 
-              padding: "1rem", 
-              borderRadius: "16px", 
-              border: selectedDateFilter === "2026-05-24" ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
-              background: selectedDateFilter === "2026-05-24" ? "rgba(249, 115, 22, 0.08)" : "rgba(255, 255, 255, 0.35)",
-              color: "var(--alvo-ink)",
-              textAlign: "left",
-              cursor: "pointer"
-            }}
-          >
-            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 800 }}>PRÓXIMO DOMINGO</span>
-            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>24 de Maio</strong>
-            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>Culto Geral às 18:30</span>
-          </button>
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          {nextSundays.map((sunday, index) => {
+            const isSelected = selectedDateFilter === sunday.dateString;
+            return (
+              <button 
+                key={sunday.dateString}
+                onClick={() => setSelectedDateFilter(sunday.dateString)}
+                style={{ 
+                  flex: 1, 
+                  minWidth: "160px",
+                  padding: "1rem", 
+                  borderRadius: "16px", 
+                  border: isSelected ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
+                  background: isSelected ? "var(--alvo-accent-soft)" : "rgba(255, 255, 255, 0.35)",
+                  color: "var(--alvo-ink)",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                <span style={{ display: "block", fontSize: "0.75rem", color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink-soft)", fontWeight: 800 }}>
+                  {index === 0 ? "PRÓXIMO DOMINGO" : index === 1 ? "DOMINGO SEGUINTE" : `DOMINGO +${index}`}
+                </span>
+                <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>
+                  {sunday.label}
+                </strong>
+                <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>
+                  Culto Geral às 18:30
+                </span>
+              </button>
+            );
+          })}
 
-          <button 
-            onClick={() => setSelectedDateFilter("2026-05-31")}
+          <div 
             style={{ 
               flex: 1, 
+              minWidth: "160px",
               padding: "1rem", 
               borderRadius: "16px", 
-              border: selectedDateFilter === "2026-05-31" ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
-              background: selectedDateFilter === "2026-05-31" ? "rgba(249, 115, 22, 0.08)" : "rgba(255, 255, 255, 0.35)",
+              border: !nextSundays.some(s => s.dateString === selectedDateFilter) ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
+              background: !nextSundays.some(s => s.dateString === selectedDateFilter) ? "var(--alvo-accent-soft)" : "rgba(255, 255, 255, 0.35)",
               color: "var(--alvo-ink)",
-              textAlign: "left",
-              cursor: "pointer"
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              gap: 4
             }}
           >
-            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 800 }}>DOMINGO SEGUINTE</span>
-            <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>31 de Maio</strong>
-            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>Culto de Missões às 18:30</span>
-          </button>
+            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 800 }}>OUTRA DATA</span>
+            <input 
+              type="date"
+              value={selectedDateFilter}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSelectedDateFilter(e.target.value);
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                border: "1px solid var(--alvo-line)",
+                borderRadius: "10px",
+                background: "white",
+                color: "var(--alvo-ink)",
+                outline: "none",
+                fontSize: "0.85rem",
+                fontWeight: 700
+              }}
+            />
+          </div>
         </div>
       </section>
 
       {/* PAINEL PRINCIPAL DE TRABALHO */}
-      <section style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+      <section className="serving-workbench" style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
         
         {/* COLUNA ESQUERDA: LISTA DE MINISTÉRIOS */}
         <aside className="panel" style={{ padding: "1.5rem" }}>
@@ -741,7 +886,7 @@ export function ServingView() {
                   key={team.code}
                   onClick={() => setSelectedMinistryCode(team.code)}
                   style={{
-                    background: isSelected ? "rgba(249, 115, 22, 0.06)" : "transparent",
+                    background: isSelected ? "var(--alvo-accent-soft)" : "transparent",
                     border: isSelected ? "1px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
                     borderRadius: "16px",
                     padding: "1rem",
@@ -840,7 +985,7 @@ export function ServingView() {
                         {isPending && (
                           <button 
                             onClick={() => setSelectedAssignmentForReminder(assignment)}
-                            style={{ background: "rgba(249, 115, 22, 0.15)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                            style={{ background: "var(--alvo-accent-soft)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
                           >
                             <MessageSquare size={13} /> Lembrar
                           </button>
@@ -855,7 +1000,7 @@ export function ServingView() {
 
                         <button 
                           onClick={() => void handleAssignmentStatus(assignment.id, "present")}
-                          style={{ background: "#f97316", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          style={{ background: "var(--alvo-green)", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
                         >
                           Presença
                         </button>
@@ -865,6 +1010,14 @@ export function ServingView() {
                           style={{ background: "rgba(139, 92, 246, 0.15)", border: "none", color: "#8b5cf6", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
                         >
                           Trocar
+                        </button>
+
+                        <button 
+                          onClick={() => void handleRemoveAssignment(assignment.id)}
+                          style={{ background: "rgba(239, 68, 68, 0.1)", border: "none", color: "#ef4444", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                          title="Remover da escala"
+                        >
+                          <X size={13} />
                         </button>
                       </div>
                     </div>
@@ -939,8 +1092,8 @@ export function ServingView() {
                       </span>
                     </div>
                     <button 
-                      onClick={() => handleQuickAssign(p)}
-                      style={{ background: "#f97316", border: "none", color: "white", borderRadius: "8px", padding: "6px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", marginTop: 10 }}
+                      onClick={() => handleQuickAssign(p, customRoleInput.trim() || undefined)}
+                      style={{ background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "8px", padding: "6px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", marginTop: 10 }}
                     >
                       Escalar
                     </button>
@@ -953,21 +1106,31 @@ export function ServingView() {
           {/* BUSCA MANUAL NA BASE */}
           <div style={{ marginTop: "2rem", borderTop: "1px solid var(--alvo-line)", paddingTop: "1.5rem" }}>
             <h4 style={{ fontSize: "0.95rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Buscar e Escalar da Base</h4>
-            <div style={{ position: "relative", marginBottom: "1rem" }}>
-              <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
-              <input 
-                placeholder="Buscar voluntário pelo nome..." 
-                value={memberSearch}
-                onChange={e => setMemberSearch(e.target.value)}
-                style={{ width: "100%", padding: "10px 12px 10px 36px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
-              />
+            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+              <div style={{ position: "relative", flex: 2, minWidth: "200px" }}>
+                <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
+                <input 
+                  placeholder="Buscar voluntário pelo nome..." 
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px 10px 36px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: "120px" }}>
+                <input 
+                  placeholder="Função (Ex: Som)" 
+                  value={customRoleInput}
+                  onChange={e => setCustomRoleInput(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
+                />
+              </div>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", maxHeight: "150px", overflowY: "auto", paddingRight: 4 }}>
               {filteredCandidatePeople.slice(0, 15).map((p) => (
                 <button 
                   key={p.id} 
-                  onClick={() => handleQuickAssign(p)}
+                  onClick={() => handleQuickAssign(p, customRoleInput.trim() || undefined)}
                   style={{ background: "white", border: "1px solid var(--alvo-line)", padding: "6px 12px", borderRadius: "20px", color: "var(--alvo-ink)", fontSize: "0.75rem", cursor: "pointer", display: "flex", gap: 6, alignItems: "center" }}
                 >
                   + {getFullName(p)}
@@ -1018,7 +1181,7 @@ export function ServingView() {
 
               <button 
                 type="submit"
-                style={{ background: "#f97316", color: "white", border: "none", borderRadius: "10px", padding: "10px", fontWeight: 800, cursor: "pointer", marginTop: 6 }}
+                style={{ background: "var(--alvo-accent)", color: "white", border: "none", borderRadius: "10px", padding: "10px", fontWeight: 800, cursor: "pointer", marginTop: 6 }}
               >
                 Cadastrar e Escalar
               </button>
@@ -1084,7 +1247,7 @@ export function ServingView() {
 
               <button 
                 onClick={() => handleSendReminder(selectedAssignmentForReminder)}
-                style={{ flex: 1, background: "#f97316", color: "white", border: "none", padding: "10px", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                style={{ flex: 1, background: "var(--alvo-green)", color: "white", border: "none", padding: "10px", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               >
                 <Send size={15} /> Disparar WhatsApp
               </button>

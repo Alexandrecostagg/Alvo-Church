@@ -16,6 +16,48 @@ import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores, fetchCommunityStoreModerationLogs, saveCommunityStore, saveCommunityStoreModerationLog } from "@alvo/firebase";
 import type { CommunityStore, CommunityStoreModerationLog, TenantContext } from "@alvo/types";
 
+const mockModerationStores: CommunityStore[] = [
+  {
+    id: "store_1",
+    organizationId: "org_alvo_demo",
+    ownerId: "user_admin_demo",
+    name: "Doces & Travessuras",
+    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde.",
+    category: "food",
+    status: "pending",
+    images: [],
+    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=200&auto=format&fit=crop",
+    contact: { address: { city: "Belém", state: "PA" } },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "store_2",
+    organizationId: "org_alvo_demo",
+    ownerId: "user_admin_demo",
+    name: "Conecta Informática",
+    description: "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade.",
+    category: "services",
+    status: "pending",
+    images: [],
+    bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200&auto=format&fit=crop",
+    contact: { address: { city: "Belém", state: "PA" } },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+const mockModerationLogs: CommunityStoreModerationLog[] = [
+  {
+    id: "log_1",
+    organizationId: "org_alvo_demo",
+    storeId: "store_1",
+    action: "created",
+    moderatedBy: "user_admin_demo",
+    timestamp: new Date().toISOString()
+  }
+];
+
 export function MarketplaceModerationView() {
   const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
   const [stores, setStores] = useState<CommunityStore[]>([]);
@@ -154,7 +196,12 @@ export function MarketplaceModerationView() {
 
   useEffect(() => {
     async function loadData() {
-      if (!firebaseReady || !tenantReady) return;
+      if (!firebaseReady || !tenantReady) {
+        setStores(mockModerationStores);
+        setLogs(mockModerationLogs);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
@@ -162,10 +209,12 @@ export function MarketplaceModerationView() {
           fetchCommunityStores(firebaseConfig, context, 200),
           fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500)
         ]);
-        setStores(allStores);
-        setLogs(allLogs);
+        setStores(allStores.length > 0 ? allStores : mockModerationStores);
+        setLogs(allLogs.length > 0 ? allLogs : mockModerationLogs);
       } catch (error) {
         console.error("Error loading data:", error);
+        setStores(mockModerationStores);
+        setLogs(mockModerationLogs);
       } finally {
         setLoading(false);
       }

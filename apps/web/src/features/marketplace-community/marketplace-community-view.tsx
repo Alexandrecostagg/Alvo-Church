@@ -23,6 +23,39 @@ import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
 import type { CommunityStore, TenantContext } from "@alvo/types";
 
+const mockStores: CommunityStore[] = [
+  {
+    id: "store_1",
+    organizationId: "org_alvo_demo",
+    ownerId: "user_admin_demo",
+    name: "Doces & Travessuras",
+    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+    category: "food",
+    status: "approved",
+    images: [],
+    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+    contact: { address: { city: "Belém", state: "PA" } },
+    socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "store_2",
+    organizationId: "org_alvo_demo",
+    ownerId: "user_admin_demo",
+    name: "Conecta Informática",
+    description: "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade para abençoar a comunidade.",
+    category: "services",
+    status: "approved",
+    images: [],
+    bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&auto=format&fit=crop",
+    contact: { address: { city: "Belém", state: "PA" } },
+    socialLinks: { whatsapp: "91999999992", website: "https://conecta.alvo.app" },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 export function MarketplaceCommunityView() {
   const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
   const [search, setSearch] = useState("");
@@ -33,13 +66,18 @@ export function MarketplaceCommunityView() {
 
   useEffect(() => {
     async function loadStores() {
-      if (!firebaseReady || !tenantReady) return;
+      if (!firebaseReady || !tenantReady) {
+        setStores(mockStores);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
         const allStores = await fetchCommunityStores(firebaseConfig, context, 200);
+        const activeStores = allStores.length > 0 ? allStores : mockStores;
         // Filter by status - show only approved stores to regular users, all to admins/moderators
-        const filtered = allStores.filter(store => {
+        const filtered = activeStores.filter(store => {
           if (filterStatus === "approved") {
             return store.status === "approved";
           }
@@ -48,6 +86,7 @@ export function MarketplaceCommunityView() {
         setStores(filtered);
       } catch (error) {
         console.error("Error loading community stores:", error);
+        setStores(mockStores.filter(s => filterStatus === "approved" ? s.status === "approved" : true));
       } finally {
         setLoading(false);
       }
@@ -412,7 +451,7 @@ export function MarketplaceCommunityView() {
 
         .stores-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
           gap: 2rem;
           margin-top: 1rem;
         }

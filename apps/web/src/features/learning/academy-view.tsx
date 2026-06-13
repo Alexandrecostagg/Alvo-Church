@@ -515,7 +515,7 @@ export function AcademyView() {
       {/* Seletor de Cursos Netflix-Style */}
       <section style={{ marginBottom: "2.5rem" }}>
         <p className="eyebrow" style={{ marginBottom: "1rem" }}>Cursos Disponíveis</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 360px), 1fr))", gap: "1.5rem" }}>
           {courses.map(course => {
             const isSelected = selectedCourseId === course.id;
             const currentCourseLessons = lessons.filter(l => l.courseId === course.id);
@@ -579,7 +579,7 @@ export function AcademyView() {
                       <span style={{ color: isSelected ? "var(--alvo-blue)" : "white" }}>Progresso</span>
                       <span>{currentCoursePercent}%</span>
                     </div>
-                    <div style={{ width: "100%", height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: "100%", height: 6, backgroundColor: "var(--alvo-line)", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{ width: `${currentCoursePercent}%`, height: "100%", backgroundColor: isDone ? "#10b981" : "var(--alvo-blue)", borderRadius: 3 }} />
                     </div>
                   </div>

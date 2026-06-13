@@ -28,6 +28,22 @@ import {
   triggerEmergencySOS
 } from "@alvo/firebase";
 
+const mockPulses: LeaderEmotionalPulse[] = [
+  { id: "pulse_1", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "happy", energyLevel: 8, stressLevel: 3, notedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "pulse_2", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "neutral", energyLevel: 6, stressLevel: 4, notedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "pulse_3", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "tired", energyLevel: 4, stressLevel: 6, notedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "pulse_4", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "energetic", energyLevel: 9, stressLevel: 2, notedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+];
+
+const mockResources: WellBeingResource[] = [
+  { id: "res_1", organizationId: "org_alvo_demo", title: "Lidando com o Burnout Ministerial", description: "Conselhos práticos de saúde mental para líderes de pequenos grupos.", category: "mental", durationMinutes: 15, contentUrl: "", tags: ["mental", "burnout"] },
+  { id: "res_2", organizationId: "org_alvo_demo", title: "Ritmos Saudáveis de Trabalho", description: "Como manter o ritmo espiritual de excelência e evitar a exaustão física.", category: "spiritual", durationMinutes: 20, contentUrl: "", tags: ["trabalho", "escala"] },
+];
+
+const mockSessions: MentoringSession[] = [
+  { id: "sess_1", organizationId: "org_alvo_demo", leaderId: "user_admin_demo", mentorName: "Pr. Roberto Oliveira", scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), meetingLink: "https://zoom.us/j/123", status: "scheduled", durationMinutes: 60 }
+];
+
 export function WellnessView() {
   const { user, firebaseConfig, organizationId, firebaseReady, tenantReady } = useAppAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -38,7 +54,13 @@ export function WellnessView() {
 
   useEffect(() => {
     async function loadData() {
-      if (!firebaseReady || !tenantReady || !user?.uid) return;
+      if (!firebaseReady || !tenantReady || !user?.uid) {
+        setPulses(mockPulses);
+        setResources(mockResources);
+        setSessions(mockSessions);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
@@ -47,11 +69,14 @@ export function WellnessView() {
           fetchWellBeingResources(firebaseConfig, context),
           fetchMentoringSessions(firebaseConfig, context, user.uid)
         ]);
-        setPulses(p);
-        setResources(r);
-        setSessions(s);
+        setPulses(p.length > 0 ? p : mockPulses);
+        setResources(r.length > 0 ? r : mockResources);
+        setSessions(s.length > 0 ? s : mockSessions);
       } catch (error) {
         console.error("Error loading wellness data:", error);
+        setPulses(mockPulses);
+        setResources(mockResources);
+        setSessions(mockSessions);
       } finally {
         setLoading(false);
       }
@@ -550,7 +575,7 @@ export function WellnessView() {
         /* Resources Styles */
         .resources-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
           gap: 1rem;
         }
 

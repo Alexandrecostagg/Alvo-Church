@@ -886,11 +886,6 @@ export function ReceptionView() {
                     className={prepared ? "queue-action is-done" : "queue-action"}
                     onClick={() => openWhatsAppTemplateModal(visitor)}
                     type="button"
-                    style={{
-                      borderColor: prepared ? "#16a34a" : "rgba(255,255,255,0.1)",
-                      backgroundColor: prepared ? "rgba(22, 163, 74, 0.15)" : "rgba(255,255,255,0.05)",
-                      color: prepared ? "#16a34a" : "white"
-                    }}
                   >
                     <CheckCircle2 size={16} />
                     {prepared ? "Disparado" : "Disparar"}
@@ -922,11 +917,6 @@ export function ReceptionView() {
                     className={greeted ? "queue-action is-done" : "queue-action"}
                     onClick={() => handleMarkGreetingComplete(visitor.id)}
                     type="button"
-                    style={{
-                      borderColor: greeted ? "#16a34a" : "rgba(255,255,255,0.1)",
-                      backgroundColor: greeted ? "rgba(22, 163, 74, 0.15)" : "rgba(255,255,255,0.05)",
-                      color: greeted ? "#16a34a" : "white"
-                    }}
                   >
                     <CheckCircle2 size={16} />
                     {greeted ? "Saudado" : "Saudar"}
