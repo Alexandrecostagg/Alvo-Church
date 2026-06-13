@@ -6703,3 +6703,291 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* --- REDESIGNED PREMIUM RECEPTION & PULPIT ALTAR FEED STYLES --- */
+
+/* Reception Page Theme Reset & High Contrast Elements */
+.reception-page {
+  color: var(--alvo-ink) !important;
+}
+
+.reception-page .visitor-form {
+  background: var(--alvo-surface) !important;
+  border: 1px solid var(--alvo-line) !important;
+  color: var(--alvo-ink) !important;
+  box-shadow: var(--alvo-shadow) !important;
+}
+
+.reception-page .visitor-form label {
+  color: var(--alvo-ink) !important;
+}
+
+.reception-page .visitor-form .form-status {
+  color: var(--alvo-blue) !important;
+  font-weight: 700 !important;
+}
+
+/* Reception Premium Header Layout */
+.reception-header-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--alvo-line);
+  padding-bottom: 1.5rem;
+}
+
+.reception-header-top-row {
+  display: flex;
+}
+
+.back-link-premium {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--alvo-ink-soft);
+  transition: color 0.2s;
+}
+
+.back-link-premium:hover {
+  color: var(--alvo-accent);
+}
+
+.reception-header-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .reception-header-main-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+}
+
+.reception-header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.eyebrow-premium {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--alvo-blue);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.title-premium {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--alvo-ink);
+  margin: 0 0 0.5rem;
+  line-height: 1.1;
+}
+
+.desc-premium {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--alvo-ink-soft);
+  margin: 0;
+  max-width: 780px;
+}
+
+.reception-header-right {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.reception-action-btn-ghost,
+.reception-action-btn-purple {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reception-action-btn-ghost {
+  background-color: var(--alvo-surface) !important;
+  border: 1px solid var(--alvo-line) !important;
+  color: var(--alvo-ink-soft) !important;
+}
+
+.reception-action-btn-ghost:hover {
+  background-color: var(--alvo-surface-muted) !important;
+  border-color: var(--alvo-ink-soft) !important;
+}
+
+.reception-action-btn-ghost svg {
+  color: var(--alvo-blue) !important;
+}
+
+.reception-action-btn-purple {
+  background: linear-gradient(135deg, #a855f7, #6366f1) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2) !important;
+}
+
+.reception-action-btn-purple:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Tabs Navigation */
+.reception-nav-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 2px solid transparent;
+}
+
+.reception-tab-item {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--alvo-ink-soft);
+  padding: 0.5rem 0.25rem 0.75rem;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.reception-tab-item:hover {
+  color: var(--alvo-ink);
+}
+
+.reception-tab-item.is-active {
+  color: var(--alvo-ink);
+}
+
+.reception-tab-item.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--alvo-accent);
+  border-radius: 99px;
+}
+
+/* Reception KPI Cards Styling */
+.reception-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.reception-kpi-card {
+  background-color: var(--alvo-surface) !important;
+  border: 1px solid var(--alvo-line) !important;
+  padding: 1.5rem !important;
+  border-radius: 20px !important;
+  box-shadow: var(--alvo-shadow) !important;
+}
+
+.reception-kpi-label {
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  color: var(--alvo-ink-soft) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.reception-kpi-val {
+  display: block !important;
+  font-size: 2.25rem !important;
+  font-weight: 900 !important;
+  margin-top: 4px !important;
+}
+
+.reception-kpi-val.val-blue { color: var(--alvo-blue) !important; }
+.reception-kpi-val.val-orange { color: #ea580c !important; }
+.reception-kpi-val.val-purple { color: #7c3aed !important; }
+.reception-kpi-val.val-green { color: var(--alvo-green) !important; }
+
+.reception-kpi-desc {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--alvo-ink-soft) !important;
+  display: block !important;
+  margin-top: 6px !important;
+}
+
+.reception-kpi-desc.text-green {
+  color: var(--alvo-green) !important;
+}
+
+@media (max-width: 1024px) {
+  .reception-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .reception-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Altar Feed / Pulpit Mode Premium Styling */
+.pulpit-live-feed {
+  background-color: #09090b !important;
+}
+
+.pulpit-live-feed h1 {
+  color: #ffffff !important;
+}
+
+.pulpit-card {
+  background-color: #18181b !important;
+  border-color: #f97316 !important;
+}
+
+.pulpit-card-number {
+  color: #a1a1aa !important;
+  font-size: 1.5rem !important;
+  font-weight: 900 !important;
+}
+
+.pulpit-card-title {
+  color: #ffffff !important;
+  font-size: 2.2rem !important;
+  font-weight: 900 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.pulpit-card-note {
+  color: #fed7aa !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  font-style: italic !important;
+  line-height: 1.5 !important;
+}
+
+.pulpit-live-feed span,
+.pulpit-live-feed strong {
+  color: #ffffff !important;
+}
+
+.pulpit-live-feed .pulpit-card-btn {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
