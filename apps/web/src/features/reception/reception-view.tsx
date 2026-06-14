@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   CheckCircle2,
-  ClipboardList,
   Megaphone,
   MessageSquareText,
   QrCode,
@@ -14,13 +13,10 @@ import {
   X,
   Send,
   MessageSquare,
-  Sparkles,
   ArrowRight,
-  TrendingUp,
-  Award,
-  BookOpen
+  Award
 } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   createVisitorIntakeWorkflow,
   fetchVisitorIntakes,
@@ -88,7 +84,6 @@ export function ReceptionView() {
   
   // Template de comunicação por WhatsApp
   const [activeTemplateVisitor, setActiveTemplateVisitor] = useState<CapturedVisitor | null>(null);
-  const [selectedTemplateText, setSelectedTemplateText] = useState("");
   const [customMsg, setCustomMsg] = useState("");
 
   // Sync real-time do Firestore
@@ -219,7 +214,6 @@ export function ReceptionView() {
   const openWhatsAppTemplateModal = (visitor: CapturedVisitor) => {
     setActiveTemplateVisitor(visitor);
     const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na Alvo Church! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
-    setSelectedTemplateText(templateText);
     setCustomMsg(templateText);
   };
 
@@ -240,13 +234,16 @@ export function ReceptionView() {
       current.includes(activeTemplateVisitor.id) ? current : [...current, activeTemplateVisitor.id]
     );
 
+    setStatus(`WhatsApp de boas-vindas preparado para ${activeTemplateVisitor.name}.`);
     setActiveTemplateVisitor(null);
   };
 
   const handleMarkGreetingComplete = (visitorId: string) => {
+    const visitor = capturedVisitors.find((item) => item.id === visitorId);
     setGreetedVisitorIds((currentIds) =>
       currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
     );
+    setStatus(visitor ? `${visitor.name} marcado como saudado no altar.` : "Visitante marcado como saudado.");
   };
 
   // Filtros
@@ -258,8 +255,13 @@ export function ReceptionView() {
     (visitor) => !greetedVisitorIds.includes(visitor.id)
   );
 
+  const localVisitorCount = capturedVisitors.length;
+  const cloudVisitorCount = visitorIntakes.length;
+  const totalVisitorCount = localVisitorCount + cloudVisitorCount;
+  const firebaseConnected = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
+
   return (
-    <main className="form-page reception-page animate-entrance" style={{ maxWidth: 1400, padding: "2rem" }}>
+    <main className="form-page reception-page animate-entrance">
       
       {/* 1. MODO TOTEM DE AUTOATENDIMENTO (Fullscreen Tablet/Kiosk Mode) */}
       {kioskMode && (
@@ -577,7 +579,6 @@ export function ReceptionView() {
                 <button
                   onClick={() => {
                     const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na Alvo Church! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
-                    setSelectedTemplateText(text);
                     setCustomMsg(text);
                   }}
                   style={{
@@ -595,7 +596,6 @@ export function ReceptionView() {
                 <button
                   onClick={() => {
                     const text = `Olá, ${activeTemplateVisitor.name}! Ficamos muito felizes com a sua visita na Alvo Church por convite de membro! 😊\n\nGostaríamos de te convidar para o nosso encontro de Célula de meio de semana. É um lugar descontraído para fazermos novos amigos e conversar sobre a bíblia. O que acha de nos fazer uma visita?`;
-                    setSelectedTemplateText(text);
                     setCustomMsg(text);
                   }}
                   style={{
@@ -643,11 +643,12 @@ export function ReceptionView() {
                 <button
                   type="button"
                   onClick={handleSendWhatsAppMessage}
+                  disabled={!activeTemplateVisitor.phone}
                   className="primary-button"
-                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "#25d366", color: "white", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "none" }}
+                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "#25d366", color: "white", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "none", opacity: activeTemplateVisitor.phone ? 1 : 0.55 }}
                 >
                   <Send size={16} />
-                  Enviar WhatsApp
+                  {activeTemplateVisitor.phone ? "Enviar WhatsApp" : "Sem telefone"}
                 </button>
               </div>
             </div>
@@ -709,10 +710,10 @@ export function ReceptionView() {
         <div className="reception-kpi-card">
           <span className="reception-kpi-label">Total de Visitantes</span>
           <strong className="reception-kpi-val val-blue">
-            {capturedVisitors.length + visitorIntakes.length}
+            {totalVisitorCount}
           </strong>
           <small className="reception-kpi-desc text-green">
-             Novas jornadas criadas hoje
+             {cloudVisitorCount ? `${cloudVisitorCount} sincronizados na nuvem` : `${localVisitorCount} no painel local`}
           </small>
         </div>
         <div className="reception-kpi-card">
@@ -734,23 +735,23 @@ export function ReceptionView() {
           </small>
         </div>
         <div className="reception-kpi-card">
-          <span className="reception-kpi-label">Jornadas Integradas (30d)</span>
+          <span className="reception-kpi-label">Jornadas Ativas</span>
           <strong className="reception-kpi-val val-green">
-            {visitorJourneys.length || 8}
+            {visitorJourneys.length}
           </strong>
           <small className="reception-kpi-desc text-green">
-             Taxa de retenção: 65%
+             {firebaseConnected ? "Sincronizadas no Firebase" : "Aguardando conexão Firebase"}
           </small>
         </div>
       </section>
 
       {/* Main Grid: Ficha de Cadastro + Fluxo / Success Alert */}
-      <section className="reception-command-grid" style={{ marginTop: "2.5rem" }}>
+      <section className="reception-command-grid">
         
         {/* Lado Esquerdo: Ficha de Entrada de Visitante */}
-        <form className="visitor-form reception-capture-card" onSubmit={handleVisitorCaptureSubmit} style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
-          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>Entrada Rápida</p>
-          <h2 style={{ color: "var(--alvo-ink)" }}>Registrar Visitante</h2>
+        <form className="visitor-form reception-capture-card" onSubmit={handleVisitorCaptureSubmit}>
+          <p className="eyebrow">Entrada Rápida</p>
+          <h2>Registrar Visitante</h2>
           
           <label style={{ color: "var(--alvo-ink)" }}>
             Nome Completo do Visitante *
@@ -778,7 +779,7 @@ export function ReceptionView() {
             />
           </label>
           
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="reception-form-row">
             <label style={{ color: "var(--alvo-ink)" }}>
               Origem do Contato
               <select
@@ -815,7 +816,7 @@ export function ReceptionView() {
         </form>
 
         {/* Lado Direito: Banner de Fluxo e Success Alert */}
-        <article className="reception-route-card" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+        <article className="reception-route-card">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Acolhimento Estruturado</p>
@@ -871,76 +872,84 @@ export function ReceptionView() {
       </section>
 
       {/* Seção das Filas de Trabalho e Triagem */}
-      <section className="reception-workbench page-workbench" style={{ marginTop: "2.5rem" }}>
+      <section className="reception-workbench page-workbench">
         
         {/* Fila de Mensagens WhatsApp */}
-        <div className="queue-panel" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+        <div className="queue-panel">
           <div className="queue-heading" style={{ borderBottomColor: "var(--alvo-line)" }}>
             <MessageSquareText size={18} style={{ color: "#25d366" }} />
             <strong style={{ color: "var(--alvo-ink)" }}>Fila de Comunicação</strong>
             <span style={{ backgroundColor: "rgba(37,211,102,0.15)", color: "#25d366" }}>{pendingCommunicationVisitors.length}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-            {capturedVisitors.map((visitor) => {
-              const prepared = preparedCommunicationIds.includes(visitor.id);
-
-              return (
-                <div className="queue-item" key={`communication-${visitor.id}`} style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem" }}>
+            {pendingCommunicationVisitors.length ? (
+              pendingCommunicationVisitors.map((visitor) => (
+                <div className="queue-item" key={`communication-${visitor.id}`}>
                   <div>
                     <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
                     <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.source} · {visitor.phone || "Sem telefone"}</p>
                   </div>
                   <button
-                    className={prepared ? "queue-action is-done" : "queue-action"}
+                    className="queue-action"
+                    disabled={!visitor.phone}
                     onClick={() => openWhatsAppTemplateModal(visitor)}
                     type="button"
+                    title={visitor.phone ? "Preparar mensagem de WhatsApp" : "Cadastre um telefone para disparar WhatsApp"}
                   >
                     <CheckCircle2 size={16} />
-                    {prepared ? "Disparado" : "Disparar"}
+                    {visitor.phone ? "Disparar" : "Sem telefone"}
                   </button>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              <div className="empty-state compact">
+                <strong>Comunicação em dia</strong>
+                <p>Todos os visitantes da fila local já receberam o encaminhamento de boas-vindas.</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Fila de Cumprimentos do Altar */}
-        <div className="queue-panel" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+        <div className="queue-panel">
           <div className="queue-heading" style={{ borderBottomColor: "var(--alvo-line)" }}>
             <Megaphone size={18} style={{ color: "#8b5cf6" }} />
             <strong style={{ color: "var(--alvo-ink)" }}>Fila de Boas-vindas Altar</strong>
             <span style={{ backgroundColor: "rgba(139,92,246,0.15)", color: "#8b5cf6" }}>{celebrationGreetingVisitors.length}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-            {capturedVisitors.map((visitor) => {
-              const greeted = greetedVisitorIds.includes(visitor.id);
-
-              return (
-                <div className="queue-item" key={`greeting-${visitor.id}`} style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem" }}>
+            {celebrationGreetingVisitors.length ? (
+              celebrationGreetingVisitors.map((visitor) => (
+                <div className="queue-item" key={`greeting-${visitor.id}`}>
                   <div>
                     <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
                     <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.note || "Visitante da celebração de hoje"}</p>
                   </div>
                   <button
-                    className={greeted ? "queue-action is-done" : "queue-action"}
+                    className="queue-action"
                     onClick={() => handleMarkGreetingComplete(visitor.id)}
                     type="button"
                   >
                     <CheckCircle2 size={16} />
-                    {greeted ? "Saudado" : "Saudar"}
+                    Saudar
                   </button>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              <div className="empty-state compact">
+                <strong>Altar em dia</strong>
+                <p>Todos os visitantes da fila local já foram marcados como saudados.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* Sincronização do Banco de Dados Real */}
-      <section className="reception-live-grid" style={{ marginTop: "2.5rem" }}>
+      <section className="reception-live-grid">
         
         {/* Entradas Reais do Firestore */}
-        <article className="directory-panel" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+        <article className="directory-panel">
           <div className="section-heading" style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <div>
               <p className="eyebrow" style={{ color: "#0ea5e9" }}>Nuvem Firestore</p>
@@ -973,7 +982,7 @@ export function ReceptionView() {
         </article>
 
         {/* Jornadas Pastorais Ativas */}
-        <article className="directory-panel" style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
+        <article className="directory-panel">
           <div className="section-heading" style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <div>
               <p className="eyebrow" style={{ color: "#10b981" }}>Monitor de Funil</p>

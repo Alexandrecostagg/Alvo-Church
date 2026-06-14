@@ -1,0 +1,31 @@
+.git/
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+coverage/
+
+# Local platform/tool caches
+apps/web/.vercel/
+apps/worker-api/.wrangler/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# First pass: code-only graph, no LLM/API key required
+docs/
+*.md
+*.mdx
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.ico
+*.txt
+*.yaml
+*.yml

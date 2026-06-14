@@ -5,6 +5,7 @@ node_modules
 dist
 build
 coverage
+graphify-out/
 .expo
 .expo-shared
 apps/mobile/.expo
