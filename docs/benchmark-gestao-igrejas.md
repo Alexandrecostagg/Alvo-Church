@@ -582,6 +582,7 @@ Se fôssemos escolher "quem inspirará cada parte do nosso produto", eu montaria
 - `ChMeetings`: all-in-one acessível, member portal e internacionalização
 - `Breeze`: simplicidade operacional para pequenas igrejas
 - `APP Igreja da Cidade / inChurch`: referência brasileira de app como camada de relacionamento diário entre igreja, membro, visitante, grupos, agenda, conteúdo e cuidado
+- `Basiléia`: referência de comunidade cristã digital com feed, mensagens, mural de oração, grupos e pedidos de ajuda mútua
 
 ## Minha recomendação estratégica
 
@@ -596,6 +597,7 @@ Eu seguiria esta composição:
 - camada de simplicidade e implantação rápida inspirada em `Breeze` e `ChMeetings`
 - camada de grupos, voluntários e check-in operacional inspirada em `ChurchSuite`
 - camada de app do membro e comunicação cotidiana inspirada no `APP Igreja da Cidade` e no ecossistema `inChurch`, adaptada para ficar profundamente conectada ao painel, às jornadas e à timeline pastoral do Alvo Church
+- camada comunitária inspirada na `Basiléia`, com oração, ajuda mútua, grupos, mensagens e moderação conectadas à operação pastoral e social da igreja
 
 ## Referência brasileira observada: APP Igreja da Cidade
 
@@ -616,6 +618,30 @@ Recursos observados publicamente:
 Lição para o Alvo Church:
 
 O app não deve ser apenas vitrine de conteúdo. Ele deve ser uma porta de entrada contínua para jornada, cuidado, grupos, eventos, serviço e comunicação. A vantagem do Alvo Church pode estar em conectar cada ação do app à timeline da pessoa, aos alertas pastorais e aos dashboards de liderança.
+
+## Referência observada: Basiléia
+
+A Basiléia aparece publicamente como uma PWA em `basileia.app`, descrita como plataforma comunitária cristã. A experiência observada aponta mais para rede comunitária/app cristão do que para gestão administrativa clássica.
+
+Recursos observados publicamente:
+
+- feed de publicações
+- stories
+- mensagens e conversas
+- perfis
+- grupos
+- mural de oração
+- pedidos de ajuda comunitária
+- categorias de ajuda, como alimentação, material, educação, apoio técnico e saúde
+- prioridade ou urgência do pedido
+- ofertas de ajuda por outros usuários
+- denúncias e moderação
+- impulsionamento/promoção de posts ou eventos
+- perfis memoriais e contatos confiáveis
+
+Lição para o Alvo Church:
+
+A camada comunitária do app pode ser mais que comunicação institucional. Ela pode organizar oração, cuidado prático, ajuda mútua, grupos e conversas em torno de necessidades reais. Para o Alvo Church, isso deve ser integrado à governança pastoral: pedidos sensíveis precisam de permissões, moderação, privacidade e possibilidade de virar tarefa ou acompanhamento no painel.
 
 ## Ordem recomendada de construção
 
@@ -695,6 +721,7 @@ Se eu tivesse que definir uma tese de produto em uma frase:
 - APP Igreja da Cidade na App Store: https://apps.apple.com/br/app/igreja-da-cidade/id1467945467
 - Site oficial da Igreja da Cidade: https://igrejadacidade.org.br/
 - inChurch: https://inchurch.com.br/
+- Basiléia: https://www.basileia.app/
 
 ### Diretórios de mercado
 

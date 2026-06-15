@@ -304,6 +304,23 @@ Capacidades:
 - integração com links de mídias externas (YouTube, Spotify, PDFs de partituras)
 - acesso direto aos arquivos de ensaio via app do voluntário
 
+### Módulo 13. Comunidade, oração e ajuda mútua
+
+Função:
+Criar uma camada comunitária no app para fortalecer pertencimento, oração, apoio entre membros e resposta prática a necessidades reais.
+
+Capacidades:
+
+- feed comunitário moderado
+- mural de oração
+- pedidos de ajuda por categoria
+- níveis de prioridade ou urgência
+- ofertas de ajuda por membros, líderes ou ministérios
+- conversa privada vinculada ao pedido
+- grupos públicos e privados
+- denúncias e moderação de conteúdo
+- histórico da ação comunitária na timeline da pessoa, quando aplicável e autorizado
+
 ## 7. Personas principais
 
 ### Pastor sênior
