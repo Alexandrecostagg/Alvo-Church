@@ -581,6 +581,7 @@ Se fôssemos escolher "quem inspirará cada parte do nosso produto", eu montaria
 - `ChurchSuite`: newcomer flow, voluntariado, grupos e check-in enxuto
 - `ChMeetings`: all-in-one acessível, member portal e internacionalização
 - `Breeze`: simplicidade operacional para pequenas igrejas
+- `APP Igreja da Cidade / inChurch`: referência brasileira de app como camada de relacionamento diário entre igreja, membro, visitante, grupos, agenda, conteúdo e cuidado
 
 ## Minha recomendação estratégica
 
@@ -594,6 +595,27 @@ Eu seguiria esta composição:
 - camada arquitetural e analítica inspirada em `Rock RMS`
 - camada de simplicidade e implantação rápida inspirada em `Breeze` e `ChMeetings`
 - camada de grupos, voluntários e check-in operacional inspirada em `ChurchSuite`
+- camada de app do membro e comunicação cotidiana inspirada no `APP Igreja da Cidade` e no ecossistema `inChurch`, adaptada para ficar profundamente conectada ao painel, às jornadas e à timeline pastoral do Alvo Church
+
+## Referência brasileira observada: APP Igreja da Cidade
+
+O APP Igreja da Cidade, publicado pela Primeira Igreja Batista em São José dos Campos e desenvolvido no ecossistema inChurch, é uma referência brasileira relevante porque organiza em um app único recursos de relacionamento com a igreja.
+
+Recursos observados publicamente:
+
+- Bíblia, planos de leitura e anotações
+- vídeos, áudios, publicações e downloads offline
+- transmissões ao vivo com notificações
+- agenda, eventos, inscrições e ingressos
+- grupos de interesse e conteúdo direcionado
+- carteirinha exclusiva
+- pedidos de oração
+- notícias e guia de negócios
+- perfil expandido e registro de "como está se sentindo hoje?"
+
+Lição para o Alvo Church:
+
+O app não deve ser apenas vitrine de conteúdo. Ele deve ser uma porta de entrada contínua para jornada, cuidado, grupos, eventos, serviço e comunicação. A vantagem do Alvo Church pode estar em conectar cada ação do app à timeline da pessoa, aos alertas pastorais e aos dashboards de liderança.
 
 ## Ordem recomendada de construção
 
@@ -670,6 +692,9 @@ Se eu tivesse que definir uma tese de produto em uma frase:
 - ChMeetings member portal: https://www.chmeetings.com/member-portal/
 - Breeze features: https://www.breezechms.com/all-features
 - Breeze invite / groups / events / giving: https://www.breezechms.com/invite
+- APP Igreja da Cidade na App Store: https://apps.apple.com/br/app/igreja-da-cidade/id1467945467
+- Site oficial da Igreja da Cidade: https://igrejadacidade.org.br/
+- inChurch: https://inchurch.com.br/
 
 ### Diretórios de mercado
 

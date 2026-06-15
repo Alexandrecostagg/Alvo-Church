@@ -64,6 +64,33 @@ No começo, o foco de cada canal deve ser:
 - líder de célula
 - voluntário
 
+## 4.1 Direção estratégica do app
+
+O app mobile deve ser planejado desde o início como uma extensão nativa da plataforma, não como um produto separado.
+
+No curto prazo, ele deve resolver ações simples e frequentes:
+
+- perfil do membro ou visitante
+- próximas ações da jornada
+- célula ou grupo
+- eventos e inscrições
+- notificações básicas
+- pedidos de oração
+- disponibilidade para servir
+
+No médio prazo, o app deve evoluir para:
+
+- carteirinha de membro
+- conteúdos, vídeos, áudios e downloads
+- planos de leitura e devocionais
+- check-in em eventos
+- agenda personalizada
+- comunicação segmentada
+- registro de estado atual da pessoa, como "como está se sentindo hoje?"
+- recursos de líder de célula, voluntário e ministério
+
+Regra de produto: tudo que acontecer no app precisa alimentar a mesma base do painel web. O app é a porta de relacionamento; o web admin é a mesa de operação e decisão.
+
 ## 5. Escopo do MVP fase 1
 
 ### Núcleo institucional

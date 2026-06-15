@@ -52,6 +52,25 @@ Isso gera:
 
 - experiência digital clara para cadastro, integração, grupos, eventos, doações e comunicação
 
+## 3.1 Estratégia do app integrado
+
+O app mobile deve ser tratado como parte integrante da plataforma, vinculado à mesma base de pessoas, famílias, jornadas, grupos, eventos, comunicação e cuidado pastoral.
+
+Ele não deve nascer como um aplicativo isolado de conteúdo da igreja. A direção correta é que o app seja a camada de relacionamento diário entre igreja, membro, visitante, líder e voluntário, enquanto o painel web permanece como camada de gestão, operação e liderança.
+
+Referências como o APP Igreja da Cidade e plataformas como inChurch reforçam que o app de igreja tende a gerar valor quando conecta:
+
+- perfil e carteirinha do membro
+- Bíblia, planos de leitura e devocionais
+- vídeos, áudios, lives e conteúdos offline
+- agenda, inscrições, ingressos e check-in
+- grupos, células e interesses
+- pedidos de oração e cuidado pastoral
+- notificações segmentadas
+- percepção de estado atual da pessoa, como "como está se sentindo hoje?"
+
+Para o Alvo Church, a diferença estratégica será manter tudo isso conectado à jornada da pessoa e à operação pastoral. Cada ação relevante no app deve alimentar a timeline, os próximos passos, os alertas e os indicadores do painel administrativo.
+
 ## 4. Princípios do produto
 
 - `people-first`: tudo parte da pessoa e da família
