@@ -307,11 +307,10 @@ Capacidades:
 ### Módulo 13. Comunidade, oração e ajuda mútua
 
 Função:
-Criar uma camada comunitária no app para fortalecer pertencimento, oração, apoio entre membros e resposta prática a necessidades reais.
+Criar uma camada comunitária e operacional para fortalecer pertencimento, oração, apoio entre membros e resposta prática a necessidades reais.
 
 Capacidades:
 
-- feed comunitário moderado
 - mural de oração
 - pedidos de ajuda por categoria
 - níveis de prioridade ou urgência
@@ -320,6 +319,23 @@ Capacidades:
 - grupos públicos e privados
 - denúncias e moderação de conteúdo
 - histórico da ação comunitária na timeline da pessoa, quando aplicável e autorizado
+
+### Módulo 14. WhatsApp, IA e atendimento pastoral automatizado
+
+Função:
+Usar WhatsApp Business e IA como camada prática de comunicação, atendimento inicial, engajamento e coleta de sinais pastorais.
+
+Capacidades:
+
+- assistente virtual configurável por igreja
+- atendimento 24h por WhatsApp
+- respostas em texto e áudio
+- suporte a múltiplos idiomas
+- campanhas e notificações segmentadas
+- confirmações e listas de presença de células pelo WhatsApp
+- solicitações organizadas, como oração, cesta básica e acompanhamento
+- geração de tarefas ou alertas pastorais a partir de conversas relevantes
+- governança de IA com limites, revisão humana e registro de consentimento
 
 ## 7. Personas principais
 
