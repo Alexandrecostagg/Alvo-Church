@@ -8,6 +8,7 @@ import {
   HeartHandshake,
   MessageCircle,
   Mic,
+  Plus,
   Send,
   Settings2,
   ShieldCheck,
@@ -15,12 +16,13 @@ import {
   UsersRound,
   Waypoints
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
 type AssistantStatus = "online" | "review" | "paused";
 type RequestStatus = "new" | "triage" | "assigned" | "resolved";
 type RequestPriority = "urgent" | "important" | "normal";
 type AssistantMode = "assistive" | "supervised" | "paused";
+type RequestFilter = "all" | RequestStatus;
 
 type PastoralRequest = {
   id: string;
@@ -139,10 +141,26 @@ const statusLabel: Record<RequestStatus, string> = {
   resolved: "Resolvida"
 };
 
+const filterLabel: Record<RequestFilter, string> = {
+  all: "Todas",
+  new: "Novas",
+  triage: "Triagem",
+  assigned: "Encaminhadas",
+  resolved: "Resolvidas"
+};
+
 export function PastoralAiView() {
   const [requests, setRequests] = useState<PastoralRequest[]>(initialPastoralRequests);
   const [cellPresences, setCellPresences] = useState<CellPresence[]>(initialCellPresences);
   const [selectedRequestId, setSelectedRequestId] = useState(initialPastoralRequests[0]?.id ?? "");
+  const [requestFilter, setRequestFilter] = useState<RequestFilter>("all");
+  const [draftRequest, setDraftRequest] = useState({
+    person: "",
+    category: "Oração",
+    priority: "normal" as RequestPriority,
+    summary: "",
+    owner: "Recepção"
+  });
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("supervised");
   const [reviewSensitive, setReviewSensitive] = useState(true);
   const [voiceReplies, setVoiceReplies] = useState(true);
@@ -155,6 +173,9 @@ export function PastoralAiView() {
     }
   ]);
   const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
+  const filteredRequests = requests.filter((request) =>
+    requestFilter === "all" ? true : request.status === requestFilter
+  );
 
   const metrics = useMemo(() => {
     const urgent = requests.filter((request) => request.priority === "urgent").length;
@@ -243,6 +264,46 @@ export function PastoralAiView() {
     }
   };
 
+  const handleCreateRequest = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const person = draftRequest.person.trim();
+    const summary = draftRequest.summary.trim();
+
+    if (!person || !summary) {
+      addActivity("Cadastro incompleto", "Informe nome e resumo para criar uma solicitação pastoral.");
+      return;
+    }
+
+    const createdAt = new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date());
+    const nextRequest: PastoralRequest = {
+      id: `req_${Date.now()}`,
+      person,
+      category: draftRequest.category,
+      channel: "Manual",
+      priority: draftRequest.priority,
+      status: "new",
+      summary,
+      owner: draftRequest.owner || "Recepção",
+      receivedAt: createdAt
+    };
+
+    setRequests((current) => [nextRequest, ...current]);
+    setSelectedRequestId(nextRequest.id);
+    setRequestFilter("all");
+    setDraftRequest({
+      person: "",
+      category: "Oração",
+      priority: "normal",
+      summary: "",
+      owner: "Recepção"
+    });
+    addActivity("Solicitação criada manualmente", `${person} entrou na fila de cuidado.`);
+  };
+
   return (
     <main className="form-page pastoral-ai-page animate-entrance">
       <header className="pastoral-ai-hero">
@@ -305,8 +366,89 @@ export function PastoralAiView() {
             </button>
           </div>
 
+          <form className="quick-request-form" onSubmit={handleCreateRequest}>
+            <div className="quick-form-row">
+              <label>
+                <span>Nome</span>
+                <input
+                  value={draftRequest.person}
+                  onChange={(event) => setDraftRequest((current) => ({ ...current, person: event.target.value }))}
+                  placeholder="Ex: Ana Souza"
+                />
+              </label>
+              <label>
+                <span>Categoria</span>
+                <select
+                  value={draftRequest.category}
+                  onChange={(event) => setDraftRequest((current) => ({ ...current, category: event.target.value }))}
+                >
+                  <option>Oração</option>
+                  <option>Cesta básica</option>
+                  <option>Integração</option>
+                  <option>Aconselhamento</option>
+                  <option>Célula</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              <span>Resumo</span>
+              <textarea
+                value={draftRequest.summary}
+                onChange={(event) => setDraftRequest((current) => ({ ...current, summary: event.target.value }))}
+                placeholder="Descreva o pedido de forma breve."
+                rows={3}
+              />
+            </label>
+
+            <div className="quick-form-row">
+              <label>
+                <span>Prioridade</span>
+                <select
+                  value={draftRequest.priority}
+                  onChange={(event) =>
+                    setDraftRequest((current) => ({
+                      ...current,
+                      priority: event.target.value as RequestPriority
+                    }))
+                  }
+                >
+                  <option value="normal">Normal</option>
+                  <option value="important">Importante</option>
+                  <option value="urgent">Urgente</option>
+                </select>
+              </label>
+              <label>
+                <span>Responsável</span>
+                <input
+                  value={draftRequest.owner}
+                  onChange={(event) => setDraftRequest((current) => ({ ...current, owner: event.target.value }))}
+                  placeholder="Equipe ou líder"
+                />
+              </label>
+            </div>
+
+            <button type="submit">
+              <Plus size={17} />
+              Criar solicitação
+            </button>
+          </form>
+
+          <div className="request-filter-bar" aria-label="Filtros da fila pastoral">
+            {(Object.keys(filterLabel) as RequestFilter[]).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                className={requestFilter === filter ? "is-active" : ""}
+                onClick={() => setRequestFilter(filter)}
+              >
+                {filterLabel[filter]}
+              </button>
+            ))}
+          </div>
+
           <div className="request-list">
-            {requests.map((request) => (
+            {filteredRequests.length > 0 ? filteredRequests.map((request) => (
               <button
                 type="button"
                 key={request.id}
@@ -321,7 +463,12 @@ export function PastoralAiView() {
                   {priorityLabel[request.priority]}
                 </small>
               </button>
-            ))}
+            )) : (
+              <div className="empty-request-list">
+                <strong>Nenhuma solicitação neste filtro</strong>
+                <span>Troque o filtro ou cadastre uma nova entrada pastoral.</span>
+              </div>
+            )}
           </div>
         </article>
 

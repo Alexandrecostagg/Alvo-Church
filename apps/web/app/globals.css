@@ -7599,6 +7599,99 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   padding: 0 14px;
 }
 
+.quick-request-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.quick-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quick-request-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.quick-request-form label span {
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.quick-request-form input,
+.quick-request-form select,
+.quick-request-form textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.quick-request-form input,
+.quick-request-form select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.quick-request-form textarea {
+  min-height: 82px;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.quick-request-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: #0f766e;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.request-filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.request-filter-bar button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #475467;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.request-filter-bar button.is-active {
+  border-color: rgba(20, 184, 166, 0.35);
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .request-list,
 .cell-list,
 .automation-list {
@@ -7622,6 +7715,24 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 .request-row.is-active {
   border-color: rgba(20, 184, 166, 0.45);
   background: #ecfdf5;
+}
+
+.empty-request-list {
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.empty-request-list strong {
+  color: #111827;
+}
+
+.empty-request-list span {
+  color: #667085;
+  line-height: 1.45;
 }
 
 .request-row strong,
@@ -7919,6 +8030,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 
   .pastoral-ai-kpi-grid,
   .detail-grid,
+  .quick-form-row,
   .cell-row,
   .activity-list div {
     grid-template-columns: 1fr;
