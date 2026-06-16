@@ -7844,6 +7844,21 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   line-height: 1.6;
 }
 
+.suggested-response textarea {
+  width: 100%;
+  min-height: 116px;
+  margin-top: 12px;
+  border: 1px solid rgba(20, 184, 166, 0.26);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #111827;
+  padding: 13px 14px;
+  font-size: 0.98rem;
+  font-weight: 680;
+  line-height: 1.55;
+  resize: vertical;
+}
+
 .detail-actions {
   display: flex;
   justify-content: flex-end;
@@ -7864,6 +7879,14 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   color: #ffffff;
   padding: 0 18px;
   box-shadow: 0 14px 26px rgba(22, 163, 74, 0.22);
+  text-decoration: none;
+}
+
+.primary-action.is-disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.75;
 }
 
 .cell-row {

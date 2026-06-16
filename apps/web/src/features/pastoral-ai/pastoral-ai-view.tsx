@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bot,
   CheckCircle2,
+  Copy,
   History,
   HeartHandshake,
   MessageCircle,
@@ -35,6 +36,7 @@ type PastoralRequest = {
   summary: string;
   owner: string;
   receivedAt: string;
+  phone?: string;
 };
 
 type CellPresence = {
@@ -77,7 +79,8 @@ const initialPastoralRequests: PastoralRequest[] = [
     status: "triage",
     summary: "Pediu oração e conversa pastoral por causa de crise familiar.",
     owner: "Pr. Ricardo",
-    receivedAt: "08:12"
+    receivedAt: "08:12",
+    phone: "11987654321"
   },
   {
     id: "req_2",
@@ -88,7 +91,8 @@ const initialPastoralRequests: PastoralRequest[] = [
     status: "assigned",
     summary: "Família recém-chegada solicitou apoio social para esta semana.",
     owner: "Ação Social",
-    receivedAt: "09:34"
+    receivedAt: "09:34",
+    phone: "21998765432"
   },
   {
     id: "req_3",
@@ -99,7 +103,8 @@ const initialPastoralRequests: PastoralRequest[] = [
     status: "new",
     summary: "Visitante perguntou sobre classe de integração e células próximas.",
     owner: "Recepção",
-    receivedAt: "10:05"
+    receivedAt: "10:05",
+    phone: "31991234567"
   }
 ];
 
@@ -171,7 +176,8 @@ export function PastoralAiView() {
     category: "Oração",
     priority: "normal" as RequestPriority,
     summary: "",
-    owner: "Recepção"
+    owner: "Recepção",
+    phone: ""
   });
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("supervised");
   const [reviewSensitive, setReviewSensitive] = useState(true);
@@ -185,10 +191,15 @@ export function PastoralAiView() {
     }
   ]);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
+  const [responseDraft, setResponseDraft] = useState("");
   const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
   const filteredRequests = requests.filter((request) =>
     requestFilter === "all" ? true : request.status === requestFilter
   );
+  const selectedPhoneDigits = selectedRequest?.phone?.replace(/\D/g, "") ?? "";
+  const whatsappUrl = selectedPhoneDigits
+    ? `https://wa.me/55${selectedPhoneDigits}?text=${encodeURIComponent(responseDraft)}`
+    : "";
 
   useEffect(() => {
     try {
@@ -233,6 +244,14 @@ export function PastoralAiView() {
 
     window.localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
   }, [activityLog, assistantMode, cellPresences, hasLoadedLocalState, requests, reviewSensitive, voiceReplies]);
+
+  useEffect(() => {
+    if (!selectedRequest) return;
+
+    setResponseDraft(
+      `Olá, ${selectedRequest.person.split(" ")[0]}. Recebemos sua mensagem e vamos caminhar com você. Já encaminhei seu pedido para a equipe responsável.`
+    );
+  }, [selectedRequest?.id]);
 
   const metrics = useMemo(() => {
     const urgent = requests.filter((request) => request.priority === "urgent").length;
@@ -297,6 +316,17 @@ export function PastoralAiView() {
     );
   };
 
+  const handleCopyResponse = async () => {
+    if (!selectedRequest) return;
+
+    try {
+      await navigator.clipboard.writeText(responseDraft);
+      addActivity("Resposta copiada", `Texto de WhatsApp copiado para ${selectedRequest.person}.`);
+    } catch {
+      addActivity("Cópia indisponível", "O navegador não permitiu copiar a resposta automaticamente.");
+    }
+  };
+
   const handleResolveRequest = () => {
     if (!selectedRequest) return;
     updateSelectedRequest("resolved");
@@ -345,7 +375,8 @@ export function PastoralAiView() {
       status: "new",
       summary,
       owner: draftRequest.owner || "Recepção",
-      receivedAt: createdAt
+      receivedAt: createdAt,
+      phone: draftRequest.phone.trim() || undefined
     };
 
     setRequests((current) => [nextRequest, ...current]);
@@ -356,7 +387,8 @@ export function PastoralAiView() {
       category: "Oração",
       priority: "normal",
       summary: "",
-      owner: "Recepção"
+      owner: "Recepção",
+      phone: ""
     });
     addActivity("Solicitação criada manualmente", `${person} entrou na fila de cuidado.`);
   };
@@ -485,6 +517,14 @@ export function PastoralAiView() {
 
             <div className="quick-form-row">
               <label>
+                <span>WhatsApp</span>
+                <input
+                  value={draftRequest.phone}
+                  onChange={(event) => setDraftRequest((current) => ({ ...current, phone: event.target.value }))}
+                  placeholder="Ex: 11999999999"
+                />
+              </label>
+              <label>
                 <span>Prioridade</span>
                 <select
                   value={draftRequest.priority}
@@ -500,6 +540,9 @@ export function PastoralAiView() {
                   <option value="urgent">Urgente</option>
                 </select>
               </label>
+            </div>
+
+            <div className="quick-form-row">
               <label>
                 <span>Responsável</span>
                 <input
@@ -572,6 +615,10 @@ export function PastoralAiView() {
               <span>Entrada</span>
               <strong>{selectedRequest.receivedAt}</strong>
             </div>
+            <div>
+              <span>WhatsApp</span>
+              <strong>{selectedRequest.phone ?? "Não informado"}</strong>
+            </div>
           </div>
 
           <div className="suggested-response">
@@ -579,9 +626,11 @@ export function PastoralAiView() {
               <Mic size={18} />
               <strong>Resposta sugerida</strong>
             </div>
-            <p>
-              Olá, {selectedRequest.person.split(" ")[0]}. Recebemos sua mensagem e vamos caminhar com você. Já encaminhei seu pedido para a equipe responsável.
-            </p>
+            <textarea
+              value={responseDraft}
+              onChange={(event) => setResponseDraft(event.target.value)}
+              rows={4}
+            />
           </div>
 
           <div className="detail-actions">
@@ -589,13 +638,30 @@ export function PastoralAiView() {
               <CheckCircle2 size={17} />
               Resolver
             </button>
+            <button type="button" className="secondary-action" onClick={handleCopyResponse}>
+              <Copy size={17} />
+              Copiar resposta
+            </button>
             <button type="button" className="secondary-action" onClick={handleCreateTask}>
               Criar tarefa pastoral
             </button>
-            <button type="button" className="primary-action" onClick={handleSendWhatsApp}>
+            <a
+              className={whatsappUrl ? "primary-action" : "primary-action is-disabled"}
+              href={whatsappUrl || undefined}
+              onClick={(event) => {
+                if (!whatsappUrl) {
+                  event.preventDefault();
+                  addActivity("WhatsApp ausente", "Informe um telefone para abrir a conversa.");
+                  return;
+                }
+                handleSendWhatsApp();
+              }}
+              rel="noreferrer"
+              target="_blank"
+            >
               <Send size={17} />
-              Enviar no WhatsApp
-            </button>
+              Abrir WhatsApp
+            </a>
           </div>
         </article>
       </section>
