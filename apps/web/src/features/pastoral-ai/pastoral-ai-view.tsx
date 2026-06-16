@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Mic,
   Plus,
+  RotateCcw,
   Send,
   Settings2,
   ShieldCheck,
@@ -16,7 +17,7 @@ import {
   UsersRound,
   Waypoints
 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 type AssistantStatus = "online" | "review" | "paused";
 type RequestStatus = "new" | "triage" | "assigned" | "resolved";
@@ -52,6 +53,17 @@ type ActivityLog = {
   detail: string;
   createdAt: string;
 };
+
+type PersistedPastoralAiState = {
+  requests: PastoralRequest[];
+  cellPresences: CellPresence[];
+  assistantMode: AssistantMode;
+  reviewSensitive: boolean;
+  voiceReplies: boolean;
+  activityLog: ActivityLog[];
+};
+
+const storageKey = "alvo:pastoral-ai-workspace:v1";
 
 const assistantStatus: AssistantStatus = "online";
 
@@ -172,10 +184,55 @@ export function PastoralAiView() {
       createdAt: "Agora"
     }
   ]);
+  const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
   const filteredRequests = requests.filter((request) =>
     requestFilter === "all" ? true : request.status === requestFilter
   );
+
+  useEffect(() => {
+    try {
+      const rawState = window.localStorage.getItem(storageKey);
+      if (!rawState) {
+        setHasLoadedLocalState(true);
+        return;
+      }
+
+      const parsedState = JSON.parse(rawState) as Partial<PersistedPastoralAiState>;
+      if (Array.isArray(parsedState.requests) && parsedState.requests.length > 0) {
+        setRequests(parsedState.requests);
+        setSelectedRequestId(parsedState.requests[0].id);
+      }
+      if (Array.isArray(parsedState.cellPresences) && parsedState.cellPresences.length > 0) {
+        setCellPresences(parsedState.cellPresences);
+      }
+      if (parsedState.assistantMode) setAssistantMode(parsedState.assistantMode);
+      if (typeof parsedState.reviewSensitive === "boolean") setReviewSensitive(parsedState.reviewSensitive);
+      if (typeof parsedState.voiceReplies === "boolean") setVoiceReplies(parsedState.voiceReplies);
+      if (Array.isArray(parsedState.activityLog) && parsedState.activityLog.length > 0) {
+        setActivityLog(parsedState.activityLog);
+      }
+    } catch {
+      // Invalid local workspace state should not block the pastoral queue.
+    } finally {
+      setHasLoadedLocalState(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalState) return;
+
+    const stateToPersist: PersistedPastoralAiState = {
+      requests,
+      cellPresences,
+      assistantMode,
+      reviewSensitive,
+      voiceReplies,
+      activityLog
+    };
+
+    window.localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
+  }, [activityLog, assistantMode, cellPresences, hasLoadedLocalState, requests, reviewSensitive, voiceReplies]);
 
   const metrics = useMemo(() => {
     const urgent = requests.filter((request) => request.priority === "urgent").length;
@@ -304,6 +361,27 @@ export function PastoralAiView() {
     addActivity("Solicitação criada manualmente", `${person} entrou na fila de cuidado.`);
   };
 
+  const handleResetDemo = () => {
+    setRequests(initialPastoralRequests);
+    setCellPresences(initialCellPresences);
+    setSelectedRequestId(initialPastoralRequests[0]?.id ?? "");
+    setRequestFilter("all");
+    setAssistantMode("supervised");
+    setReviewSensitive(true);
+    setVoiceReplies(true);
+    setActivityLog([
+      {
+        id: `log_reset_${Date.now()}`,
+        title: "Ambiente restaurado",
+        detail: "Dados de demonstração da IA Pastoral foram recarregados.",
+        createdAt: new Intl.DateTimeFormat("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date())
+      }
+    ]);
+  };
+
   return (
     <main className="form-page pastoral-ai-page animate-entrance">
       <header className="pastoral-ai-hero">
@@ -322,6 +400,10 @@ export function PastoralAiView() {
           <div>
             <strong>Assistente Alvo ativo</strong>
             <p>WhatsApp Business conectado, respostas em texto e áudio aguardando revisão pastoral.</p>
+            <button type="button" onClick={handleResetDemo}>
+              <RotateCcw size={16} />
+              Restaurar demo
+            </button>
           </div>
         </div>
       </header>
