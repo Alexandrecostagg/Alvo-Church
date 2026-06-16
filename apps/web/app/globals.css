@@ -7741,7 +7741,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 
 .cell-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto auto;
   gap: 16px;
   align-items: center;
   padding: 16px;
@@ -7772,6 +7772,94 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 .cell-row small {
   color: #111827;
   font-weight: 900;
+}
+
+.cell-row button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.assistant-config {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.assistant-config label {
+  display: grid;
+  gap: 8px;
+  color: #344054;
+  font-weight: 800;
+}
+
+.assistant-config select {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 12px;
+  font-weight: 760;
+}
+
+.assistant-config .toggle-row {
+  display: flex;
+  grid-template-columns: none;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.92rem;
+}
+
+.assistant-config input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #16a34a;
+}
+
+.activity-panel {
+  margin-top: 24px;
+}
+
+.activity-list {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-list div {
+  display: grid;
+  grid-template-columns: 72px minmax(150px, 0.45fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.activity-list time {
+  color: #0f766e;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.activity-list strong {
+  color: #111827;
+  font-size: 0.94rem;
+}
+
+.activity-list span {
+  color: #475467;
+  line-height: 1.45;
 }
 
 .automation-list div,
@@ -7831,7 +7919,8 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 
   .pastoral-ai-kpi-grid,
   .detail-grid,
-  .cell-row {
+  .cell-row,
+  .activity-list div {
     grid-template-columns: 1fr;
   }
 
