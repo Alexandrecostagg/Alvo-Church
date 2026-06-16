@@ -7395,3 +7395,454 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   background-color: #16a34a !important;
   color: #ffffff !important;
 }
+
+.pastoral-ai-page {
+  min-height: 100vh;
+  padding: 42px clamp(20px, 3vw, 48px) 80px;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(46, 213, 115, 0.13), transparent 30%),
+    radial-gradient(circle at 88% 0%, rgba(245, 158, 11, 0.12), transparent 28%),
+    linear-gradient(135deg, #f8fafc 0%, #f5fbf7 48%, #fffaf2 100%);
+  color: #182033;
+}
+
+.pastoral-ai-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 390px);
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+.pastoral-ai-hero h1 {
+  max-width: 880px;
+  margin: 14px 0 12px;
+  color: #111827;
+  font-size: clamp(2.25rem, 5vw, 5rem);
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+.pastoral-ai-hero p {
+  max-width: 900px;
+  margin: 0;
+  color: #344054;
+  font-size: 1.08rem;
+  line-height: 1.65;
+}
+
+.pastoral-ai-page .eyebrow-premium,
+.pastoral-ai-page .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #f97316;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assistant-status-card,
+.pastoral-ai-kpi-grid article,
+.pastoral-ai-panel {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.assistant-status-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  min-height: 150px;
+  padding: 22px;
+  border-radius: 24px;
+}
+
+.assistant-status-card strong {
+  display: block;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.assistant-status-card p {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.assistant-dot {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 7px rgba(148, 163, 184, 0.14);
+}
+
+.assistant-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.16);
+}
+
+.assistant-dot.review {
+  background: #f59e0b;
+  box-shadow: 0 0 0 7px rgba(245, 158, 11, 0.16);
+}
+
+.assistant-dot.paused {
+  background: #ef4444;
+  box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.14);
+}
+
+.pastoral-ai-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.pastoral-ai-kpi-grid article {
+  min-height: 158px;
+  padding: 22px;
+  border-radius: 22px;
+}
+
+.pastoral-ai-kpi-grid svg {
+  color: #0f766e;
+}
+
+.pastoral-ai-kpi-grid span {
+  display: block;
+  margin-top: 18px;
+  color: #667085;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pastoral-ai-kpi-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #111827;
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.pastoral-ai-kpi-grid small {
+  display: block;
+  margin-top: 10px;
+  color: #475467;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.pastoral-ai-workbench,
+.pastoral-ai-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.92fr) minmax(420px, 1.38fr);
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.pastoral-ai-lower-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  margin-bottom: 0;
+}
+
+.pastoral-ai-panel {
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.panel-heading.compact {
+  align-items: center;
+}
+
+.panel-heading h2,
+.request-detail h2 {
+  margin: 6px 0 0;
+  color: #111827;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.panel-heading button,
+.primary-action,
+.secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 14px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.panel-heading button {
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  background: rgba(240, 253, 250, 0.84);
+  color: #0f766e;
+  padding: 0 14px;
+}
+
+.request-list,
+.cell-list,
+.automation-list {
+  display: grid;
+  gap: 14px;
+}
+
+.request-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.78);
+  text-align: left;
+}
+
+.request-row.is-active {
+  border-color: rgba(20, 184, 166, 0.45);
+  background: #ecfdf5;
+}
+
+.request-row strong,
+.cell-row strong {
+  display: block;
+  color: #111827;
+  font-size: 0.98rem;
+}
+
+.request-row span,
+.cell-row span {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 0.9rem;
+}
+
+.priority-pill {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.priority-pill.urgent {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.priority-pill.important {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.priority-pill.normal {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.request-detail > p {
+  margin: 14px 0 20px;
+  color: #344054;
+  font-size: 1.04rem;
+  line-height: 1.65;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.detail-grid div {
+  padding: 15px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.detail-grid span {
+  display: block;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.detail-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: #111827;
+  font-size: 0.98rem;
+}
+
+.suggested-response {
+  padding: 18px;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(255, 247, 237, 0.86));
+}
+
+.suggested-response div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #0f766e;
+}
+
+.suggested-response p {
+  margin: 10px 0 0;
+  color: #344054;
+  line-height: 1.6;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.secondary-action {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  color: #344054;
+  padding: 0 16px;
+}
+
+.primary-action {
+  border: 0;
+  background: #16a34a;
+  color: #ffffff;
+  padding: 0 18px;
+  box-shadow: 0 14px 26px rgba(22, 163, 74, 0.22);
+}
+
+.cell-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.cell-row p {
+  margin: 8px 0 0;
+  color: #475467;
+  font-size: 0.9rem;
+}
+
+.presence-meter {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.presence-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #16a34a, #06b6d4);
+}
+
+.cell-row small {
+  color: #111827;
+  font-weight: 900;
+}
+
+.automation-list div,
+.guardrail-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.automation-list div {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.88);
+  color: #344054;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.automation-list svg {
+  flex: 0 0 auto;
+  color: #16a34a;
+}
+
+.guardrail-note {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
+.guardrail-note svg {
+  flex: 0 0 auto;
+}
+
+.guardrail-note p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .pastoral-ai-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pastoral-ai-hero,
+  .pastoral-ai-workbench,
+  .pastoral-ai-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .pastoral-ai-page {
+    padding: 26px 16px 110px;
+  }
+
+  .pastoral-ai-kpi-grid,
+  .detail-grid,
+  .cell-row {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-heading,
+  .detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .detail-actions button,
+  .panel-heading button {
+    width: 100%;
+  }
+}

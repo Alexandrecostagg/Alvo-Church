@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   CalendarDays,
+  Bot,
   ClipboardList,
   GraduationCap,
   Handshake,
@@ -30,6 +31,7 @@ const navigationGroups = [
     items: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
       { label: "Recepção", icon: ClipboardList, href: "/reception", match: (pathname: string) => pathname.startsWith("/reception") },
+      { label: "IA Pastoral", icon: Bot, href: "/pastoral-ai", match: (pathname: string) => pathname.startsWith("/pastoral-ai") },
       { label: "Finanças", icon: Landmark, href: "/finance", match: (pathname: string) => pathname.startsWith("/finance") },
     ]
   },
