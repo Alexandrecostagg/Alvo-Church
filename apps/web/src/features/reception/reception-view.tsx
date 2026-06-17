@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Megaphone,
@@ -21,7 +22,9 @@ import {
   createVisitorIntakeWorkflow,
   fetchVisitorIntakes,
   fetchVisitorJourneys,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
+  updateVisitorIntakeStatus,
+  updateVisitorJourneyStage
 } from "@alvo/firebase";
 import type { VisitorIntake, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
@@ -59,7 +62,58 @@ const demoVisitors: CapturedVisitor[] = [
   }
 ];
 
+function mapIntakeToCapturedVisitor(
+  intake: VisitorIntake,
+  journey?: VisitorJourney
+): CapturedVisitor {
+  return {
+    id: intake.id,
+    journeyId: intake.journeyId || journey?.id,
+    name: intake.name,
+    nextStep: getVisitorNextStep(journey),
+    personId: intake.personId,
+    phone: intake.phone || undefined,
+    source: intake.source,
+    status: getVisitorIntakeStatusLabel(intake.status),
+    note: intake.greeting || undefined
+  };
+}
+
+function getVisitorNextStep(journey?: VisitorJourney) {
+  switch (journey?.currentStage) {
+    case "welcomed":
+      return "Convidar para célula";
+    case "invited_to_group":
+      return "Acompanhar presença no grupo";
+    case "attending_class":
+      return "Acompanhar classe de integração";
+    case "ready_for_membership":
+      return "Preparar cadastro como membro";
+    case "completed":
+      return "Jornada concluída";
+    case "new_visitor":
+    default:
+      return "Enviar boas-vindas no WhatsApp";
+  }
+}
+
+function getVisitorIntakeStatusLabel(status: VisitorIntake["status"]) {
+  switch (status) {
+    case "captured":
+      return "Capturado";
+    case "journey_created":
+      return "Jornada iniciada";
+    case "greeting_scheduled":
+      return "Pronto para saudação";
+    case "archived":
+      return "Arquivado";
+    default:
+      return "Jornada iniciada";
+  }
+}
+
 export function ReceptionView() {
+  const searchParams = useSearchParams();
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   
   // Estado básico
@@ -81,6 +135,12 @@ export function ReceptionView() {
   const [kioskMode, setKioskMode] = useState(false);
   const [pulpitMode, setPulpitMode] = useState(false);
   const [kioskStep, setKioskStep] = useState<"form" | "success">("form");
+
+  useEffect(() => {
+    if (searchParams.get("pastor") === "1") {
+      setPulpitMode(true);
+    }
+  }, [searchParams]);
   
   // Template de comunicação por WhatsApp
   const [activeTemplateVisitor, setActiveTemplateVisitor] = useState<CapturedVisitor | null>(null);
@@ -105,6 +165,17 @@ export function ReceptionView() {
 
         setVisitorJourneys(nextJourneys);
         setVisitorIntakes(nextIntakes);
+        if (nextIntakes.length > 0) {
+          const journeyById = new Map(nextJourneys.map((journey) => [journey.id, journey]));
+          setCapturedVisitors(
+            nextIntakes.filter((intake) => intake.status !== "archived").map((intake) =>
+              mapIntakeToCapturedVisitor(
+                intake,
+                intake.journeyId ? journeyById.get(intake.journeyId) : undefined
+              )
+            )
+          );
+        }
         setStatus(`${nextIntakes.length} entrada(s) e ${nextJourneys.length} jornada(s) sincronizadas.`);
       } catch (error) {
         if (!cancelled) {
@@ -147,6 +218,7 @@ export function ReceptionView() {
         {
           capturedByUserId: user.uid,
           name,
+          note,
           phone,
           source
         }
@@ -217,7 +289,7 @@ export function ReceptionView() {
     setCustomMsg(templateText);
   };
 
-  const handleSendWhatsAppMessage = () => {
+  const handleSendWhatsAppMessage = async () => {
     if (!activeTemplateVisitor) return;
 
     const phoneClean = (activeTemplateVisitor.phone || "").replace(/\D/g, "");
@@ -233,16 +305,69 @@ export function ReceptionView() {
     setPreparedCommunicationIds((current) =>
       current.includes(activeTemplateVisitor.id) ? current : [...current, activeTemplateVisitor.id]
     );
+    setCapturedVisitors((current) =>
+      current.map((visitor) =>
+        visitor.id === activeTemplateVisitor.id
+          ? { ...visitor, status: "WhatsApp preparado" }
+          : visitor
+      )
+    );
+
+    if (firebaseConnected) {
+      try {
+        await updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
+          intakeId: activeTemplateVisitor.id,
+          status: "greeting_scheduled",
+          updatedByUserId: user.uid
+        });
+      } catch (error) {
+        setStatus("WhatsApp preparado localmente. Não foi possível atualizar o status na nuvem agora.");
+        setActiveTemplateVisitor(null);
+        return;
+      }
+    }
 
     setStatus(`WhatsApp de boas-vindas preparado para ${activeTemplateVisitor.name}.`);
     setActiveTemplateVisitor(null);
   };
 
-  const handleMarkGreetingComplete = (visitorId: string) => {
+  const handleMarkGreetingComplete = async (visitorId: string) => {
     const visitor = capturedVisitors.find((item) => item.id === visitorId);
     setGreetedVisitorIds((currentIds) =>
       currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
     );
+    setCapturedVisitors((current) =>
+      current.map((item) =>
+        item.id === visitorId ? { ...item, status: "Saudado no altar" } : item
+      )
+    );
+
+    if (visitor && firebaseConnected) {
+      try {
+        await Promise.all([
+          updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
+            intakeId: visitor.id,
+            status: "archived",
+            updatedByUserId: user.uid
+          }),
+          visitor.journeyId
+            ? updateVisitorJourneyStage(firebaseConfig, { organizationId }, {
+                journeyId: visitor.journeyId,
+                stage: "welcomed",
+                updatedByUserId: user.uid
+              })
+            : Promise.resolve()
+        ]);
+      } catch (error) {
+        setStatus(
+          visitor
+            ? `${visitor.name} foi marcado localmente, mas a nuvem não atualizou agora.`
+            : "Visitante marcado localmente, mas a nuvem não atualizou agora."
+        );
+        return;
+      }
+    }
+
     setStatus(visitor ? `${visitor.name} marcado como saudado no altar.` : "Visitante marcado como saudado.");
   };
 
@@ -255,9 +380,9 @@ export function ReceptionView() {
     (visitor) => !greetedVisitorIds.includes(visitor.id)
   );
 
-  const localVisitorCount = capturedVisitors.length;
   const cloudVisitorCount = visitorIntakes.length;
-  const totalVisitorCount = localVisitorCount + cloudVisitorCount;
+  const localVisitorCount = cloudVisitorCount ? 0 : capturedVisitors.length;
+  const totalVisitorCount = cloudVisitorCount || localVisitorCount;
   const firebaseConnected = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   return (
@@ -413,44 +538,25 @@ export function ReceptionView() {
 
       {/* 2. MODO ALTAR / TELEPROMPTER DO PASTOR (Pulpit Live Feed Screen) */}
       {pulpitMode && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "#0a0a0a",
-            zIndex: 300,
-            display: "flex",
-            flexDirection: "column",
-            padding: "2rem",
-            color: "white"
-          }}
-          className="pulpit-live-feed animate-entrance"
-        >
+        <div className="pulpit-live-feed animate-entrance">
           {/* Cabeçalho de Púlpito */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "1rem", marginBottom: "2rem" }}>
+          <div className="pulpit-header">
             <div>
-              <span style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "#f97316", fontWeight: 800 }}>LIVE ALTAR FEED</span>
-              <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "white" }}>Visitantes de Hoje</h1>
+              <span className="pulpit-eyebrow">
+                <Tv size={16} />
+                Painel do Pastor
+              </span>
+              <h1>Boas-vindas no Culto</h1>
+              <p>Lista limpa para saudação pública, com observações importantes da recepção.</p>
             </div>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <span className="pulpit-counter" style={{ fontSize: "1.2rem", fontWeight: 700, backgroundColor: "#1e293b", padding: "0.5rem 1rem", borderRadius: 8 }}>
-                {celebrationGreetingVisitors.length} na lista
+            <div className="pulpit-header-actions">
+              <span className="pulpit-counter">
+                <strong>{celebrationGreetingVisitors.length}</strong>
+                <span>na lista</span>
               </span>
               <button
                 onClick={() => setPulpitMode(false)}
                 className="pulpit-back-btn"
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "0.5rem 1rem",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: 700
-                }}
               >
                 Voltar
               </button>
@@ -458,68 +564,43 @@ export function ReceptionView() {
           </div>
 
           {/* Lista Teleprompter */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
-              gap: "1.5rem",
-              paddingBottom: "2rem"
-            }}
-          >
+          <div className="pulpit-card-grid">
             {celebrationGreetingVisitors.length > 0 ? (
               celebrationGreetingVisitors.map((visitor, idx) => (
                 <div
                   key={visitor.id}
                   className="pulpit-card"
-                  style={{
-                    backgroundColor: "#18181b",
-                    border: "3px solid #f97316",
-                    borderRadius: 20,
-                    padding: "2.5rem 2rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between"
-                  }}
                 >
                   <div>
-                    <span className="pulpit-card-number" style={{ color: "#a1a1aa", fontSize: "1.5rem", fontWeight: 900 }}>#{idx + 1}</span>
-                    <h2 className="pulpit-card-title" style={{ fontSize: "2.2rem", fontWeight: 900, color: "#ffffff", marginTop: "0.25rem", marginBottom: "0.75rem" }}>
+                    <span className="pulpit-card-number">#{idx + 1}</span>
+                    <h2 className="pulpit-card-title">
                       {visitor.name}
                     </h2>
                     {visitor.note && (
-                      <p className="pulpit-card-note" style={{ fontSize: "1.25rem", color: "#fed7aa", fontWeight: 700, fontStyle: "italic", marginBottom: "1rem" }}>
-                        💡 {visitor.note}
+                      <p className="pulpit-card-note">
+                        <Megaphone size={20} />
+                        {visitor.note}
                       </p>
                     )}
                   </div>
                   
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
-                    <span className="pulpit-card-source" style={{ fontSize: "1rem", color: "#e2e8f0" }}>Origem: <strong>{visitor.source}</strong></span>
+                  <div className="pulpit-card-footer">
+                    <span className="pulpit-card-source">Origem: <strong>{visitor.source}</strong></span>
                     <button
                       onClick={() => handleMarkGreetingComplete(visitor.id)}
                       className="pulpit-card-btn"
-                      style={{
-                        backgroundColor: "#16a34a",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 12,
-                        padding: "0.75rem 1.5rem",
-                        fontSize: "1.1rem",
-                        fontWeight: 800,
-                        cursor: "pointer"
-                      }}
                     >
-                      ✓ Cumprimentado
+                      <CheckCircle2 size={18} />
+                      Cumprimentado
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <div style={{ gridColumn: "1/-1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#4b5563" }}>
+              <div className="pulpit-empty-state">
                 <Tv size={64} />
-                <h3 style={{ fontSize: "1.5rem", marginTop: "1rem" }}>Nenhum visitante pendente de boas-vindas no altar.</h3>
+                <h3>Nenhum visitante pendente de boas-vindas no altar.</h3>
+                <p>Quando a recepção preparar nomes para saudação, eles aparecerão aqui.</p>
               </div>
             )}
           </div>

@@ -234,7 +234,7 @@ export function MemberNewView() {
   };
 
   return (
-    <main className="form-page">
+    <main className="form-page member-new-page">
       <section className="form-hero">
         <Link className="back-link" href="/members">
           <ArrowLeft size={16} /> Voltar à base pastoral
@@ -1206,7 +1206,218 @@ export function MemberNewView() {
           color: white;
         }
 
+        .member-new-page {
+          width: 100%;
+          max-width: 1480px;
+          margin: 0 auto;
+          padding: 32px clamp(20px, 3vw, 44px) 56px;
+          background:
+            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
+            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
+          color: #111827;
+        }
+
+        .member-new-page .form-hero {
+          max-width: none;
+          margin: 0 0 24px;
+          padding-bottom: 24px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+        }
+
+        .member-new-page .back-link {
+          min-height: 46px;
+          margin-bottom: 24px;
+          padding: 0 18px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 10px;
+          background: #ffffff;
+          color: #334155;
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+        }
+
+        .member-new-page .eyebrow {
+          color: #ea580c;
+          font-size: 13px;
+          letter-spacing: 0.16em;
+        }
+
+        .member-new-page h1 {
+          max-width: 980px;
+          margin: 10px 0 12px;
+          color: #111827;
+          font-size: clamp(44px, 4.5vw, 64px);
+          line-height: 0.98;
+          letter-spacing: 0;
+        }
+
+        .member-new-page .form-hero p:not(.eyebrow) {
+          max-width: 980px;
+          margin: 0;
+          color: #1f2937;
+          font-size: clamp(17px, 1.25vw, 20px);
+          line-height: 1.55;
+        }
+
+        .member-new-page .form-page-layout {
+          grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+          gap: 20px;
+        }
+
+        .member-new-page .form-card,
+        .member-new-page .preview-panel > div,
+        .member-new-page .save-confirmation-glass {
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 16px;
+          box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
+        }
+
+        .member-new-page .form-card {
+          width: 100%;
+          padding: 28px;
+          gap: 28px;
+        }
+
+        .member-new-page fieldset {
+          gap: 16px;
+          padding-bottom: 24px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .member-new-page fieldset:last-of-type {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .member-new-page legend {
+          color: #111827;
+          font-size: 22px;
+          line-height: 1.15;
+          letter-spacing: 0;
+        }
+
+        .member-new-page label {
+          color: #1f2937;
+          font-size: 15px;
+          font-weight: 800;
+        }
+
+        .member-new-page input,
+        .member-new-page select,
+        .member-new-page textarea {
+          min-height: 48px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 10px;
+          background: #f8fafc;
+          color: #111827;
+          font-size: 15px;
+          box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+        }
+
+        .member-new-page input:focus,
+        .member-new-page select:focus,
+        .member-new-page textarea:focus {
+          border-color: #2563eb;
+          background: #ffffff;
+          box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+        }
+
+        .member-new-page .check-row {
+          color: #334155;
+        }
+
+        .member-new-page .highlight-checkbox {
+          border-color: rgba(15, 23, 42, 0.10);
+          background: #f8fafc;
+          border-radius: 14px;
+        }
+
+        .member-new-page .form-status {
+          padding: 12px 14px;
+          border: 1px solid rgba(37, 99, 235, 0.14);
+          border-radius: 12px;
+          background: #eff6ff;
+          color: #1d4ed8;
+          text-align: left;
+          line-height: 1.45;
+        }
+
+        .member-new-page .submit-btn {
+          min-height: 52px;
+          border-radius: 10px;
+          background: #ea580c;
+          color: #ffffff;
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+        }
+
+        .member-new-page .preview-panel {
+          gap: 20px;
+          top: 24px;
+        }
+
+        .member-new-page .pass-preview-wrapper,
+        .member-new-page .lgpd-info-card,
+        .member-new-page .save-confirmation-glass {
+          padding: 24px;
+        }
+
+        .member-new-page .preview-title,
+        .member-new-page .lgpd-info-card h4,
+        .member-new-page .confirmation-header h2 {
+          color: #111827;
+        }
+
+        .member-new-page .digital-card {
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          background:
+            radial-gradient(circle at 0% 0%, rgba(234, 88, 12, 0.22), transparent 32%),
+            linear-gradient(135deg, #111827 0%, #243043 100%);
+          box-shadow: 0 18px 44px -28px rgba(15, 23, 42, 0.75);
+        }
+
+        .member-new-page .lgpd-info-card {
+          color: #475569;
+        }
+
+        .member-new-page .lgpd-terms-box {
+          color: #475569;
+        }
+
+        .member-new-page .lgpd-terms-box p strong {
+          color: #111827;
+        }
+
+        .member-new-page .save-confirmation-glass {
+          animation: none;
+        }
+
+        .member-new-page .confirmation-summary,
+        .member-new-page .info-dl dt {
+          color: #475569;
+        }
+
+        .member-new-page .info-dl {
+          border-color: rgba(15, 23, 42, 0.08);
+          background: #f8fafc;
+        }
+
+        .member-new-page .info-dl dd {
+          color: #111827;
+        }
+
+        .member-new-page .confirmation-actions .ghost-button {
+          min-height: 44px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          background: #ffffff;
+          color: #334155;
+        }
+
         @media (max-width: 1024px) {
+          .member-new-page .form-page-layout {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
           .form-page-layout {
             grid-template-columns: 1fr;
             gap: 2rem;
@@ -1218,6 +1429,26 @@ export function MemberNewView() {
         }
 
         @media (max-width: 768px) {
+          .member-new-page {
+            padding: 24px 16px 40px;
+          }
+          .member-new-page h1 {
+            font-size: 42px;
+          }
+          .member-new-page .form-card,
+          .member-new-page .pass-preview-wrapper,
+          .member-new-page .lgpd-info-card,
+          .member-new-page .save-confirmation-glass {
+            padding: 20px;
+          }
+          .member-new-page .input-group,
+          .member-new-page .input-group-triple {
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+          .member-new-page .span-2 {
+            grid-column: auto;
+          }
           .form-page {
             padding: 1.5rem;
           }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   Building2,
   CalendarDays,
@@ -21,7 +22,9 @@ import {
   Waypoints,
   Tent,
   CalendarRange,
-  Store
+  Store,
+  Music,
+  Tv
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 
@@ -30,7 +33,8 @@ const navigationGroups = [
     title: "Geral",
     items: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
-      { label: "Recepção", icon: ClipboardList, href: "/reception", match: (pathname: string) => pathname.startsWith("/reception") },
+      { label: "Recepção", icon: ClipboardList, href: "/reception", match: (pathname: string, searchParams: URLSearchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") !== "1" },
+      { label: "Painel Pastor", icon: Tv, href: "/reception?pastor=1", match: (pathname: string, searchParams: URLSearchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") === "1" },
       { label: "IA Pastoral", icon: Bot, href: "/pastoral-ai", match: (pathname: string) => pathname.startsWith("/pastoral-ai") },
       { label: "Finanças", icon: Landmark, href: "/finance", match: (pathname: string) => pathname.startsWith("/finance") },
     ]
@@ -52,7 +56,8 @@ const navigationGroups = [
       { label: "Jornadas", icon: MapIcon, href: "/journeys", match: (pathname: string) => pathname.startsWith("/journeys") },
       { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", match: (pathname: string) => pathname.startsWith("/learning") },
       { label: "Eventos", icon: CalendarRange, href: "/events", match: (pathname: string) => pathname.startsWith("/events") },
-      { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname.startsWith("/serving") },
+      { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname === "/serving" },
+      { label: "Louvor & Cifras", icon: Music, href: "/serving/worship", match: (pathname: string) => pathname.startsWith("/serving/worship") },
       { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", match: (pathname: string) => pathname.startsWith("/kids/scan") },
     ]
   },
@@ -66,6 +71,12 @@ const navigationGroups = [
 
 export function ModuleNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
+
+  useEffect(() => {
+    activeLinkRef.current?.scrollIntoView({ block: "center", inline: "nearest" });
+  }, [pathname]);
 
   return (
     <aside className="app-sidebar">
@@ -76,11 +87,12 @@ export function ModuleNav() {
             <span className="nav-group-title">{group.title}</span>
             <div className="nav-group-items">
               {group.items.map((item) => {
-                const isActive = item.match(pathname);
+                const isActive = item.match(pathname, searchParams);
                 return (
                   <Link
                     key={item.label}
                     href={item.href}
+                    ref={isActive ? activeLinkRef : undefined}
                     className={isActive ? "app-nav-item is-active" : "app-nav-item"}
                   >
                     <item.icon size={18} strokeWidth={2.2} />

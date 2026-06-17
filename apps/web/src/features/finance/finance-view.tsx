@@ -193,10 +193,11 @@ export function FinanceView() {
         } else if (newEntry.category === "Saída") {
           nextExpenses += amountVal;
         } else if (newEntry.category === "Missões") {
+          nextIncome += amountVal;
           nextMissions += amountVal;
         }
 
-        const nextBalance = nextIncome - nextExpenses - nextMissions;
+        const nextBalance = nextIncome - nextExpenses;
 
         return {
           ...rep,
@@ -335,7 +336,7 @@ export function FinanceView() {
         };
         const nextIncome = rep.income + activeValue;
         const nextMissions = selectedCategory === "Missões" ? rep.missions + activeValue : rep.missions;
-        const nextBalance = nextIncome - rep.expenses - nextMissions;
+        const nextBalance = nextIncome - rep.expenses;
 
         return {
           ...rep,
@@ -649,11 +650,11 @@ export function FinanceView() {
       )}
 
       {/* Main Header */}
-      <header className="topbar">
+      <header className="finance-hero topbar">
         <div className="topbar-content">
-          <p className="eyebrow" style={{ color: "#f97316" }}>Fase 3: Operações & Gateway PIX</p>
-          <h1>Finanças Alvo</h1>
-          <p>Visão clara de recursos e portal interativo de doações inteligentes por IA.</p>
+          <p className="eyebrow" style={{ color: "#f97316" }}>Finanças e transparência</p>
+          <h1>Gestão Financeira da Igreja</h1>
+          <p>Controle entradas, saídas, missões, metas e contribuições por PIX em uma visão clara para liderança e transparência.</p>
         </div>
         <div className="topbar-actions">
            <button onClick={() => setShowPrintStatement(true)} className="ghost-button compact" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}>
@@ -666,10 +667,10 @@ export function FinanceView() {
       </header>
 
       {/* Main Grid: Insights Contábeis + WhatsApp Smartphone Sim */}
-      <section style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: "2.5rem", marginTop: "2rem" }}>
+      <section className="finance-layout" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: "2.5rem", marginTop: "2rem" }}>
         
         {/* Lado Esquerdo: Cards, Gráficos Dinâmicos e Extrato */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+        <div className="finance-left-column" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           
           {/* Nubank Card de Caixa e Indicadores */}
           <div className="finance-main-card antigravity-float" style={{ width: "100%" }}>
@@ -723,6 +724,7 @@ export function FinanceView() {
 
           {/* Gráfico & Insights Tab System */}
           <div
+            className="finance-insight-panel"
             style={{
               background: "rgba(30, 41, 59, 0.4)",
               border: "1px solid rgba(255, 255, 255, 0.05)",
@@ -732,6 +734,7 @@ export function FinanceView() {
           >
             <div style={{ display: "flex", gap: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
               <button
+                className={activeTab === "chart" ? "finance-tab-button is-active" : "finance-tab-button"}
                 onClick={() => setActiveTab("chart")}
                 style={{
                   padding: "0.5rem 1rem",
@@ -751,6 +754,7 @@ export function FinanceView() {
                 Histórico Anual
               </button>
               <button
+                className={activeTab === "distribution" ? "finance-tab-button is-active" : "finance-tab-button"}
                 onClick={() => setActiveTab("distribution")}
                 style={{
                   padding: "0.5rem 1rem",
@@ -770,6 +774,7 @@ export function FinanceView() {
                 Distribuição de Despesas
               </button>
               <button
+                className={activeTab === "goals" ? "finance-tab-button is-active" : "finance-tab-button"}
                 onClick={() => setActiveTab("goals")}
                 style={{
                   padding: "0.5rem 1rem",
@@ -1049,7 +1054,7 @@ export function FinanceView() {
         </div>
 
         {/* Lado Direito: WhatsApp Smartphone Simulator */}
-        <aside style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <aside className="finance-gateway-panel" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 6, color: "#a855f7" }}>

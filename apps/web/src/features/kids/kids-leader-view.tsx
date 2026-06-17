@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { 
   QrCode, 
   ShieldCheck, 
@@ -170,12 +170,18 @@ export function KidsLeaderView() {
   };
 
   const activeCheckedInCount = kidsList.filter(k => k.status === "checked_in").length;
+  const checkedOutCount = kidsList.filter(k => k.status === "checked_out").length;
+  const alertCount = kidsList.filter(k => k.status === "checked_in" && (
+    (k.allergies && k.allergies !== "Nenhuma") ||
+    (k.securityRestrictions && k.securityRestrictions !== "Nenhuma")
+  )).length;
+  const roomCapacity = 15;
 
   return (
     <main className="kids-leader-workbench" style={{ minHeight: "100vh", padding: "2rem" }}>
       
       {/* HEADER TOPBAR (Futuristic Security Style) */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+      <header className="kids-operation-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <Link href="/" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
             ← Voltar ao painel principal
@@ -186,7 +192,7 @@ export function KidsLeaderView() {
           </h1>
         </div>
         <div>
-          <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "20px", padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: "0.85rem", color: "#10b981", fontWeight: 700 }}>
+          <div className="kids-network-pill" style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "20px", padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: "0.85rem", color: "#10b981", fontWeight: 700 }}>
             <span style={{ width: 8, height: 8, background: "#10b981", borderRadius: "50%", display: "inline-block", animation: "pulse 2s infinite" }}></span>
             Rede Kids Protegida e Criptografada
           </div>
@@ -198,21 +204,28 @@ export function KidsLeaderView() {
         <section className="kids-dashboard">
           
           {/* STATS & QUICK ACTIONS ROW */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
-            <div className="panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="kids-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
+            <div className="panel kids-stat-card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Presentes Agora</span>
               <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{activeCheckedInCount}</strong>
               <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>crianças sob cuidado pastoral</p>
             </div>
             
-            <div className="panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="panel kids-stat-card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Vagas das Salas</span>
-              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>15</strong>
-              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>capacidade técnica recomendada</p>
+              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{roomCapacity - activeCheckedInCount}</strong>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>{checkedOutCount} retirada(s) concluída(s) hoje</p>
+            </div>
+
+            <div className="panel kids-stat-card kids-alert-stat" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Alertas Ativos</span>
+              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{alertCount}</strong>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>restrições médicas ou de retirada</p>
             </div>
 
             <button 
               onClick={() => setView("checkin")}
+              className="kids-action-card"
               style={{ background: "rgba(249, 115, 22, 0.1)", border: "1px solid rgba(249, 115, 22, 0.25)", color: "var(--alvo-ink)", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer", backdropFilter: "blur(20px)", boxShadow: "var(--alvo-shadow-airy)" }}
             >
               <Plus size={24} style={{ color: "var(--alvo-accent)" }} />
@@ -222,6 +235,7 @@ export function KidsLeaderView() {
 
             <button 
               onClick={handleStartScan}
+              className="kids-action-card kids-scan-card"
               style={{ background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "20px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4, textAlign: "left", cursor: "pointer" }}
             >
               <Scan size={24} />
@@ -230,13 +244,13 @@ export function KidsLeaderView() {
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+          <div className="kids-main-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
             
             {/* TABELA DE PRESENTES */}
             <article className="panel" style={{ padding: "2rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
                 <h2 style={{ fontSize: "1.25rem", color: "var(--alvo-ink)", fontWeight: 800, margin: 0 }}>Crianças Ativas nas Salas</h2>
-                <div style={{ position: "relative" }}>
+                <div className="kids-search-box" style={{ position: "relative" }}>
                   <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
                   <input 
                     placeholder="Filtrar criança ou responsável..." 
@@ -252,6 +266,7 @@ export function KidsLeaderView() {
                   filteredKids.map(kid => (
                     <div 
                       key={kid.id} 
+                      className="kid-presence-row"
                       style={{ 
                         background: kid.status === "checked_out" ? "rgba(15, 23, 42, 0.03)" : "rgba(15, 23, 42, 0.04)", 
                         border: "1px solid var(--alvo-line)", 
@@ -269,8 +284,8 @@ export function KidsLeaderView() {
                           
                           {/* Alert marker for lactose/peanut allergies */}
                           {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
-                            <span style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: "0.65rem", padding: "2px 8px", borderRadius: "6px", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
-                              ⚠️ ALERGIA
+                            <span className="kid-warning-badge" style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", fontSize: "0.65rem", padding: "2px 8px", borderRadius: "6px", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                              <AlertTriangle size={12} /> ALERGIA
                             </span>
                           )}
                         </div>
@@ -332,9 +347,10 @@ export function KidsLeaderView() {
       {/* VIEW: CHECK-IN LOUNGE TERMINAL */}
       {view === "checkin" && (
         <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
+          <div className="panel kids-flow-panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
             <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
-              👶 Lounge de Entrada Expressa
+              <Baby size={24} style={{ color: "var(--alvo-accent)" }} />
+              Lounge de Entrada Expressa
             </h2>
             <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
               Cadastre a criança na recepção de entrada. Especifique qualquer necessidade alimentar, médica ou restrição de entrega de familiares.
@@ -352,7 +368,7 @@ export function KidsLeaderView() {
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="kids-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Idade
                   <input 
@@ -420,7 +436,7 @@ export function KidsLeaderView() {
       {/* VIEW: SIMULADOR DE SCANNER QR CODE COM ANIMAÇÕES */}
       {view === "scan" && (
         <section style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 0" }}>
-          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
+          <div className="panel kids-flow-panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
             
             <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", backgroundColor: "rgba(15, 23, 42, 0.04)", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--alvo-line)" }}>
               
@@ -489,7 +505,7 @@ export function KidsLeaderView() {
       {/* VIEW: PROTOCOLO DE RETIRADA RIGIDO (CHECKOUT) */}
       {view === "checkout" && scannedChild && (
         <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-          <div className="panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
+          <div className="panel kids-flow-panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
             
             <div style={{ textAlign: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
               <ShieldCheck size={40} style={{ color: "var(--alvo-accent)", margin: "0 auto 8px" }} />

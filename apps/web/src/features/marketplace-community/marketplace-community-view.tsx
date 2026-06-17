@@ -10,14 +10,16 @@ import {
   Smartphone,
   Globe,
   BadgeCheck,
-  Tag,
   ArrowRight,
-  Filter,
   Plus,
   Loader2,
   Heart,
-  Star,
-  ShoppingBag
+  ShoppingBag,
+  HeartPulse,
+  Utensils,
+  GraduationCap,
+  Wrench,
+  Users
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
@@ -95,11 +97,11 @@ export function MarketplaceCommunityView() {
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady, filterStatus]);
 
   const categories = [
-    { id: "health", label: "Saúde & Bem-estar", color: "#ef4444", icon: "🏥" },
-    { id: "food", label: "Alimentação", color: "#f59e0b", icon: "🍽️" },
-    { id: "education", label: "Educação", color: "#3b82f6", icon: "📚" },
-    { id: "services", label: "Serviços", color: "#10b981", icon: "🔧" },
-    { id: "community", label: "Comunidade", color: "#8b5cf6", icon: "🤝" },
+    { id: "health", label: "Saúde & Bem-estar", color: "#ef4444", icon: HeartPulse },
+    { id: "food", label: "Alimentação", color: "#f59e0b", icon: Utensils },
+    { id: "education", label: "Educação", color: "#3b82f6", icon: GraduationCap },
+    { id: "services", label: "Serviços", color: "#10b981", icon: Wrench },
+    { id: "community", label: "Comunidade", color: "#8b5cf6", icon: Users },
   ];
 
   const filteredStores = stores.filter(store => {
@@ -109,6 +111,11 @@ export function MarketplaceCommunityView() {
     const matchesCategory = !activeCategory || store.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+  const approvedStores = stores.filter((store) => store.status === "approved").length;
+  const storesWithWhatsapp = stores.filter((store) => store.socialLinks?.whatsapp).length;
+  const activeCategoryLabel = activeCategory
+    ? categories.find((category) => category.id === activeCategory)?.label ?? "Categoria"
+    : "Todas";
 
   return (
     <main className="marketplace-community-container animate-entrance">
@@ -120,6 +127,24 @@ export function MarketplaceCommunityView() {
           </div>
           <h1>Marketplace da Comunidade</h1>
           <p>Apoie os empreendimentos dos nossos membros! Descubra produtos, serviços e promoções exclusivas de comerciantes congregados.</p>
+        </div>
+
+        <div className="marketplace-actions">
+          <Link href="/marketplace-community/my-stores" className="btn-secondary-store">
+            Minhas lojas
+          </Link>
+          <Link href="/marketplace-community/admin/moderation" className="btn-secondary-store">
+            Moderação
+          </Link>
+          {user && (
+            <Link 
+              href="/marketplace-community/new"
+              className="btn-create-store"
+            >
+              <Plus size={18} />
+              Criar Loja
+            </Link>
+          )}
         </div>
 
         <div className="search-bar-container">
@@ -140,30 +165,40 @@ export function MarketplaceCommunityView() {
             >
               Todas
             </button>
-            {categories.map(cat => (
+            {categories.map(cat => {
+              const CategoryIcon = cat.icon;
+              return (
               <button 
                 key={cat.id}
                 className={`pill ${activeCategory === cat.id ? 'active' : ''}`}
                 onClick={() => setActiveCategory(cat.id)}
                 style={{ '--pill-accent': cat.color } as any}
               >
-                <span className="pill-icon">{cat.icon}</span>
+                <CategoryIcon size={16} className="pill-icon" />
                 {cat.label}
               </button>
-            ))}
+            )})}
           </div>
         </div>
-
-        {user && (
-          <Link 
-            href="/marketplace-community/new"
-            className="btn-create-store"
-          >
-            <Plus size={18} />
-            Criar Loja
-          </Link>
-        )}
       </header>
+
+      <section className="marketplace-kpis" aria-label="Indicadores do marketplace">
+        <article>
+          <span>Lojas aprovadas</span>
+          <strong>{approvedStores}</strong>
+          <p>negócios visíveis para a comunidade</p>
+        </article>
+        <article>
+          <span>Categoria ativa</span>
+          <strong>{activeCategoryLabel}</strong>
+          <p>{filteredStores.length} resultado(s) no filtro atual</p>
+        </article>
+        <article>
+          <span>Contato rápido</span>
+          <strong>{storesWithWhatsapp}</strong>
+          <p>lojas com WhatsApp disponível</p>
+        </article>
+      </section>
 
       {loading && (
         <div className="loading-container">
@@ -201,16 +236,23 @@ export function MarketplaceCommunityView() {
                     <BadgeCheck size={14} /> Verificado
                   </span>
                 )}
-                <button className="favorite-btn">
+                <button className="favorite-btn" type="button" aria-label={`Favoritar ${store.name}`}>
                   <Heart size={18} />
                 </button>
               </div>
             </div>
 
             <div className="store-body">
-              <div className="category-tag" style={{ color: categories.find(c => c.id === store.category)?.color }}>
-                {categories.find(c => c.id === store.category)?.icon} {categories.find(c => c.id === store.category)?.label}
-              </div>
+              {(() => {
+                const category = categories.find(c => c.id === store.category);
+                const CategoryIcon = category?.icon ?? ShoppingBag;
+                return (
+                  <div className="category-tag" style={{ color: category?.color }}>
+                    <CategoryIcon size={15} />
+                    {category?.label ?? "Comunidade"}
+                  </div>
+                );
+              })()}
               
               <h3>{store.name}</h3>
               <p className="store-description">{store.description}</p>
@@ -383,7 +425,7 @@ export function MarketplaceCommunityView() {
         }
 
         .pill-icon {
-          font-size: 1.125rem;
+          flex-shrink: 0;
         }
 
         .btn-create-store {
@@ -557,7 +599,7 @@ export function MarketplaceCommunityView() {
         .category-tag {
           display: inline-flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: 0.35rem;
           width: fit-content;
           font-size: 0.75rem;
           font-weight: 800;
@@ -661,13 +703,334 @@ export function MarketplaceCommunityView() {
           box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
+        .marketplace-community-container {
+          width: 100%;
+          max-width: 1480px;
+          margin: 0 auto;
+          padding: 32px clamp(20px, 3vw, 44px) 56px;
+          background:
+            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
+            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
+          color: #111827;
+        }
+
+        .marketplace-community-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 20px;
+          align-items: end;
+          margin-bottom: 24px;
+          padding-bottom: 24px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+        }
+
+        .header-content {
+          margin: 0;
+        }
+
+        .header-content .eyebrow {
+          color: #ea580c;
+          font-size: 13px;
+          letter-spacing: 0.16em;
+        }
+
+        .header-content h1 {
+          max-width: 980px;
+          margin: 10px 0 12px;
+          color: #111827;
+          font-size: clamp(44px, 4.5vw, 64px);
+          line-height: 0.98;
+          letter-spacing: 0;
+        }
+
+        .header-content p {
+          max-width: 980px;
+          margin: 0;
+          color: #1f2937;
+          font-size: clamp(17px, 1.25vw, 20px);
+          line-height: 1.55;
+        }
+
+        .marketplace-actions {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 10px;
+          align-self: end;
+        }
+
+        .btn-create-store,
+        .btn-secondary-store {
+          min-height: 46px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 0 18px;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 850;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .btn-create-store {
+          background: #ea580c;
+          color: #ffffff;
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+        }
+
+        .btn-secondary-store {
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          background: #ffffff;
+          color: #334155;
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+        }
+
+        .search-bar-container {
+          grid-column: 1 / -1;
+          display: grid;
+          gap: 14px;
+          margin-top: 0;
+          padding: 18px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
+        }
+
+        .search-input-wrapper {
+          max-width: none;
+          min-height: 52px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 10px;
+          background: #f8fafc;
+          padding: 0 14px;
+        }
+
+        .search-input-wrapper:focus-within {
+          border-color: #2563eb;
+          background: #ffffff;
+          box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+        }
+
+        .search-input {
+          color: #111827;
+          font-size: 15px;
+        }
+
+        .search-input::placeholder {
+          color: #94a3b8;
+        }
+
+        .category-pills {
+          gap: 10px;
+        }
+
+        .pill {
+          min-height: 42px;
+          padding: 0 14px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 10px;
+          background: #ffffff;
+          color: #334155;
+          font-size: 14px;
+          font-weight: 850;
+        }
+
+        .pill:hover {
+          border-color: rgba(234, 88, 12, 0.28);
+          background: #fff7ed;
+          color: #111827;
+        }
+
+        .pill.active {
+          border-color: var(--pill-accent, #ea580c);
+          background: #fff7ed;
+          color: #111827;
+          box-shadow: none;
+        }
+
+        .marketplace-kpis {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+
+        .marketplace-kpis article,
+        .store-card,
+        .loading-container,
+        .empty-state {
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
+        }
+
+        .marketplace-kpis article {
+          min-height: 134px;
+          padding: 22px;
+        }
+
+        .marketplace-kpis span {
+          display: block;
+          color: #475569;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.25;
+        }
+
+        .marketplace-kpis strong {
+          display: block;
+          margin-top: 12px;
+          color: #0891b2;
+          font-size: clamp(30px, 3vw, 42px);
+          line-height: 0.95;
+        }
+
+        .marketplace-kpis article:nth-child(2) strong {
+          color: #ea580c;
+          font-size: clamp(24px, 2.4vw, 34px);
+          white-space: nowrap;
+        }
+
+        .marketplace-kpis article:nth-child(3) strong {
+          color: #16a34a;
+        }
+
+        .marketplace-kpis p {
+          margin: 8px 0 0;
+          color: #64748b;
+          font-size: 14px;
+          line-height: 1.35;
+        }
+
+        .stores-grid {
+          gap: 20px;
+          margin-top: 0;
+        }
+
+        .store-card {
+          overflow: hidden;
+        }
+
+        .store-card:hover {
+          border-color: rgba(37, 99, 235, 0.22);
+          box-shadow: 0 22px 52px -34px rgba(15, 23, 42, 0.65);
+          transform: translateY(-2px);
+        }
+
+        .store-image-header {
+          height: 210px;
+          background: #f1f5f9;
+        }
+
+        .placeholder-banner {
+          background: #f8fafc;
+          color: #64748b;
+        }
+
+        .status-badge.approved {
+          background: rgba(236, 253, 245, 0.95);
+          border: 1px solid rgba(22, 163, 74, 0.22);
+          color: #166534;
+        }
+
+        .favorite-btn {
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          color: #64748b;
+        }
+
+        .favorite-btn:hover {
+          background: #fff7ed;
+          color: #ea580c;
+        }
+
+        .store-body {
+          padding: 22px;
+        }
+
+        .category-tag {
+          margin-bottom: 10px;
+          letter-spacing: 0;
+          text-transform: none;
+        }
+
+        .store-body h3 {
+          color: #111827;
+          font-size: 22px;
+          line-height: 1.15;
+        }
+
+        .store-description {
+          color: #475569;
+          font-size: 15px;
+          line-height: 1.45;
+        }
+
+        .store-meta {
+          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .meta-item {
+          color: #475569;
+        }
+
+        .contact-link {
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          background: #f8fafc;
+          color: #334155;
+          border-radius: 10px;
+        }
+
+        .contact-link:hover {
+          background: #eff6ff;
+          border-color: rgba(37, 99, 235, 0.22);
+          color: #1d4ed8;
+          box-shadow: none;
+        }
+
+        .btn-view-store {
+          min-height: 46px;
+          border-radius: 10px;
+          background: #ea580c;
+          color: #ffffff;
+        }
+
+        .empty-state h3 {
+          color: #111827;
+        }
+
+        .empty-state {
+          color: #64748b;
+          border-style: dashed;
+          box-shadow: none;
+        }
+
         @media (max-width: 768px) {
           .marketplace-community-container {
-            padding: 1.5rem;
+            padding: 24px 16px 40px;
           }
 
           .header-content h1 {
-            font-size: 2rem;
+            font-size: 42px;
+          }
+
+          .marketplace-community-header,
+          .marketplace-kpis {
+            grid-template-columns: 1fr;
+          }
+
+          .marketplace-actions {
+            justify-content: start;
+          }
+
+          .btn-create-store,
+          .btn-secondary-store {
+            width: 100%;
           }
 
           .stores-grid {
@@ -675,8 +1038,10 @@ export function MarketplaceCommunityView() {
           }
 
           .category-pills {
+            flex-wrap: nowrap;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
           }
         }
       `}</style>

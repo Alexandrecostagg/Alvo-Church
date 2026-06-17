@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   AlertTriangle,
   Bot,
@@ -420,46 +421,55 @@ export function PastoralAiView() {
         <div>
           <span className="eyebrow-premium">
             <Sparkles size={16} />
-            WhatsApp + IA Pastoral
+            Cuidado inteligente
           </span>
-          <h1>Central de Atendimento Inteligente</h1>
+          <h1>IA Pastoral e Serviços de Cuidado</h1>
           <p>
-            Organize conversas, pedidos de oração, solicitações sociais e presença de células em um único painel de cuidado.
+            Transforme recepção, WhatsApp, pedidos de oração e presença de células em uma fila clara de acompanhamento pastoral.
           </p>
-        </div>
-        <div className="assistant-status-card">
-          <span className={`assistant-dot ${assistantStatus}`} />
-          <div>
-            <strong>Assistente Alvo ativo</strong>
-            <p>WhatsApp Business conectado, respostas em texto e áudio aguardando revisão pastoral.</p>
+          <div className="pastoral-ai-hero-actions">
+            <Link href="/" className="pastoral-ai-nav-action">
+              Dashboard
+            </Link>
+            <Link href="/reception" className="pastoral-ai-nav-action is-active">
+              Recepção
+            </Link>
             <button type="button" onClick={handleResetDemo}>
               <RotateCcw size={16} />
               Restaurar demo
             </button>
           </div>
         </div>
+        <div className="assistant-status-card">
+          <span className={`assistant-dot ${assistantStatus}`} />
+          <div>
+            <small>Serviço supervisionado</small>
+            <strong>Assistente Alvo ativo</strong>
+            <p>Respostas sugeridas, áudio e encaminhamentos ficam aguardando revisão da liderança autorizada.</p>
+          </div>
+        </div>
       </header>
 
       <section className="pastoral-ai-kpi-grid">
-        <article>
+        <article className="tone-blue">
           <MessageCircle size={22} />
           <span>Solicitações abertas</span>
           <strong>{metrics.open}</strong>
           <small>entradas vindas do WhatsApp e recepção</small>
         </article>
-        <article>
+        <article className="tone-orange">
           <AlertTriangle size={22} />
           <span>Prioridade alta</span>
           <strong>{metrics.urgent}</strong>
           <small>precisam de validação humana</small>
         </article>
-        <article>
+        <article className="tone-green">
           <Waypoints size={22} />
           <span>Presença em células</span>
           <strong>{metrics.presenceRate}%</strong>
           <small>confirmada por líderes no WhatsApp</small>
         </article>
-        <article>
+        <article className="tone-purple">
           <Bot size={22} />
           <span>Automações ativas</span>
           <strong>{metrics.automations}</strong>

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Plus, Music, Play, ExternalLink, HelpCircle, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Music, Play, ExternalLink, Save } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { transposeChordsText } from "@alvo/domain";
-import type { WorshipSong, WorshipSetlist } from "@alvo/types";
-import { MOCK_WORSHIP_SONGS, MOCK_WORSHIP_SETLISTS } from "../../lib/mock-data";
+import type { WorshipSong } from "@alvo/types";
+import { MOCK_WORSHIP_SONGS } from "../../lib/mock-data";
 import { useAppAuth } from "../../../app/providers";
 import { fetchWorshipSongs, saveWorshipSong, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 
@@ -147,100 +147,95 @@ export function WorshipView() {
   };
 
   return (
-    <main className="form-page serving-page animate-entrance">
-      <section className="serving-hero" style={{ paddingBottom: "1.5rem" }}>
+    <main className="form-page worship-page animate-entrance">
+      <header className="worship-hero">
         <div>
           <Link className="back-link" href="/serving">
-            <ArrowLeft size={14} style={{ marginRight: 6 }} />
-            Voltar ao Ministério de Música
+            <ArrowLeft size={16} />
+            Voltar para Escalas
           </Link>
-          <p className="eyebrow" style={{ color: "#8b5cf6" }}>Música & Adoração</p>
-          <h1>Worship Setlists</h1>
-          <p>
-            Gerencie o repertório da igreja, transponha tons dinamicamente para os ministros e acesse links de streaming.
+          <p className="eyebrow">
+            <Music size={14} />
+            Louvor & Cifras
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
-            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: configured && firebaseReady ? '#a78bfa' : '#f59e0b', letterSpacing: "0.03em" }}>
-              {status.toUpperCase()}
-            </span>
-          </div>
+          <h1>Repertório e Transposição</h1>
+          <p>
+            Organize músicas, tons, links e cifras em uma tela clara para ensaio, culto e preparação dos ministros.
+          </p>
         </div>
+
+        <aside className="worship-status-card">
+          <span className={`sync-pulse ${configured && firebaseReady ? "active" : "simulated"}`} />
+          <strong>{configured && firebaseReady ? "Firestore conectado" : "Modo demonstração"}</strong>
+          <p>{status}</p>
+        </aside>
+      </header>
+
+      <section className="worship-kpis" aria-label="Resumo do repertório">
+        <article>
+          <span>Músicas</span>
+          <strong>{songs.length}</strong>
+          <p>louvores no repertório ativo</p>
+        </article>
+        <article>
+          <span>Tom selecionado</span>
+          <strong>{selectedKey}</strong>
+          <p>transposição aplicada em tempo real</p>
+        </article>
+        <article>
+          <span>Louvor atual</span>
+          <strong>{selectedSong?.originalKey ?? "-"}</strong>
+          <p>tom original da música escolhida</p>
+        </article>
       </section>
 
-      <section className="serving-workbench" style={{ display: "grid", gridTemplateColumns: "350px 1fr", gap: "2rem" }}>
-        {/* Painel Esquerdo: Repertório e Lista */}
-        <aside className="serving-panel" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ display: "flex", justifySelf: "stretch", justifyContent: "space-between", alignItems: "center" }}>
-            <p className="eyebrow">Repertório ativo</p>
+      <section className="worship-workbench">
+        <aside className="worship-panel worship-library">
+          <div className="worship-panel-heading">
+            <div>
+              <p className="eyebrow">Repertório ativo</p>
+              <h2>Biblioteca</h2>
+            </div>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              style={{
-                backgroundColor: "#8b5cf6",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                padding: "6px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
+              className="worship-primary-action"
+              type="button"
             >
-              <Plus size={14} />
+              <Plus size={16} />
               Nova Música
             </button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div className="worship-song-list">
             {songs.map(song => (
               <button
                 key={song.id}
                 onClick={() => handleSelectSong(song.id)}
-                className={`volunteer-card ${selectedSongId === song.id ? "is-selected" : ""}`}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "1rem",
-                  borderRadius: "12px",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  backgroundColor: selectedSongId === song.id ? "rgba(139, 92, 246, 0.15)" : "rgba(30, 41, 59, 0.5)",
-                  color: "white",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
+                className={selectedSongId === song.id ? "worship-song-card is-selected" : "worship-song-card"}
+                type="button"
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong>{song.title}</strong>
-                  <span style={{ fontSize: "0.75rem", backgroundColor: "#8b5cf6", padding: "2px 6px", borderRadius: 4 }}>
-                    Tom: {song.originalKey}
-                  </span>
-                </div>
-                <p style={{ fontSize: "0.8rem", opacity: 0.6, marginTop: 4 }}>{song.artist}</p>
-                {song.tempoBpm && (
-                  <span style={{ fontSize: "0.7rem", opacity: 0.5 }}>BPM: {song.tempoBpm}</span>
-                )}
+                <span>Tom {song.originalKey}</span>
+                <strong>{song.title}</strong>
+                <p>{song.artist}</p>
+                {song.tempoBpm && <small>{song.tempoBpm} BPM</small>}
               </button>
             ))}
           </div>
         </aside>
 
-        {/* Painel Direito: Cifra e Transposição */}
-        <article className="serving-panel" style={{ minHeight: "600px", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <article className="worship-panel worship-main-panel">
           {showAddForm ? (
-            <form onSubmit={handleAddSong} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div className="section-heading">
+            <form onSubmit={handleAddSong} className="worship-song-form">
+              <div className="worship-panel-heading">
                 <div>
-                  <p className="eyebrow">Formulário de Cadastro</p>
-                  <h2>Cadastrar Novo Louvor</h2>
+                  <p className="eyebrow">Cadastro</p>
+                  <h2>Cadastrar novo louvor</h2>
                 </div>
               </div>
 
-              <div className="quick-group-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="worship-form-grid">
                 <label>
-                  Título do Louvor *
+                  Título do louvor *
                   <input
                     type="text"
                     required
@@ -261,9 +256,9 @@ export function WorshipView() {
                 </label>
               </div>
 
-              <div className="quick-group-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="worship-form-grid">
                 <label>
-                  Tom Original *
+                  Tom original *
                   <select
                     value={newSong.originalKey}
                     onChange={e => setNewSong(c => ({ ...c, originalKey: e.target.value }))}
@@ -274,7 +269,7 @@ export function WorshipView() {
                   </select>
                 </label>
                 <label>
-                  BPM (Andamento)
+                  BPM
                   <input
                     type="number"
                     value={newSong.tempoBpm}
@@ -284,7 +279,7 @@ export function WorshipView() {
                 </label>
               </div>
 
-              <div className="quick-group-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="worship-form-grid">
                 <label>
                   Link Spotify
                   <input
@@ -306,115 +301,77 @@ export function WorshipView() {
               </div>
 
               <label>
-                Letra Cifrada (Use colchetes para os acordes, ex: Deus en[G]viou Seu Filho a[C]mado)
+                Letra cifrada
                 <textarea
-                  rows={10}
-                  style={{
-                    backgroundColor: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: "12px",
-                    color: "white",
-                    padding: "1rem",
-                    fontFamily: "monospace"
-                  }}
+                  rows={12}
                   value={newSong.chordsLyrics}
                   onChange={e => setNewSong(c => ({ ...c, chordsLyrics: e.target.value }))}
                   placeholder="[G] Deus enviou Seu Filho..."
                 />
+                <small>Use acordes entre colchetes, como [G], [C#m7] ou [D/F#].</small>
               </label>
 
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <button type="submit" className="primary-button" style={{ backgroundColor: "#8b5cf6" }}>
+              <div className="worship-form-actions">
+                <button type="submit" className="worship-primary-action">
                   <Save size={16} />
-                  Salvar no Repertório
+                  Salvar no repertório
                 </button>
-                <button type="button" onClick={() => setShowAddForm(false)} className="ghost-button">
+                <button type="button" onClick={() => setShowAddForm(false)} className="worship-secondary-action">
                   Cancelar
                 </button>
               </div>
             </form>
           ) : selectedSong ? (
             <>
-              {/* Cabeçalho do Louvor */}
-              <div className="section-heading" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "1rem" }}>
+              <div className="worship-song-header">
                 <div>
                   <p className="eyebrow">{selectedSong.artist}</p>
-                  <h2 style={{ fontSize: "2rem", fontWeight: 800 }}>{selectedSong.title}</h2>
-                  <div style={{ display: "flex", gap: "1rem", marginTop: 8 }}>
+                  <h2>{selectedSong.title}</h2>
+                  <div className="worship-song-links">
                     {selectedSong.spotifyUrl && (
-                      <a href={selectedSong.spotifyUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", color: "#1db954" }}>
+                      <a href={selectedSong.spotifyUrl} target="_blank" rel="noopener noreferrer">
                         <Play size={14} />
                         Spotify
                       </a>
                     )}
                     {selectedSong.youtubeUrl && (
-                      <a href={selectedSong.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", color: "#ff0000" }}>
+                      <a href={selectedSong.youtubeUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={14} />
                         YouTube
                       </a>
                     )}
-                    {selectedSong.tempoBpm && (
-                      <span style={{ fontSize: "0.8rem", opacity: 0.5 }}> Andamento: {selectedSong.tempoBpm} BPM</span>
-                    )}
+                    {selectedSong.tempoBpm && <span>{selectedSong.tempoBpm} BPM</span>}
                   </div>
                 </div>
 
-                {/* Transpositor Premium de Tons */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6" }}>TRANSPOSITOR DINÂMICO</span>
-                  <div style={{ display: "flex", gap: 4 }}>
+                <div className="worship-key-control">
+                  <span>Transpositor</span>
+                  <div className="worship-key-grid">
                     {CHROMATIC_SCALE.map(k => (
                       <button
                         key={k}
                         onClick={() => setSelectedKey(k)}
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 8,
-                          border: "none",
-                          fontSize: "0.8rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          backgroundColor: selectedKey === k ? "#8b5cf6" : "rgba(255,255,255,0.05)",
-                          color: "white",
-                          transition: "all 0.2s"
-                        }}
+                        className={selectedKey === k ? "is-active" : ""}
+                        type="button"
                       >
                         {k}
                       </button>
                     ))}
                   </div>
-                  <span style={{ fontSize: "0.7rem", opacity: 0.5 }}>
-                    Tom original: {selectedSong.originalKey} | Transposto em real-time
-                  </span>
+                  <small>Tom original: {selectedSong.originalKey}</small>
                 </div>
               </div>
 
-              {/* Corpo da Cifra Renderizada em Tempo Real */}
-              <div
-                style={{
-                  backgroundColor: "rgba(15, 23, 42, 0.9)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  borderRadius: "16px",
-                  padding: "2rem",
-                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
-                  flex: 1,
-                  overflowY: "auto",
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "JetBrains Mono, monospace"
-                }}
-              >
-                <code style={{ fontSize: "1.1rem", lineHeight: "1.75rem", color: "#e2e8f0" }}>
-                  {/* Destaca acordes em colchetes com cor roxa do tema de louvor */}
+              <div className="worship-chord-sheet">
+                <code>
                   {transposedChordsLyrics.split("\n").map((line, idx) => {
-                    // Regex para destacar [C#m7] etc
                     const parts = line.split(/(\[[^\]]+\])/g);
                     return (
-                      <div key={idx} style={{ minHeight: "1.25rem" }}>
+                      <div key={idx} className="worship-chord-line">
                         {parts.map((part, pIdx) => {
                           if (part.startsWith("[") && part.endsWith("]")) {
                             return (
-                              <strong key={pIdx} style={{ color: "#a78bfa", fontWeight: 800 }}>
+                              <strong key={pIdx}>
                                 {part}
                               </strong>
                             );
@@ -435,6 +392,459 @@ export function WorshipView() {
           )}
         </article>
       </section>
+
+      <style jsx>{`
+        .worship-page {
+          width: 100%;
+          max-width: 1480px;
+          margin: 0 auto;
+          padding: 32px clamp(20px, 3vw, 44px) 56px;
+          color: #111827;
+          background:
+            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
+            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
+        }
+
+        .worship-hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+          gap: 24px;
+          align-items: end;
+          margin-bottom: 24px;
+          padding-bottom: 24px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+        }
+
+        .worship-hero .back-link,
+        .worship-primary-action,
+        .worship-secondary-action {
+          min-height: 46px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 850;
+          text-decoration: none;
+        }
+
+        .worship-hero .back-link,
+        .worship-secondary-action {
+          padding: 0 18px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          background: #ffffff;
+          color: #334155;
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+        }
+
+        .worship-hero .eyebrow,
+        .worship-panel .eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #ea580c;
+          font-size: 13px;
+          letter-spacing: 0.16em;
+        }
+
+        .worship-hero h1 {
+          max-width: 980px;
+          margin: 10px 0 12px;
+          color: #111827;
+          font-size: clamp(44px, 4.5vw, 64px);
+          line-height: 0.98;
+          letter-spacing: 0;
+        }
+
+        .worship-hero p:not(.eyebrow) {
+          max-width: 920px;
+          margin: 0;
+          color: #1f2937;
+          font-size: clamp(17px, 1.25vw, 20px);
+          line-height: 1.55;
+        }
+
+        .worship-status-card,
+        .worship-kpis article,
+        .worship-panel {
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
+        }
+
+        .worship-status-card {
+          padding: 20px;
+        }
+
+        .worship-status-card strong {
+          display: block;
+          margin: 10px 0 6px;
+          color: #111827;
+          font-size: 18px;
+        }
+
+        .worship-status-card p {
+          margin: 0;
+          color: #64748b;
+          font-size: 14px;
+          line-height: 1.35;
+        }
+
+        .worship-kpis {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+
+        .worship-kpis article {
+          min-height: 126px;
+          padding: 22px;
+        }
+
+        .worship-kpis span {
+          color: #475569;
+          font-size: 14px;
+          font-weight: 750;
+        }
+
+        .worship-kpis strong {
+          display: block;
+          margin-top: 10px;
+          color: #0891b2;
+          font-size: 38px;
+          line-height: 1;
+        }
+
+        .worship-kpis article:nth-child(2) strong {
+          color: #ea580c;
+        }
+
+        .worship-kpis article:nth-child(3) strong {
+          color: #16a34a;
+        }
+
+        .worship-kpis p {
+          margin: 8px 0 0;
+          color: #64748b;
+          font-size: 14px;
+        }
+
+        .worship-workbench {
+          display: grid;
+          grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+          gap: 20px;
+          align-items: start;
+        }
+
+        .worship-panel {
+          padding: 24px;
+        }
+
+        .worship-library {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .worship-main-panel {
+          min-height: 640px;
+          display: flex;
+          flex-direction: column;
+          gap: 22px;
+        }
+
+        .worship-panel-heading,
+        .worship-song-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 18px;
+        }
+
+        .worship-panel-heading h2,
+        .worship-song-header h2 {
+          margin: 6px 0 0;
+          color: #111827;
+          font-size: clamp(26px, 2.5vw, 36px);
+          line-height: 1.1;
+          letter-spacing: 0;
+        }
+
+        .worship-primary-action {
+          padding: 0 18px;
+          border: 0;
+          background: #ea580c;
+          color: #ffffff;
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+          white-space: nowrap;
+        }
+
+        .worship-song-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .worship-song-card {
+          width: 100%;
+          min-height: 112px;
+          padding: 16px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 14px;
+          background: #f8fafc;
+          color: #111827;
+          text-align: left;
+          transition: all 0.18s ease;
+        }
+
+        .worship-song-card:hover,
+        .worship-song-card.is-selected {
+          border-color: rgba(8, 145, 178, 0.32);
+          background: #ecfeff;
+          transform: translateY(-1px);
+        }
+
+        .worship-song-card span {
+          display: inline-flex;
+          padding: 3px 8px;
+          border-radius: 999px;
+          background: #ffffff;
+          color: #0891b2;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .worship-song-card strong {
+          display: block;
+          margin-top: 10px;
+          color: #111827;
+          font-size: 17px;
+          line-height: 1.2;
+        }
+
+        .worship-song-card p,
+        .worship-song-card small {
+          color: #64748b;
+        }
+
+        .worship-song-card p {
+          margin: 5px 0 0;
+          font-size: 14px;
+        }
+
+        .worship-song-card small {
+          display: block;
+          margin-top: 8px;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .worship-song-links {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .worship-song-links a,
+        .worship-song-links span {
+          min-height: 34px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 10px;
+          border-radius: 999px;
+          background: #f8fafc;
+          color: #334155;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .worship-key-control {
+          min-width: 260px;
+          padding: 14px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 14px;
+          background: #f8fafc;
+        }
+
+        .worship-key-control > span {
+          color: #ea580c;
+          font-size: 12px;
+          font-weight: 950;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .worship-key-control small {
+          display: block;
+          margin-top: 10px;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 750;
+        }
+
+        .worship-key-grid {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+          gap: 6px;
+          margin-top: 10px;
+        }
+
+        .worship-key-grid button {
+          min-height: 34px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 8px;
+          background: #ffffff;
+          color: #334155;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .worship-key-grid button.is-active {
+          border-color: #ea580c;
+          background: #ea580c;
+          color: #ffffff;
+        }
+
+        .worship-chord-sheet {
+          flex: 1;
+          overflow: auto;
+          padding: 24px;
+          border: 1px solid rgba(15, 23, 42, 0.10);
+          border-radius: 16px;
+          background: #fffdf8;
+          box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03);
+        }
+
+        .worship-chord-sheet code {
+          display: block;
+          color: #1f2937;
+          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+          font-size: 17px;
+          line-height: 1.85;
+          white-space: pre-wrap;
+        }
+
+        .worship-chord-line {
+          min-height: 1.4em;
+        }
+
+        .worship-chord-line strong {
+          color: #0891b2;
+          font-weight: 950;
+        }
+
+        .worship-song-form {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .worship-form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        .worship-song-form label {
+          color: #111827;
+          font-size: 14px;
+          font-weight: 850;
+        }
+
+        .worship-song-form input,
+        .worship-song-form select,
+        .worship-song-form textarea {
+          width: 100%;
+          margin-top: 8px;
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          border-radius: 10px;
+          background: #ffffff;
+          color: #111827;
+          font-size: 15px;
+          outline: none;
+        }
+
+        .worship-song-form input,
+        .worship-song-form select {
+          min-height: 46px;
+          padding: 0 14px;
+        }
+
+        .worship-song-form textarea {
+          padding: 14px;
+          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+          line-height: 1.55;
+          resize: vertical;
+        }
+
+        .worship-song-form input:focus,
+        .worship-song-form select:focus,
+        .worship-song-form textarea:focus {
+          border-color: #0891b2;
+          box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.12);
+        }
+
+        .worship-song-form label small {
+          display: block;
+          margin-top: 8px;
+          color: #64748b;
+          font-size: 13px;
+        }
+
+        .worship-form-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+        }
+
+        @media (max-width: 1100px) {
+          .worship-hero,
+          .worship-workbench {
+            grid-template-columns: 1fr;
+          }
+
+          .worship-status-card {
+            max-width: none;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .worship-page {
+            padding: 24px 16px 40px;
+          }
+
+          .worship-hero h1 {
+            font-size: 42px;
+          }
+
+          .worship-kpis,
+          .worship-form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .worship-panel-heading,
+          .worship-song-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .worship-key-control {
+            min-width: 0;
+          }
+
+          .worship-primary-action,
+          .worship-secondary-action {
+            width: 100%;
+          }
+        }
+      `}</style>
     </main>
   );
 }

@@ -1,6 +1,6 @@
-# Getro Church
+# Getro Church / Alvo Church
 
-Monorepo inicial do Getro Church.
+Monorepo do produto Getro Church / Alvo Church.
 
 ## Stack
 
@@ -45,8 +45,8 @@ Para publicar o painel web com `Next.js 16` no Cloudflare, o caminho recomendado
 
 Arquivos-base:
 
-- [apps/web/open-next.config.ts](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/web/open-next.config.ts)
-- [apps/web/wrangler.jsonc](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/web/wrangler.jsonc)
+- [apps/web/open-next.config.ts](apps/web/open-next.config.ts)
+- [apps/web/wrangler.jsonc](apps/web/wrangler.jsonc)
 
 Scripts:
 
@@ -61,6 +61,8 @@ Observacao importante:
 - `@cloudflare/next-on-pages` nao e mais o caminho recomendado para este projeto
 - como o Alvo usa `Next 16`, o deploy correto e via `@opennextjs/cloudflare`
 - para Git deploy no Cloudflare, use um projeto baseado em `Worker`, apontando para `apps/web/wrangler.jsonc`
+- deploy canonico atual: `https://alvo-church-web.alexandrecostagg.workers.dev`
+- `https://alvo-church-web.pages.dev` e legado/teste e nao deve ser usado como fonte principal de validacao
 
 Variaveis de ambiente necessarias:
 
@@ -131,7 +133,7 @@ No Firebase Console, registre tambem os apps nativos no mesmo projeto:
 
 ## Firestore Rules do tenant
 
-O projeto agora usa regras orientadas a tenant em [firestore.rules](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/firestore.rules):
+O projeto agora usa regras orientadas a tenant em [firestore.rules](firestore.rules):
 
 ```text
 rules_version = '2';
@@ -157,7 +159,7 @@ Para publicar:
 
 ## Storage Rules do tenant
 
-O upload de logo, icone e favicon usa [storage.rules](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/storage.rules).
+O upload de logo, icone e favicon usa [storage.rules](storage.rules).
 
 Essas regras permitem:
 
@@ -177,8 +179,8 @@ Como o Firebase Storage pode exigir plano pago, o projeto agora esta preparado p
 
 Arquivos-base:
 
-- Worker: [apps/worker-api/src/index.ts](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/worker-api/src/index.ts)
-- Wrangler: [apps/worker-api/wrangler.jsonc](/Users/alexandregomesdacosta/Documents/Projetos%20DEV/Alvo%20Church/apps/worker-api/wrangler.jsonc)
+- Worker: [apps/worker-api/src/index.ts](apps/worker-api/src/index.ts)
+- Wrangler: [apps/worker-api/wrangler.jsonc](apps/worker-api/wrangler.jsonc)
 
 Configuracoes necessarias:
 
@@ -200,6 +202,23 @@ Fluxo:
 
 Enquanto `NEXT_PUBLIC_UPLOAD_API_BASE_URL` nao estiver configurada, o painel continua funcionando com preenchimento manual das URLs.
 
+## Documentacao principal
+
+Documentos de trabalho:
+
+- [Mapa operacional de rotas e modulos](docs/mapa-operacional-rotas-modulos.md)
+- [Manual operacional dos modulos atuais](docs/manual-operacional-modulos.md)
+- [Backlog MVP de implementacao](docs/backlog-mvp-implementacao.md)
+
+Documentos de produto e arquitetura:
+
+- [PRD - Sistema completo de gestao de igrejas](docs/prd-sistema-gestao-igrejas.md)
+- [Roadmap do MVP](docs/roadmap-mvp-alvo-church.md)
+- [Arquitetura tecnica do monorepo](docs/arquitetura-tecnica-monorepo-alvo-church.md)
+- [Modelo SaaS e modularizacao comercial](docs/modelo-saas-modularizacao-comercial-alvo-church.md)
+- [Arquitetura multi-brand e white-label](docs/arquitetura-multi-brand-white-label-alvo-church.md)
+- [Identidade visual](docs/identidade-visual-alvo-church.md)
+
 ## Status
 
-Base inicial do monorepo criada a partir da arquitetura definida em [docs/arquitetura-tecnica-monorepo-alvo-church.md](/Users/alexandregomesdacosta/Documents/New%20project/docs/arquitetura-tecnica-monorepo-alvo-church.md).
+Base inicial do monorepo criada a partir da arquitetura definida em [docs/arquitetura-tecnica-monorepo-alvo-church.md](docs/arquitetura-tecnica-monorepo-alvo-church.md).

@@ -21,9 +21,9 @@ O simbolo criado para o Alvo Church combina:
 
 Arquivo inicial:
 
-- [alvo-mark.svg](/Users/alexandregomesdacosta/Documents/New%20project/apps/web/public/brand/alvo-mark.svg)
-- [alvo-lockup-horizontal.svg](/Users/alexandregomesdacosta/Documents/New%20project/apps/web/public/brand/alvo-lockup-horizontal.svg)
-- [alvo-lockup-vertical.svg](/Users/alexandregomesdacosta/Documents/New%20project/apps/web/public/brand/alvo-lockup-vertical.svg)
+- [alvo-mark.svg](../apps/web/public/brand/alvo-mark.svg)
+- [alvo-lockup-horizontal.svg](../apps/web/public/brand/alvo-lockup-horizontal.svg)
+- [alvo-lockup-vertical.svg](../apps/web/public/brand/alvo-lockup-vertical.svg)
 
 ## Relacao com a Alvorecer
 
@@ -90,13 +90,13 @@ Web:
 
 Mobile:
 
-- primeira tela com emblema de marca em [App.tsx](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/App.tsx)
-- cores base e metadata visual inicial em [app.json](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/app.json)
-- tokens compartilhados em [packages/ui/src/index.ts](/Users/alexandregomesdacosta/Documents/New%20project/packages/ui/src/index.ts)
+- primeira tela com emblema de marca em [App.tsx](../apps/mobile/App.tsx)
+- cores base e metadata visual inicial em [app.json](../apps/mobile/app.json)
+- tokens compartilhados em [packages/ui/src/index.ts](../packages/ui/src/index.ts)
 
 Assets gerados:
 
-- [icon.png](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/assets/generated/icon.png)
-- [adaptive-icon-foreground.png](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/assets/generated/adaptive-icon-foreground.png)
-- [splash.png](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/assets/generated/splash.png)
-- [store-icon.png](/Users/alexandregomesdacosta/Documents/New%20project/apps/mobile/assets/generated/store-icon.png)
+- [icon.png](../apps/mobile/assets/generated/icon.png)
+- [adaptive-icon-foreground.png](../apps/mobile/assets/generated/adaptive-icon-foreground.png)
+- [splash.png](../apps/mobile/assets/generated/splash.png)
+- [store-icon.png](../apps/mobile/assets/generated/store-icon.png)

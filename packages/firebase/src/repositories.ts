@@ -1003,12 +1003,30 @@ export async function updateVisitorJourneyStage(
   });
 }
 
+export async function updateVisitorIntakeStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    intakeId: string;
+    status: VisitorIntake["status"];
+    updatedByUserId?: string;
+  }
+) {
+  const firestore = getFirebaseFirestore(config);
+  await updateDoc(doc(firestore, `${getVisitorIntakesCollectionPath(context)}/${params.intakeId}`), {
+    status: params.status,
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: params.updatedByUserId ?? null
+  });
+}
+
 export async function createVisitorIntakeWorkflow(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
   params: {
     capturedByUserId?: string;
     name: string;
+    note?: string;
     phone?: string;
     source: string;
   }
@@ -1082,7 +1100,7 @@ export async function createVisitorIntakeWorkflow(
       phone: params.phone ?? null,
       source: params.source,
       status: "journey_created",
-      greeting: "Incluir nos cumprimentos da celebracao",
+      greeting: params.note || "Incluir nos cumprimentos da celebracao",
       capturedByUserId: params.capturedByUserId ?? null,
       createdAt
     })
@@ -2535,4 +2553,3 @@ export async function saveMemberBadge(
     { merge: true }
   );
 }
-
