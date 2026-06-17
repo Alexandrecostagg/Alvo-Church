@@ -38,6 +38,7 @@ import {
 } from "@alvo/firebase";
 import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { loadLocalMemberStore } from "../../lib/local-member-store";
 import { recentPeople, activeJourneys, followUps, activeGroups, latestAttendance } from "../../lib/mock-data";
 
 const journeyLanes = [
@@ -231,9 +232,10 @@ export function JourneysView() {
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      const localStore = loadLocalMemberStore();
       setStatus("Exibindo jornadas simuladas de acolhimento.");
       // Se não houver firebase, carrega mock data
-      setPeople(recentPeople as unknown as Person[]);
+      setPeople(mergeById(recentPeople as unknown as Person[], localStore.people));
       setJourneys(activeJourneys as unknown as VisitorJourney[]);
       setTasks(followUps as unknown as FollowUpTask[]);
       setGroups(activeGroups as unknown as Group[]);
@@ -245,7 +247,7 @@ export function JourneysView() {
         roleInGroup: "member",
         joinedAt: new Date().toISOString()
       })) as unknown as GroupMember[]);
-      setSelectedPersonId(recentPeople[0]?.id ?? null);
+      setSelectedPersonId(localStore.people[0]?.id ?? recentPeople[0]?.id ?? null);
       return;
     }
 
@@ -267,7 +269,11 @@ export function JourneysView() {
 
         if (cancelled) return;
 
-        const finalPeople = nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]);
+        const localStore = loadLocalMemberStore();
+        const finalPeople = mergeById(
+          nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]),
+          localStore.people
+        );
         const finalJourneys = nextJourneys.length > 0 ? nextJourneys : (activeJourneys as unknown as VisitorJourney[]);
         const finalTasks = nextTasks.length > 0 ? nextTasks : (followUps as unknown as FollowUpTask[]);
         const finalGroups = nextGroups.length > 0 ? nextGroups : (activeGroups as unknown as Group[]);
@@ -287,7 +293,7 @@ export function JourneysView() {
         setGroupMembers(finalGroupMembers);
         setSelectedPersonId((currentId) => currentId ?? finalPeople[0]?.id ?? null);
         setStatus(
-          `${nextPeople.length} pessoa(s) sincronizada(s) no Firestore.`
+          `${nextPeople.length} pessoa(s) sincronizada(s) no Firestore. ${localStore.people.length} cadastro(s) local(is) disponível(is).`
         );
       } catch (error) {
         if (!cancelled) {
@@ -677,6 +683,58 @@ export function JourneysView() {
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: `
+        .journeys-page {
+          max-width: 1480px !important;
+          padding: 32px !important;
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journeys-hero {
+          background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.88)) !important;
+          border: 1px solid var(--alvo-line) !important;
+          border-radius: 28px !important;
+          padding: 28px !important;
+          box-shadow: var(--alvo-shadow-soft) !important;
+        }
+        .journeys-page .journeys-hero h1 {
+          color: var(--alvo-ink) !important;
+          font-size: clamp(42px, 5vw, 74px) !important;
+          line-height: 0.96 !important;
+          max-width: 920px !important;
+        }
+        .journeys-page .journeys-hero p {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .back-link {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+          color: var(--alvo-ink) !important;
+          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05) !important;
+        }
+        .journeys-page .active-bottleneck-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(245, 158, 11, 0.28) !important;
+          box-shadow: 0 18px 38px rgba(245, 158, 11, 0.12) !important;
+        }
+        .journeys-page .active-bottleneck-card strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .active-bottleneck-card span {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .active-bottleneck-card > div:last-child {
+          background: #f8fafc !important;
+          border: 1px solid var(--alvo-line) !important;
+        }
+        .journeys-page .journey-bottleneck-grid article {
+          min-height: 150px !important;
+        }
+        .journeys-page .journey-command-panel {
+          background: rgba(255,255,255,0.72) !important;
+          border: 1px solid var(--alvo-line) !important;
+          border-radius: 28px !important;
+          padding: 22px !important;
+          box-shadow: var(--alvo-shadow-soft) !important;
+        }
         .journeys-page .journey-lane {
           background: #ffffff !important;
           border: 1px solid var(--alvo-line) !important;
@@ -691,6 +749,16 @@ export function JourneysView() {
           color: var(--alvo-ink) !important;
         }
         .journeys-page .journey-person-card small {
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .journey-person-card span {
+          color: inherit;
+        }
+        .journeys-page .journey-lane-heading strong,
+        .journeys-page .journey-lane-heading span {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journey-lane-heading span:not(:last-child) {
           color: var(--alvo-ink-soft) !important;
         }
         .journeys-page .journey-detail-card {
@@ -708,6 +776,11 @@ export function JourneysView() {
         .journeys-page .journey-detail-card p,
         .journeys-page .journey-detail-card small {
           color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .journey-detail-card > div,
+        .journeys-page .journey-detail-card article,
+        .journeys-page .journey-detail-card aside {
+          color: var(--alvo-ink) !important;
         }
         .journeys-page .journey-health-card {
           background: #ffffff !important;
@@ -741,6 +814,68 @@ export function JourneysView() {
         }
         .journeys-page .task-card span {
           color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page textarea,
+        .journeys-page input,
+        .journeys-page select {
+          color: var(--alvo-ink) !important;
+          background: #ffffff !important;
+          border-color: var(--alvo-line) !important;
+        }
+        .journeys-page .phone-chat-header,
+        .journeys-page .phone-chat-input-bar {
+          background: #f8fafc !important;
+          border-color: var(--alvo-line) !important;
+        }
+        .journeys-page .phone-screen-frame {
+          background: #ffffff !important;
+        }
+        .journeys-page .phone-status-bar {
+          background: #ffffff !important;
+          color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .phone-chat-header strong {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .phone-chat-body {
+          background-color: #f8fafc !important;
+        }
+        .journeys-page .chat-bubble-received {
+          background: #ffffff !important;
+          color: var(--alvo-ink) !important;
+          border: 1px solid var(--alvo-line) !important;
+        }
+        .journeys-page .phone-chat-input-field {
+          background: #ffffff !important;
+          color: var(--alvo-ink-soft) !important;
+          border-color: var(--alvo-line) !important;
+        }
+        .journeys-page .whatsapp-phone-mockup {
+          background: #ffffff !important;
+          border: 1px solid var(--alvo-line) !important;
+          box-shadow: var(--alvo-shadow-soft) !important;
+        }
+        @media (max-width: 1180px) {
+          .journeys-page .journey-bottleneck-grid,
+          .journeys-page .journey-lanes {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          .journeys-page .directory-toolbar {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 720px) {
+          .journeys-page {
+            padding: 20px 14px 36px !important;
+          }
+          .journeys-page .journey-bottleneck-grid,
+          .journeys-page .journey-lanes,
+          .journeys-page .journey-detail-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .journeys-page .journeys-hero {
+            padding: 22px !important;
+          }
         }
       `}} />
       
@@ -1816,6 +1951,12 @@ function getLaneKey(person: Person, groupMembers: readonly GroupMember[]) {
   if (["congregant", "new_believer"].includes(person.memberStatus)) return "congregant";
 
   return "member";
+}
+
+function mergeById<T extends { id: string }>(base: readonly T[], incoming: readonly T[]) {
+  const map = new Map(base.map((item) => [item.id, item]));
+  incoming.forEach((item) => map.set(item.id, item));
+  return Array.from(map.values());
 }
 
 function matchesJourneyFilter(
