@@ -10,6 +10,7 @@ import {
 } from "@alvo/firebase";
 import type { Family, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { loadLocalMemberStore } from "../../lib/local-member-store";
 
 export function MembersView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
@@ -20,6 +21,25 @@ export function MembersView() {
   const [memberStatusFilter, setMemberStatusFilter] = useState("all");
   const [passFilter, setPassFilter] = useState("all");
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    function loadLocalMembers() {
+      const localStore = loadLocalMemberStore();
+
+      if (localStore.people.length || localStore.families.length) {
+        setPeople((current) => mergeById(current, localStore.people));
+        setFamilies((current) => mergeById(current, localStore.families));
+        setStatus(`${localStore.people.length} cadastro(s) local(is) carregado(s) neste navegador.`);
+      }
+    }
+
+    loadLocalMembers();
+    window.addEventListener("alvo-local-members-updated", loadLocalMembers);
+
+    return () => {
+      window.removeEventListener("alvo-local-members-updated", loadLocalMembers);
+    };
+  }, []);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -41,10 +61,11 @@ export function MembersView() {
           return;
         }
 
-        setPeople(nextPeople);
-        setFamilies(nextFamilies);
+        const localStore = loadLocalMemberStore();
+        setPeople(mergeById(nextPeople, localStore.people));
+        setFamilies(mergeById(nextFamilies, localStore.families));
         setStatus(
-          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) sincronizadas.`
+          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) sincronizadas no Firestore.`
         );
       } catch (error) {
         if (!cancelled) {
@@ -392,6 +413,12 @@ function maskCpf(cpf: string) {
 
 function countFamilyPeople(people: readonly Person[], familyId: string) {
   return people.filter((person) => person.primaryFamilyId === familyId).length;
+}
+
+function mergeById<T extends { id: string }>(base: readonly T[], incoming: readonly T[]) {
+  const map = new Map(base.map((item) => [item.id, item]));
+  incoming.forEach((item) => map.set(item.id, item));
+  return Array.from(map.values());
 }
 
 function getMemberStatusLabel(status: Person["memberStatus"]) {

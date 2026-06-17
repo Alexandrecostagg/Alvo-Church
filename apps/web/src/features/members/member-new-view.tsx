@@ -10,6 +10,7 @@ import {
 } from "@alvo/firebase";
 import type { Family, FamilyMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { saveLocalMemberProfile } from "../../lib/local-member-store";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -54,6 +55,24 @@ export function MemberNewView() {
     city: "Belém",
     state: "PA"
   });
+
+  function resetFormState(formElement: HTMLFormElement) {
+    formElement.reset();
+    setFirstName("");
+    setLastName("");
+    setMemberStatus("member");
+    setPartnerBenefitsEnabled(false);
+    setLgpdConsent(false);
+    setAddress({
+      postalCode: "",
+      street: "",
+      number: "",
+      complement: "",
+      district: "",
+      city: "Belém",
+      state: "PA"
+    });
+  }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawCep = e.target.value;
@@ -100,12 +119,6 @@ export function MemberNewView() {
       return;
     }
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Formulário pronto. Entre no Firebase para salvar este membro no Firestore.");
-      setLastSavedMember(null);
-      return;
-    }
-
     const familyName = getFormValue(form, "familyName");
     const familyId = familyName ? createId("family") : undefined;
     const personId = createId("person");
@@ -138,30 +151,50 @@ export function MemberNewView() {
       memberStatus: memberStatus as Person["memberStatus"],
       status: "active"
     };
+    const family: Family | undefined =
+      familyId && familyName
+        ? {
+            id: familyId,
+            organizationId,
+            familyName,
+            displayName: familyName,
+            status: "active",
+            address,
+            incomeRange: person.householdIncomeRange,
+            notes: getFormValue(form, "familyNotes") || undefined
+          }
+        : undefined;
+    const familyMember: FamilyMember | undefined =
+      familyId && familyName
+        ? {
+            id: createId("family_member"),
+            organizationId,
+            familyId,
+            personId,
+            relationshipType: getFormValue(form, "relationshipType") as FamilyMember["relationshipType"],
+            isPrimaryContact: Boolean(form.get("isPrimaryContact")),
+            isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
+            isLegalGuardian: Boolean(form.get("isLegalGuardian"))
+          }
+        : undefined;
+
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      saveLocalMemberProfile({ family, familyMember, person });
+      setStatus(
+        `✓ ${fullName} salvo neste navegador. Configure o Firebase para sincronizar na nuvem.`
+      );
+      setLastSavedMember({
+        familyId,
+        fullName,
+        memberCardCode: person.memberCardCode,
+        personId
+      });
+      resetFormState(formElement);
+      return;
+    }
 
     try {
-      if (familyId && familyName) {
-        const family: Family = {
-          id: familyId,
-          organizationId,
-          familyName,
-          displayName: familyName,
-          status: "active",
-          address,
-          incomeRange: person.householdIncomeRange,
-          notes: getFormValue(form, "familyNotes") || undefined
-        };
-        const familyMember: FamilyMember = {
-          id: createId("family_member"),
-          organizationId,
-          familyId,
-          personId,
-          relationshipType: getFormValue(form, "relationshipType") as FamilyMember["relationshipType"],
-          isPrimaryContact: Boolean(form.get("isPrimaryContact")),
-          isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
-          isLegalGuardian: Boolean(form.get("isLegalGuardian"))
-        };
-
+      if (family && familyMember) {
         await saveFamilyProfile(firebaseConfig, { organizationId }, family);
         await saveFamilyMemberProfile(firebaseConfig, { organizationId }, familyMember);
       }
@@ -179,22 +212,7 @@ export function MemberNewView() {
         personId
       });
       
-      // Reset form states
-      formElement.reset();
-      setFirstName("");
-      setLastName("");
-      setMemberStatus("member");
-      setPartnerBenefitsEnabled(false);
-      setLgpdConsent(false);
-      setAddress({
-        postalCode: "",
-        street: "",
-        number: "",
-        complement: "",
-        district: "",
-        city: "Belém",
-        state: "PA"
-      });
+      resetFormState(formElement);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Não foi possível salvar o membro.");
       setLastSavedMember(null);
@@ -588,7 +606,7 @@ export function MemberNewView() {
                 </div>
               </div>
               <p className="confirmation-summary">
-                Membro inserido no Firestore. As credenciais e vínculos estão ativos e prontos para uso pastoral e recepção.
+                Cadastro inserido na base disponível. Com Firebase ativo, os dados ficam sincronizados no Firestore; sem Firebase, ficam salvos neste navegador para teste operacional.
               </p>
               <dl className="info-dl">
                 <div>
