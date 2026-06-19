@@ -25,7 +25,9 @@ export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
       features,
       ready: tenantReady,
       isEnabled: (key: ModuleKey) => {
-        if (!tenantReady || !modules) return false;
+        if (!tenantReady) return false;
+        // Sem config de módulos no Firestore → tudo habilitado (fallback demo/dev)
+        if (!modules) return true;
         return isModuleEnabled(modules, key);
       },
       isBeta: (key: ModuleKey) => {
