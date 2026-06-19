@@ -144,6 +144,9 @@ export function OrganizationNewView() {
         tribes: { enabled: Boolean(form.get("tribes")), source: "plan" },
         journeys: { enabled: Boolean(form.get("journeys")), source: "plan" },
         communication: { enabled: Boolean(form.get("communication")), source: "addon" },
+        marketplace: { enabled: Boolean(form.get("marketplace")), source: "addon" },
+        giving: { enabled: Boolean(form.get("giving")), source: "addon" },
+        publicForms: { enabled: Boolean(form.get("publicForms")), source: "plan" },
         finance: { enabled: Boolean(form.get("finance")), source: "addon" },
         ai: {
           enabled: Boolean(form.get("ai")),

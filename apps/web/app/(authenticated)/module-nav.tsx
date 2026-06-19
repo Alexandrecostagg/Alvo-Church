@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Map as MapIcon,
   MessageSquareText,
+  Settings,
   ShieldCheck,
   UserCircle,
   UserPlus,
@@ -27,44 +28,62 @@ import {
   Tv
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
+import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
+import type { ModuleKey } from "@alvo/domain";
 
-const navigationGroups = [
+type NavItem = {
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  moduleKey?: ModuleKey;
+  match: (pathname: string, searchParams: URLSearchParams) => boolean;
+};
+
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+const navigationGroups: NavGroup[] = [
   {
     title: "Geral",
     items: [
-      { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname: string) => pathname === "/" },
-      { label: "Recepção", icon: ClipboardList, href: "/reception", match: (pathname: string, searchParams: URLSearchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") !== "1" },
-      { label: "Painel Pastor", icon: Tv, href: "/reception?pastor=1", match: (pathname: string, searchParams: URLSearchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") === "1" },
-      { label: "IA Pastoral", icon: Bot, href: "/pastoral-ai", match: (pathname: string) => pathname.startsWith("/pastoral-ai") },
-      { label: "Finanças", icon: Landmark, href: "/finance", match: (pathname: string) => pathname.startsWith("/finance") },
+      { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
+      { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") !== "1" },
+      { label: "Painel Pastor", icon: Tv, href: "/reception?pastor=1", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") === "1" },
+      { label: "IA Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") },
+      { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },
     ]
   },
   {
     title: "Membros",
     items: [
-      { label: "Minha Area", icon: UserCircle, href: "/me", match: (pathname: string) => pathname.startsWith("/me") },
-      { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname: string) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
-      { label: "Novo Membro", icon: UserPlus, href: "/members/new", match: (pathname: string) => pathname.startsWith("/members/new") },
-      { label: "Marketplace", icon: Store, href: "/marketplace-community", match: (pathname: string) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
+      { label: "Minha Area", icon: UserCircle, href: "/me", match: (pathname) => pathname.startsWith("/me") },
+      { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
+      { label: "Novo Membro", icon: UserPlus, href: "/members/new", match: (pathname) => pathname.startsWith("/members/new") },
+      { label: "Marketplace", icon: Store, href: "/marketplace-community", moduleKey: "marketplace", match: (pathname) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
+      { label: "Comunicação", icon: MessageSquareText, href: "/communication", moduleKey: "communication", match: (pathname) => pathname.startsWith("/communication") },
+      { label: "Doações", icon: HeartHandshake, href: "/giving", moduleKey: "giving", match: (pathname) => pathname.startsWith("/giving") },
     ]
   },
   {
     title: "Estrategia",
     items: [
-      { label: "Tribos", icon: Tent, href: "/tribes", match: (pathname: string) => pathname.startsWith("/tribes") },
-      { label: "Células", icon: Waypoints, href: "/groups", match: (pathname: string) => pathname.startsWith("/groups") },
-      { label: "Jornadas", icon: MapIcon, href: "/journeys", match: (pathname: string) => pathname.startsWith("/journeys") },
-      { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", match: (pathname: string) => pathname.startsWith("/learning") },
-      { label: "Eventos", icon: CalendarRange, href: "/events", match: (pathname: string) => pathname.startsWith("/events") },
-      { label: "Escalas", icon: Handshake, href: "/serving", match: (pathname: string) => pathname === "/serving" },
-      { label: "Louvor & Cifras", icon: Music, href: "/serving/worship", match: (pathname: string) => pathname.startsWith("/serving/worship") },
-      { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", match: (pathname: string) => pathname.startsWith("/kids/scan") },
+      { label: "Tribos", icon: Tent, href: "/tribes", moduleKey: "tribes", match: (pathname) => pathname.startsWith("/tribes") },
+      { label: "Células", icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") },
+      { label: "Jornadas", icon: MapIcon, href: "/journeys", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/journeys") },
+      { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") },
+      { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
+      { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname === "/serving" },
+      { label: "Louvor & Cifras", icon: Music, href: "/serving/worship", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving/worship") },
+      { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
     ]
   },
   {
     title: "Admin",
     items: [
-      { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") }
+      { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname) => pathname.startsWith("/saas") },
+      { label: "Configurações", icon: Settings, href: "/settings", match: (pathname) => pathname.startsWith("/settings") },
     ]
   }
 ];
@@ -73,16 +92,29 @@ export function ModuleNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const { ready, isEnabled, isBeta } = useOrgFeatures();
 
   useEffect(() => {
     activeLinkRef.current?.scrollIntoView({ block: "center", inline: "nearest" });
   }, [pathname]);
 
+  const visibleGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        // Itens sem moduleKey são sempre visíveis (core da plataforma)
+        if (!item.moduleKey) return true;
+        // Itens com moduleKey: visíveis apenas quando o módulo está ativo
+        return isEnabled(item.moduleKey);
+      })
+    }))
+    .filter((group) => group.items.length > 0);
+
   return (
     <aside className="app-sidebar">
       <BrandLogo compact size={42} />
       <nav className="app-nav" aria-label="Navegacao principal">
-        {navigationGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.title} className="nav-group">
             <span className="nav-group-title">{group.title}</span>
             <div className="nav-group-items">
@@ -97,6 +129,9 @@ export function ModuleNav() {
                   >
                     <item.icon size={18} strokeWidth={2.2} />
                     <span>{item.label}</span>
+                    {item.moduleKey && isBeta(item.moduleKey) && (
+                      <span className="nav-badge-beta">beta</span>
+                    )}
                   </Link>
                 );
               })}

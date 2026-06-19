@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const FinanceView = dynamic(
   () => import("../../../src/features/finance/finance-view").then((mod) => mod.FinanceView),
@@ -8,5 +9,9 @@ const FinanceView = dynamic(
 );
 
 export default function FinancePage() {
-  return <FinanceView />;
+  return (
+    <ModuleGuard moduleKey="finance">
+      <FinanceView />
+    </ModuleGuard>
+  );
 }

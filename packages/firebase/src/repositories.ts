@@ -229,6 +229,9 @@ function toOrganizationFeaturesSettings(
       tribes: data.modules?.tribes ?? { enabled: false, source: "manual" },
       journeys: data.modules?.journeys ?? { enabled: true, source: "plan" },
       communication: data.modules?.communication ?? { enabled: false, source: "manual" },
+      marketplace: data.modules?.marketplace ?? { enabled: false, source: "manual" },
+      giving: data.modules?.giving ?? { enabled: false, source: "manual" },
+      publicForms: data.modules?.publicForms ?? { enabled: false, source: "manual" },
       finance: data.modules?.finance ?? { enabled: false, source: "manual" },
       ai: data.modules?.ai ?? { enabled: false, source: "manual" }
     }

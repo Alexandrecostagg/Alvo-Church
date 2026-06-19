@@ -211,10 +211,10 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   }
 
   const settings = tenantRuntime?.settings ?? null;
-  const visitorsEnabled = settings ? isModuleEnabled(settings.features, "visitors") : true;
-  const groupsEnabled = settings ? isModuleEnabled(settings.features, "groups") : true;
-  const eventsEnabled = settings ? isModuleEnabled(settings.features, "events") : true;
-  const financeEnabled = settings ? isModuleEnabled(settings.features, "finance") : true;
+  const visitorsEnabled = settings ? isModuleEnabled(settings.features.modules, "visitors") : true;
+  const groupsEnabled = settings ? isModuleEnabled(settings.features.modules, "groups") : true;
+  const eventsEnabled = settings ? isModuleEnabled(settings.features.modules, "events") : true;
+  const financeEnabled = settings ? isModuleEnabled(settings.features.modules, "finance") : true;
   const memberCount = people.filter((person) =>
     ["member", "leader", "volunteer"].includes(person.memberStatus)
   ).length;
@@ -249,7 +249,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             Marca: <strong>{getBrandModeLabel(settings.branding.brandMode)}</strong>
           </span>
           <span>
-            Modulos ativos: <strong>{getEnabledModuleCount(settings.features)}</strong>
+            Modulos ativos: <strong>{getEnabledModuleCount(settings.features.modules)}</strong>
           </span>
         </div>
       ) : null}

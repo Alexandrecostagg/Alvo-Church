@@ -104,16 +104,7 @@ export function getOrganizationDisplayName(organization: Organization) {
   return organization.displayName || organization.publicName || organization.name;
 }
 
-export function isModuleEnabled(
-  features: OrganizationFeaturesSettings,
-  moduleKey: keyof OrganizationFeaturesSettings["modules"]
-) {
-  return features.modules[moduleKey]?.enabled ?? false;
-}
-
-export function getEnabledModuleCount(features: OrganizationFeaturesSettings) {
-  return Object.values(features.modules).filter((module) => module?.enabled).length;
-}
+export * from "./featureGate";
 
 export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brandMode"]) {
   switch (brandMode) {

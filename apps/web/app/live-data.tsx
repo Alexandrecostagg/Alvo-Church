@@ -226,7 +226,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
             <span>
               Plano: <strong>{getPlanTierLabel(tenantRuntime.settings.subscription.planTier)}</strong> ·
               Marca: <strong>{getBrandModeLabel(tenantRuntime.settings.branding.brandMode)}</strong> ·
-              Modulos ativos: <strong>{getEnabledModuleCount(tenantRuntime.settings.features)}</strong>
+              Modulos ativos: <strong>{getEnabledModuleCount(tenantRuntime.settings.features.modules)}</strong>
             </span>
           ) : null}
         </div>

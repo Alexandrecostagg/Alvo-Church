@@ -1170,7 +1170,7 @@ export function DashboardView() {
                 <h2>Suite ativa</h2>
               </div>
               <span className="soft-pill">
-                {getEnabledModuleCount(tenantSettings.features)} ativos
+                {getEnabledModuleCount(tenantSettings.features.modules)} ativos
               </span>
             </div>
             <div className="module-list">

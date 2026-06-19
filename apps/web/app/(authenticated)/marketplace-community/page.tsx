@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const MarketplaceCommunityView = dynamic(
   () => import("../../../src/features/marketplace-community/marketplace-community-view").then((mod) => mod.MarketplaceCommunityView),
@@ -8,5 +9,9 @@ const MarketplaceCommunityView = dynamic(
 );
 
 export default function Page() {
-  return <MarketplaceCommunityView />;
+  return (
+    <ModuleGuard moduleKey="communication">
+      <MarketplaceCommunityView />
+    </ModuleGuard>
+  );
 }

@@ -126,6 +126,9 @@ export interface OrganizationFeaturesSettings {
     tribes: OrganizationFeatureModule;
     journeys: OrganizationFeatureModule;
     communication: OrganizationFeatureModule;
+    marketplace: OrganizationFeatureModule;
+    giving: OrganizationFeatureModule;
+    publicForms: OrganizationFeatureModule;
     finance: OrganizationFeatureModule;
     ai: OrganizationFeatureModule;
   };

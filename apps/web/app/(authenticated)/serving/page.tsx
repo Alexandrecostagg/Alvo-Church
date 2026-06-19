@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const ServingView = dynamic(
   () => import("../../../src/features/serving/serving-view").then((mod) => mod.ServingView),
@@ -8,5 +9,9 @@ const ServingView = dynamic(
 );
 
 export default function ServingPage() {
-  return <ServingView />;
+  return (
+    <ModuleGuard moduleKey="volunteers">
+      <ServingView />
+    </ModuleGuard>
+  );
 }

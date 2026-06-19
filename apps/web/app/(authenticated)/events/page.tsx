@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const EventsView = dynamic(
   () => import("../../../src/features/events/events-view").then((mod) => mod.EventsView),
@@ -8,5 +9,9 @@ const EventsView = dynamic(
 );
 
 export default function EventsPage() {
-  return <EventsView />;
+  return (
+    <ModuleGuard moduleKey="events">
+      <EventsView />
+    </ModuleGuard>
+  );
 }

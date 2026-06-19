@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../../contexts/ModuleGuard";
 
 const KidsLeaderView = dynamic(
   () => import("../../../../src/features/kids/kids-leader-view").then((mod) => mod.KidsLeaderView),
@@ -8,5 +9,9 @@ const KidsLeaderView = dynamic(
 );
 
 export default function KidsScanPage() {
-  return <KidsLeaderView />;
+  return (
+    <ModuleGuard moduleKey="children">
+      <KidsLeaderView />
+    </ModuleGuard>
+  );
 }

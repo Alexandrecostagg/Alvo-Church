@@ -59,6 +59,9 @@ export const tenantSettings: OrganizationSettingsSnapshot = {
       tribes: { enabled: true, source: "plan" },
       journeys: { enabled: true, source: "plan" },
       communication: { enabled: true, source: "addon" },
+      marketplace: { enabled: true, source: "addon" },
+      giving: { enabled: true, source: "addon" },
+      publicForms: { enabled: true, source: "plan" },
       finance: { enabled: true, source: "addon" },
       ai: { enabled: true, source: "trial", limits: { monthlySuggestions: 250 } }
     }
@@ -714,7 +717,7 @@ export const moduleHighlights = [
     description: "Base unica com dados cadastrais, casas, lideres, visitantes e vinculos familiares.",
     href: "/members",
     icon: UsersRound,
-    enabled: isModuleEnabled(tenantSettings.features, "core"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "core"),
     action: "Ver base"
   },
   {
@@ -722,7 +725,7 @@ export const moduleHighlights = [
     description: "Entrada do visitante que cria pessoa, jornada, comunicacao e roteiro de acolhimento.",
     href: "/reception",
     icon: ClipboardList,
-    enabled: isModuleEnabled(tenantSettings.features, "visitors"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "visitors"),
     action: "Capturar visitante"
   },
   {
@@ -730,7 +733,7 @@ export const moduleHighlights = [
     description: "Proximos passos, missoes e progresso para cada pessoa acompanhada.",
     href: "/journeys",
     icon: Trophy,
-    enabled: isModuleEnabled(tenantSettings.features, "journeys"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "journeys"),
     action: "Ver progresso"
   },
   {
@@ -739,8 +742,8 @@ export const moduleHighlights = [
     href: "/groups",
     icon: Waypoints,
     enabled:
-      isModuleEnabled(tenantSettings.features, "groups") &&
-      isModuleEnabled(tenantSettings.features, "events"),
+      isModuleEnabled(tenantSettings.features.modules, "groups") &&
+      isModuleEnabled(tenantSettings.features.modules, "events"),
     action: "Organizar agenda"
   },
   {
@@ -748,7 +751,7 @@ export const moduleHighlights = [
     description: "Voluntarios, ministerios, confirmacoes, justificativas e funcionarios contratados.",
     href: "/serving",
     icon: Handshake,
-    enabled: isModuleEnabled(tenantSettings.features, "volunteers"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "volunteers"),
     action: "Montar escala"
   },
   {
@@ -756,7 +759,7 @@ export const moduleHighlights = [
     description: "Fila viva para WhatsApp, convites, lembretes e retorno pastoral.",
     href: "#actions",
     icon: MessageSquareText,
-    enabled: isModuleEnabled(tenantSettings.features, "communication"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "communication"),
     action: "Ver fila"
   },
   {
@@ -764,7 +767,7 @@ export const moduleHighlights = [
     description: "Prestacao de contas, arrecadacoes e demonstrativos publicaveis para a igreja.",
     href: "#transparency",
     icon: Landmark,
-    enabled: isModuleEnabled(tenantSettings.features, "finance"),
+    enabled: isModuleEnabled(tenantSettings.features.modules, "finance"),
     action: "Publicar contas"
   },
   {

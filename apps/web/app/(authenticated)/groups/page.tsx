@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const GroupsView = dynamic(
   () => import("../../../src/features/groups/groups-view").then((mod) => mod.GroupsView),
@@ -8,5 +9,9 @@ const GroupsView = dynamic(
 );
 
 export default function GroupsPage() {
-  return <GroupsView />;
+  return (
+    <ModuleGuard moduleKey="groups">
+      <GroupsView />
+    </ModuleGuard>
+  );
 }

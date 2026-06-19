@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../../contexts/ModuleGuard";
 
 const AcademyView = dynamic(
   () => import("../../../../src/features/learning/academy-view").then((mod) => mod.AcademyView),
@@ -8,5 +9,9 @@ const AcademyView = dynamic(
 );
 
 export default function Page() {
-  return <AcademyView />;
+  return (
+    <ModuleGuard moduleKey="journeys">
+      <AcademyView />
+    </ModuleGuard>
+  );
 }

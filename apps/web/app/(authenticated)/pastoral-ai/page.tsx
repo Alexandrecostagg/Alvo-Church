@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const PastoralAiView = dynamic(
   () => import("../../../src/features/pastoral-ai/pastoral-ai-view").then((mod) => mod.PastoralAiView),
@@ -8,5 +9,9 @@ const PastoralAiView = dynamic(
 );
 
 export default function PastoralAiPage() {
-  return <PastoralAiView />;
+  return (
+    <ModuleGuard moduleKey="ai">
+      <PastoralAiView />
+    </ModuleGuard>
+  );
 }

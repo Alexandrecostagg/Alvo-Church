@@ -100,6 +100,20 @@ export function AppProviders({ children }: { children: ReactNode }) {
     };
   }, [configured, firebaseConfig]);
 
+  // Derive organizationId from Firebase custom claims after login
+  useEffect(() => {
+    if (!firebaseReady || !user) {
+      setOrganizationId(DEFAULT_ORGANIZATION_ID);
+      return;
+    }
+    user.getIdTokenResult().then((result) => {
+      const claimOrgId = result.claims["organizationId"];
+      if (typeof claimOrgId === "string" && claimOrgId) {
+        setOrganizationId(claimOrgId);
+      }
+    }).catch(() => { /* keep default */ });
+  }, [firebaseReady, user]);
+
   useEffect(() => {
     if (!configured || !firebaseReady || !user) {
       setTenantRuntime(null);

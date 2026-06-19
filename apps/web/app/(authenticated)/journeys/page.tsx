@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const JourneysView = dynamic(
   () => import("../../../src/features/journeys/journeys-view").then((mod) => mod.JourneysView),
@@ -8,5 +9,9 @@ const JourneysView = dynamic(
 );
 
 export default function JourneysPage() {
-  return <JourneysView />;
+  return (
+    <ModuleGuard moduleKey="journeys">
+      <JourneysView />
+    </ModuleGuard>
+  );
 }
