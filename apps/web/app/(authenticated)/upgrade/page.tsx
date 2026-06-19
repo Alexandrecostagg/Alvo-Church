@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Lock, ArrowLeft } from "lucide-react";
@@ -13,12 +14,15 @@ const MODULE_LABELS: Record<string, string> = {
   volunteers: "Escalas & Voluntários",
   tribes: "Tribos",
   journeys: "Jornadas & EAD",
-  communication: "Marketplace Comunitário",
+  communication: "Comunicação Multicanal",
+  marketplace: "Marketplace Comunitário",
+  giving: "Doações & Giving",
+  publicForms: "Formulários Públicos",
   finance: "Finanças",
   ai: "IA Pastoral",
 };
 
-export default function UpgradePage() {
+function UpgradeContent() {
   const searchParams = useSearchParams();
   const moduleKey = searchParams.get("module") ?? "";
   const moduleLabel = MODULE_LABELS[moduleKey] ?? "este módulo";
@@ -45,6 +49,14 @@ export default function UpgradePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function UpgradePage() {
+  return (
+    <Suspense>
+      <UpgradeContent />
+    </Suspense>
   );
 }
 

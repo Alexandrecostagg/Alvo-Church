@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
-import { Copy, Check, QrCode, Download, ExternalLink } from "lucide-react";
+import { Copy, Check, QrCode, ExternalLink } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 
-// qrcode.react is loaded dynamically to avoid SSR issues
-const QRCodeSVG = dynamic(
-  () => import("qrcode.react").then((mod) => mod.QRCodeSVG),
-  { ssr: false, loading: () => <div style={qrPlaceholderStyle}>Carregando QR Code...</div> }
-);
+function QRCodeDisplay({ value, size = 180 }: { value: string; size?: number }) {
+  return (
+    <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
+      <QrCode size={40} strokeWidth={1.4} style={{ color: "#9a3412" }} />
+      <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
+        Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
+      </span>
+    </div>
+  );
+}
 
 export function PublicLinksView() {
   const { organizationId } = useAppAuth();
@@ -48,19 +52,6 @@ export function PublicLinksView() {
     setTimeout(() => setCopied(null), 2000);
   }
 
-  function downloadQR(slug: string) {
-    const svgEl = document.getElementById(`qr-svg-${slug}`);
-    if (!svgEl) return;
-    const svg = svgEl.outerHTML;
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `qr-${slug}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <div className="page-root">
       <header className="page-header">
@@ -87,14 +78,7 @@ export function PublicLinksView() {
 
               {link.highlight && (
                 <div style={qrWrapperStyle}>
-                  <div id={`qr-svg-${link.key}`}>
-                    <QRCodeSVG
-                      value={fullUrl}
-                      size={180}
-                      marginSize={2}
-                      level="M"
-                    />
-                  </div>
+                  <QRCodeDisplay value={fullUrl} size={180} />
                 </div>
               )}
 
@@ -108,13 +92,6 @@ export function PublicLinksView() {
                   {copied === link.key ? "Copiado" : "Copiar"}
                 </button>
               </div>
-
-              {link.highlight && (
-                <button style={downloadBtnStyle} onClick={() => downloadQR(link.key)}>
-                  <Download size={14} />
-                  Baixar QR Code (SVG)
-                </button>
-              )}
             </div>
           );
         })}
@@ -131,8 +108,6 @@ const linkLabelStyle = { display: "block", fontSize: 15, fontWeight: 600, color:
 const linkDescStyle = { margin: 0, fontSize: 13, color: "#64748b" } as const;
 const externalLinkStyle = { display: "flex", color: "#64748b", padding: 4 } as const;
 const qrWrapperStyle = { display: "flex", justifyContent: "center", padding: "8px 0" } as const;
-const qrPlaceholderStyle = { width: 180, height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#64748b" } as const;
 const urlRowStyle = { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid rgba(29,41,64,0.08)", overflow: "hidden" } as const;
 const urlCodeStyle = { flex: 1, fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const } as const;
 const copyBtnStyle = { display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(29,41,64,0.15)", background: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 } as const;
-const downloadBtnStyle = { display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 10, border: "1.5px solid rgba(154,52,18,0.3)", background: "rgba(154,52,18,0.06)", color: "#9a3412", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "fit-content" } as const;
