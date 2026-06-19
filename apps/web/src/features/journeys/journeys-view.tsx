@@ -673,20 +673,33 @@ export function JourneysView() {
       style={{ 
         maxWidth: 1440, 
         padding: "2rem",
-        ["--alvo-accent" as string]: "#2563eb",
-        ["--alvo-accent-soft" as string]: "rgba(37, 99, 235, 0.08)",
-        ["--alvo-accent-dark" as string]: "#1e3a8a",
-        ["--alvo-blue" as string]: "#2563eb",
-        ["--alvo-blue-soft" as string]: "rgba(37, 99, 235, 0.08)",
+        ["--alvo-accent" as string]: "#2f6f8f",
+        ["--alvo-accent-soft" as string]: "rgba(47, 111, 143, 0.10)",
+        ["--alvo-accent-dark" as string]: "#255a75",
+        ["--alvo-blue" as string]: "#2f6f8f",
+        ["--alvo-blue-soft" as string]: "rgba(47, 111, 143, 0.10)",
         ["--alvo-green" as string]: "#10b981",
         ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)"
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: `
+        body:has(.journeys-page) {
+          background: linear-gradient(135deg, #f8fafc 0%, #eef6fb 46%, #f7fbf8 100%) !important;
+        }
+        body:has(.journeys-page) canvas {
+          opacity: 0.08 !important;
+          filter: saturate(0.35) brightness(1.45) !important;
+        }
+        body:has(.journeys-page) .app-container,
+        body:has(.journeys-page) .main-content,
+        body:has(.journeys-page) .content-area {
+          background: transparent !important;
+        }
         .journeys-page {
           max-width: 1480px !important;
           padding: 32px !important;
           color: var(--alvo-ink) !important;
+          background: transparent !important;
         }
         .journeys-page .journeys-hero {
           background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.88)) !important;
@@ -757,9 +770,45 @@ export function JourneysView() {
         .journeys-page .journey-lane-heading strong,
         .journeys-page .journey-lane-heading span {
           color: var(--alvo-ink) !important;
+          background: transparent !important;
+          box-shadow: none !important;
         }
         .journeys-page .journey-lane-heading span:not(:last-child) {
           color: var(--alvo-ink-soft) !important;
+        }
+        .journeys-page .journey-lane-title {
+          color: var(--alvo-ink) !important;
+        }
+        .journeys-page .journey-lane-description {
+          display: block !important;
+          width: auto !important;
+          min-width: 0 !important;
+          color: var(--alvo-ink-soft) !important;
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          overflow: visible !important;
+          white-space: normal !important;
+        }
+        .journeys-page .journey-lane-count {
+          background: #f8fafc !important;
+          border: 1px solid var(--alvo-line) !important;
+          color: var(--alvo-ink) !important;
+          box-shadow: none !important;
+        }
+        .journeys-page .journey-filter-chip.is-active {
+          background: #eef6fb !important;
+          border-color: rgba(47, 111, 143, 0.28) !important;
+          color: #255a75 !important;
+          box-shadow: 0 10px 20px rgba(47, 111, 143, 0.10) !important;
+        }
+        .journeys-page .journey-filter-chip.is-active strong {
+          background: rgba(47, 111, 143, 0.12) !important;
+          color: #255a75 !important;
+        }
+        .journeys-page .journey-person-card,
+        .journeys-page .journey-person-card * {
+          text-shadow: none !important;
         }
         .journeys-page .journey-detail-card {
           background: #ffffff !important;
@@ -952,11 +1001,11 @@ export function JourneysView() {
               onClick={() => setFocusFilter(filter.value)}
               type="button"
               style={{
-                backgroundColor: focusFilter === filter.value ? "var(--alvo-accent)" : "rgba(255, 255, 255, 0.35)",
-                border: focusFilter === filter.value ? "1px solid var(--alvo-accent-dark)" : "1px solid var(--alvo-line)",
+                backgroundColor: focusFilter === filter.value ? "#eef6fb" : "#ffffff",
+                border: focusFilter === filter.value ? "1px solid rgba(47, 111, 143, 0.28)" : "1px solid var(--alvo-line)",
                 padding: "10px 18px",
                 borderRadius: 14,
-                color: focusFilter === filter.value ? "white" : "var(--alvo-ink)",
+                color: focusFilter === filter.value ? "#255a75" : "var(--alvo-ink)",
                 cursor: "pointer",
                 fontWeight: 800,
                 fontSize: "0.85rem",
@@ -967,7 +1016,7 @@ export function JourneysView() {
               }}
             >
               <span>{filter.label}</span>
-              <strong style={{ backgroundColor: "rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 8, fontSize: "0.75rem" }}>
+              <strong style={{ backgroundColor: focusFilter === filter.value ? "rgba(47, 111, 143, 0.12)" : "#f8fafc", color: focusFilter === filter.value ? "#255a75" : "var(--alvo-ink)", padding: "2px 8px", borderRadius: 8, fontSize: "0.75rem" }}>
                 {getFilterCount(filter.value, {
                   aspirantsWithoutCell,
                   membersWithoutCell,
@@ -1035,10 +1084,10 @@ export function JourneysView() {
               <div className="journey-lane-heading" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem" }}>
                 <div style={{ color: lane.color }}><lane.icon size={20} /></div>
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: "white", display: "block", fontSize: "1rem", fontWeight: 800 }}>{lane.title}</strong>
-                  <span style={{ color: "#64748b", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
+                  <strong className="journey-lane-title" style={{ color: "var(--alvo-ink)", display: "block", fontSize: "1rem", fontWeight: 800 }}>{lane.title}</strong>
+                  <span className="journey-lane-description" style={{ color: "var(--alvo-ink-soft)", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
                 </div>
-                <span style={{ background: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+                <span className="journey-lane-count" style={{ background: "#f8fafc", color: "var(--alvo-ink)", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
                   {lane.people.length}
                 </span>
               </div>
@@ -1661,8 +1710,8 @@ export function JourneysView() {
       </section>
 
       <style jsx global>{`
-        body, .main-content, .app-container {
-          background-color: transparent !important;
+        body:has(.journeys-page) {
+          background: linear-gradient(135deg, #f8fafc 0%, #eef6fb 46%, #f7fbf8 100%) !important;
         }
       `}</style>
 

@@ -64,6 +64,7 @@ import { useAppAuth } from "../../../app/providers";
 import {
   createVisitorIntakeWorkflow,
   createFirebaseWebRuntimeConfigFromEnv,
+  fetchEvents,
   fetchFamilies,
   fetchFinancialTransparencyReports,
   fetchFollowUpTasks,
@@ -77,6 +78,7 @@ import {
 } from "@alvo/firebase";
 import type {
   Family,
+  Event,
   FollowUpTask,
   Group,
   OrganizationSettingsSnapshot,
@@ -114,6 +116,7 @@ export function DashboardView() {
   const [realPeople, setRealPeople] = useState<Person[]>([]);
   const [realFamilies, setRealFamilies] = useState<Family[]>([]);
   const [realGroups, setRealGroups] = useState<Group[]>([]);
+  const [realEvents, setRealEvents] = useState<Event[]>([]);
   const [realJourneys, setRealJourneys] = useState<VisitorJourney[]>([]);
   const [realTasks, setRealTasks] = useState<FollowUpTask[]>([]);
   const [realIntakes, setRealIntakes] = useState<VisitorIntake[]>([]);
@@ -131,10 +134,11 @@ export function DashboardView() {
     async function syncDashboard() {
       setSyncMessage("Sincronizando pulso da igreja...");
       try {
-        const [nextPeople, nextFamilies, nextGroups, nextJourneys, nextTasks, nextIntakes, nextReports] = await Promise.all([
+        const [nextPeople, nextFamilies, nextGroups, nextEvents, nextJourneys, nextTasks, nextIntakes, nextReports] = await Promise.all([
           fetchPeople(firebaseConfig, { organizationId }, 100),
           fetchFamilies(firebaseConfig, { organizationId }, 50),
           fetchGroups(firebaseConfig, { organizationId }, 20),
+          fetchEvents(firebaseConfig, { organizationId }, 20),
           fetchVisitorJourneys(firebaseConfig, { organizationId }, 50),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 100),
           fetchVisitorIntakes(firebaseConfig, { organizationId }, 50),
@@ -146,6 +150,7 @@ export function DashboardView() {
         setRealPeople(nextPeople);
         setRealFamilies(nextFamilies);
         setRealGroups(nextGroups);
+        setRealEvents(nextEvents);
         setRealJourneys(nextJourneys);
         setRealTasks(nextTasks);
         setRealIntakes(nextIntakes);
@@ -180,13 +185,16 @@ export function DashboardView() {
         eyebrow: getFollowUpStatusLabel(task.status),
         detail: (realPeople.length > 0 ? realPeople : recentPeople).find((p) => p.id === task.personId)?.firstName || "Pessoa",
         icon: CheckCircle2,
-        href: "#actions"
+        href: "/journeys"
       })) as any[])
   ].filter((item, index, self) => self.findIndex((t) => t.id === item.id) === index);
   const peopleSource = (realPeople.length > 0 ? realPeople : recentPeople) as Person[];
+  const familiesSource = realFamilies.length > 0 ? realFamilies : families;
   const groupsSource = (realGroups.length > 0 ? realGroups : activeGroups) as Group[];
+  const eventsSource = (realEvents.length > 0 ? realEvents : publishedEvents) as Event[];
   const journeysSource = (realJourneys.length > 0 ? realJourneys : activeJourneys) as VisitorJourney[];
   const tasksSource = (realTasks.length > 0 ? realTasks : followUps) as FollowUpTask[];
+  const openTasksSource = tasksSource.filter((task) => task.status !== "completed");
 
   const journeyBottlenecks = [
     {
@@ -289,7 +297,7 @@ export function DashboardView() {
           type: "Pessoa",
           title: `${person.preferredName || person.firstName} ${person.lastName}`,
           detail: person.email,
-          href: "#people"
+          href: `/members/${person.id}`
         })),
       ...capturedVisitors.map((visitor) => ({
         id: visitor.id,
@@ -298,19 +306,19 @@ export function DashboardView() {
         detail: `${visitor.source} - ${visitor.nextStep}`,
         href: "/reception"
       })),
-      ...dashboard.activeGroups.map((group) => ({
+      ...groupsSource.map((group) => ({
         id: group.id,
         type: "Celula",
         title: group.name,
         detail: `${getGroupTypeLabel(group.type)} · ${group.meetingTime}`,
         href: "/groups"
       })),
-      ...dashboard.publishedEvents.map((event) => ({
+      ...eventsSource.map((event) => ({
         id: event.id,
         type: "Evento",
         title: event.name,
         detail: `${getEventTypeLabel(event.type)} · ${event.capacity} vagas`,
-        href: "#events"
+        href: "/events"
       })),
       ...openActionFeed.map((action) => ({
         id: action.id,
@@ -322,7 +330,53 @@ export function DashboardView() {
     ].filter((item) =>
       normalizeSearch(`${item.type} ${item.title} ${item.detail}`).includes(normalizedQuery)
     );
-  }, [query, completedActionIds, openActionFeed, capturedVisitors]);
+  }, [query, completedActionIds, openActionFeed, capturedVisitors, eventsSource, groupsSource, peopleSource]);
+  const primaryAction = openActionFeed[0] ?? null;
+  const primaryActionCompleted = primaryAction ? completedActionIds.includes(primaryAction.id) : false;
+  const dynamicOperationalShortcuts = operationalShortcuts.map((shortcut) => {
+    switch (shortcut.href) {
+      case "/reception":
+        return { ...shortcut, meta: `${capturedVisitors.length} visitante(s)` };
+      case "/members":
+        return { ...shortcut, meta: `${peopleSource.length} pessoa(s)` };
+      case "/journeys":
+        return { ...shortcut, meta: `${openTasksSource.length} tarefa(s) abertas` };
+      case "/groups":
+        return { ...shortcut, meta: `${groupsSource.length} grupo(s)` };
+      default:
+        return shortcut;
+    }
+  });
+  const mobileContractCards = [
+    {
+      label: "Inicio do app",
+      title: "Resumo pessoal e proximos passos",
+      detail: `${openTasksSource.length} tarefa(s) de cuidado alimentam a fila mobile quando vinculadas ao usuario.`,
+      href: "/journeys",
+      status: openTasksSource.length > 0 ? "Fonte ativa" : "Aguardando tarefas"
+    },
+    {
+      label: "Agenda",
+      title: "Eventos e celulas",
+      detail: `${eventsSource.length} evento(s) e ${groupsSource.length} grupo(s) devem aparecer no celular conforme permissao.`,
+      href: "/events",
+      status: eventsSource.length || groupsSource.length ? "Fonte ativa" : "Sem agenda"
+    },
+    {
+      label: "Jornada",
+      title: "Missões, badges e integração",
+      detail: `${journeysSource.length} jornada(s) de visitante hoje; proximo passo e ligar perfis gamificados do app.`,
+      href: "/journeys",
+      status: journeysSource.length ? "Parcial" : "A estruturar"
+    },
+    {
+      label: "Perfil",
+      title: "Ficha, família, LGPD e Getro Pass",
+      detail: `${peopleSource.length} pessoa(s) e ${familiesSource.length} familia(s) formam a base segura do app.`,
+      href: "/members",
+      status: peopleSource.length ? "Fonte ativa" : "Sem pessoas"
+    }
+  ];
   const careWorkflowSteps = [
     {
       label: "Capturar",
@@ -338,7 +392,7 @@ export function DashboardView() {
       description: "Dados sensiveis ficam protegidos, mas lideres enxergam familia, bairro e contexto.",
       href: "#families",
       icon: UsersRound,
-      metric: `${families.length} familias mapeadas`
+      metric: `${familiesSource.length} familias mapeadas`
     },
     {
       label: "Cuidar",
@@ -720,29 +774,34 @@ export function DashboardView() {
           <article className="mission-board antigravity-float">
             <div className="mission-copy">
               <p className="eyebrow">Proxima melhor acao</p>
-              <h2>Acompanhar Lucas antes da proxima reuniao.</h2>
+              <h2>{primaryAction ? primaryAction.title : "Fila pastoral em dia."}</h2>
               <p>
-                Visitante vindo pelo WhatsApp, com convite de celula em andamento e
-                sinal de reavaliacao ministerial.
+                {primaryAction
+                  ? `${primaryAction.eyebrow} · ${primaryAction.detail}`
+                  : "Quando uma tarefa, visitante ou alerta pastoral aparecer, a Dashboard vira o ponto de partida para resolver."}
               </p>
               <div className="mission-actions">
                 <button
                   className="primary-button"
-                  onClick={() => void handleCompleteAction("followup_1")}
+                  disabled={!primaryAction}
+                  onClick={() => {
+                    if (primaryAction) void handleCompleteAction(primaryAction.id);
+                  }}
                 >
                   <CheckCircle2 size={18} />
-                  {completedActionIds.includes("followup_1")
+                  {primaryActionCompleted
                     ? "Follow-up concluido"
-                    : "Concluir follow-up"}
+                    : primaryAction
+                      ? "Concluir acao"
+                      : "Sem acao aberta"}
                 </button>
-                <a
+                <Link
                   className="ghost-button"
-                  href="#journeys"
-                  onClick={() => setActiveSection("journeys")}
+                  href={primaryAction?.href ?? "/journeys"}
                 >
-                  Ver jornada
+                  Abrir origem
                   <ChevronRight size={17} />
-                </a>
+                </Link>
               </div>
             </div>
             <div className="progress-stack" aria-label="Progresso da jornada">
@@ -824,7 +883,7 @@ export function DashboardView() {
             <span className="soft-pill">Paginas principais</span>
           </div>
           <div className="shortcut-grid">
-            {operationalShortcuts.map((shortcut) => (
+            {dynamicOperationalShortcuts.map((shortcut) => (
               <Link
                 className="shortcut-card"
                 href={shortcut.href}
@@ -926,6 +985,29 @@ export function DashboardView() {
                   <ChevronRight size={16} />
                 </Link>
               </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="workflow-panel" aria-label="Contrato entre painel web e app mobile">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Web + mobile</p>
+              <h2>O que o painel alimenta no celular do membro</h2>
+            </div>
+            <span className="soft-pill">Contrato operacional</span>
+          </div>
+          <div className="shortcut-grid">
+            {mobileContractCards.map((card) => (
+              <Link className="shortcut-card" href={card.href} key={card.label}>
+                <div className="shortcut-icon">
+                  <Smartphone size={19} />
+                </div>
+                <span>{card.label}</span>
+                <strong>{card.title}</strong>
+                <p>{card.detail}</p>
+                <small>{card.status}</small>
+              </Link>
             ))}
           </div>
         </section>
@@ -1170,18 +1252,18 @@ export function DashboardView() {
               <span className="soft-pill">Hoje</span>
             </div>
             <div className="ops-grid">
-              {dashboard.activeGroups.map((group) => (
+              {groupsSource.slice(0, 4).map((group) => (
                 <div key={group.id} className="ops-card">
                   <Waypoints size={18} />
                   <strong>{group.name}</strong>
                   <p>{getGroupTypeLabel(group.type)} · {group.meetingTime}</p>
                 </div>
               ))}
-              {dashboard.publishedEvents.map((event) => (
+              {eventsSource.slice(0, 4).map((event) => (
                 <div
                   key={event.id}
                   className="ops-card"
-                  id={event.id === dashboard.publishedEvents[0]?.id ? "events" : undefined}
+                  id={event.id === eventsSource[0]?.id ? "events" : undefined}
                 >
                   <CalendarDays size={18} />
                   <strong>{event.name}</strong>

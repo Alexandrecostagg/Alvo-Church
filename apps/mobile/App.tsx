@@ -13,6 +13,9 @@ import {
 import {
   createFirebaseRuntimeConfigFromEnv,
   ensureTenantUserAccess,
+  fetchEvents,
+  fetchFollowUpTasks,
+  fetchGroups,
   fetchTenantRuntimeSnapshot,
   isFirebaseWebRuntimeConfigured,
   signInWithFirebaseMobileEmailPassword,
@@ -26,10 +29,12 @@ import {
   getPlanTierLabel,
   isModuleEnabled
 } from "@alvo/domain";
-import type { OrganizationSettingsSnapshot, TenantRuntimeSnapshot } from "@alvo/types";
+import type { Event, FollowUpTask, Group, OrganizationSettingsSnapshot, TenantRuntimeSnapshot } from "@alvo/types";
 import { alvoTheme, createBrandTheme } from "@alvo/ui";
 
 type MobileTab = "inicio" | "agenda" | "jornada" | "perfil";
+type MobileAgendaItem = { day: string; hour: string; kind: string; title: string };
+type MobileNextStep = { meta: string; title: string };
 
 const tabs: Array<{ id: MobileTab; label: string }> = [
   { id: "inicio", label: "Inicio" },
@@ -168,6 +173,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<MobileTab>("inicio");
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
+  const [mobileEvents, setMobileEvents] = useState<Event[]>([]);
+  const [mobileGroups, setMobileGroups] = useState<Group[]>([]);
+  const [mobileTasks, setMobileTasks] = useState<FollowUpTask[]>([]);
   const [tenantReady, setTenantReady] = useState(false);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -179,6 +187,33 @@ export default function App() {
   const brandTheme = createBrandTheme(activeTenantSettings.branding);
 
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
+  const openMobileTasks = mobileTasks.filter((task) => task.status !== "completed");
+  const mobileNextSteps: MobileNextStep[] = openMobileTasks.length
+    ? openMobileTasks.slice(0, 4).map((task) => ({
+        title: task.title,
+        meta: `${getMobileTaskStatusLabel(task.status)} · ${task.dueAt ? formatMobileDate(task.dueAt) : "Sem prazo"}`
+      }))
+    : [...nextSteps];
+  const mobileAgendaItems: MobileAgendaItem[] = [
+    ...mobileEvents.slice(0, 4).map((event) => ({
+      day: formatMobileWeekday(event.startsAt),
+      hour: formatMobileHour(event.startsAt),
+      kind: getMobileEventKind(event.type),
+      title: event.name
+    })),
+    ...mobileGroups.slice(0, Math.max(0, 4 - mobileEvents.length)).map((group) => ({
+      day: "Cel",
+      hour: group.meetingTime ?? "A definir",
+      kind: "Celula",
+      title: group.name
+    }))
+  ];
+  const activeAgenda = mobileAgendaItems.length ? mobileAgendaItems : [...agenda];
+  const dynamicPastoralSignals = [
+    `${openMobileTasks.length} tarefa(s) de cuidado abertas`,
+    `${mobileEvents.length} evento(s) sincronizado(s)`,
+    `${mobileGroups.length} celula(s) disponivel(is)`
+  ];
   const availableTabs = tabs.filter((tab) => {
     if (tab.id === "agenda") {
       return isModuleEnabled(activeTenantSettings.features, "groups") ||
@@ -230,16 +265,26 @@ export default function App() {
           roles: ["church_admin"]
         });
 
-        const snapshot = await fetchTenantRuntimeSnapshot(firebaseConfig, {
-          organizationId: fallbackTenantRuntime.organization.id
-        });
+        const context = { organizationId: fallbackTenantRuntime.organization.id };
+        const [snapshot, nextEvents, nextGroups, nextTasks] = await Promise.all([
+          fetchTenantRuntimeSnapshot(firebaseConfig, context),
+          fetchEvents(firebaseConfig, context, 8),
+          fetchGroups(firebaseConfig, context, 8),
+          fetchFollowUpTasks(firebaseConfig, context, 20)
+        ]);
 
         if (!cancelled) {
           setTenantRuntime(snapshot);
+          setMobileEvents(nextEvents);
+          setMobileGroups(nextGroups);
+          setMobileTasks(nextTasks);
         }
       } catch {
         if (!cancelled) {
           setTenantRuntime(null);
+          setMobileEvents([]);
+          setMobileGroups([]);
+          setMobileTasks([]);
         }
       } finally {
         if (!cancelled) {
@@ -366,6 +411,8 @@ export default function App() {
               {activeTab === "inicio" ? (
                 <HomeTab
                   brandLabel={brandTheme.brand.appName}
+                  nextSteps={mobileNextSteps}
+                  pastoralSignals={dynamicPastoralSignals}
                   tenantReady={tenantReady}
                   tenantSettings={activeTenantSettings}
                   tenantName={
@@ -374,9 +421,16 @@ export default function App() {
                   }
                 />
               ) : null}
-              {activeTab === "agenda" ? <AgendaTab /> : null}
-              {activeTab === "jornada" ? <JourneyTab /> : null}
-              {activeTab === "perfil" ? <ProfileTab email={user.email ?? "Sem email"} /> : null}
+              {activeTab === "agenda" ? <AgendaTab agendaItems={activeAgenda} /> : null}
+              {activeTab === "jornada" ? <JourneyTab openTaskCount={openMobileTasks.length} /> : null}
+              {activeTab === "perfil" ? (
+                <ProfileTab
+                  email={user.email ?? "Sem email"}
+                  eventCount={mobileEvents.length}
+                  groupCount={mobileGroups.length}
+                  taskCount={openMobileTasks.length}
+                />
+              ) : null}
             </>
           ) : null}
         </ScrollView>
@@ -523,11 +577,15 @@ function SessionPanel({
 
 function HomeTab({
   brandLabel,
+  nextSteps,
+  pastoralSignals,
   tenantName,
   tenantReady,
   tenantSettings
 }: {
   brandLabel: string;
+  nextSteps: MobileNextStep[];
+  pastoralSignals: string[];
   tenantName: string;
   tenantReady: boolean;
   tenantSettings: OrganizationSettingsSnapshot;
@@ -622,7 +680,7 @@ function HomeTab({
   );
 }
 
-function AgendaTab() {
+function AgendaTab({ agendaItems }: { agendaItems: MobileAgendaItem[] }) {
   return (
     <>
       <SectionHeader
@@ -631,7 +689,7 @@ function AgendaTab() {
         caption="Pensado para caber bem em iPhone e Android desde o primeiro layout."
       />
       <View style={styles.stack}>
-        {agenda.map((entry) => (
+        {agendaItems.map((entry) => (
           <View key={`${entry.day}-${entry.title}`} style={styles.agendaCard}>
             <View style={styles.dayBadge}>
               <Text style={styles.dayBadgeText}>{entry.day}</Text>
@@ -649,7 +707,7 @@ function AgendaTab() {
   );
 }
 
-function JourneyTab() {
+function JourneyTab({ openTaskCount }: { openTaskCount: number }) {
   return (
     <>
       <SectionHeader
@@ -660,7 +718,7 @@ function JourneyTab() {
       <View style={styles.panelAccent}>
         <Text style={styles.panelTitle}>Trilha principal</Text>
         <Text style={styles.panelIntroDark}>
-          O app traduz a caminhada em passos concretos e visiveis.
+          O app traduz a caminhada em passos concretos e visiveis. Hoje existem {openTaskCount} tarefa(s) aberta(s) vindas do painel.
         </Text>
         <View style={styles.stack}>
           {timeline.map((item) => (
@@ -689,7 +747,17 @@ function JourneyTab() {
   );
 }
 
-function ProfileTab({ email }: { email: string }) {
+function ProfileTab({
+  email,
+  eventCount,
+  groupCount,
+  taskCount
+}: {
+  email: string;
+  eventCount: number;
+  groupCount: number;
+  taskCount: number;
+}) {
   return (
     <>
       <SectionHeader
@@ -702,6 +770,13 @@ function ProfileTab({ email }: { email: string }) {
           <Text style={styles.metricLabel}>Conta</Text>
           <Text style={styles.metricValue}>{email}</Text>
           <Text style={styles.metricDetail}>Autenticado via Firebase Auth</Text>
+        </View>
+        <View style={styles.panel}>
+          <Text style={styles.metricLabel}>Sincronia com o painel</Text>
+          <Text style={styles.metricValue}>{eventCount + groupCount + taskCount}</Text>
+          <Text style={styles.metricDetail}>
+            {eventCount} evento(s), {groupCount} celula(s) e {taskCount} tarefa(s) carregadas do web.
+          </Text>
         </View>
         {profileCards.map((card) => (
           <View key={card.label} style={styles.panel}>
@@ -766,6 +841,70 @@ function formatFirebaseError(message: string) {
   }
 
   return `Firebase: ${message}`;
+}
+
+function formatMobileDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data a confirmar";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit"
+  }).format(date);
+}
+
+function formatMobileHour(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "A definir";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function formatMobileWeekday(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Ag";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short"
+  })
+    .format(date)
+    .replace(".", "")
+    .slice(0, 3);
+}
+
+function getMobileEventKind(type: Event["type"]) {
+  switch (type) {
+    case "service":
+      return "Culto";
+    case "training":
+      return "Formacao";
+    case "conference":
+      return "Conferencia";
+    case "retreat":
+      return "Retiro";
+    case "integration_class":
+      return "Integracao";
+    case "kids_event":
+      return "Kids";
+    default:
+      return "Evento";
+  }
+}
+
+function getMobileTaskStatusLabel(status: FollowUpTask["status"]) {
+  switch (status) {
+    case "in_progress":
+      return "Em andamento";
+    case "completed":
+      return "Concluida";
+    case "cancelled":
+      return "Cancelada";
+    default:
+      return "Aberta";
+  }
 }
 
 const styles = StyleSheet.create({
