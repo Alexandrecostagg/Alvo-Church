@@ -115,9 +115,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [firebaseReady, user]);
 
   useEffect(() => {
-    if (!configured || !firebaseReady || !user) {
+    if (!configured || !firebaseReady) {
       setTenantRuntime(null);
       setTenantReady(false);
+      return;
+    }
+
+    // Modo demo: sem usuário logado, libera tudo como guest
+    if (!user) {
+      setTenantRuntime(null);
+      setTenantReady(true);
       return;
     }
 
