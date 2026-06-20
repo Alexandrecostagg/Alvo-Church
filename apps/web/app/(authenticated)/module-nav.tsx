@@ -115,7 +115,7 @@ export function ModuleNav() {
   return (
     <aside className="app-sidebar" data-collapsed={collapsed ? "true" : "false"}>
       <div className="sidebar-header">
-        <BrandLogo compact size={42} />
+        <BrandLogo compact size={42} iconOnly={collapsed} />
         <button
           className="sidebar-collapse-btn"
           onClick={() => setCollapsed((c) => !c)}

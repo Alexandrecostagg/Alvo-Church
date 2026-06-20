@@ -5,10 +5,12 @@ import { useAppAuth } from "./providers";
 
 export function BrandLogo({
   size = 56,
-  compact = false
+  compact = false,
+  iconOnly = false
 }: {
   size?: number;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const { tenantRuntime } = useAppAuth();
   const brandTheme = createBrandTheme(tenantRuntime?.settings?.branding);
@@ -56,7 +58,7 @@ export function BrandLogo({
           G
         </div>
       )}
-      <div style={{ display: "grid", gap: 2 }}>
+      {!iconOnly && <div style={{ display: "grid", gap: 2 }}>
         <span
           style={{
             fontSize: compact ? 11 : 12,
@@ -86,7 +88,7 @@ export function BrandLogo({
             {brandTheme.brand.poweredByLabel ?? "by Alvo"}
           </span>
         ) : null}
-      </div>
+      </div>}
     </div>
   );
 }

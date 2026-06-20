@@ -98,7 +98,7 @@ export function DashboardView() {
   const [actionSyncStatus, setActionSyncStatus] = useState<string | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>("person_2");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [capturedVisitors, setCapturedVisitors] = useState<any[]>([...visitorIntakeRecords]);
   const [visitorDraft, setVisitorDraft] = useState({
     name: "",
