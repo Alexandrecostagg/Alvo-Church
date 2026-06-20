@@ -434,7 +434,7 @@ export function AcademyView() {
                 </div>
               </div>
 
-              <h1 style={{ fontSize: "2.5rem", color: "#1e293b", fontFamily: "Georgia, serif", margin: "1rem 0 0.5rem 0", fontWeight: 700 }}>
+              <h1 style={{ fontSize: "1.25rem", color: "#1e293b", fontWeight: 700 }}>
                 CERTIFICADO DE CONCLUSÃO
               </h1>
               <p style={{ fontStyle: "italic", fontSize: "1.1rem", color: "#64748b", margin: 0 }}>

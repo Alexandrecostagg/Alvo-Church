@@ -935,7 +935,7 @@ export function JourneysView() {
             <ArrowLeft size={14} style={{ marginRight: 6 }} /> Voltar ao painel
           </Link>
           <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Painel de Integração</p>
-          <h1 style={{ fontSize: "2.75rem", fontWeight: 950, color: "var(--alvo-ink)", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--alvo-ink)", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
           <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.1rem", maxWidth: 750, lineHeight: 1.6 }}>
             Raciocínio profundo para o cuidado de almas: gerencie gargalos ativos, acompanhe a evolução de visitantes
             para a aliança de membresia e monitore a inserção em células.
@@ -946,7 +946,7 @@ export function JourneysView() {
             <AlertTriangle size={24} style={{ color: "#f59e0b", filter: "drop-shadow(0 0 5px rgba(245, 158, 11, 0.5))" }} />
             <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 800 }}>ALERTAS CRÍTICOS</span>
           </div>
-          <strong style={{ fontSize: "2.5rem", display: "block", color: "white", marginTop: 8, fontWeight: 950, letterSpacing: "-0.02em" }}>
+          <strong style={{ fontSize: "1.15rem", display: "block", color: "white", marginTop: 8, fontWeight: 700, letterSpacing: "-0.02em" }}>
             {visitorsWithoutContact.length + aspirantsWithoutCell.length + membersWithoutCell.length}
           </strong>
           <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 700 }}>Gargalos de cuidado ativos</span>
@@ -1177,7 +1177,7 @@ export function JourneysView() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Membro em Foco</span>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: 950, color: "var(--alvo-ink)", marginTop: 4, letterSpacing: "-0.03em" }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--alvo-ink)", marginTop: 4, letterSpacing: "-0.03em" }}>
                     {getFullName(selectedPerson)}
                   </h2>
                 </div>

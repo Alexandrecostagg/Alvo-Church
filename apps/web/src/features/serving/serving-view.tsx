@@ -685,7 +685,7 @@ export function ServingView() {
               ← Voltar ao painel principal
             </Link>
             <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Controle Central de Escalas</p>
-            <h1 style={{ color: "var(--alvo-ink)", fontSize: "2.5rem", fontWeight: 950, letterSpacing: "-0.04em", margin: "8px 0" }}>
+            <h1 style={{ color: "var(--alvo-ink)", fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-0.02em", margin: "8px 0" }}>
               Quem serve também precisa de clareza.
             </h1>
             <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.05rem", maxWidth: "750px", lineHeight: "1.6rem" }}>

@@ -187,7 +187,7 @@ export function KidsLeaderView() {
             ← Voltar ao painel principal
           </Link>
           <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Lounge Kids &amp; Segurança Ativa</p>
-          <h1 style={{ color: "var(--alvo-ink)", fontSize: "2rem", fontWeight: 950, letterSpacing: "-0.03em", margin: "4px 0" }}>
+          <h1 style={{ color: "var(--alvo-ink)", fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", margin: "4px 0" }}>
             Operação Kids Alvo
           </h1>
         </div>

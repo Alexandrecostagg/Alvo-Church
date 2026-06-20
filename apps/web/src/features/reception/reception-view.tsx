@@ -449,7 +449,7 @@ export function ReceptionView() {
                   <Award size={32} />
                 </div>
               </div>
-              <h2 style={{ fontSize: "2rem", fontWeight: 900, marginBottom: "0.5rem" }}>Seja Bem-vindo! ⛪</h2>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.25rem" }}>Seja Bem-vindo! ⛪</h2>
               <p style={{ color: "#94a3b8", fontSize: "0.95rem", marginBottom: "2.5rem" }}>
                 Ficamos muito contentes com sua presença. Preencha seus dados rápidos para podermos te acolher com carinho hoje!
               </p>
@@ -521,7 +521,7 @@ export function ReceptionView() {
               >
                 <CheckCircle2 size={54} strokeWidth={3} />
               </div>
-              <h1 style={{ fontSize: "2.5rem", fontWeight: 900, marginBottom: "1rem" }}>Cadastro Concluído! 🎉</h1>
+              <h1 style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: "0.5rem" }}>Cadastro Concluído! 🎉</h1>
               <p style={{ fontSize: "1.25rem", color: "#94a3b8", lineHeight: "1.8rem" }}>
                 Muito obrigado, <strong>{lastCreated?.name}</strong>! Já registramos a sua chegada.
               </p>

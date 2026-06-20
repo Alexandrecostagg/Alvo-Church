@@ -275,10 +275,10 @@ code {
 }
 
 .welcome-section h1 {
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
   color: var(--alvo-ink);
 }
 
@@ -9506,4 +9506,64 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 
 .btn-secondary:hover {
   background: var(--alvo-surface-muted);
+}
+
+/* ─── Tipografia global calibrada ─── */
+/* Títulos inline com fontWeight 950/900 e fontSize grande → escala para baixo */
+.app-workspace h1 {
+  font-size: clamp(17px, 2vw, 22px) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.25 !important;
+}
+
+.app-workspace h2 {
+  font-size: clamp(14px, 1.5vw, 17px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+.app-workspace h3 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+/* Exceção: o dashboard mantém h1 maior para o "Bom dia, Getro" */
+.dashboard-header-premium h1,
+.welcome-section h1 {
+  font-size: clamp(22px, 3vw, 32px) !important;
+  font-weight: 800 !important;
+}
+
+/* ─── Espaçamento entre cards calibrado ─── */
+/* Seções com gap excessivo */
+.app-workspace > * + *,
+.page-root > * + * {
+  /* herda o gap do flex pai, mas garantimos o page-root */
+}
+
+.page-root {
+  gap: 20px !important;
+}
+
+/* Cards em grid — espaçamento mais compacto */
+.stats-row {
+  gap: 10px !important;
+}
+
+/* Seções de conteúdo */
+.content-section {
+  gap: 10px !important;
+}
+
+/* Padding da workspace um pouco mais compacto */
+.app-workspace {
+  padding: 20px 24px !important;
+}
+
+/* top-bar mais sutil */
+.app-topbar {
+  padding: 0 24px !important;
 }
