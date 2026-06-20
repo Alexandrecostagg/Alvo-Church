@@ -238,9 +238,14 @@ code {
   line-height: 1.4;
 }
 
-.sidebar-status {
+.sidebar-footer {
   flex: 0 0 auto;
-  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-status {
   padding: 14px;
   display: flex;
   gap: 10px;
@@ -252,6 +257,108 @@ code {
   font-size: 13px;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.05);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.04);
+  font-size: 12px;
+}
+
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--alvo-ink-soft, #475467);
+}
+
+.sidebar-user-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-signout-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--alvo-ink-soft);
+}
+
+.sidebar-login {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-login-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--alvo-primary, #c46a2d);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sidebar-login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sidebar-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-login-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.15);
+  font-size: 12px;
+  background: #fff;
+  color: #1c2433;
+  box-sizing: border-box;
+}
+
+.sidebar-login-error {
+  font-size: 11px;
+  color: #b42318;
+  line-height: 1.4;
+}
+
+.sidebar-login-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.sidebar-login-actions .sidebar-login-btn {
+  flex: 1;
+}
+
+.sidebar-login-cancel {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--alvo-ink-soft);
 }
 
 .app-workspace {

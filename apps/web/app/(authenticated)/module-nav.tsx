@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Building2,
   CalendarDays,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
+import { useAppAuth } from "../providers";
 import type { ModuleKey } from "@alvo/domain";
 
 type NavItem = {
@@ -93,6 +94,12 @@ export function ModuleNav() {
   const searchParams = useSearchParams();
   const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
   const { ready, isEnabled, isBeta } = useOrgFeatures();
+  const { user, firebaseReady, signIn, signOut } = useAppAuth();
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [email, setEmail] = useState("admin@alvochurch.app");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginPending, setLoginPending] = useState(false);
 
   useEffect(() => {
     activeLinkRef.current?.scrollIntoView({ block: "center", inline: "nearest" });
@@ -139,9 +146,81 @@ export function ModuleNav() {
           </div>
         ))}
       </nav>
-      <div className="sidebar-status">
-        <ShieldCheck size={18} />
-        <span>Getro Growth · Co-branded</span>
+      <div className="sidebar-footer">
+        {user ? (
+          <div className="sidebar-user">
+            <div className="sidebar-user-info">
+              <ShieldCheck size={14} />
+              <span>{user.email ?? "Admin"}</span>
+            </div>
+            <button
+              className="sidebar-signout-btn"
+              onClick={() => signOut()}
+              title="Sair"
+            >
+              Sair
+            </button>
+          </div>
+        ) : (
+          <div className="sidebar-login">
+            {!loginOpen ? (
+              <button
+                className="sidebar-login-btn"
+                onClick={() => setLoginOpen(true)}
+                disabled={!firebaseReady}
+              >
+                {firebaseReady ? "Entrar" : "Carregando..."}
+              </button>
+            ) : (
+              <form
+                className="sidebar-login-form"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setLoginError(null);
+                  setLoginPending(true);
+                  try {
+                    await signIn(email, password);
+                    setLoginOpen(false);
+                  } catch (err) {
+                    setLoginError(err instanceof Error ? err.message : "Erro ao entrar.");
+                  } finally {
+                    setLoginPending(false);
+                  }
+                }}
+              >
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  autoComplete="email"
+                  className="sidebar-login-input"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Senha"
+                  autoComplete="current-password"
+                  className="sidebar-login-input"
+                />
+                {loginError && <span className="sidebar-login-error">{loginError}</span>}
+                <div className="sidebar-login-actions">
+                  <button type="submit" className="sidebar-login-btn" disabled={loginPending}>
+                    {loginPending ? "Entrando..." : "Entrar"}
+                  </button>
+                  <button type="button" className="sidebar-login-cancel" onClick={() => setLoginOpen(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+        <div className="sidebar-status">
+          <ShieldCheck size={14} />
+          <span>Getro Growth · Co-branded</span>
+        </div>
       </div>
     </aside>
   );
