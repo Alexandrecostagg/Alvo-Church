@@ -9343,19 +9343,6 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   gap: 4px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--alvo-ink);
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--alvo-ink-soft);
-  margin: 0;
-}
 
 .page-header-actions {
   display: flex;
@@ -9508,33 +9495,24 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   background: var(--alvo-surface-muted);
 }
 
-/* ─── Tipografia global calibrada ─── */
-/* Títulos inline com fontWeight 950/900 e fontSize grande → escala para baixo */
-.app-workspace h1 {
-  font-size: clamp(17px, 2vw, 22px) !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.25 !important;
+/* ─── Títulos de página padronizados (padrão hero do app) ─── */
+h1.page-title,
+.page-title {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  margin: 0;
+  color: var(--alvo-ink);
 }
 
-.app-workspace h2 {
-  font-size: clamp(14px, 1.5vw, 17px) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
-  line-height: 1.3 !important;
-}
-
-.app-workspace h3 {
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  line-height: 1.35 !important;
-}
-
-/* Exceção: o dashboard mantém h1 maior para o "Bom dia, Getro" */
-.dashboard-header-premium h1,
-.welcome-section h1 {
-  font-size: clamp(22px, 3vw, 32px) !important;
-  font-weight: 800 !important;
+.page-subtitle {
+  font-size: 17px;
+  color: var(--alvo-ink-soft);
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 760px;
 }
 
 /* ─── Espaçamento entre cards calibrado ─── */
