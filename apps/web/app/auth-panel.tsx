@@ -133,7 +133,7 @@ const buttonStyle = {
   border: 0,
   borderRadius: 14,
   padding: "12px 16px",
-  background: "#c46a2d",
+  background: "var(--getro-primary)",
   color: "#fffaf1",
   fontWeight: 700,
   cursor: "pointer"

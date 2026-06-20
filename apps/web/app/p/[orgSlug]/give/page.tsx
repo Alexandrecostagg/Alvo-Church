@@ -18,7 +18,7 @@ export default function PublicGivePage() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={headerStyle}>
-          <Heart size={32} strokeWidth={1.6} style={{ color: "#9a3412" }} />
+          <Heart size={32} strokeWidth={1.6} style={{ color: "var(--getro-primary-dark)" }} />
           <h1 style={titleStyle}>Contribuir</h1>
           <p style={subtitleStyle}>Sua oferta faz diferença</p>
         </div>
@@ -112,10 +112,10 @@ const labelStyle = { fontSize: 13, fontWeight: 600, color: "#374151" } as const;
 const optStyle = { fontWeight: 400, color: "#9ca3af", fontSize: 12 } as const;
 const suggestedStyle = { display: "flex", gap: 8, flexWrap: "wrap" as const } as const;
 const chipStyle = { padding: "8px 16px", borderRadius: 999, border: "1.5px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" } as const;
-const chipActiveStyle = { background: "#9a3412", borderColor: "#9a3412", color: "#fff" } as const;
+const chipActiveStyle = { background: "var(--getro-primary-dark)", borderColor: "var(--getro-primary-dark)", color: "#fff" } as const;
 const inputStyle = { padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(29,41,64,0.18)", fontSize: 15, width: "100%", boxSizing: "border-box" as const, outline: "none", background: "#fff" } as const;
 const methodRowStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } as const;
 const methodBtnStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, border: "1.5px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" } as const;
-const methodBtnActiveStyle = { borderColor: "#9a3412", background: "rgba(154,52,18,0.06)", color: "#9a3412" } as const;
+const methodBtnActiveStyle = { borderColor: "var(--getro-primary-dark)", background: "var(--getro-primary-softer)", color: "var(--getro-primary-dark)" } as const;
 const noticeStyle = { padding: "12px 14px", borderRadius: 10, background: "#f8fafc", border: "1px solid rgba(29,41,64,0.08)" } as const;
-const submitStyle = { padding: "14px", borderRadius: 12, background: "#9a3412", color: "#fff", border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer" } as const;
+const submitStyle = { padding: "14px", borderRadius: 12, background: "var(--getro-primary-dark)", color: "#fff", border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer" } as const;

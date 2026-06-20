@@ -271,6 +271,6 @@ const radioGroupStyle = { display: "flex", gap: 16, flexWrap: "wrap" as const } 
 const radioLabelStyle = { display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" } as const;
 const consentLabelStyle = { display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#64748b", cursor: "pointer", lineHeight: 1.5 } as const;
 const errorStyle = { color: "#dc2626", fontSize: 13, margin: 0 } as const;
-const submitButtonStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: "#9a3412", color: "#fff", border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer", marginTop: 4 } as const;
+const submitButtonStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: "var(--getro-primary-dark)", color: "#fff", border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer", marginTop: 4 } as const;
 const successTitleStyle = { margin: 0, fontSize: 24, fontWeight: 700, color: "#1c2433" } as const;
 const successDescStyle = { margin: 0, fontSize: 15, color: "#64748b", lineHeight: 1.6 } as const;

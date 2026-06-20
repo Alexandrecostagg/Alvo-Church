@@ -10,6 +10,12 @@
   --alvo-accent-soft: rgba(37, 99, 235, 0.08);
   --alvo-accent-gold: #eab308;
   --alvo-accent-dark: #1e3a8a;
+
+  /* Marca Getro — laranja suave */
+  --getro-primary: #fb923c;
+  --getro-primary-dark: #c2410c;
+  --getro-primary-soft: rgba(251, 146, 60, 0.12);
+  --getro-primary-softer: rgba(251, 146, 60, 0.06);
   --alvo-green: #16a34a;
   --alvo-green-soft: rgba(22, 163, 74, 0.08);
   --alvo-blue: #0891b2;
@@ -233,7 +239,7 @@ code {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: color-mix(in srgb, var(--alvo-accent) 15%, transparent);
-  color: var(--alvo-accent-dark, #9a3412);
+  color: var(--alvo-accent-dark, var(--getro-primary-dark));
   border: 1px solid color-mix(in srgb, var(--alvo-accent) 30%, transparent);
   line-height: 1.4;
 }
@@ -306,7 +312,7 @@ code {
   padding: 10px 14px;
   border-radius: 10px;
   border: none;
-  background: var(--alvo-primary, #c46a2d);
+  background: var(--getro-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -3256,7 +3262,7 @@ code {
 
 .care-signal-chip.is-attention {
   background: #ffedd5;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
 }
 
 .care-signal-chip.is-stable {
@@ -3621,7 +3627,7 @@ code {
   border-radius: 999px;
   padding: 0 10px;
   background: #ffedd5;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
   font-size: 11px;
   font-weight: 950;
 }
@@ -4260,7 +4266,7 @@ code {
 
 .group-health-pill.is-attention {
   background: #ffedd5;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
 }
 
 .group-health-pill.is-risk {
@@ -4410,7 +4416,7 @@ code {
   border-radius: 22px;
   background:
     radial-gradient(circle at top right, rgba(251, 191, 36, 0.36), transparent 40%),
-    linear-gradient(135deg, #111827 0%, #7c2d12 100%);
+    linear-gradient(135deg, #111827 0%, var(--getro-primary-dark) 100%);
   color: #ffffff;
   box-shadow: var(--alvo-shadow-strong);
 }
@@ -4638,7 +4644,7 @@ code {
   border-radius: 999px;
   padding: 0 8px;
   background: #ffedd5;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
   font-size: 10px;
   font-weight: 950;
   text-transform: uppercase;
@@ -4675,7 +4681,7 @@ code {
 .scale-card small {
   display: block;
   margin-top: 7px;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
   font-size: 12px;
   font-weight: 900;
   line-height: 1.35;
@@ -4872,7 +4878,7 @@ code {
 }
 
 .staff-card svg {
-  color: #9a3412;
+  color: var(--getro-primary-dark);
 }
 
 .staff-card span {
@@ -6190,7 +6196,7 @@ code {
 .getro-pass-card.tribe-JUDAH { 
   background: 
     radial-gradient(circle at top right, rgba(249, 115, 22, 0.4), transparent 50%),
-    linear-gradient(135deg, #7c2d12 0%, #9a3412 100%); 
+    linear-gradient(135deg, var(--getro-primary-dark) 0%, var(--getro-primary-dark) 100%); 
 }
 
 .getro-pass-card::before {
@@ -7921,7 +7927,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   padding: 16px;
   border-radius: 14px;
   background: #fff7ed;
-  color: #7c2d12 !important;
+  color: var(--getro-primary-dark) !important;
   font-size: clamp(18px, 1.6vw, 24px) !important;
   font-weight: 800 !important;
   line-height: 1.45 !important;
@@ -8247,7 +8253,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 .finance-tab-button.is-active {
   border-color: rgba(234, 88, 12, 0.35) !important;
   background: #fff7ed !important;
-  color: #9a3412 !important;
+  color: var(--getro-primary-dark) !important;
 }
 
 .finance-insight-panel h4,
@@ -8774,7 +8780,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 .request-filter-bar button.is-active {
   border-color: rgba(234, 88, 12, 0.35);
   background: #fff7ed;
-  color: #9a3412;
+  color: var(--getro-primary-dark);
 }
 
 .request-list,
@@ -9107,7 +9113,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   padding: 16px;
   border-radius: 18px;
   background: #fff7ed;
-  color: #7c2d12;
+  color: var(--getro-primary-dark);
 }
 
 .guardrail-note svg {

@@ -7,7 +7,7 @@ import { useAppAuth } from "../../../app/providers";
 function QRCodeDisplay({ value, size = 180 }: { value: string; size?: number }) {
   return (
     <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
-      <QrCode size={40} strokeWidth={1.4} style={{ color: "#9a3412" }} />
+      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--getro-primary-dark)" }} />
       <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
         Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
       </span>

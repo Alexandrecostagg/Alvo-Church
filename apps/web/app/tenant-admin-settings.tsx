@@ -965,6 +965,6 @@ const saveButtonStyle = {
 const secondaryButtonStyle = {
   ...saveButtonStyle,
   background: "#fff7ed",
-  color: "#9a3412",
+  color: "var(--getro-primary-dark)",
   border: "1px solid rgba(210, 120, 54, 0.35)"
 } as const;

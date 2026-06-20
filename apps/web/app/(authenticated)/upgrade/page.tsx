@@ -31,7 +31,7 @@ function UpgradeContent() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={iconWrapStyle}>
-          <Lock size={32} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, #9a3412)" }} />
+          <Lock size={32} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--getro-primary-dark))" }} />
         </div>
 
         <h1 style={titleStyle}>Módulo não incluído no seu plano</h1>
@@ -112,7 +112,7 @@ const backLinkStyle = {
   gap: 6,
   padding: "10px 20px",
   borderRadius: 999,
-  background: "var(--alvo-accent-dark, #9a3412)",
+  background: "var(--alvo-accent-dark, var(--getro-primary-dark))",
   color: "#fff",
   fontWeight: 600,
   fontSize: 14,
