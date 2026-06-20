@@ -147,47 +147,33 @@ export function WorshipView() {
   };
 
   return (
-    <main className="form-page worship-page animate-entrance">
-      <header className="worship-hero">
-        <div>
-          <Link className="back-link" href="/serving">
-            <ArrowLeft size={16} />
-            Voltar para Escalas
-          </Link>
-          <p className="eyebrow">
-            <Music size={14} />
-            Louvor & Cifras
-          </p>
-          <h1>Repertório e Transposição</h1>
-          <p>
-            Organize músicas, tons, links e cifras em uma tela clara para ensaio, culto e preparação dos ministros.
-          </p>
+    <div className="page-root worship-page">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Louvor & Cifras</h1>
+          <p className="page-subtitle">Repertório, transposição e preparação para o culto</p>
         </div>
-
-        <aside className="worship-status-card">
-          <span className={`sync-pulse ${configured && firebaseReady ? "active" : "simulated"}`} />
-          <strong>{configured && firebaseReady ? "Firestore conectado" : "Modo demonstração"}</strong>
-          <p>{status}</p>
-        </aside>
+        <div className="page-header-actions">
+          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
+            {configured && firebaseReady ? "Firestore conectado" : "Modo demonstração"}
+          </span>
+        </div>
       </header>
 
-      <section className="worship-kpis" aria-label="Resumo do repertório">
-        <article>
-          <span>Músicas</span>
-          <strong>{songs.length}</strong>
-          <p>louvores no repertório ativo</p>
-        </article>
-        <article>
-          <span>Tom selecionado</span>
-          <strong>{selectedKey}</strong>
-          <p>transposição aplicada em tempo real</p>
-        </article>
-        <article>
-          <span>Louvor atual</span>
-          <strong>{selectedSong?.originalKey ?? "-"}</strong>
-          <p>tom original da música escolhida</p>
-        </article>
-      </section>
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon"><Music size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Músicas no repertório</span><span className="stat-value">{songs.length}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary-dark)" }}><Play size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Tom selecionado</span><span className="stat-value">{selectedKey}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><Music size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Tom original</span><span className="stat-value">{selectedSong?.originalKey ?? "—"}</span></div>
+        </div>
+      </div>
 
       <section className="worship-workbench">
         <aside className="worship-panel worship-library">
@@ -845,6 +831,6 @@ export function WorshipView() {
           }
         }
       `}</style>
-    </main>
+    </div>
   );
 }

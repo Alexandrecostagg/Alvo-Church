@@ -427,33 +427,41 @@ export function GroupsView() {
   }
 
   return (
-    <main className="form-page groups-page animate-entrance">
-      <section className="groups-hero">
-        <div>
-          <Link className="back-link" href="/">
-            Voltar ao painel
-          </Link>
-          <p className="eyebrow">Celulas e pequenos grupos</p>
-          <h1>Comunidade pequena, cuidado continuo.</h1>
-          <p>
-            Acompanhe capacidade, participantes, encontros e pessoas que ainda precisam
-            ser conectadas a uma celula.
-          </p>
+    <div className="page-root groups-page">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Células e Grupos</h1>
+          <p className="page-subtitle">Acompanhe capacidade, participantes, encontros e conexões</p>
         </div>
-        <aside className="groups-status-card antigravity-float">
-          <Waypoints size={24} />
-          <strong>{peopleWithoutGroup.length}</strong>
-          <span>pessoa(s) sem celula</span>
-          <p>{status}</p>
-        </aside>
-      </section>
+        <div className="page-header-actions">
+          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
+            {status}
+          </span>
+        </div>
+      </header>
 
-      <section className="groups-metric-grid">
-        <MetricCard detail="grupos ativos" icon={Waypoints} label="Celulas" value={activeGroups.length} />
-        <MetricCard detail="pessoas vinculadas" icon={UsersRound} label="Participantes" value={groupMembers.length} />
-        <MetricCard detail="capacidade declarada" icon={UserPlus} label="Vagas" value={totalCapacity || "-"} />
-        <MetricCard detail="presencas registradas" icon={CheckCircle2} label="Presenca" value={`${attendanceRate}%`} />
-      </section>
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon"><Waypoints size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Células ativas</span><span className="stat-value">{activeGroups.length}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><UsersRound size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Participantes</span><span className="stat-value">{groupMembers.length}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><UserPlus size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Vagas disponíveis</span><span className="stat-value">{totalCapacity || "—"}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><CheckCircle2 size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Taxa de presença</span><span className="stat-value">{attendanceRate}%</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}><AlertTriangle size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Sem célula</span><span className="stat-value">{peopleWithoutGroup.length}</span></div>
+        </div>
+      </div>
 
       <section className="groups-workbench">
         <aside className="groups-list-panel">
@@ -926,7 +934,7 @@ export function GroupsView() {
           </div>
         </aside>
       </section>
-    </main>
+    </div>
   );
 }
 

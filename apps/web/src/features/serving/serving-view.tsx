@@ -636,101 +636,41 @@ export function ServingView() {
   }
 
   return (
-    <main 
-      className="form-page serving-page" 
-      style={{ 
-        padding: "2rem",
-        ["--alvo-accent" as string]: "#2563eb",
-        ["--alvo-accent-soft" as string]: "rgba(37, 99, 235, 0.08)",
-        ["--alvo-accent-dark" as string]: "#1e3a8a",
-        ["--alvo-green" as string]: "#10b981",
-        ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)"
-      }}
-    >
-      <style dangerouslySetInnerHTML={{ __html: `
-        .serving-page .panel {
-          border: 1px solid var(--alvo-line) !important;
-          background: #ffffff !important;
-          border-radius: 20px !important;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
-          transition: all 0.2s ease;
-        }
-        .serving-page .panel:hover {
-          box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.05), 0 4px 6px -4px rgba(37, 99, 235, 0.05) !important;
-          border-color: var(--alvo-accent) !important;
-        }
-        .serving-page .serving-metric-grid article {
-          border: 1px solid var(--alvo-line) !important;
-          background: #ffffff !important;
-          border-radius: 20px !important;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
-          transition: all 0.2s ease;
-        }
-        .serving-page .serving-metric-grid article:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
-        }
-        .serving-page .hover-card:hover {
-          border-color: rgba(37, 99, 235, 0.25) !important;
-          background-color: var(--alvo-accent-soft) !important;
-          transform: translateY(-1.5px);
-        }
-      `}} />
-      
-      {/* HEADER CONTROLE CENTRAL */}
-      <section className="serving-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2.5rem", marginBottom: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "2rem" }}>
-          <div>
-            <Link className="back-link" href="/" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
-              ← Voltar ao painel principal
-            </Link>
-            <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Controle Central de Escalas</p>
-            <h1 style={{ color: "var(--alvo-ink)", fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-0.02em", margin: "8px 0" }}>
-              Quem serve também precisa de clareza.
-            </h1>
-            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.05rem", maxWidth: "750px", lineHeight: "1.6rem" }}>
-              Gerencie voluntários com inteligência baseada em Tribos, envie lembretes rápidos via WhatsApp e acompanhe a cobertura de voluntários em tempo real.
-            </p>
-          </div>
-          
-          <aside className="panel serving-status-card" style={{ padding: "1.5rem", width: "260px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Handshake size={28} style={{ color: "var(--alvo-accent)" }} />
-              <div>
-                <strong style={{ display: "block", fontSize: "1.75rem", color: "var(--alvo-ink)" }}>{coverage}%</strong>
-                <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>cobertura confirmada</span>
-              </div>
-            </div>
-            <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: "12px", borderTop: "1px solid var(--alvo-line)", paddingTop: "8px" }}>
-              {status}
-            </p>
-          </aside>
+    <div className="page-root serving-page">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Escalas & Voluntários</h1>
+          <p className="page-subtitle">Gerencie equipes, confirme presenças e acompanhe cobertura em tempo real</p>
         </div>
-      </section>
+        <div className="page-header-actions">
+          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
+            {status}
+          </span>
+        </div>
+      </header>
 
-      {/* KPI METRICAS */}
-      <section className="serving-metric-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
-        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid var(--alvo-green)" }}>
-          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Confirmados</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{confirmedCount}</strong>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>presença garantida nos cultos</p>
-        </article>
-        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #94a3b8" }}>
-          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Aguardando</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{pendingCount}</strong>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>lembretes prontos para envio</p>
-        </article>
-        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #ef4444" }}>
-          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Justificados/Riscos</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{declinedCount}</strong>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>impossibilidades ou faltas declaradas</p>
-        </article>
-        <article style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "20px", padding: "1.25rem", borderLeft: "4px solid #10b981" }}>
-          <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Banco de Voluntários</span>
-          <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{availablePeople.length || people.length}</strong>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4 }}>membros ativos elegíveis</p>
-        </article>
-      </section>
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(22,163,74,0.1)", color: "#16a34a" }}><CheckCircle2 size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Confirmados</span><span className="stat-value">{confirmedCount}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><Clock3 size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Aguardando</span><span className="stat-value">{pendingCount}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}><AlertTriangle size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Justificados</span><span className="stat-value">{declinedCount}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><Users size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Banco de voluntários</span><span className="stat-value">{availablePeople.length || people.length}</span></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary-dark)" }}><Handshake size={20} /></div>
+          <div className="stat-body"><span className="stat-label">Cobertura</span><span className="stat-value">{coverage}%</span></div>
+        </div>
+      </div>
 
       {/* SOLICITAÇÕES DE TROCA DE ESCALAS PENDENTES */}
       {swapRequests.filter(s => s.status === "pending").length > 0 && (
@@ -1256,7 +1196,7 @@ export function ServingView() {
         </div>
       )}
 
-    </main>
+    </div>
   );
 }
 
