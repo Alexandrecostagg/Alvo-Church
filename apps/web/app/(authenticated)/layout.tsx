@@ -1,17 +1,26 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { ModuleNav } from "./module-nav";
+import { TopBar } from "./top-bar";
 import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
+import { ToastProvider } from "../../contexts/ToastContext";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
     <OrgFeaturesProvider>
-      <div className="app-shell">
-        <Suspense fallback={null}>
-          <ModuleNav />
-        </Suspense>
-        {children}
-      </div>
+      <ToastProvider>
+        <div className="app-shell">
+          <Suspense fallback={null}>
+            <ModuleNav />
+          </Suspense>
+          <div className="app-content-column">
+            <Suspense fallback={null}>
+              <TopBar />
+            </Suspense>
+            {children}
+          </div>
+        </div>
+      </ToastProvider>
     </OrgFeaturesProvider>
   );
 }

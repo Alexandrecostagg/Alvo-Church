@@ -5,8 +5,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Building2,
-  CalendarDays,
   Bot,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   GraduationCap,
   Handshake,
@@ -15,21 +16,20 @@ import {
   LayoutDashboard,
   Map as MapIcon,
   MessageSquareText,
+  Music,
   Settings,
   ShieldCheck,
+  Store,
+  Tent,
+  CalendarRange,
+  Tv,
   UserCircle,
   UserPlus,
   UsersRound,
   Waypoints,
-  Tent,
-  CalendarRange,
-  Store,
-  Music,
-  Tv
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
-import { useAppAuth } from "../providers";
 import type { ModuleKey } from "@alvo/domain";
 
 type NavItem = {
@@ -94,12 +94,7 @@ export function ModuleNav() {
   const searchParams = useSearchParams();
   const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
   const { ready, isEnabled, isBeta } = useOrgFeatures();
-  const { user, firebaseReady, signIn, signOut } = useAppAuth();
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [email, setEmail] = useState("admin@alvochurch.app");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginPending, setLoginPending] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     activeLinkRef.current?.scrollIntoView({ block: "center", inline: "nearest" });
@@ -109,17 +104,27 @@ export function ModuleNav() {
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
-        // Itens sem moduleKey são sempre visíveis (core da plataforma)
         if (!item.moduleKey) return true;
-        // Itens com moduleKey: visíveis apenas quando o módulo está ativo
         return isEnabled(item.moduleKey);
       })
     }))
     .filter((group) => group.items.length > 0);
 
+  const CollapseIcon = collapsed ? ChevronRight : ChevronLeft;
+
   return (
-    <aside className="app-sidebar">
-      <BrandLogo compact size={42} />
+    <aside className="app-sidebar" data-collapsed={collapsed ? "true" : "false"}>
+      <div className="sidebar-header">
+        <BrandLogo compact size={42} />
+        <button
+          className="sidebar-collapse-btn"
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+          aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+        >
+          <CollapseIcon size={16} strokeWidth={2.2} />
+        </button>
+      </div>
       <nav className="app-nav" aria-label="Navegacao principal">
         {visibleGroups.map((group) => (
           <div key={group.title} className="nav-group">
@@ -133,6 +138,7 @@ export function ModuleNav() {
                     href={item.href}
                     ref={isActive ? activeLinkRef : undefined}
                     className={isActive ? "app-nav-item is-active" : "app-nav-item"}
+                    title={collapsed ? item.label : undefined}
                   >
                     <item.icon size={18} strokeWidth={2.2} />
                     <span>{item.label}</span>
@@ -147,76 +153,6 @@ export function ModuleNav() {
         ))}
       </nav>
       <div className="sidebar-footer">
-        {user ? (
-          <div className="sidebar-user">
-            <div className="sidebar-user-info">
-              <ShieldCheck size={14} />
-              <span>{user.email ?? "Admin"}</span>
-            </div>
-            <button
-              className="sidebar-signout-btn"
-              onClick={() => signOut()}
-              title="Sair"
-            >
-              Sair
-            </button>
-          </div>
-        ) : (
-          <div className="sidebar-login">
-            {!loginOpen ? (
-              <button
-                className="sidebar-login-btn"
-                onClick={() => setLoginOpen(true)}
-                disabled={!firebaseReady}
-              >
-                {firebaseReady ? "Entrar" : "Carregando..."}
-              </button>
-            ) : (
-              <form
-                className="sidebar-login-form"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setLoginError(null);
-                  setLoginPending(true);
-                  try {
-                    await signIn(email, password);
-                    setLoginOpen(false);
-                  } catch (err) {
-                    setLoginError(err instanceof Error ? err.message : "Erro ao entrar.");
-                  } finally {
-                    setLoginPending(false);
-                  }
-                }}
-              >
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                  autoComplete="email"
-                  className="sidebar-login-input"
-                />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Senha"
-                  autoComplete="current-password"
-                  className="sidebar-login-input"
-                />
-                {loginError && <span className="sidebar-login-error">{loginError}</span>}
-                <div className="sidebar-login-actions">
-                  <button type="submit" className="sidebar-login-btn" disabled={loginPending}>
-                    {loginPending ? "Entrando..." : "Entrar"}
-                  </button>
-                  <button type="button" className="sidebar-login-cancel" onClick={() => setLoginOpen(false)}>
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
         <div className="sidebar-status">
           <ShieldCheck size={14} />
           <span>Getro Growth · Co-branded</span>
