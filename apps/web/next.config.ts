@@ -16,10 +16,18 @@ const firebaseEnvKeys = [
 const workspaceEnv = readDotEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  reactCompiler: true,
   experimental: {
     cpus: 1
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Replace eval-based dynamic require with a no-op in Worker environments
+      // to avoid "Code generation from strings disallowed" EvalError in Cloudflare Workers.
+      config.module = config.module ?? {};
+      config.module.unknownContextCritical = false;
+      config.module.exprContextCritical = false;
+    }
+    return config;
   },
   env: firebaseEnvKeys.reduce<Record<string, string>>((acc, key) => {
     const value = process.env[key] ?? workspaceEnv[key];

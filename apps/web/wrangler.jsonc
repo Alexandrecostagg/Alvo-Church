@@ -9,6 +9,12 @@
   "assets": {
     "directory": ".open-next/assets"
   },
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "60605570c4774907b4f4d5b6395dd4c4"
+    }
+  ],
   "vars": {
     "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "alvo-church.firebaseapp.com",
