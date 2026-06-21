@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 
-const PublicLinksView = dynamic(
-  () => import("../../../src/features/settings/public-links-view").then((mod) => mod.PublicLinksView),
+const SettingsView = dynamic(
+  () => import("../../../src/features/settings/settings-view").then((mod) => mod.SettingsView),
   { ssr: false }
 );
 
 export default function SettingsPage() {
-  return <PublicLinksView />;
+  return <SettingsView />;
 }

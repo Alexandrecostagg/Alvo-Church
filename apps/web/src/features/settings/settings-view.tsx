@@ -1,0 +1,285 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import {
+  Copy, Check, QrCode, ExternalLink,
+  Bot, CalendarRange, GraduationCap, Handshake,
+  HeartHandshake, Landmark, Map as MapIcon, MessageSquareText,
+  ShieldCheck, Store, Tent, Users, Waypoints, CheckCircle, XCircle,
+  Save, Loader2, Info,
+} from "lucide-react";
+import { useAppAuth } from "../../../app/providers";
+import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
+import { saveOrganizationFeaturesSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import type { OrganizationFeaturesSettings } from "@alvo/types";
+import type { ModuleKey } from "@alvo/domain";
+
+/* ── QR helper ──────────────────────────────────────────────────────────── */
+function QRCodeDisplay({ size = 180 }: { size?: number }) {
+  return (
+    <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
+      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--getro-primary-dark)" }} />
+      <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
+        Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
+      </span>
+    </div>
+  );
+}
+
+/* ── Module definitions ──────────────────────────────────────────────────── */
+type ModuleDef = {
+  key: ModuleKey;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+  color: string;
+};
+
+const MODULE_DEFS: ModuleDef[] = [
+  { key: "visitors",      label: "Recepção & Visitantes",  desc: "Formulários de visita, painel do pastor, triagem de novos contatos", icon: Users,             color: "#3b82f6" },
+  { key: "groups",        label: "Células",                desc: "Grupos de discipulado, reuniões, chamadas e relatórios de célula",   icon: Waypoints,         color: "#10b981" },
+  { key: "tribes",        label: "Tribos Ministeriais",    desc: "Classificação vocacional por IA, perfil ministerial e indicação",    icon: Tent,              color: "#f97316" },
+  { key: "journeys",      label: "Jornadas & EAD",         desc: "Trilha de integração de novos membros e escola de discipulado EAD",  icon: MapIcon,           color: "#8b5cf6" },
+  { key: "events",        label: "Eventos",                desc: "Agenda estratégica, inscrições, check-in e relatórios de presença",  icon: CalendarRange,     color: "#06b6d4" },
+  { key: "volunteers",    label: "Escalas & Louvor",       desc: "Escalas de serviço, gestão de equipes e cifras para músicos",        icon: Handshake,         color: "#ec4899" },
+  { key: "communication", label: "Comunicação",            desc: "Envio de mensagens, push, WhatsApp e segmentação por grupo",        icon: MessageSquareText, color: "#64748b" },
+  { key: "giving",        label: "Doações & Dízimos",      desc: "Recebimento de dízimos e ofertas via PIX, cartão e boleto",         icon: HeartHandshake,    color: "#16a34a" },
+  { key: "finance",       label: "Finanças",               desc: "Relatórios financeiros, receitas, despesas e fluxo de caixa",       icon: Landmark,          color: "#d97706" },
+  { key: "ai",            label: "IA Pastoral",            desc: "Análise preditiva de risco de desengajamento e insights por membro", icon: Bot,               color: "#7c3aed" },
+  { key: "marketplace",   label: "Marketplace",            desc: "Comunidade de trocas e serviços entre membros da igreja",           icon: Store,             color: "#0ea5e9" },
+  { key: "children",      label: "Segurança Kids",         desc: "Check-in de crianças, identificação e rastreio de retirada",       icon: ShieldCheck,       color: "#f43f5e" },
+  { key: "publicForms",   label: "Formulários Públicos",   desc: "QR Codes para visitantes e links de cadastro sem login",           icon: GraduationCap,     color: "#84cc16" },
+];
+
+/* ── Toggle switch ───────────────────────────────────────────────────────── */
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!enabled)}
+      style={{
+        width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+        background: enabled ? "var(--getro-primary)" : "var(--alvo-border)",
+        position: "relative", flexShrink: 0, transition: "background 0.2s",
+      }}
+      aria-checked={enabled}
+      role="switch"
+    >
+      <span style={{
+        position: "absolute", top: 3, left: enabled ? 23 : 3,
+        width: 18, height: 18, borderRadius: "50%", background: "white",
+        transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }} />
+    </button>
+  );
+}
+
+/* ── Main view ───────────────────────────────────────────────────────────── */
+export function SettingsView() {
+  const { organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
+  const { features, ready } = useOrgFeatures();
+  const [copied, setCopied] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Local module state — initialized from Firestore or all-enabled fallback
+  const [moduleState, setModuleState] = useState<Record<ModuleKey, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const def of MODULE_DEFS) {
+      initial[def.key] = features?.modules?.[def.key]?.enabled ?? true;
+    }
+    return initial as Record<ModuleKey, boolean>;
+  });
+
+  const toggleModule = useCallback((key: ModuleKey, value: boolean) => {
+    setModuleState(prev => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }, []);
+
+  async function saveModules() {
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    setSaving(true);
+    try {
+      const modules = {} as OrganizationFeaturesSettings["modules"];
+      for (const def of MODULE_DEFS) {
+        (modules as Record<string, unknown>)[def.key] = { enabled: moduleState[def.key] };
+      }
+      // core is always enabled
+      (modules as Record<string, unknown>).core = { enabled: true };
+
+      const updated: OrganizationFeaturesSettings = {
+        organizationId: organizationId ?? "",
+        modules,
+      };
+      await saveOrganizationFeaturesSettings(firebaseConfig, updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to save features:", e);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const orgSlug = organizationId;
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const publicLinks = [
+    { key: "visit",  label: "Formulário de Visitante", desc: "Exiba este QR Code na entrada do culto", path: `/p/${orgSlug}/visit`, highlight: true },
+    { key: "give",   label: "Link de Doação",          desc: "Compartilhe para receber dízimos e ofertas", path: `/p/${orgSlug}/give`, highlight: false },
+    { key: "portal", label: "Portal Público",          desc: "Página pública da organização", path: `/p/${orgSlug}`, highlight: false },
+  ];
+
+  async function copyLink(url: string, key: string) {
+    await navigator.clipboard.writeText(url);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  const enabledCount = Object.values(moduleState).filter(Boolean).length;
+
+  return (
+    <div className="page-root">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Configurações</h1>
+          <p className="page-subtitle">Gerencie módulos ativos, links públicos e personalizações da organização</p>
+        </div>
+      </header>
+
+      {/* ── Módulos ──────────────────────────────────────────────────── */}
+      <section className="content-section">
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">Módulos do Sistema</h2>
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
+              {enabledCount} de {MODULE_DEFS.length} módulos ativos — controle o que aparece no menu de navegação
+            </p>
+          </div>
+          <button
+            onClick={saveModules}
+            disabled={saving || !isFirebaseWebRuntimeConfigured(firebaseConfig)}
+            className="btn-primary btn-sm"
+            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
+          >
+            {saving ? (
+              <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</>
+            ) : saved ? (
+              <><CheckCircle size={14} /> Salvo!</>
+            ) : (
+              <><Save size={14} /> Salvar</>
+            )}
+          </button>
+        </div>
+
+        {!isFirebaseWebRuntimeConfigured(firebaseConfig) && (
+          <div className="settings-demo-banner">
+            <Info size={14} style={{ color: "#d97706", flexShrink: 0 }} />
+            <span>Modo demo — configure o Firebase para persistir as alterações de módulos</span>
+          </div>
+        )}
+
+        <div className="modules-grid">
+          {MODULE_DEFS.map(def => {
+            const Icon = def.icon;
+            const enabled = moduleState[def.key];
+            return (
+              <div
+                key={def.key}
+                className="module-card"
+                style={{ borderColor: enabled ? `${def.color}30` : "var(--alvo-border)", opacity: enabled ? 1 : 0.65 }}
+              >
+                <div className="module-card-left">
+                  <div className="module-icon" style={{ background: `${def.color}18`, color: def.color }}>
+                    <Icon size={18} />
+                  </div>
+                  <div className="module-info">
+                    <strong style={{ fontSize: 13, color: "var(--alvo-ink)", display: "flex", alignItems: "center", gap: 6 }}>
+                      {def.label}
+                      {enabled
+                        ? <CheckCircle size={12} style={{ color: "#16a34a" }} />
+                        : <XCircle size={12} style={{ color: "#dc2626" }} />}
+                    </strong>
+                    <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{def.desc}</span>
+                  </div>
+                </div>
+                <Toggle enabled={enabled} onChange={v => toggleModule(def.key, v)} />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Links Públicos ────────────────────────────────────────────── */}
+      <section className="content-section">
+        <div className="section-header">
+          <h2 className="section-title">Links Públicos &amp; QR Codes</h2>
+        </div>
+        <div style={{ display: "grid", gap: 16, maxWidth: 720 }}>
+          {publicLinks.map(link => {
+            const fullUrl = `${baseUrl}${link.path}`;
+            return (
+              <div key={link.key} style={{
+                padding: "20px 24px", borderRadius: 14,
+                background: link.highlight ? "#fffdf8" : "var(--alvo-surface)",
+                border: link.highlight ? "1px solid rgba(154,52,18,0.2)" : "1px solid var(--alvo-border)",
+                display: "grid", gap: 14,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: 14, fontWeight: 600, color: "var(--alvo-ink)", marginBottom: 2 }}>{link.label}</strong>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--alvo-ink-soft)" }}>{link.desc}</p>
+                  </div>
+                  <a href={link.path} target="_blank" rel="noreferrer" style={{ display: "flex", color: "var(--alvo-ink-soft)", padding: 4 }}>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+                {link.highlight && <div style={{ display: "flex", justifyContent: "center" }}><QRCodeDisplay size={160} /></div>}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-border)", overflow: "hidden" }}>
+                  <code style={{ flex: 1, fontSize: 12, color: "var(--alvo-ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fullUrl}</code>
+                  <button
+                    onClick={() => copyLink(fullUrl, link.key)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--alvo-border)", background: "var(--alvo-surface)", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    {copied === link.key ? <Check size={13} /> : <Copy size={13} />}
+                    {copied === link.key ? "Copiado" : "Copiar"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <style jsx>{`
+        .settings-demo-banner {
+          display: flex; align-items: center; gap: 8px;
+          background: #fffbeb; border: 1px solid #fde68a;
+          border-radius: 10px; padding: 10px 14px;
+          font-size: 12px; color: var(--alvo-ink-soft); margin-bottom: 12px;
+        }
+        .modules-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 10px;
+        }
+        .module-card {
+          display: flex; align-items: center; justify-content: space-between; gap: 14px;
+          padding: 14px 16px; border-radius: 12px;
+          background: var(--alvo-surface); border: 1.5px solid;
+          transition: border-color 0.2s, opacity 0.2s;
+        }
+        .module-card-left {
+          display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0;
+        }
+        .module-icon {
+          width: 38px; height: 38px; border-radius: 10px;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .module-info {
+          display: flex; flex-direction: column; gap: 3px; min-width: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
