@@ -1,245 +1,500 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  createFirebaseWebRuntimeConfigFromEnv, 
-  fetchGroups, 
-  fetchPeople, 
-  isFirebaseWebRuntimeConfigured 
+import {
+  fetchPeople,
+  isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
-import type { Group, Person, TribeCode } from "@alvo/types";
+import type { Person, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { activeGroups, recentPeople, tribeDefinitions } from "../../../src/lib/mock-data";
-import { UsersRound, Waypoints, ChevronRight, Tent, Search, X } from "lucide-react";
+import { recentPeople, tribeDefinitions } from "../../lib/mock-data";
+import {
+  UsersRound,
+  Tent,
+  Search,
+  X,
+  Sparkles,
+  AlertCircle,
+  CheckCircle,
+  ChevronRight,
+  Bot,
+  RotateCcw,
+  User
+} from "lucide-react";
 import Link from "next/link";
+
+type TribeAccent = { main: string; soft: string; dark: string };
 
 export function TribesView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [realPeople, setRealPeople] = useState<Person[]>([]);
-  const [realGroups, setRealGroups] = useState<Group[]>([]);
   const [selectedTribe, setSelectedTribe] = useState<TribeCode | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
-
-    async function loadTribesData() {
+    async function load() {
       try {
-        const [people, groups] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 200),
-          fetchGroups(firebaseConfig, { organizationId }, 100)
-        ]);
+        const people = await fetchPeople(firebaseConfig, { organizationId }, 300);
         setRealPeople(people);
-        setRealGroups(groups);
-      } catch (error) {
-        console.error("Failed to sync tribes data:", error);
+      } catch (e) {
+        console.error("Failed to load people:", e);
       }
     }
-    void loadTribesData();
+    void load();
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const peopleSource = (realPeople.length > 0 ? realPeople : recentPeople) as Person[];
-  const groupsSource = (realGroups.length > 0 ? realGroups : activeGroups) as Group[];
 
-  const tribesWithStats = tribeDefinitions.map(tribe => {
-    const tribeMembers = peopleSource.filter(p => p.tribePrimaryCode === tribe.code);
-    const tribeCells = groupsSource.filter(g => g.tribeCode === tribe.code);
-    const accent = getTribeAccent(tribe.code as TribeCode);
-    return {
-      ...tribe,
-      memberCount: tribeMembers.length,
-      cellCount: tribeCells.length,
-      accent
-    };
-  }).filter(t => 
-    search === "" || 
-    t.name.toLowerCase().includes(search.toLowerCase()) || 
-    t.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const classified   = peopleSource.filter(p => p.tribePrimaryCode);
+  const unclassified = peopleSource.filter(p => !p.tribePrimaryCode);
 
-  const filteredGroups = selectedTribe 
-    ? groupsSource.filter(g => g.tribeCode === selectedTribe)
-    : groupsSource;
+  const tribesWithStats = tribeDefinitions
+    .map(tribe => {
+      const members = peopleSource.filter(p => p.tribePrimaryCode === tribe.code);
+      const accent  = getTribeAccent(tribe.code as TribeCode);
+      return { ...tribe, memberCount: members.length, members, accent };
+    })
+    .filter(t =>
+      search === "" ||
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase()) ||
+      t.ministrySummary.toLowerCase().includes(search.toLowerCase())
+    );
 
-  const selectedTribeData = selectedTribe 
-    ? tribesWithStats.find(t => t.code === selectedTribe) 
+  const selectedTribeData = selectedTribe
+    ? tribesWithStats.find(t => t.code === selectedTribe)
     : null;
 
+  const totalClassified   = classified.length;
+  const totalUnclassified = unclassified.length;
+  const coveragePct = peopleSource.length > 0
+    ? Math.round((totalClassified / peopleSource.length) * 100)
+    : 0;
+
   return (
-    <main className="tribes-page">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Ecossistema Pastoral</p>
-          <h1>Tribos & Comunidades</h1>
-        </div>
-        <Link href="/tribes/test" className="primary-pill compact" style={{ textDecoration: "none" }}>
-          Fazer Teste de Dons
-        </Link>
-      </header>
+    <div className="page-root">
 
-      {/* Search */}
-      <div className="tribes-search-bar">
-        <Search size={16} style={{ opacity: 0.4 }} />
-        <input
-          type="text"
-          placeholder="Buscar tribo..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="tribes-search-input"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <X size={14} style={{ opacity: 0.5 }} />
-          </button>
-        )}
-      </div>
-
-      {/* Stats summary */}
-      <div className="tribes-stats-bar">
-        <div className="tribes-stat-pill">
-          <Tent size={14} />
-          <span><strong>{tribeDefinitions.length}</strong> tribos ativas</span>
+      {/* Header */}
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Tribos Ministeriais</h1>
+          <p className="page-subtitle">
+            Identidade vocacional dos membros — classificada automaticamente pela IA a partir da ficha cadastral
+          </p>
         </div>
-        <div className="tribes-stat-pill">
-          <UsersRound size={14} />
-          <span><strong>{peopleSource.length}</strong> pessoas mapeadas</span>
-        </div>
-        <div className="tribes-stat-pill">
-          <Waypoints size={14} />
-          <span><strong>{groupsSource.length}</strong> células vinculadas</span>
-        </div>
-      </div>
-
-      {/* Tribe Grid - 12 tribes */}
-      <section className="tribe-grid tribe-grid-full">
-        {tribesWithStats.map((tribe) => (
-          <article 
-            key={tribe.code} 
-            className={`tribe-card tone-${tribe.code.toLowerCase()} ${selectedTribe === tribe.code ? 'is-selected' : ''}`}
-            onClick={() => setSelectedTribe(selectedTribe === tribe.code ? null : tribe.code as TribeCode)}
-            style={{ 
-              borderColor: selectedTribe === tribe.code ? tribe.accent.main : 'transparent',
-              background: selectedTribe === tribe.code 
-                ? `radial-gradient(circle at top right, ${tribe.accent.soft}, #fff)` 
-                : '#fff',
-              cursor: 'pointer'
-            }}
-          >
-            <div className="tribe-icon" style={{ backgroundColor: tribe.accent.soft, color: tribe.accent.dark }}>
-              <Tent size={22} />
-            </div>
-            <div className="tribe-info">
-              <h2 style={{ color: tribe.accent.dark, fontSize: '15px' }}>{tribe.name}</h2>
-              <p style={{ fontSize: '12px', lineHeight: '1.4' }}>{tribe.description}</p>
-            </div>
-            <div className="tribe-stats">
-              <div className="stat" style={{ color: tribe.accent.main }}>
-                <UsersRound size={12} />
-                <span>{tribe.memberCount}</span>
-              </div>
-              <div className="stat" style={{ color: tribe.accent.main }}>
-                <Waypoints size={12} />
-                <span>{tribe.cellCount} cél.</span>
-              </div>
-            </div>
-            <div className="tribe-selection-indicator" style={{ color: tribe.accent.main }}>
-              <ChevronRight size={16} style={{ transform: selectedTribe === tribe.code ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s' }} />
-            </div>
-          </article>
-        ))}
-      </section>
-
-      {/* Tribe Detail Panel */}
-      {selectedTribeData && (
-        <div className="tribe-detail-panel animate-entrance" style={{ borderLeft: `4px solid ${selectedTribeData.accent.main}`, backgroundColor: selectedTribeData.accent.soft }}>
-          <div className="tribe-detail-header">
-            <div className="tribe-icon" style={{ backgroundColor: selectedTribeData.accent.main + '20', color: selectedTribeData.accent.dark }}>
-              <Tent size={28} />
-            </div>
-            <div>
-              <h2 style={{ color: selectedTribeData.accent.dark }}>Tribo de {selectedTribeData.name}</h2>
-              <p style={{ color: selectedTribeData.accent.dark, opacity: 0.8, fontSize: '13px' }}>{selectedTribeData.ministrySummary}</p>
-            </div>
-          </div>
-          <div className="tribe-detail-stats">
-            <div className="tribe-stat-box" style={{ backgroundColor: 'white' }}>
-              <strong style={{ color: selectedTribeData.accent.dark, fontSize: '24px' }}>{selectedTribeData.memberCount}</strong>
-              <span>Membros</span>
-            </div>
-            <div className="tribe-stat-box" style={{ backgroundColor: 'white' }}>
-              <strong style={{ color: selectedTribeData.accent.dark, fontSize: '24px' }}>{selectedTribeData.cellCount}</strong>
-              <span>Células</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cells Section */}
-      <section className="tribes-cells-section">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">
-              {selectedTribe ? `Células da Tribo ${selectedTribeData?.name}` : "Todas as Células"}
-            </p>
-            <h2>{selectedTribe ? "Comunidades Vinculadas" : "Visão Geral de Grupos"}</h2>
-          </div>
-          <div className="section-actions">
-            <span className="soft-pill">{filteredGroups.length} grupos</span>
-            {selectedTribe && (
-              <button 
-                className="soft-pill" 
-                style={{ cursor: 'pointer', border: 'none', background: '#f1f5f9' }}
-                onClick={() => setSelectedTribe(null)}
-              >
-                Ver todos
+        <div className="page-header-actions">
+          <div className="tribes-search-bar">
+            <Search size={14} style={{ color: "var(--alvo-ink-soft)" }} />
+            <input
+              type="text"
+              placeholder="Buscar tribo..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="tribes-search-input"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+                <X size={13} style={{ color: "var(--alvo-ink-soft)" }} />
               </button>
             )}
           </div>
         </div>
+      </header>
 
-        <div className="cells-list-grid">
-          {filteredGroups.length > 0 ? (
-            filteredGroups.map(group => {
-              const accent = getTribeAccent(group.tribeCode);
-              const dayLabel = getDayLabel(group.meetingDayOfWeek);
-              return (
-                <div key={group.id} className="cell-compact-card animate-entrance">
-                  <div 
-                    className="cell-tribe-tag" 
-                    style={{ backgroundColor: accent.soft, color: accent.dark }}
-                  >
-                    <Tent size={10} />
-                    {group.tribeCode || "Sem Tribo"}
-                  </div>
-                  <div className="cell-content">
-                    <h3>{group.name}</h3>
-                    <p>{group.city}, {group.state} • {dayLabel} {group.meetingTime}</p>
-                  </div>
-                  <Link href={`/groups/${group.id}`} className="icon-button" style={{ color: accent.main }}>
-                    <ChevronRight size={16} />
-                  </Link>
+      {/* Stats row */}
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary)" }}>
+            <Tent size={18} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Tribos ativas</span>
+            <span className="stat-value">{tribeDefinitions.length}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>
+            <CheckCircle size={18} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Classificados</span>
+            <span className="stat-value">{totalClassified}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "#fef3c7", color: "#d97706" }}>
+            <AlertCircle size={18} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Aguardando IA</span>
+            <span className="stat-value">{totalUnclassified}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "#ede9fe", color: "#7c3aed" }}>
+            <Bot size={18} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Cobertura</span>
+            <span className="stat-value">{coveragePct}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Banner de classificação automática */}
+      <div className="tribes-ai-banner">
+        <Bot size={16} style={{ color: "var(--getro-primary)", flexShrink: 0 }} />
+        <div>
+          <strong>Classificação automática por IA</strong>
+          <span>
+            {" "}A tribo de cada membro é sugerida automaticamente com base no Perfil Ministerial preenchido na ficha de cadastro.
+            O administrador pode revisar e reclassificar manualmente a qualquer momento.
+          </span>
+        </div>
+      </div>
+
+      {/* Grade das 12 tribos */}
+      <section className="content-section">
+        <div className="section-header">
+          <h2 className="section-title">As 12 Tribos</h2>
+          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>Clique para ver os membros</span>
+        </div>
+
+        <div className="tribe-grid">
+          {tribesWithStats.map(tribe => {
+            const isSelected = selectedTribe === tribe.code;
+            return (
+              <article
+                key={tribe.code}
+                className="tribe-card"
+                onClick={() => setSelectedTribe(isSelected ? null : tribe.code as TribeCode)}
+                style={{
+                  borderColor: isSelected ? tribe.accent.main : "var(--alvo-border)",
+                  background: isSelected
+                    ? `linear-gradient(135deg, ${tribe.accent.soft}, white)`
+                    : "var(--alvo-surface)",
+                  cursor: "pointer",
+                }}
+              >
+                <div className="tribe-card-icon" style={{ background: tribe.accent.soft, color: tribe.accent.dark }}>
+                  <Tent size={20} />
                 </div>
-              );
-            })
-          ) : (
-            <div className="empty-state-card">
-              <Waypoints size={32} opacity={0.2} />
-              <p>Nenhuma célula vinculada a esta tribo ainda.</p>
-            </div>
-          )}
+                <div className="tribe-card-body">
+                  <h3 style={{ color: tribe.accent.dark, fontSize: 14, fontWeight: 800, margin: 0 }}>
+                    {tribe.name}
+                  </h3>
+                  <p style={{ fontSize: 12, color: "var(--alvo-ink-soft)", margin: "4px 0 0", lineHeight: 1.4 }}>
+                    {tribe.description}
+                  </p>
+                </div>
+                <div className="tribe-card-footer" style={{ color: tribe.accent.main }}>
+                  <UsersRound size={12} />
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{tribe.memberCount} membros</span>
+                  <ChevronRight
+                    size={14}
+                    style={{
+                      marginLeft: "auto",
+                      transform: isSelected ? "rotate(90deg)" : "none",
+                      transition: "transform 0.2s"
+                    }}
+                  />
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
-    </main>
+
+      {/* Painel de detalhe da tribo selecionada */}
+      {selectedTribeData && (
+        <section className="tribe-detail-panel animate-entrance" style={{ borderLeft: `4px solid ${selectedTribeData.accent.main}` }}>
+          <div className="tribe-detail-header">
+            <div className="tribe-detail-icon" style={{ background: selectedTribeData.accent.soft, color: selectedTribeData.accent.dark }}>
+              <Tent size={24} />
+            </div>
+            <div>
+              <h2 style={{ color: selectedTribeData.accent.dark, fontSize: 18, fontWeight: 800, margin: 0 }}>
+                Tribo de {selectedTribeData.name}
+              </h2>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: 13, margin: "4px 0 0" }}>
+                {selectedTribeData.ministrySummary}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedTribe(null)}
+              style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--alvo-ink-soft)", display: "flex" }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {selectedTribeData.memberCount === 0 ? (
+            <div className="empty-state" style={{ padding: "32px 0" }}>
+              <UsersRound size={32} style={{ color: "var(--alvo-border)", margin: "0 auto 12px" }} />
+              <p style={{ color: "var(--alvo-ink-soft)", textAlign: "center" }}>
+                Nenhum membro classificado nesta tribo ainda.
+              </p>
+            </div>
+          ) : (
+            <div className="tribe-members-list">
+              {selectedTribeData.members.map(person => (
+                <Link
+                  key={person.id}
+                  href={`/members/${person.id}`}
+                  className="tribe-member-row"
+                >
+                  <div className="tribe-member-avatar" style={{ background: selectedTribeData.accent.soft, color: selectedTribeData.accent.dark }}>
+                    {getInitials(person)}
+                  </div>
+                  <div className="tribe-member-info">
+                    <strong style={{ fontSize: 13, color: "var(--alvo-ink)" }}>
+                      {person.preferredName || person.firstName} {person.lastName}
+                    </strong>
+                    <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
+                      {getMemberStatusLabel(person.memberStatus)}
+                    </span>
+                  </div>
+                  {person.tribeSecondaryCode && (
+                    <span className="tribe-secondary-badge">
+                      + {person.tribeSecondaryCode}
+                    </span>
+                  )}
+                  <ChevronRight size={14} style={{ color: "var(--alvo-border)", marginLeft: "auto" }} />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Pendentes de classificação */}
+      {unclassified.length > 0 && (
+        <section className="content-section">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">Aguardando classificação</h2>
+              <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
+                Membros com Perfil Ministerial preenchido que ainda não receberam tribo
+              </p>
+            </div>
+            <button className="btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Bot size={14} />
+              Classificar todos com IA
+            </button>
+          </div>
+
+          <div className="unclassified-list">
+            {unclassified.slice(0, 10).map(person => (
+              <div key={person.id} className="unclassified-row">
+                <div className="tribe-member-avatar" style={{ background: "#f1f5f9", color: "#64748b" }}>
+                  {getInitials(person)}
+                </div>
+                <div className="tribe-member-info">
+                  <strong style={{ fontSize: 13, color: "var(--alvo-ink)" }}>
+                    {person.preferredName || person.firstName} {person.lastName}
+                  </strong>
+                  <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
+                    {getMemberStatusLabel(person.memberStatus)}
+                    {(person as any).ministerialInterests?.length > 0 && " · perfil ministerial preenchido"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+                  <button className="btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <Sparkles size={12} />
+                    Classificar
+                  </button>
+                  <Link href={`/members/${person.id}`} className="btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <User size={12} />
+                    Ficha
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {unclassified.length > 10 && (
+              <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", textAlign: "center", padding: "12px 0" }}>
+                +{unclassified.length - 10} pessoas aguardando classificação
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
+      <style jsx>{`
+        .tribes-search-bar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--alvo-surface);
+          border: 1px solid var(--alvo-border);
+          border-radius: 10px;
+          padding: 8px 12px;
+          width: 220px;
+        }
+        .tribes-search-input {
+          border: none;
+          background: none;
+          outline: none;
+          font-size: 13px;
+          color: var(--alvo-ink);
+          width: 100%;
+        }
+        .tribes-ai-banner {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          background: var(--getro-primary-softer);
+          border: 1px solid var(--getro-primary-soft);
+          border-radius: 12px;
+          padding: 12px 16px;
+          font-size: 13px;
+          color: var(--alvo-ink-soft);
+          line-height: 1.5;
+        }
+        .tribes-ai-banner strong {
+          color: var(--alvo-ink);
+        }
+        .tribe-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 12px;
+        }
+        .tribe-card {
+          border: 1.5px solid;
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .tribe-card:hover {
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          transform: translateY(-1px);
+        }
+        .tribe-card-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .tribe-card-body {
+          flex: 1;
+        }
+        .tribe-card-footer {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-top: 8px;
+          border-top: 1px solid var(--alvo-border);
+        }
+        .tribe-detail-panel {
+          background: var(--alvo-surface);
+          border: 1px solid var(--alvo-border);
+          border-radius: 14px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .tribe-detail-header {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .tribe-detail-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .tribe-members-list {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .tribe-member-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          text-decoration: none;
+          transition: background 0.1s;
+        }
+        .tribe-member-row:hover {
+          background: var(--alvo-surface-muted);
+        }
+        .tribe-member-avatar {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 800;
+          flex-shrink: 0;
+        }
+        .tribe-member-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .tribe-secondary-badge {
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--alvo-ink-soft);
+          background: var(--alvo-surface-muted);
+          border: 1px solid var(--alvo-border);
+          border-radius: 6px;
+          padding: 2px 6px;
+        }
+        .unclassified-list {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .unclassified-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--alvo-border);
+          background: var(--alvo-surface);
+        }
+      `}</style>
+    </div>
   );
 }
 
-function getDayLabel(day?: number) {
-  const days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  return day !== undefined ? days[day] : "";
+function getInitials(person: Person) {
+  const first = (person.preferredName || person.firstName || "").charAt(0);
+  const last  = (person.lastName || "").charAt(0);
+  return `${first}${last}`.toUpperCase();
 }
 
-function getTribeAccent(code?: TribeCode | string) {
-  const accents: Record<string, { main: string; soft: string; dark: string }> = {
+function getMemberStatusLabel(status: Person["memberStatus"]) {
+  const labels: Record<string, string> = {
+    visitor:      "Visitante",
+    congregant:   "Congregado",
+    new_believer: "Novo Convertido",
+    member:       "Membro",
+    leader:       "Líder",
+    volunteer:    "Voluntário",
+  };
+  return labels[status ?? ""] || "Membro";
+}
+
+function getTribeAccent(code?: TribeCode | string): TribeAccent {
+  const accents: Record<string, TribeAccent> = {
     ASHER:    { main: "#10b981", soft: "#ecfdf5", dark: "#065f46" },
     LEVI:     { main: "#3b82f6", soft: "#eff6ff", dark: "#1e3a8a" },
     JUDAH:    { main: "#f97316", soft: "#fff7ed", dark: "#7c2d12" },
@@ -252,8 +507,6 @@ function getTribeAccent(code?: TribeCode | string) {
     EPHRAIM:  { main: "#84cc16", soft: "#f7fee7", dark: "#365314" },
     BENJAMIN: { main: "#6366f1", soft: "#eef2ff", dark: "#1e1b4b" },
     REUBEN:   { main: "#ef4444", soft: "#fef2f2", dark: "#7f1d1d" },
-    default:  { main: "#94a3b8", soft: "#f1f5f9", dark: "#334155" }
   };
-
-  return accents[code as string] || accents.default;
+  return accents[code as string] ?? { main: "#94a3b8", soft: "#f1f5f9", dark: "#334155" };
 }
