@@ -86,6 +86,8 @@ export interface OrganizationBrandingSettings {
   fontBody?: string;
   showPoweredByAlvo: boolean;
   poweredByLabel?: string;
+  pixKey?: string;
+  pixReceiverName?: string;
 }
 
 export interface OrganizationSubscriptionSettings {

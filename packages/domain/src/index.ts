@@ -105,6 +105,7 @@ export function getOrganizationDisplayName(organization: Organization) {
 }
 
 export * from "./featureGate";
+export * from "./pix";
 
 export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brandMode"]) {
   switch (brandMode) {

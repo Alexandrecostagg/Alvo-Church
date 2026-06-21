@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
-import { saveOrganizationFeaturesSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import { saveOrganizationFeaturesSettings, saveOrganizationBrandingSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import type { OrganizationFeaturesSettings } from "@alvo/types";
 import type { ModuleKey } from "@alvo/domain";
 
@@ -80,6 +80,10 @@ export function SettingsView() {
   const [copied, setCopied] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pixKey, setPixKey] = useState(tenantRuntime?.settings?.branding?.pixKey ?? "");
+  const [pixName, setPixName] = useState(tenantRuntime?.settings?.branding?.pixReceiverName ?? "");
+  const [pixSaving, setPixSaving] = useState(false);
+  const [pixSaved, setPixSaved] = useState(false);
 
   // Local module state — initialized from Firestore or all-enabled fallback
   const [moduleState, setModuleState] = useState<Record<ModuleKey, boolean>>(() => {
@@ -117,6 +121,25 @@ export function SettingsView() {
       console.error("Failed to save features:", e);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function savePixConfig() {
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding) return;
+    setPixSaving(true);
+    try {
+      const updated = {
+        ...tenantRuntime.settings.branding,
+        pixKey: pixKey.trim(),
+        pixReceiverName: pixName.trim(),
+      };
+      await saveOrganizationBrandingSettings(firebaseConfig, updated);
+      setPixSaved(true);
+      setTimeout(() => setPixSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to save PIX config:", e);
+    } finally {
+      setPixSaving(false);
     }
   }
 
@@ -206,6 +229,59 @@ export function SettingsView() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── PIX ──────────────────────────────────────────────────────── */}
+      <section className="content-section">
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">Configuração PIX</h2>
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
+              Chave usada para gerar QR Codes de doação na página pública
+            </p>
+          </div>
+          <button
+            onClick={savePixConfig}
+            disabled={pixSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding}
+            className="btn-primary btn-sm"
+            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
+          >
+            {pixSaving ? (
+              <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</>
+            ) : pixSaved ? (
+              <><CheckCircle size={14} /> Salvo!</>
+            ) : (
+              <><Save size={14} /> Salvar</>
+            )}
+          </button>
+        </div>
+        <div style={{ display: "grid", gap: 12, maxWidth: 500 }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--alvo-ink)" }}>
+              Chave PIX
+            </label>
+            <input
+              type="text"
+              placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+              value={pixKey}
+              onChange={e => { setPixKey(e.target.value); setPixSaved(false); }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--alvo-ink)" }}>
+              Nome do beneficiário
+              <span style={{ fontWeight: 400, color: "var(--alvo-ink-soft)", fontSize: 12, marginLeft: 6 }}>(aparece no app do banco)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Igreja Alvo Comunidade"
+              value={pixName}
+              onChange={e => { setPixName(e.target.value); setPixSaved(false); }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+            />
+          </div>
         </div>
       </section>
 
