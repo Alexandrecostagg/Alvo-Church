@@ -16,16 +16,17 @@ export function Sparkline({ data, color = "var(--getro-primary)", width = 120, h
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
   const range = max - min || 1;
+  const W = 200; // internal coordinate space
   const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
+    const x = (i / (data.length - 1)) * W;
     const y = height - ((v - min) / range) * (height - 4) - 2;
     return `${x},${y}`;
   });
   const polyline = pts.join(" ");
-  const area = `0,${height} ${polyline} ${width},${height}`;
+  const area = `0,${height} ${polyline} ${W},${height}`;
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
+    <svg width="100%" height={height} viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{ overflow: "visible", display: "block" }}>
       {filled && (
         <polygon points={area} fill={color} fillOpacity={0.12} />
       )}

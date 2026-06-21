@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  Bell,
   Building2,
   Bot,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  FileBarChart2,
   GraduationCap,
   Handshake,
   HeartHandshake,
@@ -95,6 +97,8 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         ...(orgTier === "network" || orgTier === "denomination" ? [
           { label: "Rede de Igrejas", icon: NetworkIcon, href: "/network", match: (pathname: string) => pathname.startsWith("/network") },
         ] : []),
+        { label: "Relatórios", icon: FileBarChart2, href: "/reports", match: (pathname: string) => pathname.startsWith("/reports") },
+        { label: "Notificações", icon: Bell, href: "/notifications", match: (pathname: string) => pathname.startsWith("/notifications") },
         { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") },
         { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname.startsWith("/settings") },
       ]

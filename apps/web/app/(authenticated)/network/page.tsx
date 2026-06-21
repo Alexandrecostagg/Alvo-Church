@@ -5,17 +5,19 @@ import {
   Building2, Users, TrendingUp, MapPin, Plus,
   ChevronRight, CheckCircle, Clock, AlertCircle,
   Heart, CalendarRange, Waypoints, RefreshCw, Copy, Check,
+  Download, History,
 } from "lucide-react";
 import {
   fetchNetworkAffiliates,
   fetchLatestNetworkSnapshot,
+  fetchNetworkSnapshotsHistory,
   saveNetworkAffiliate,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
 import type { NetworkAffiliate, NetworkSnapshot } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
-import { MetricCard, BarChart, Donut } from "../../../src/components/charts/NetworkCharts";
+import { MetricCard, BarChart, Donut, Sparkline } from "../../../src/components/charts/NetworkCharts";
 
 /* ── Mock data (fallback offline) ────────────────────────────────────────── */
 const MOCK_AFFILIATES: NetworkAffiliate[] = [
@@ -33,6 +35,22 @@ const MOCK_SNAPSHOTS: Record<string, NetworkSnapshot> = {
   "child-3": { id: "t", organizationId: "child-3", date: "2026-06-21", month: "2026-06", totalMembers: 210,  newMembersThisMonth: 5,  activeMembers: 155, visitors: 14, totalGroups: 9,  activeGroups: 8,  avgGroupAttendance: 8,  eventsThisMonth: 1, totalEventAttendance: 98,  givingThisMonth: 7600,  givingLastMonth: 7200,  serviceAttendanceRate: 74, createdAt: "" },
   "child-4": { id: "t", organizationId: "child-4", date: "2026-06-21", month: "2026-06", totalMembers: 380,  newMembersThisMonth: 9,  activeMembers: 280, visitors: 31, totalGroups: 14, activeGroups: 13, avgGroupAttendance: 10, eventsThisMonth: 2, totalEventAttendance: 190, givingThisMonth: 14100, givingLastMonth: 12900, serviceAttendanceRate: 74, createdAt: "" },
 };
+
+// Mock histórico 6 meses para demo
+const MOCK_HISTORY: NetworkSnapshot[] = [
+  { id:"h1", organizationId:"net", date:"2026-01-01", month:"2026-01", totalMembers:2080, newMembersThisMonth:38, activeMembers:1490, visitors:88, totalGroups:84, activeGroups:76, avgGroupAttendance:10, eventsThisMonth:7, totalEventAttendance:980, givingThisMonth:68500, givingLastMonth:64000, serviceAttendanceRate:72, createdAt:"" },
+  { id:"h2", organizationId:"net", date:"2026-02-01", month:"2026-02", totalMembers:2138, newMembersThisMonth:42, activeMembers:1540, visitors:92, totalGroups:85, activeGroups:78, avgGroupAttendance:10, eventsThisMonth:6, totalEventAttendance:920, givingThisMonth:71200, givingLastMonth:68500, serviceAttendanceRate:72, createdAt:"" },
+  { id:"h3", organizationId:"net", date:"2026-03-01", month:"2026-03", totalMembers:2195, newMembersThisMonth:44, activeMembers:1580, visitors:98, totalGroups:87, activeGroups:80, avgGroupAttendance:11, eventsThisMonth:8, totalEventAttendance:1050, givingThisMonth:74800, givingLastMonth:71200, serviceAttendanceRate:72, createdAt:"" },
+  { id:"h4", organizationId:"net", date:"2026-04-01", month:"2026-04", totalMembers:2250, newMembersThisMonth:40, activeMembers:1620, visitors:95, totalGroups:88, activeGroups:81, avgGroupAttendance:11, eventsThisMonth:7, totalEventAttendance:1020, givingThisMonth:76200, givingLastMonth:74800, serviceAttendanceRate:72, createdAt:"" },
+  { id:"h5", organizationId:"net", date:"2026-05-01", month:"2026-05", totalMembers:2310, newMembersThisMonth:47, activeMembers:1665, visitors:105, totalGroups:89, activeGroups:82, avgGroupAttendance:11, eventsThisMonth:9, totalEventAttendance:1120, givingThisMonth:79400, givingLastMonth:76200, serviceAttendanceRate:72, createdAt:"" },
+  { id:"h6", organizationId:"net", date:"2026-06-01", month:"2026-06", totalMembers:2360, newMembersThisMonth:53, activeMembers:1710, visitors:131, totalGroups:89, activeGroups:81, avgGroupAttendance:11, eventsThisMonth:9, totalEventAttendance:1123, givingThisMonth:80700, givingLastMonth:79400, serviceAttendanceRate:72, createdAt:"" },
+];
+
+const MONTH_LABELS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+function monthLabel(m: string) {
+  const idx = parseInt(m.slice(5, 7), 10) - 1;
+  return MONTH_LABELS[idx] ?? m;
+}
 
 const STATUS_CONFIG = {
   active:   { label: "Ativa",    color: "#16a34a", bg: "#dcfce7", icon: CheckCircle },
@@ -121,6 +139,7 @@ export default function NetworkPage() {
 
   const [affiliates, setAffiliates]   = useState<NetworkAffiliate[]>([]);
   const [snapshots, setSnapshots]     = useState<Record<string, NetworkSnapshot>>({});
+  const [history, setHistory]         = useState<NetworkSnapshot[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showInvite, setShowInvite]   = useState(false);
   const [selectedId, setSelectedId]   = useState<string | null>(null);
@@ -133,26 +152,50 @@ export default function NetworkPage() {
       if (!isReal || !organizationId) {
         setAffiliates(MOCK_AFFILIATES);
         setSnapshots(MOCK_SNAPSHOTS);
+        setHistory(MOCK_HISTORY);
         setLoading(false);
         return;
       }
       try {
         const affs = await fetchNetworkAffiliates(firebaseConfig, organizationId);
-        setAffiliates(affs.length ? affs : MOCK_AFFILIATES);
+        const usedAffs = affs.length ? affs : MOCK_AFFILIATES;
+        setAffiliates(usedAffs);
 
         const snaps: Record<string, NetworkSnapshot> = {};
+        const histByMonth: Record<string, NetworkSnapshot> = {};
+
         await Promise.all(
-          (affs.length ? affs : MOCK_AFFILIATES)
-            .filter(a => a.status === "active")
-            .map(async a => {
-              const s = await fetchLatestNetworkSnapshot(firebaseConfig, a.childOrganizationId);
-              if (s) snaps[a.childOrganizationId] = s;
-            })
+          usedAffs.filter(a => a.status === "active").map(async a => {
+            const [latest, hist] = await Promise.all([
+              fetchLatestNetworkSnapshot(firebaseConfig, a.childOrganizationId),
+              fetchNetworkSnapshotsHistory(firebaseConfig, a.childOrganizationId, 6),
+            ]);
+            if (latest) snaps[a.childOrganizationId] = latest;
+            // Aggregate history across all affiliates by month
+            for (const h of hist) {
+              if (!histByMonth[h.month]) {
+                histByMonth[h.month] = { ...h, organizationId: "net", id: h.month };
+              } else {
+                const acc = histByMonth[h.month]!;
+                acc.totalMembers         += h.totalMembers;
+                acc.newMembersThisMonth  += h.newMembersThisMonth;
+                acc.activeMembers        += h.activeMembers;
+                acc.visitors             += h.visitors;
+                acc.totalGroups          += h.totalGroups;
+                acc.givingThisMonth      += h.givingThisMonth;
+                acc.totalEventAttendance += h.totalEventAttendance;
+              }
+            }
+          })
         );
+
         setSnapshots(Object.keys(snaps).length ? snaps : MOCK_SNAPSHOTS);
+        const sortedHistory = Object.values(histByMonth).sort((a, b) => a.month.localeCompare(b.month));
+        setHistory(sortedHistory.length >= 2 ? sortedHistory : MOCK_HISTORY);
       } catch (e) {
         setAffiliates(MOCK_AFFILIATES);
         setSnapshots(MOCK_SNAPSHOTS);
+        setHistory(MOCK_HISTORY);
       } finally {
         setLoading(false);
       }
@@ -197,6 +240,34 @@ export default function NetworkPage() {
     ? Math.round(activeAffiliates.reduce((a, af) => a + (snapshots[af.childOrganizationId]?.serviceAttendanceRate ?? 0), 0) / activeAffiliates.length)
     : 0;
 
+  function exportCSV() {
+    const headers = [
+      "Igreja","Cidade","Estado","Status","Membros","Novos/mês","Membros ativos",
+      "Visitantes","Grupos totais","Grupos ativos","Arrecadação (R$)","Arrecad. anterior (R$)",
+      "Δ arrecadação (%)","Eventos/mês","Total presença eventos","Engajamento (%)",
+    ];
+    const rows = affiliates.map(a => {
+      const s = snapshots[a.childOrganizationId];
+      const delta = s ? ((s.givingThisMonth - s.givingLastMonth) / (s.givingLastMonth || 1) * 100).toFixed(1) : "";
+      return [
+        a.childName, a.childCity ?? "", a.childState ?? "", a.status,
+        s?.totalMembers ?? "", s?.newMembersThisMonth ?? "", s?.activeMembers ?? "",
+        s?.visitors ?? "", s?.totalGroups ?? "", s?.activeGroups ?? "",
+        s?.givingThisMonth ?? "", s?.givingLastMonth ?? "",
+        delta, s?.eventsThisMonth ?? "", s?.totalEventAttendance ?? "",
+        s?.serviceAttendanceRate ?? "",
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `rede-igrejas-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function copyCode(code: string) {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
@@ -234,6 +305,9 @@ export default function NetworkPage() {
           </p>
         </div>
         <div className="page-header-actions">
+          <button onClick={exportCSV} className="btn-outline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Download size={15} /> Exportar CSV
+          </button>
           <button onClick={() => setShowInvite(true)} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Plus size={15} /> Adicionar Igreja
           </button>
@@ -345,6 +419,54 @@ export default function NetworkPage() {
           <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--alvo-ink-soft)" }}>valores em R$ mil</p>
         </section>
       </div>
+
+      {/* Evolução histórica */}
+      {history.length >= 2 && (
+        <section className="content-section">
+          <div className="section-header">
+            <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <History size={16} style={{ color: "var(--getro-primary)" }} /> Evolução Histórica
+            </h2>
+            <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>últimos {history.length} meses</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+            {[
+              { label: "Membros", key: "totalMembers" as const, color: "var(--getro-primary)" },
+              { label: "Arrecadação", key: "givingThisMonth" as const, color: "#10b981", isCurrency: true },
+              { label: "Visitantes", key: "visitors" as const, color: "#f59e0b" },
+              { label: "Grupos ativos", key: "activeGroups" as const, color: "#8b5cf6" },
+            ].map(({ label, key, color, isCurrency }) => {
+              const values = history.map(h => h[key] as number);
+              const last = values[values.length - 1] ?? 0;
+              const prev = values[values.length - 2] ?? 0;
+              const delta = prev ? ((last - prev) / prev * 100) : 0;
+              const positive = delta >= 0;
+              return (
+                <div key={label} style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-border)", borderRadius: 14, padding: "16px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--alvo-ink-soft)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
+                      <p style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800, color: "var(--alvo-ink)" }}>
+                        {isCurrency ? fmtBRL(last) : fmt(last)}
+                      </p>
+                    </div>
+                    {delta !== 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: positive ? "#dcfce7" : "#fee2e2", color: positive ? "#16a34a" : "#dc2626" }}>
+                        {positive ? "+" : ""}{delta.toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                  <Sparkline data={values} color={color} height={48} />
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <span style={{ fontSize: 10, color: "var(--alvo-ink-soft)" }}>{monthLabel(history[0]!.month)}</span>
+                    <span style={{ fontSize: 10, color: "var(--alvo-ink-soft)" }}>{monthLabel(history[history.length - 1]!.month)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Lista de igrejas */}
       <section className="content-section">
