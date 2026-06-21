@@ -6,13 +6,27 @@ import {
   Bot, CalendarRange, GraduationCap, Handshake,
   HeartHandshake, Landmark, Map as MapIcon, MessageSquareText,
   ShieldCheck, Store, Tent, Users, Waypoints, CheckCircle, XCircle,
-  Save, Loader2, Info,
+  Save, Loader2, Info, Building2, Layers,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
+import { useOrgFeatures, type GroupsModelType, type OrgTier } from "../../../contexts/OrgFeaturesContext";
 import { saveOrganizationFeaturesSettings, saveOrganizationBrandingSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import type { OrganizationFeaturesSettings } from "@alvo/types";
 import type { ModuleKey } from "@alvo/domain";
+
+const GROUPS_MODEL_OPTIONS: { value: GroupsModelType; label: string; desc: string }[] = [
+  { value: "cell",       label: "Células",    desc: "Grupos geográficos semanais — modelo de célula clássico" },
+  { value: "gc",         label: "G.C.",       desc: "Grupos de Crescimento — mesmo modelo, nome diferente" },
+  { value: "leadership", label: "Lideranças", desc: "Liderança de Casais, Jovens, Famílias — grupos temáticos" },
+  { value: "generic",    label: "Grupos",     desc: "Nomenclatura genérica sem vínculo a modelo específico" },
+];
+
+const ORG_TIER_OPTIONS: { value: OrgTier; label: string; desc: string; icon: React.ElementType }[] = [
+  { value: "solo",         label: "Igreja Solo",   desc: "Igreja independente — simples, sem hierarquia",                icon: Building2 },
+  { value: "campus",       label: "Multi-campus",  desc: "Uma sede com múltiplos campi sob a mesma liderança",           icon: Layers },
+  { value: "network",      label: "Rede",          desc: "Instituição com igrejas afiliadas — visão consolidada",        icon: Layers },
+  { value: "denomination", label: "Denominação",   desc: "Estrutura formal com hierarquia nacional e múltiplos níveis",  icon: Layers },
+];
 
 /* ── QR helper ──────────────────────────────────────────────────────────── */
 function QRCodeDisplay({ size = 180 }: { size?: number }) {
@@ -76,7 +90,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 /* ── Main view ───────────────────────────────────────────────────────────── */
 export function SettingsView() {
   const { organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
-  const { features, ready } = useOrgFeatures();
+  const { features, ready, orgTier, groupsModelType } = useOrgFeatures();
   const [copied, setCopied] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -84,6 +98,19 @@ export function SettingsView() {
   const [pixName, setPixName] = useState(tenantRuntime?.settings?.branding?.pixReceiverName ?? "");
   const [pixSaving, setPixSaving] = useState(false);
   const [pixSaved, setPixSaved] = useState(false);
+  // Groups config
+  const [groupsModel, setGroupsModel] = useState<GroupsModelType>(
+    (tenantRuntime?.settings?.branding?.groupsModelType as GroupsModelType | undefined) ?? "cell"
+  );
+  const [groupsCustomLabel, setGroupsCustomLabel] = useState(
+    tenantRuntime?.settings?.branding?.groupsModuleLabel ?? ""
+  );
+  const [groupsSaving, setGroupsSaving] = useState(false);
+  const [groupsSaved, setGroupsSaved] = useState(false);
+  // Org tier
+  const [selectedTier, setSelectedTier] = useState<OrgTier>(orgTier);
+  const [tierSaving, setTierSaving] = useState(false);
+  const [tierSaved, setTierSaved] = useState(false);
 
   // Local module state — initialized from Firestore or all-enabled fallback
   const [moduleState, setModuleState] = useState<Record<ModuleKey, boolean>>(() => {
@@ -140,6 +167,42 @@ export function SettingsView() {
       console.error("Failed to save PIX config:", e);
     } finally {
       setPixSaving(false);
+    }
+  }
+
+  async function saveGroupsConfig() {
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding) return;
+    setGroupsSaving(true);
+    try {
+      await saveOrganizationBrandingSettings(firebaseConfig, {
+        ...tenantRuntime.settings.branding,
+        groupsModelType: groupsModel,
+        groupsModuleLabel: groupsCustomLabel.trim() || undefined,
+      });
+      setGroupsSaved(true);
+      setTimeout(() => setGroupsSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to save groups config:", e);
+    } finally {
+      setGroupsSaving(false);
+    }
+  }
+
+  async function saveTierConfig() {
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.organization) return;
+    setTierSaving(true);
+    try {
+      const { saveOrganizationProfile } = await import("@alvo/firebase");
+      await saveOrganizationProfile(firebaseConfig, {
+        ...tenantRuntime.organization,
+        organizationTier: selectedTier,
+      });
+      setTierSaved(true);
+      setTimeout(() => setTierSaved(false), 3000);
+    } catch (e) {
+      console.error("Failed to save tier:", e);
+    } finally {
+      setTierSaving(false);
     }
   }
 
@@ -230,6 +293,126 @@ export function SettingsView() {
             );
           })}
         </div>
+      </section>
+
+      {/* ── Modelo de Grupos ─────────────────────────────────────────── */}
+      <section className="content-section">
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">Modelo de Grupos</h2>
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
+              Define como o módulo de grupos aparece no menu e nas telas da sua instituição
+            </p>
+          </div>
+          <button
+            onClick={saveGroupsConfig}
+            disabled={groupsSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding}
+            className="btn-primary btn-sm"
+            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
+          >
+            {groupsSaving ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</> :
+             groupsSaved  ? <><CheckCircle size={14} /> Salvo!</> :
+                            <><Save size={14} /> Salvar</>}
+          </button>
+        </div>
+
+        <div style={{ display: "grid", gap: 16, maxWidth: 640 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {GROUPS_MODEL_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => { setGroupsModel(opt.value); setGroupsCustomLabel(""); setGroupsSaved(false); }}
+                style={{
+                  textAlign: "left", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+                  border: `1.5px solid ${groupsModel === opt.value ? "var(--getro-primary)" : "var(--alvo-border)"}`,
+                  background: groupsModel === opt.value ? "var(--getro-primary-softer)" : "var(--alvo-surface)",
+                  transition: "all 0.15s",
+                }}
+              >
+                <strong style={{ display: "block", fontSize: 14, color: groupsModel === opt.value ? "var(--getro-primary-dark)" : "var(--alvo-ink)", marginBottom: 4 }}>
+                  {opt.label}
+                </strong>
+                <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--alvo-ink)" }}>
+              Nome personalizado
+              <span style={{ fontWeight: 400, color: "var(--alvo-ink-soft)", fontSize: 12, marginLeft: 6 }}>
+                (opcional — sobrescreve o nome do modelo acima)
+              </span>
+            </label>
+            <input
+              type="text"
+              placeholder={`Ex: "${GROUPS_MODEL_OPTIONS.find(o => o.value === groupsModel)?.label ?? "Células"}"`}
+              value={groupsCustomLabel}
+              onChange={e => { setGroupsCustomLabel(e.target.value); setGroupsSaved(false); }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Tipo de Organização ───────────────────────────────────────── */}
+      <section className="content-section">
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">Tipo de Organização</h2>
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
+              Define a estrutura institucional e desbloqueia funcionalidades específicas por porte
+            </p>
+          </div>
+          <button
+            onClick={saveTierConfig}
+            disabled={tierSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.organization}
+            className="btn-primary btn-sm"
+            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
+          >
+            {tierSaving ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</> :
+             tierSaved   ? <><CheckCircle size={14} /> Salvo!</> :
+                           <><Save size={14} /> Salvar</>}
+          </button>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 640 }}>
+          {ORG_TIER_OPTIONS.map(opt => {
+            const Icon = opt.icon;
+            const isSelected = selectedTier === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => { setSelectedTier(opt.value); setTierSaved(false); }}
+                style={{
+                  textAlign: "left", padding: "16px", borderRadius: 12, cursor: "pointer",
+                  border: `1.5px solid ${isSelected ? "var(--getro-primary)" : "var(--alvo-border)"}`,
+                  background: isSelected ? "var(--getro-primary-softer)" : "var(--alvo-surface)",
+                  display: "flex", flexDirection: "column", gap: 8, transition: "all 0.15s",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon size={16} style={{ color: isSelected ? "var(--getro-primary)" : "var(--alvo-ink-soft)" }} />
+                  <strong style={{ fontSize: 13, color: isSelected ? "var(--getro-primary-dark)" : "var(--alvo-ink)" }}>
+                    {opt.label}
+                  </strong>
+                  {isSelected && <CheckCircle size={13} style={{ color: "var(--getro-primary)", marginLeft: "auto" }} />}
+                </div>
+                <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{opt.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {(selectedTier === "network" || selectedTier === "denomination") && (
+          <div className="settings-demo-banner" style={{ marginTop: 12 }}>
+            <Info size={14} style={{ color: "#3b82f6", flexShrink: 0 }} />
+            <span>
+              <strong style={{ color: "var(--alvo-ink)" }}>Painel de Rede</strong> será habilitado no menu lateral —
+              gerencie igrejas afiliadas e visualize métricas consolidadas
+            </span>
+          </div>
+        )}
       </section>
 
       {/* ── PIX ──────────────────────────────────────────────────────── */}

@@ -27,6 +27,7 @@ import {
 } from "@alvo/firebase";
 import type { Group, GroupAttendance, GroupMeeting, GroupMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { useGroupsLabel } from "../../../contexts/OrgFeaturesContext";
 import { recentPeople, activeGroups } from "../../lib/mock-data";
 
 const weekdayOptions = [
@@ -49,6 +50,7 @@ type GroupFollowUpItem = {
 };
 
 export function GroupsView() {
+  const groupsLabel = useGroupsLabel();
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -430,7 +432,7 @@ export function GroupsView() {
     <div className="page-root groups-page">
       <header className="page-header">
         <div className="page-header-left">
-          <h1 className="page-title">Células e Grupos</h1>
+          <h1 className="page-title">{groupsLabel}</h1>
           <p className="page-subtitle">Acompanhe capacidade, participantes, encontros e conexões</p>
         </div>
         <div className="page-header-actions">

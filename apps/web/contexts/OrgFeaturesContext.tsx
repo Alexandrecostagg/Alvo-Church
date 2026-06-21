@@ -5,11 +5,26 @@ import type { OrganizationFeaturesSettings } from "@alvo/types";
 import { isModuleEnabled, type ModuleKey, type ModulesConfig } from "@alvo/domain";
 import { useAppAuth } from "../app/providers";
 
+export type GroupsModelType = "cell" | "gc" | "leadership" | "generic";
+export type OrgTier = "solo" | "campus" | "network" | "denomination";
+
+const GROUPS_MODEL_LABELS: Record<GroupsModelType, string> = {
+  cell:       "Células",
+  gc:         "G.C.",
+  leadership: "Lideranças",
+  generic:    "Grupos",
+};
+
 interface OrgFeaturesContextValue {
   features: OrganizationFeaturesSettings | null;
   ready: boolean;
   isEnabled: (key: ModuleKey) => boolean;
   isBeta: (key: ModuleKey) => boolean;
+  // Grupos config
+  groupsLabel: string;
+  groupsModelType: GroupsModelType;
+  // Org tier
+  orgTier: OrgTier;
 }
 
 const OrgFeaturesContext = createContext<OrgFeaturesContextValue | null>(null);
@@ -17,16 +32,30 @@ const OrgFeaturesContext = createContext<OrgFeaturesContextValue | null>(null);
 export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
   const { tenantRuntime, tenantReady } = useAppAuth();
   const features = tenantRuntime?.settings?.features ?? null;
+  const branding = tenantRuntime?.settings?.branding ?? null;
+  const org      = tenantRuntime?.organization ?? null;
 
   const value = useMemo<OrgFeaturesContextValue>(() => {
     const modules: ModulesConfig | null = features?.modules ?? null;
+
+    const modelType: GroupsModelType =
+      (branding?.groupsModelType as GroupsModelType | undefined) ?? "cell";
+
+    const groupsLabel =
+      branding?.groupsModuleLabel?.trim() ||
+      GROUPS_MODEL_LABELS[modelType];
+
+    const orgTier: OrgTier =
+      (org?.organizationTier as OrgTier | undefined) ??
+      (org?.organizationType === "network" ? "network" :
+       org?.organizationType === "denomination" ? "denomination" :
+       "solo");
 
     return {
       features,
       ready: tenantReady,
       isEnabled: (key: ModuleKey) => {
         if (!tenantReady) return false;
-        // Sem config de módulos no Firestore → tudo habilitado (fallback demo/dev)
         if (!modules) return true;
         return isModuleEnabled(modules, key);
       },
@@ -34,8 +63,11 @@ export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
         if (!modules) return false;
         return modules[key]?.beta === true;
       },
+      groupsLabel,
+      groupsModelType: modelType,
+      orgTier,
     };
-  }, [features, tenantReady]);
+  }, [features, branding, org, tenantReady]);
 
   return (
     <OrgFeaturesContext.Provider value={value}>
@@ -54,4 +86,12 @@ export function useOrgFeatures(): OrgFeaturesContextValue {
 
 export function useModuleEnabled(key: ModuleKey): boolean {
   return useOrgFeatures().isEnabled(key);
+}
+
+export function useGroupsLabel(): string {
+  return useOrgFeatures().groupsLabel;
+}
+
+export function useOrgTier(): OrgTier {
+  return useOrgFeatures().orgTier;
 }

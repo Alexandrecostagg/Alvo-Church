@@ -66,6 +66,7 @@ export interface Organization {
   publicName?: string;
   displayName?: string;
   organizationType?: "church" | "network" | "denomination" | "institution";
+  organizationTier?: "solo" | "campus" | "network" | "denomination";
 }
 
 export interface OrganizationBrandingSettings {
@@ -88,6 +89,8 @@ export interface OrganizationBrandingSettings {
   poweredByLabel?: string;
   pixKey?: string;
   pixReceiverName?: string;
+  groupsModuleLabel?: string;
+  groupsModelType?: "cell" | "gc" | "leadership" | "generic";
 }
 
 export interface OrganizationSubscriptionSettings {
