@@ -929,16 +929,11 @@ export function JourneysView() {
       `}} />
       
       {/* Hero Central de Acolhimento */}
-      <section className="journeys-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
-        <div>
-          <Link className="back-link" href="/">
-            <ArrowLeft size={14} style={{ marginRight: 6 }} /> Voltar ao painel
-          </Link>
-          <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Painel de Integração</p>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--alvo-ink)", letterSpacing: "-0.03em" }}>Jornadas de Integração & Triagem Pastoral</h1>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: "1.1rem", maxWidth: 750, lineHeight: 1.6 }}>
-            Raciocínio profundo para o cuidado de almas: gerencie gargalos ativos, acompanhe a evolução de visitantes
-            para a aliança de membresia e monitore a inserção em células.
+      <section className="journeys-hero page-header" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
+        <div className="page-header-left">
+          <h1 className="page-title">Jornadas de Integração</h1>
+          <p className="page-subtitle">
+            Gerencie gargalos ativos, acompanhe a evolução de visitantes para a aliança de membresia e monitore a inserção em células.
           </p>
         </div>
         <aside className="journey-health-card active-bottleneck-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: 24, padding: "1.5rem", minWidth: 260, boxShadow: "0 0 15px rgba(245, 158, 11, 0.08)" }}>

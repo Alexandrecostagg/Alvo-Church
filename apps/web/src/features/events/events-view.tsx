@@ -1218,15 +1218,14 @@ export function EventsView() {
       )}
 
       {/* Main Header */}
-      <header className="topbar">
-        <div className="topbar-content">
-          <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Agenda Geral da Igreja</p>
-          <h1>Agenda Estratégica</h1>
-          <p>Coordene retiros, conferências e cultos unificados com check-in automatizado.</p>
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">Agenda Estratégica</h1>
+          <p className="page-subtitle">Coordene retiros, conferências e cultos unificados com check-in automatizado.</p>
         </div>
-        <div className="topbar-actions">
-           <button 
-             onClick={() => setShowAddDrawer(true)} 
+        <div className="page-header-actions">
+           <button
+             onClick={() => setShowAddDrawer(true)}
              className="primary-button compact"
              style={{ backgroundColor: "var(--alvo-accent)", color: "white", padding: "0.75rem 1.25rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, border: "none" }}
            >
@@ -1236,26 +1235,32 @@ export function EventsView() {
       </header>
 
       {/* Dashboard Mini-KPI Counters */}
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem", margin: "1.5rem 0" }}>
-        <div className="metric-card" style={{ padding: "1.25rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total de Eventos</span>
-          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-ink)", display: "block", marginTop: 4, fontWeight: 850 }}>{events.length}</strong>
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-body">
+            <span className="stat-label">Total de Eventos</span>
+            <span className="stat-value">{events.length}</span>
+          </div>
         </div>
-        <div className="metric-card" style={{ padding: "1.25rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Inscritos Totais</span>
-          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-accent)", display: "block", marginTop: 4, fontWeight: 850 }}>
-            {Object.values(attendeesMap).reduce((acc, curr) => acc + curr.length, 0)}
-          </strong>
+        <div className="stat-card">
+          <div className="stat-body">
+            <span className="stat-label">Inscritos Totais</span>
+            <span className="stat-value">{Object.values(attendeesMap).reduce((acc, curr) => acc + curr.length, 0)}</span>
+          </div>
         </div>
-        <div className="metric-card" style={{ padding: "1.25rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Padrão Financeiro</span>
-          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-green)", display: "block", marginTop: 4, fontWeight: 850 }}>R$ 18.520</strong>
+        <div className="stat-card">
+          <div className="stat-body">
+            <span className="stat-label">Padrão Financeiro</span>
+            <span className="stat-value">R$ 18.520</span>
+          </div>
         </div>
-        <div className="metric-card" style={{ padding: "1.25rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Taxa de Presença</span>
-          <strong style={{ fontSize: "1.75rem", color: "var(--alvo-ink)", display: "block", marginTop: 4, fontWeight: 850 }}>62%</strong>
+        <div className="stat-card">
+          <div className="stat-body">
+            <span className="stat-label">Taxa de Presença</span>
+            <span className="stat-value">62%</span>
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* Main Grid */}
       <section className="events-grid">
