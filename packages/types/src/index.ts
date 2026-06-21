@@ -150,6 +150,59 @@ export interface TenantRuntimeSnapshot {
   settings: OrganizationSettingsSnapshot | null;
 }
 
+/* ── Network / Rede de Igrejas ─────────────────────────────────────────── */
+
+export interface NetworkAffiliate {
+  id: string;
+  parentOrganizationId: string;
+  childOrganizationId: string;
+  childName: string;
+  childCity?: string;
+  childState?: string;
+  status: "pending" | "active" | "inactive";
+  inviteCode?: string;
+  joinedAt?: string;
+  lastSnapshotAt?: string;
+}
+
+export interface NetworkSnapshot {
+  id: string;
+  organizationId: string;
+  date: string;                    // "YYYY-MM-DD"
+  month: string;                   // "YYYY-MM"
+  // Membros
+  totalMembers: number;
+  newMembersThisMonth: number;
+  activeMembers: number;
+  visitors: number;
+  // Grupos
+  totalGroups: number;
+  activeGroups: number;
+  avgGroupAttendance: number;
+  // Eventos
+  eventsThisMonth: number;
+  totalEventAttendance: number;
+  // Financeiro
+  givingThisMonth: number;
+  givingLastMonth: number;
+  // Engajamento
+  serviceAttendanceRate: number;   // 0–100
+  // Meta
+  createdAt: string;
+}
+
+export interface NetworkDashboardSnapshot {
+  affiliates: NetworkAffiliate[];
+  snapshots: Record<string, NetworkSnapshot>;  // keyed by childOrganizationId
+  totals: {
+    churches: number;
+    members: number;
+    visitors: number;
+    groups: number;
+    giving: number;
+  };
+}
+
 export interface TenantBrandAssetUploadResponse {
   success: boolean;
   assetKind: BrandAssetKind;

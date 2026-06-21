@@ -4,6 +4,7 @@ import { ModuleNav } from "./module-nav";
 import { TopBar } from "./top-bar";
 import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
 import { ToastProvider } from "../../contexts/ToastContext";
+import { NetworkSync } from "./network-sync";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
             {children}
           </div>
         </div>
+        <NetworkSync />
       </ToastProvider>
     </OrgFeaturesProvider>
   );

@@ -6,9 +6,11 @@ import {
   getDocs,
   getFirestore,
   limit,
+  orderBy,
   query,
   setDoc,
   updateDoc,
+  where,
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
@@ -60,7 +62,9 @@ import type {
   MemberJourneyProfile,
   JourneyMission,
   Badge,
-  MemberBadge
+  MemberBadge,
+  NetworkAffiliate,
+  NetworkSnapshot
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -2555,4 +2559,101 @@ export async function saveMemberBadge(
     cleanFirestoreData(memberBadge),
     { merge: true }
   );
+}
+
+/* ── Network / Rede de Igrejas ─────────────────────────────────────────── */
+
+function getNetworkAffiliatesPath(parentOrgId: string) {
+  return `organizations/${parentOrgId}/affiliates`;
+}
+
+function getNetworkSnapshotPath(childOrgId: string, date: string) {
+  return `organizations/${childOrgId}/networkSnapshots/${date}`;
+}
+
+function getNetworkSnapshotsPath(childOrgId: string) {
+  return `organizations/${childOrgId}/networkSnapshots`;
+}
+
+export async function fetchNetworkAffiliates(
+  config: FirebaseWebRuntimeConfig,
+  parentOrganizationId: string
+): Promise<NetworkAffiliate[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as NetworkAffiliate));
+}
+
+export async function saveNetworkAffiliate(
+  config: FirebaseWebRuntimeConfig,
+  affiliate: NetworkAffiliate
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getNetworkAffiliatesPath(affiliate.parentOrganizationId), affiliate.id),
+    cleanFirestoreData(affiliate),
+    { merge: true }
+  );
+}
+
+export async function fetchNetworkAffiliateByInviteCode(
+  config: FirebaseWebRuntimeConfig,
+  parentOrganizationId: string,
+  inviteCode: string
+): Promise<NetworkAffiliate | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)),
+      where("inviteCode", "==", inviteCode)
+    )
+  );
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as NetworkAffiliate;
+}
+
+export async function saveNetworkSnapshot(
+  config: FirebaseWebRuntimeConfig,
+  snapshot: NetworkSnapshot
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getNetworkSnapshotPath(snapshot.organizationId, snapshot.date)),
+    cleanFirestoreData(snapshot),
+    { merge: true }
+  );
+}
+
+export async function fetchLatestNetworkSnapshot(
+  config: FirebaseWebRuntimeConfig,
+  childOrganizationId: string
+): Promise<NetworkSnapshot | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getNetworkSnapshotsPath(childOrganizationId)),
+      orderBy("date", "desc"),
+      limit(1)
+    )
+  );
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as NetworkSnapshot;
+}
+
+export async function fetchNetworkSnapshotsHistory(
+  config: FirebaseWebRuntimeConfig,
+  childOrganizationId: string,
+  months = 6
+): Promise<NetworkSnapshot[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getNetworkSnapshotsPath(childOrganizationId)),
+      orderBy("date", "desc"),
+      limit(months)
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as NetworkSnapshot));
 }
