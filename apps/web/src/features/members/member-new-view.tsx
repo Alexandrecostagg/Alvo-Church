@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   User,
   MapPin,
-  HeartHandshake
+  HeartHandshake,
+  Tent
 } from "lucide-react";
 
 interface SavedMemberSummary {
@@ -46,6 +47,9 @@ export function MemberNewView() {
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
 
+  const [ministerialInterests, setMinisterialInterests] = useState<string[]>([]);
+  const [availability, setAvailability] = useState<string[]>([]);
+
   const [address, setAddress] = useState({
     postalCode: "",
     street: "",
@@ -63,6 +67,8 @@ export function MemberNewView() {
     setMemberStatus("member");
     setPartnerBenefitsEnabled(false);
     setLgpdConsent(false);
+    setMinisterialInterests([]);
+    setAvailability([]);
     setAddress({
       postalCode: "",
       street: "",
@@ -149,7 +155,10 @@ export function MemberNewView() {
       partnerBenefitsEnabled,
       personType: getFormValue(form, "personType") as Person["personType"],
       memberStatus: memberStatus as Person["memberStatus"],
-      status: "active"
+      status: "active",
+      ministerialInterests: ministerialInterests.length > 0 ? ministerialInterests : undefined,
+      servingProfile: (getFormValue(form, "servingProfile") || undefined) as Person["servingProfile"],
+      availability: availability.length > 0 ? availability : undefined,
     };
     const family: Family | undefined =
       familyId && familyName
@@ -488,6 +497,92 @@ export function MemberNewView() {
               Observações da Família
               <textarea name="familyNotes" rows={3} placeholder="Notas adicionais sobre a dinâmica familiar..." />
             </label>
+          </fieldset>
+
+          {/* Perfil Ministerial — alimenta IA de Tribos */}
+          <fieldset>
+            <legend><Tent size={18} /> Perfil Ministerial</legend>
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "-8px 0 4px", lineHeight: 1.5 }}>
+              Essas informações ajudam o sistema a sugerir a tribo vocacional mais adequada para o membro.
+            </p>
+
+            <div>
+              <label style={{ marginBottom: 10, display: "block" }}>Áreas de interesse ministerial</label>
+              <div className="check-grid">
+                {[
+                  { value: "louvor", label: "🎵 Louvor & Adoração" },
+                  { value: "ensino", label: "📖 Ensino & Discipulado" },
+                  { value: "recepcao", label: "🤝 Recepção & Acolhimento" },
+                  { value: "kids", label: "👶 Ministério Infantil" },
+                  { value: "midia", label: "🎬 Mídia & Comunicação" },
+                  { value: "administracao", label: "📋 Administração" },
+                  { value: "intercessao", label: "🙏 Intercessão & Oração" },
+                  { value: "missoes", label: "🌍 Missões & Evangelismo" },
+                  { value: "cuidado", label: "💚 Cuidado Pastoral" },
+                  { value: "jovens", label: "⚡ Ministério de Jovens" },
+                ].map(({ value, label }) => (
+                  <label key={value} className="check-row check-pill">
+                    <input
+                      type="checkbox"
+                      checked={ministerialInterests.includes(value)}
+                      onChange={(e) => {
+                        setMinisterialInterests(prev =>
+                          e.target.checked ? [...prev, value] : prev.filter(v => v !== value)
+                        );
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ marginBottom: 10, display: "block" }}>Como você se vê servindo?</label>
+              <div className="radio-grid">
+                {[
+                  { value: "leading", label: "🧭 Liderando pessoas" },
+                  { value: "teaching", label: "📚 Ensinando e discipulando" },
+                  { value: "creating", label: "🎨 Criando e expressando" },
+                  { value: "caring", label: "🫶 Cuidando e acolhendo" },
+                  { value: "organizing", label: "⚙️ Organizando e executando" },
+                  { value: "interceding", label: "🙏 Orando e intercedendo" },
+                ].map(({ value, label }) => (
+                  <label key={value} className="check-row check-pill">
+                    <input type="radio" name="servingProfile" value={value} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ marginBottom: 10, display: "block" }}>Disponibilidade semanal</label>
+              <div className="check-grid-days">
+                {[
+                  { value: "seg", label: "Seg" },
+                  { value: "ter", label: "Ter" },
+                  { value: "qua", label: "Qua" },
+                  { value: "qui", label: "Qui" },
+                  { value: "sex", label: "Sex" },
+                  { value: "sab", label: "Sáb" },
+                  { value: "dom", label: "Dom" },
+                ].map(({ value, label }) => (
+                  <label key={value} className="check-row day-pill">
+                    <input
+                      type="checkbox"
+                      checked={availability.includes(value)}
+                      onChange={(e) => {
+                        setAvailability(prev =>
+                          e.target.checked ? [...prev, value] : prev.filter(v => v !== value)
+                        );
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
           </fieldset>
 
           {/* Privacidade & Getro Pass */}
@@ -1429,6 +1524,87 @@ export function MemberNewView() {
           border: 1px solid rgba(15, 23, 42, 0.10);
           background: #ffffff;
           color: #334155;
+        }
+
+        /* Perfil Ministerial */
+        .check-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+
+        .radio-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+
+        .check-grid-days {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .check-pill {
+          flex-direction: row;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border: 1px solid rgba(15,23,42,0.10);
+          border-radius: 10px;
+          background: #f8fafc;
+          font-size: 13px;
+          font-weight: 600;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .check-pill:has(input:checked) {
+          border-color: #ea580c;
+          background: rgba(234,88,12,0.06);
+          color: #c2410c;
+          font-weight: 700;
+        }
+
+        .check-pill input {
+          width: 16px;
+          height: 16px;
+          min-height: unset;
+          padding: 0;
+          accent-color: #ea580c;
+          flex-shrink: 0;
+        }
+
+        .day-pill {
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 14px;
+          border: 1px solid rgba(15,23,42,0.10);
+          border-radius: 10px;
+          background: #f8fafc;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          cursor: pointer;
+          min-width: 52px;
+          text-align: center;
+          transition: all 0.15s;
+        }
+
+        .day-pill:has(input:checked) {
+          border-color: #ea580c;
+          background: rgba(234,88,12,0.06);
+          color: #c2410c;
+        }
+
+        .day-pill input {
+          width: 16px;
+          height: 16px;
+          min-height: unset;
+          padding: 0;
+          accent-color: #ea580c;
         }
 
         @media (max-width: 1024px) {

@@ -256,6 +256,9 @@ export interface Person {
   status: PersonStatus;
   tribePrimaryCode?: TribeCode;
   tribeSecondaryCode?: TribeCode;
+  ministerialInterests?: string[];
+  servingProfile?: "leading" | "teaching" | "creating" | "caring" | "organizing" | "interceding";
+  availability?: string[];
 }
 
 export interface PeopleListItem {
