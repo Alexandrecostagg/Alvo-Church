@@ -19,7 +19,7 @@ const MODULE_LABELS: Record<string, string> = {
   giving: "Doações & Giving",
   publicForms: "Formulários Públicos",
   finance: "Finanças",
-  ai: "IA Pastoral",
+  ai: "Cuidado Pastoral",
 };
 
 function UpgradeContent() {

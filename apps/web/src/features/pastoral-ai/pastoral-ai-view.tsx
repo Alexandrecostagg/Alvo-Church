@@ -406,7 +406,7 @@ export function PastoralAiView() {
       {
         id: `log_reset_${Date.now()}`,
         title: "Ambiente restaurado",
-        detail: "Dados de demonstração da IA Pastoral foram recarregados.",
+        detail: "Dados de demonstração da Cuidado Pastoral foram recarregados.",
         createdAt: new Intl.DateTimeFormat("pt-BR", {
           hour: "2-digit",
           minute: "2-digit"
@@ -423,7 +423,7 @@ export function PastoralAiView() {
             <Sparkles size={16} />
             Cuidado inteligente
           </span>
-          <h1>IA Pastoral e Serviços de Cuidado</h1>
+          <h1>Cuidado Pastoral</h1>
           <p>
             Transforme recepção, WhatsApp, pedidos de oração e presença de células em uma fila clara de acompanhamento pastoral.
           </p>

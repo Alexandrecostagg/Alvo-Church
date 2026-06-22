@@ -37,7 +37,7 @@ const moduleOptions = [
   { id: "children", label: "Kids Security", desc: "Segurança infantil", source: "manual" },
   { id: "tribes", label: "Tribos", desc: "Identidade e dons", source: "plan" },
   { id: "journeys", label: "Jornadas", desc: "Discipulado e integração", source: "plan" },
-  { id: "ai", label: "IA Pastoral", desc: "Insights e sinais", source: "trial" },
+  { id: "ai", label: "Cuidado Pastoral", desc: "Insights e sinais", source: "trial" },
   { id: "events", label: "Eventos", desc: "Check-in e inscrições", source: "plan" },
   { id: "groups", label: "Células", desc: "Pequenos grupos", source: "plan" },
   { id: "volunteers", label: "Escalas", desc: "Serviço e voluntários", source: "addon" },
@@ -348,7 +348,7 @@ export function OrganizationNewView() {
             <label>
               Cota mensal de IA
               <input name="aiQuota" type="number" min="0" value={planConfig.aiQuota} readOnly />
-              <p className="field-hint">A cota alimenta os limites iniciais da IA Pastoral para esse tenant.</p>
+              <p className="field-hint">A cota alimenta os limites iniciais do Cuidado Pastoral para esse tenant.</p>
             </label>
           </fieldset>
 

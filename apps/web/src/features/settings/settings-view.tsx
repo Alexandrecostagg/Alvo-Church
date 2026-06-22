@@ -59,7 +59,7 @@ const MODULE_DEFS: ModuleDef[] = [
   { key: "communication", label: "Comunicação",            desc: "Envio de mensagens, push, WhatsApp e segmentação por grupo",        icon: MessageSquareText, color: "#64748b" },
   { key: "giving",        label: "Doações & Dízimos",      desc: "Recebimento de dízimos e ofertas via PIX, cartão e boleto",         icon: HeartHandshake,    color: "#16a34a" },
   { key: "finance",       label: "Finanças",               desc: "Relatórios financeiros, receitas, despesas e fluxo de caixa",       icon: Landmark,          color: "#d97706" },
-  { key: "ai",            label: "IA Pastoral",            desc: "Análise preditiva de risco de desengajamento e insights por membro", icon: Bot,               color: "#7c3aed" },
+  { key: "ai",            label: "Cuidado Pastoral",            desc: "Análise preditiva de risco de desengajamento e insights por membro", icon: Bot,               color: "#7c3aed" },
   { key: "marketplace",   label: "Marketplace",            desc: "Comunidade de trocas e serviços entre membros da igreja",           icon: Store,             color: "#0ea5e9" },
   { key: "children",      label: "Segurança Kids",         desc: "Check-in de crianças, identificação e rastreio de retirada",       icon: ShieldCheck,       color: "#f43f5e" },
   { key: "publicForms",   label: "Formulários Públicos",   desc: "QR Codes para visitantes e links de cadastro sem login",           icon: GraduationCap,     color: "#84cc16" },

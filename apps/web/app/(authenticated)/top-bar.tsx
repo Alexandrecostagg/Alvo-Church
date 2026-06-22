@@ -31,7 +31,7 @@ const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p === "/", label: "Dashboard", icon: LayoutDashboard },
   { match: (p) => p.startsWith("/reception") && !p.includes("pastor"), label: "Recepção", icon: ClipboardList },
   { match: (p) => p.startsWith("/reception"), label: "Painel Pastor", icon: Tv },
-  { match: (p) => p.startsWith("/pastoral-ai"), label: "IA Pastoral", icon: Bot },
+  { match: (p) => p.startsWith("/pastoral-ai"), label: "Cuidado Pastoral", icon: Bot },
   { match: (p) => p.startsWith("/finance"), label: "Finanças", icon: Landmark },
   { match: (p) => p.startsWith("/me"), label: "Minha Área", icon: UserCircle },
   { match: (p) => p.startsWith("/members/new"), label: "Novo Membro", icon: UserPlus },
