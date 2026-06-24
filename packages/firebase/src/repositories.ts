@@ -601,6 +601,18 @@ export async function fetchOrganizationById(
   return toOrganization(snapshot.id, snapshot.data());
 }
 
+export async function fetchOrganizationBySlug(
+  config: FirebaseWebRuntimeConfig,
+  slug: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(collection(firestore, "organizations"), where("slug", "==", slug), limit(1));
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  const first = snapshot.docs[0];
+  return toOrganization(first.id, first.data());
+}
+
 export async function fetchOrganizationBrandingSettings(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext

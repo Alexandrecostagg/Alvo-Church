@@ -49,11 +49,13 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
   browserLocalPersistence,
   connectAuthEmulator,
+  createUserWithEmailAndPassword,
   getAuth,
   initializeAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   inMemoryPersistence,
   type Auth,
   type User
@@ -217,6 +219,18 @@ export async function signInWithFirebaseMobileEmailPassword(params: {
 export async function signOutFromFirebaseMobile(config: FirebaseRuntimeConfig) {
   const auth = getFirebaseMobileAuth(config);
   await signOut(auth);
+}
+
+export async function registerWithFirebaseMobileEmailPassword(params: {
+  config: FirebaseRuntimeConfig;
+  email: string;
+  password: string;
+  displayName: string;
+}) {
+  const auth = getFirebaseMobileAuth(params.config);
+  const credential = await createUserWithEmailAndPassword(auth, params.email, params.password);
+  await updateProfile(credential.user, { displayName: params.displayName });
+  return credential;
 }
 
 export function createTenantUploadApiBaseUrlFromEnv(
