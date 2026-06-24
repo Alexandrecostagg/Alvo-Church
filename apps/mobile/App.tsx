@@ -1,12 +1,17 @@
 import { StatusBar } from "expo-status-bar";
+import * as ImagePicker from "expo-image-picker";
+import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -26,19 +31,55 @@ import {
   subscribeToFirebaseMobileAuthState,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, OrganizationSettingsSnapshot, TenantRuntimeSnapshot } from "@alvo/types";
+import type { Event, Group, Organization, TenantRuntimeSnapshot } from "@alvo/types";
+
+// ─── Notification handler (show when app is foreground) ──────────────────────
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false
+  })
+});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Screen =
-  | "splash"
-  | "welcome"
-  | "login"
-  | "register"
-  | "link-institution"
-  | "main";
+type AuthScreen = "splash" | "welcome" | "login" | "register" | "link-institution";
+type Tab = "inicio" | "agenda" | "celula" | "perfil";
+type ModalScreen =
+  | "doacoes"
+  | "kids-checkin"
+  | "escala"
+  | "musica"
+  | "inscricao"
+  | "song-detail";
 
-type Tab = "inicio" | "celula" | "agenda" | "perfil";
+type EscalaStatus = "pendente" | "confirmado" | "recusado";
+type EscalaSlot = {
+  id: string;
+  date: string;
+  time: string;
+  service: string;
+  role: string;
+  status: EscalaStatus;
+};
+type Song = {
+  id: string;
+  title: string;
+  artist: string;
+  key: string;
+  bpm: number;
+  chords: string;
+  lyrics: string;
+};
+type KidCheckIn = {
+  id: string;
+  childName: string;
+  room: string;
+  code: string;
+  checkedInAt: string;
+  checkedOut: boolean;
+};
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -47,78 +88,136 @@ const runtimeEnv =
 
 const firebaseConfig = createFirebaseRuntimeConfigFromEnv(runtimeEnv, "EXPO_PUBLIC");
 
-const BRAND_COLOR = "#d27836";
+const BRAND = "#d27836";
 const BRAND_DARK = "#1c2433";
-const BRAND_SURFACE = "#f7f3ea";
-const BRAND_ACCENT = "#e8dcc7";
+const SURFACE = "#f7f3ea";
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const MOCK_ESCALA: EscalaSlot[] = [
+  { id: "e1", date: "Dom, 29 Jun", time: "18:00", service: "Culto de Celebração", role: "Recepção", status: "pendente" },
+  { id: "e2", date: "Qua, 02 Jul", time: "19:30", service: "Culto de Meio de Semana", role: "Recepção", status: "pendente" },
+  { id: "e3", date: "Dom, 06 Jul", time: "18:00", service: "Culto de Celebração", role: "Berçário", status: "pendente" }
+];
+
+const MOCK_SONGS: Song[] = [
+  {
+    id: "s1",
+    title: "Grande é o Senhor",
+    artist: "Ministério Zoe",
+    key: "G",
+    bpm: 72,
+    chords: "G - D - Em - C\nG - D - C",
+    lyrics: `Grande é o Senhor
+E mui digno de louvor
+Na cidade do nosso Deus
+No seu santo monte
+
+Belo na sua altitude
+A alegria de toda a terra
+O monte Sião, os lados do norte
+É a cidade do Grande Rei`
+  },
+  {
+    id: "s2",
+    title: "Nada além do Sangue",
+    artist: "Hillsong",
+    key: "A",
+    bpm: 68,
+    chords: "A - E - F#m - D\nA - E - D",
+    lyrics: `Que pode me dar perdão
+Somente o sangue de Jesus
+Que pode me restaurar
+Somente o sangue de Jesus
+
+Oh! Precioso é o fluxo
+Que me faz branco como a neve
+Nenhum outro fonte sei
+Somente o sangue de Jesus`
+  },
+  {
+    id: "s3",
+    title: "Oceans",
+    artist: "Hillsong United",
+    key: "D",
+    bpm: 62,
+    chords: "D - A - Bm - G\nD - A - G",
+    lyrics: `You call me out upon the waters
+The great unknown where feet may fail
+And there I find You in the mystery
+In oceans deep my faith will stand`
+  },
+  {
+    id: "s4",
+    title: "Tua Graça Me Basta",
+    artist: "Ministério Avivah",
+    key: "E",
+    bpm: 76,
+    chords: "E - B - C#m - A\nE - B - A",
+    lyrics: `Tua graça me basta
+Teu poder se aperfeiçoa
+Na fraqueza, na dor
+Tua glória eu vou ver`
+  }
+];
+
+const MOCK_PROGRAMMING = [
+  { order: 1, type: "Entrada", description: "Grande é o Senhor — Ministério Zoe" },
+  { order: 2, type: "Louvor", description: "Nada além do Sangue — Hillsong" },
+  { order: 3, type: "Adoração", description: "Oceans — Hillsong United" },
+  { order: 4, type: "Ofertório", description: "Tua Graça Me Basta — Ministério Avivah" },
+  { order: 5, type: "Encerramento", description: "Grande é o Senhor (reprise)" }
+];
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("splash");
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("splash");
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-
-  // linked institution
   const [linkedOrg, setLinkedOrg] = useState<Organization | null>(null);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [dataReady, setDataReady] = useState(false);
-
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const notifListener = useRef<Notifications.EventSubscription | null>(null);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   // auth listener
   useEffect(() => {
-    if (!configured) {
+    if (!configured) { setAuthReady(true); setAuthScreen("welcome"); return; }
+    const unsub = subscribeToFirebaseMobileAuthState(firebaseConfig, (u) => {
+      setUser(u);
       setAuthReady(true);
-      setScreen("welcome");
-      return;
-    }
-
-    const unsub = subscribeToFirebaseMobileAuthState(firebaseConfig, (nextUser) => {
-      setUser(nextUser);
-      setAuthReady(true);
-      if (nextUser) {
-        setScreen("main");
-      } else {
-        setScreen("welcome");
-      }
+      setAuthScreen(u ? "splash" : "welcome"); // splash means "go to main"
     });
-
     return () => unsub();
   }, [configured]);
 
-  // load tenant data when logged in
+  // push notifications setup
   useEffect(() => {
-    if (!user || !configured) {
-      setDataReady(false);
-      return;
-    }
+    registerForPushNotifications().then(token => { if (token) setPushToken(token); });
+    notifListener.current = Notifications.addNotificationReceivedListener(() => {});
+    return () => { if (notifListener.current) Notifications.removeNotificationSubscription(notifListener.current); };
+  }, []);
 
+  // load tenant data
+  useEffect(() => {
+    if (!user || !configured) { setDataReady(false); return; }
     let cancelled = false;
-
     async function load() {
       try {
-        // Use linked org or fallback to default
         const orgId = linkedOrg?.id ?? "org_alvo_demo";
-        const context = { organizationId: orgId };
-        const [snapshot, nextEvents, nextGroups] = await Promise.all([
-          fetchTenantRuntimeSnapshot(firebaseConfig, context),
-          fetchEvents(firebaseConfig, context, 8),
-          fetchGroups(firebaseConfig, context, 8)
+        const ctx = { organizationId: orgId };
+        const [snap, evts, grps] = await Promise.all([
+          fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
+          fetchEvents(firebaseConfig, ctx, 8),
+          fetchGroups(firebaseConfig, ctx, 8)
         ]);
-        if (!cancelled) {
-          setTenantRuntime(snapshot);
-          setEvents(nextEvents);
-          setGroups(nextGroups);
-          setDataReady(true);
-        }
-      } catch {
-        if (!cancelled) setDataReady(true);
-      }
+        if (!cancelled) { setTenantRuntime(snap); setEvents(evts); setGroups(grps); setDataReady(true); }
+      } catch { if (!cancelled) setDataReady(true); }
     }
-
     void load();
     return () => { cancelled = true; };
   }, [user, linkedOrg, configured]);
@@ -126,75 +225,49 @@ export default function App() {
   async function handleSignOut() {
     try {
       await signOutFromFirebaseMobile(firebaseConfig);
-      setLinkedOrg(null);
-      setTenantRuntime(null);
-      setEvents([]);
-      setGroups([]);
-      setDataReady(false);
-      setScreen("welcome");
+      setLinkedOrg(null); setTenantRuntime(null); setEvents([]); setGroups([]); setDataReady(false);
+      setAuthScreen("welcome");
     } catch {}
   }
 
-  if (!authReady || screen === "splash") {
-    return <SplashScreen />;
+  // Auth screens
+  if (!authReady || (!user && authScreen === "splash")) return <SplashScreen />;
+  if (!user) {
+    if (authScreen === "welcome") return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
+    if (authScreen === "login") return <LoginScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("splash")} onRegister={() => setAuthScreen("register")} />;
+    if (authScreen === "register") return <RegisterScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("link-institution")} onLogin={() => setAuthScreen("login")} />;
+    if (authScreen === "link-institution") return <LinkInstitutionScreen configured={configured} onLink={(org) => { setLinkedOrg(org); setAuthScreen("splash"); }} onSkip={() => setAuthScreen("splash")} />;
+    return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
   }
 
-  if (screen === "welcome") {
-    return (
-      <WelcomeScreen
-        onLogin={() => setScreen("login")}
-        onRegister={() => setScreen("register")}
-      />
-    );
-  }
-
-  if (screen === "login") {
-    return (
-      <LoginScreen
-        configured={configured}
-        onBack={() => setScreen("welcome")}
-        onSuccess={() => setScreen("main")}
-        onRegister={() => setScreen("register")}
-      />
-    );
-  }
-
-  if (screen === "register") {
-    return (
-      <RegisterScreen
-        configured={configured}
-        onBack={() => setScreen("welcome")}
-        onSuccess={() => setScreen("link-institution")}
-        onLogin={() => setScreen("login")}
-      />
-    );
-  }
-
-  if (screen === "link-institution") {
-    return (
-      <LinkInstitutionScreen
-        configured={configured}
-        onLink={(org) => {
-          setLinkedOrg(org);
-          setScreen("main");
-        }}
-        onSkip={() => setScreen("main")}
-      />
-    );
-  }
-
-  // main app
   return (
     <MainApp
-      user={user!}
+      user={user}
       tenantRuntime={tenantRuntime}
       events={events}
       groups={groups}
       dataReady={dataReady}
       linkedOrg={linkedOrg}
+      pushToken={pushToken}
       onSignOut={handleSignOut}
     />
   );
+}
+
+// ─── Push notification helper ─────────────────────────────────────────────────
+
+async function registerForPushNotifications(): Promise<string | null> {
+  try {
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") return null;
+    const token = await Notifications.getExpoPushTokenAsync();
+    return token.data;
+  } catch { return null; }
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
@@ -204,10 +277,8 @@ function SplashScreen() {
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
       <View style={[s.fill, s.center, { backgroundColor: BRAND_DARK }]}>
-        <View style={s.logoMark}>
-          <Text style={s.logoText}>A</Text>
-        </View>
-        <ActivityIndicator color={BRAND_COLOR} style={{ marginTop: 32 }} />
+        <View style={s.logoMark}><Text style={s.logoText}>A</Text></View>
+        <ActivityIndicator color={BRAND} style={{ marginTop: 32 }} />
       </View>
     </SafeAreaView>
   );
@@ -215,40 +286,19 @@ function SplashScreen() {
 
 // ─── Welcome ──────────────────────────────────────────────────────────────────
 
-function WelcomeScreen({
-  onLogin,
-  onRegister
-}: {
-  onLogin: () => void;
-  onRegister: () => void;
-}) {
+function WelcomeScreen({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="dark" />
-      <View style={[s.fill, { backgroundColor: BRAND_SURFACE }]}>
+      <View style={[s.fill, { backgroundColor: SURFACE }]}>
         <View style={s.welcomeHero}>
-          <View style={[s.logoMark, { backgroundColor: BRAND_COLOR }]}>
-            <Text style={s.logoText}>A</Text>
-          </View>
+          <View style={[s.logoMark, { backgroundColor: BRAND }]}><Text style={s.logoText}>A</Text></View>
           <Text style={s.welcomeTitle}>Bem-vindo{"\n"}à sua Igreja</Text>
-          <Text style={s.welcomeSubtitle}>
-            Conecte-se, cresça e sirva com a sua comunidade de fé.
-          </Text>
+          <Text style={s.welcomeSub}>Conecte-se, cresça e sirva com a sua comunidade de fé.</Text>
         </View>
-
         <View style={s.welcomeActions}>
-          <Pressable
-            style={({ pressed }) => [s.btnPrimary, pressed && s.btnPressed]}
-            onPress={onRegister}
-          >
-            <Text style={s.btnPrimaryText}>Criar conta</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [s.btnSecondary, pressed && s.btnPressed]}
-            onPress={onLogin}
-          >
-            <Text style={s.btnSecondaryText}>Já tenho conta</Text>
-          </Pressable>
+          <Btn label="Criar conta" onPress={onRegister} />
+          <Btn label="Já tenho conta" onPress={onLogin} variant="outline" />
         </View>
       </View>
     </SafeAreaView>
@@ -257,104 +307,29 @@ function WelcomeScreen({
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
-function LoginScreen({
-  configured,
-  onBack,
-  onSuccess,
-  onRegister
-}: {
-  configured: boolean;
-  onBack: () => void;
-  onSuccess: () => void;
-  onRegister: () => void;
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured: boolean; onBack: () => void; onSuccess: () => void; onRegister: () => void }) {
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit() {
     if (!email.trim() || !password || loading) return;
-    try {
-      setLoading(true);
-      setError(null);
-      await signInWithFirebaseMobileEmailPassword({
-        config: firebaseConfig,
-        email: email.trim(),
-        password
-      });
+    try { setLoading(true); setError(null);
+      await signInWithFirebaseMobileEmailPassword({ config: firebaseConfig, email: email.trim(), password });
       onSuccess();
-    } catch (err) {
-      setError(formatAuthError(err));
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(formatAuthError(e)); } finally { setLoading(false); }
   }
-
   return (
-    <SafeAreaView style={s.fill}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={s.fill}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View style={s.screenHeader}>
-          <TouchableOpacity onPress={onBack} hitSlop={12}>
-            <Text style={s.backBtn}>← Voltar</Text>
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={s.fill}><StatusBar style="dark" />
+      <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={s.screenHeader}><TouchableOpacity onPress={onBack} hitSlop={12}><Text style={s.backBtn}>← Voltar</Text></TouchableOpacity></View>
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Entrar</Text>
-          <Text style={s.screenSubtitle}>Acesse sua conta para continuar.</Text>
-
-          {!configured && (
-            <View style={s.warningBox}>
-              <Text style={s.warningText}>Firebase não configurado. Use variáveis EXPO_PUBLIC_*.</Text>
-            </View>
-          )}
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Email</Text>
-            <TextInput
-              style={s.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="seu@email.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Senha</Text>
-            <TextInput
-              style={s.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-            />
-          </View>
-
+          <Text style={s.screenSub}>Acesse sua conta para continuar.</Text>
+          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
+          <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
+          <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="••••••••" />
           {error && <Text style={s.errorText}>{error}</Text>}
-
-          <Pressable
-            style={({ pressed }) => [s.btnPrimary, pressed && s.btnPressed, loading && s.btnDisabled]}
-            onPress={submit}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={s.btnPrimaryText}>Entrar</Text>
-            }
-          </Pressable>
-
-          <TouchableOpacity onPress={onRegister} style={s.linkRow}>
-            <Text style={s.linkText}>Não tem conta? <Text style={s.linkBold}>Criar conta</Text></Text>
-          </TouchableOpacity>
+          <Btn label="Entrar" onPress={submit} loading={loading} />
+          <TouchableOpacity onPress={onRegister} style={s.linkRow}><Text style={s.linkText}>Não tem conta? <Text style={s.linkBold}>Criar conta</Text></Text></TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -363,140 +338,34 @@ function LoginScreen({
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
-function RegisterScreen({
-  configured,
-  onBack,
-  onSuccess,
-  onLogin
-}: {
-  configured: boolean;
-  onBack: () => void;
-  onSuccess: () => void;
-  onLogin: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured: boolean; onBack: () => void; onSuccess: () => void; onLogin: () => void }) {
+  const [name, setName] = useState(""); const [email, setEmail] = useState("");
+  const [password, setPassword] = useState(""); const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit() {
     if (!name.trim() || !email.trim() || !password || loading) return;
-    if (password !== confirm) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("A senha deve ter ao menos 6 caracteres.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      await registerWithFirebaseMobileEmailPassword({
-        config: firebaseConfig,
-        email: email.trim(),
-        password,
-        displayName: name.trim()
-      });
+    if (password !== confirm) { setError("As senhas não coincidem."); return; }
+    if (password.length < 6) { setError("Mínimo 6 caracteres."); return; }
+    try { setLoading(true); setError(null);
+      await registerWithFirebaseMobileEmailPassword({ config: firebaseConfig, email: email.trim(), password, displayName: name.trim() });
       onSuccess();
-    } catch (err) {
-      setError(formatAuthError(err));
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(formatAuthError(e)); } finally { setLoading(false); }
   }
-
   return (
-    <SafeAreaView style={s.fill}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={s.fill}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View style={s.screenHeader}>
-          <TouchableOpacity onPress={onBack} hitSlop={12}>
-            <Text style={s.backBtn}>← Voltar</Text>
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={s.fill}><StatusBar style="dark" />
+      <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={s.screenHeader}><TouchableOpacity onPress={onBack} hitSlop={12}><Text style={s.backBtn}>← Voltar</Text></TouchableOpacity></View>
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Criar conta</Text>
-          <Text style={s.screenSubtitle}>Preencha seus dados para começar.</Text>
-
-          {!configured && (
-            <View style={s.warningBox}>
-              <Text style={s.warningText}>Firebase não configurado. Use variáveis EXPO_PUBLIC_*.</Text>
-            </View>
-          )}
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Nome completo</Text>
-            <TextInput
-              style={s.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Seu nome"
-              placeholderTextColor="#9ca3af"
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Email</Text>
-            <TextInput
-              style={s.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="seu@email.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Senha</Text>
-            <TextInput
-              style={s.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 6 caracteres"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-            />
-          </View>
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Confirmar senha</Text>
-            <TextInput
-              style={s.input}
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Repita a senha"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-            />
-          </View>
-
+          <Text style={s.screenSub}>Preencha seus dados para começar.</Text>
+          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
+          <Field label="Nome completo" value={name} onChange={setName} autoCapitalize="words" placeholder="Seu nome" />
+          <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
+          <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="Mínimo 6 caracteres" />
+          <Field label="Confirmar senha" value={confirm} onChange={setConfirm} secureTextEntry placeholder="Repita a senha" />
           {error && <Text style={s.errorText}>{error}</Text>}
-
-          <Pressable
-            style={({ pressed }) => [s.btnPrimary, pressed && s.btnPressed, loading && s.btnDisabled]}
-            onPress={submit}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={s.btnPrimaryText}>Criar conta</Text>
-            }
-          </Pressable>
-
-          <TouchableOpacity onPress={onLogin} style={s.linkRow}>
-            <Text style={s.linkText}>Já tem conta? <Text style={s.linkBold}>Entrar</Text></Text>
-          </TouchableOpacity>
+          <Btn label="Criar conta" onPress={submit} loading={loading} />
+          <TouchableOpacity onPress={onLogin} style={s.linkRow}><Text style={s.linkText}>Já tem conta? <Text style={s.linkBold}>Entrar</Text></Text></TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -505,90 +374,29 @@ function RegisterScreen({
 
 // ─── Link Institution ─────────────────────────────────────────────────────────
 
-function LinkInstitutionScreen({
-  configured,
-  onLink,
-  onSkip
-}: {
-  configured: boolean;
-  onLink: (org: Organization) => void;
-  onSkip: () => void;
-}) {
-  const [slug, setSlug] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boolean; onLink: (org: Organization) => void; onSkip: () => void }) {
+  const [slug, setSlug] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   async function search() {
     const value = slug.trim().toLowerCase().replace(/\s+/g, "-");
     if (!value || loading) return;
-    try {
-      setLoading(true);
-      setError(null);
+    try { setLoading(true); setError(null);
       const org = await fetchOrganizationBySlug(firebaseConfig, value);
-      if (!org) {
-        setError("Igreja não encontrada. Verifique o código e tente novamente.");
-        return;
-      }
+      if (!org) { setError("Igreja não encontrada. Verifique o código."); return; }
       onLink(org);
-    } catch {
-      setError("Erro ao buscar a igreja. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Erro ao buscar a igreja. Tente novamente."); } finally { setLoading(false); }
   }
-
   return (
-    <SafeAreaView style={s.fill}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={s.fill}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+    <SafeAreaView style={s.fill}><StatusBar style="dark" />
+      <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
-          <View style={s.institutionIcon}>
-            <Text style={s.institutionEmoji}>⛪</Text>
-          </View>
+          <View style={s.center}><Text style={{ fontSize: 52, marginBottom: 20 }}>⛪</Text></View>
           <Text style={s.screenTitle}>Vincular Igreja</Text>
-          <Text style={s.screenSubtitle}>
-            Insira o código ou slug da sua igreja para conectar sua conta à comunidade.
-          </Text>
-
-          <View style={s.infoBox}>
-            <Text style={s.infoText}>
-              O código da sua igreja é fornecido pelo líder ou secretaria.{"\n"}
-              Exemplo: <Text style={s.infoCode}>getro-church</Text>
-            </Text>
-          </View>
-
-          <View style={s.formGroup}>
-            <Text style={s.label}>Código da Igreja</Text>
-            <TextInput
-              style={s.input}
-              value={slug}
-              onChangeText={setSlug}
-              placeholder="ex: minha-igreja"
-              placeholderTextColor="#9ca3af"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
+          <Text style={s.screenSub}>Insira o código da sua igreja para conectar sua conta à comunidade.</Text>
+          <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>getro-church</Text></Text></View>
+          <Field label="Código da Igreja" value={slug} onChange={setSlug} autoCapitalize="none" placeholder="ex: minha-igreja" />
           {error && <Text style={s.errorText}>{error}</Text>}
-
-          <Pressable
-            style={({ pressed }) => [s.btnPrimary, pressed && s.btnPressed, loading && s.btnDisabled]}
-            onPress={search}
-            disabled={loading || !configured}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={s.btnPrimaryText}>Buscar e vincular</Text>
-            }
-          </Pressable>
-
-          <TouchableOpacity onPress={onSkip} style={s.linkRow}>
-            <Text style={s.linkText}>Fazer isso depois</Text>
-          </TouchableOpacity>
+          <Btn label="Buscar e vincular" onPress={search} loading={loading} disabled={!configured} />
+          <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Fazer isso depois</Text></TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -597,105 +405,75 @@ function LinkInstitutionScreen({
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
-function MainApp({
-  user,
-  tenantRuntime,
-  events,
-  groups,
-  dataReady,
-  linkedOrg,
-  onSignOut
-}: {
-  user: FirebaseAuthUser;
-  tenantRuntime: TenantRuntimeSnapshot | null;
-  events: Event[];
-  groups: Group[];
-  dataReady: boolean;
-  linkedOrg: Organization | null;
-  onSignOut: () => void;
+function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pushToken, onSignOut }: {
+  user: FirebaseAuthUser; tenantRuntime: TenantRuntimeSnapshot | null; events: Event[];
+  groups: Group[]; dataReady: boolean; linkedOrg: Organization | null;
+  pushToken: string | null; onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("inicio");
+  const [modalStack, setModalStack] = useState<ModalScreen[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
-  const orgName = tenantRuntime?.organization?.displayName
-    ?? tenantRuntime?.organization?.name
-    ?? linkedOrg?.displayName
-    ?? linkedOrg?.name
-    ?? "Minha Igreja";
-
-  const primaryColor = (tenantRuntime?.settings?.branding?.primaryColor ?? BRAND_COLOR);
-
+  const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
-  const userGroups = groups.slice(0, 3);
-  const nextEvents = events.slice(0, 5);
+
+  function push(screen: ModalScreen) { setModalStack(p => [...p, screen]); }
+  function pop() { setModalStack(p => p.slice(0, -1)); }
+
+  const modal = modalStack[modalStack.length - 1] ?? null;
+
+  function openInscricao(event: Event) { setSelectedEvent(event); push("inscricao"); }
+  function openSongDetail(song: Song) { setSelectedSong(song); push("song-detail"); }
 
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="dark" />
       <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
         {/* Header */}
-        <View style={[s.mainHeader, { backgroundColor: primaryColor }]}>
+        <View style={[s.mainHeader, { backgroundColor: primary }]}>
           <View>
-            <Text style={s.mainHeaderGreeting}>Olá, {firstName} 👋</Text>
-            <Text style={s.mainHeaderOrg}>{orgName}</Text>
+            <Text style={s.mainGreeting}>Olá, {firstName} 👋</Text>
+            <Text style={s.mainOrg}>{orgName}</Text>
           </View>
           <View style={[s.avatarCircle, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
-            <Text style={s.avatarText}>
-              {(user.displayName ?? user.email ?? "M")[0].toUpperCase()}
-            </Text>
+            <Text style={s.avatarText}>{(user.displayName ?? user.email ?? "M")[0].toUpperCase()}</Text>
           </View>
         </View>
 
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && (
-            <HomeTab
-              user={user}
-              primaryColor={primaryColor}
-              events={nextEvents}
-              groups={userGroups}
-              dataReady={dataReady}
-              orgName={orgName}
-            />
-          )}
-          {tab === "celula" && (
-            <CelulaTab groups={userGroups} primaryColor={primaryColor} dataReady={dataReady} />
-          )}
-          {tab === "agenda" && (
-            <AgendaTab events={nextEvents} primaryColor={primaryColor} dataReady={dataReady} />
-          )}
-          {tab === "perfil" && (
-            <PerfilTab
-              user={user}
-              orgName={orgName}
-              linkedOrg={linkedOrg}
-              primaryColor={primaryColor}
-              onSignOut={onSignOut}
-            />
-          )}
+          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
+          {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
+          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} />}
+          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
+
+          {/* Modals */}
+          {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} onBack={pop} />}
+          {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "escala" && <EscalaScreen primary={primary} onBack={pop} />}
+          {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
+          {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
+          {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
         </View>
 
-        {/* Bottom Tab Bar */}
-        <View style={s.tabBar}>
-          {([
-            { id: "inicio", label: "Início", icon: "🏠" },
-            { id: "celula", label: "Célula", icon: "🤝" },
-            { id: "agenda", label: "Agenda", icon: "📅" },
-            { id: "perfil", label: "Perfil", icon: "👤" }
-          ] as const).map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={s.tabItem}
-              onPress={() => setTab(item.id)}
-            >
-              <Text style={[s.tabIcon, tab === item.id && { opacity: 1 }]}>
-                {item.icon}
-              </Text>
-              <Text style={[s.tabLabel, tab === item.id && { color: primaryColor, fontWeight: "700" }]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Tab Bar — hidden when modal is open */}
+        {!modal && (
+          <View style={s.tabBar}>
+            {([
+              { id: "inicio", label: "Início", icon: "🏠" },
+              { id: "agenda", label: "Agenda", icon: "📅" },
+              { id: "celula", label: "Célula", icon: "🤝" },
+              { id: "perfil", label: "Perfil", icon: "👤" }
+            ] as const).map(item => (
+              <TouchableOpacity key={item.id} style={s.tabItem} onPress={() => setTab(item.id)}>
+                <Text style={[s.tabIcon, tab === item.id && { opacity: 1 }]}>{item.icon}</Text>
+                <Text style={[s.tabLabel, tab === item.id && { color: primary, fontWeight: "700" }]}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -703,46 +481,29 @@ function MainApp({
 
 // ─── Home Tab ─────────────────────────────────────────────────────────────────
 
-function HomeTab({
-  user,
-  primaryColor,
-  events,
-  groups,
-  dataReady,
-  orgName
-}: {
-  user: FirebaseAuthUser;
-  primaryColor: string;
-  events: Event[];
-  groups: Group[];
-  dataReady: boolean;
-  orgName: string;
+function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica }: {
+  primary: string; events: Event[]; groups: Group[]; dataReady: boolean;
+  onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void;
 }) {
   const nextEvent = events[0];
+  const myGroup = groups[0];
 
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
-      {!dataReady && (
-        <View style={s.loadingRow}>
-          <ActivityIndicator color={primaryColor} />
-          <Text style={s.loadingLabel}>Carregando dados da sua igreja...</Text>
-        </View>
-      )}
+      {!dataReady && <LoadingRow primary={primary} label="Carregando dados da sua igreja..." />}
 
-      {/* Next service card */}
+      {/* Next event */}
       {nextEvent ? (
-        <View style={[s.card, s.nextServiceCard, { borderLeftColor: primaryColor }]}>
-          <Text style={s.cardEyebrow}>PRÓXIMO EVENTO</Text>
+        <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 4 }]}>
+          <Text style={s.eyebrow}>PRÓXIMO EVENTO</Text>
           <Text style={s.cardTitle}>{nextEvent.name}</Text>
-          <Text style={s.cardMeta}>
-            {formatDate(nextEvent.startsAt)} · {formatHour(nextEvent.startsAt)}
-          </Text>
-          <Pressable style={[s.cardCta, { backgroundColor: primaryColor }]}>
-            <Text style={s.cardCtaText}>Fazer check-in</Text>
-          </Pressable>
+          <Text style={s.cardMeta}>{formatDate(nextEvent.startsAt)} · {formatHour(nextEvent.startsAt)}</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            <View style={[s.cta, { backgroundColor: primary, flex: 1 }]}><Text style={s.ctaText}>Fazer check-in</Text></View>
+          </View>
         </View>
       ) : dataReady ? (
-        <View style={[s.card, { borderLeftColor: primaryColor, borderLeftWidth: 3 }]}>
+        <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
           <Text style={s.cardTitle}>Nenhum evento próximo</Text>
           <Text style={s.cardMeta}>Fique atento às novidades da sua igreja.</Text>
         </View>
@@ -750,368 +511,808 @@ function HomeTab({
 
       {/* Quick actions */}
       <Text style={s.sectionTitle}>Acesso rápido</Text>
-      <View style={s.quickActionsGrid}>
-        {([
-          { icon: "✅", label: "Check-in", sub: "Registrar presença" },
-          { icon: "🙏", label: "Pedido de\noração", sub: "Enviar para líderes" },
-          { icon: "📖", label: "Devocional", sub: "Leitura do dia" },
-          { icon: "💰", label: "Dízimos", sub: "Contribuições" }
-        ] as const).map((item) => (
-          <Pressable key={item.label} style={s.quickAction}>
-            <Text style={s.quickActionIcon}>{item.icon}</Text>
-            <Text style={s.quickActionLabel}>{item.label}</Text>
-            <Text style={s.quickActionSub}>{item.sub}</Text>
-          </Pressable>
-        ))}
+      <View style={s.quickGrid}>
+        <QuickAction icon="💰" label="Dízimos e Doações" sub="PIX e cartão" onPress={onOpenDoacoes} />
+        <QuickAction icon="👶" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />
+        <QuickAction icon="📋" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />
+        <QuickAction icon="🎸" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />
       </View>
 
-      {/* My groups */}
-      {groups.length > 0 && (
+      {/* My cell */}
+      {myGroup && (
         <>
           <Text style={s.sectionTitle}>Minha Célula</Text>
-          {groups.slice(0, 1).map((g) => (
-            <View key={g.id} style={[s.card, { borderLeftColor: primaryColor, borderLeftWidth: 3 }]}>
-              <Text style={s.cardTitle}>{g.name}</Text>
-              <Text style={s.cardMeta}>
-                {g.meetingDayOfWeek != null ? weekdayNumLabel(g.meetingDayOfWeek) : "Dia a definir"}{" "}
-                {g.meetingTime ? `· ${g.meetingTime}` : ""}
-              </Text>
-              <Pressable style={[s.cardCta, { backgroundColor: primaryColor }]}>
-                <Text style={s.cardCtaText}>Confirmar presença</Text>
-              </Pressable>
-            </View>
-          ))}
+          <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
+            <Text style={s.cardTitle}>{myGroup.name}</Text>
+            <Text style={s.cardMeta}>{myGroup.meetingDayOfWeek != null ? dowLabel(myGroup.meetingDayOfWeek) : "Dia a definir"}{myGroup.meetingTime ? ` · ${myGroup.meetingTime}` : ""}</Text>
+          </View>
         </>
       )}
 
-      {/* Journey progress */}
+      {/* Journey */}
       <Text style={s.sectionTitle}>Minha Jornada</Text>
       <View style={s.card}>
-        <View style={s.journeyRow}>
-          <View style={s.journeyStep}>
-            <View style={[s.journeyDot, { backgroundColor: primaryColor }]} />
-            <Text style={s.journeyStepLabel}>Visitante</Text>
-            <Text style={[s.journeyStepStatus, { color: primaryColor }]}>Concluído</Text>
-          </View>
-          <View style={[s.journeyLine, { backgroundColor: primaryColor }]} />
-          <View style={s.journeyStep}>
-            <View style={[s.journeyDot, { backgroundColor: primaryColor }]} />
-            <Text style={s.journeyStepLabel}>Conectado</Text>
-            <Text style={[s.journeyStepStatus, { color: primaryColor }]}>Atual</Text>
-          </View>
-          <View style={[s.journeyLine, { backgroundColor: "#e5e7eb" }]} />
-          <View style={s.journeyStep}>
-            <View style={[s.journeyDot, { backgroundColor: "#e5e7eb" }]} />
-            <Text style={s.journeyStepLabel}>Servindo</Text>
-            <Text style={s.journeyStepStatusMuted}>Em breve</Text>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
-  );
-}
-
-// ─── Célula Tab ───────────────────────────────────────────────────────────────
-
-function CelulaTab({
-  groups,
-  primaryColor,
-  dataReady
-}: {
-  groups: Group[];
-  primaryColor: string;
-  dataReady: boolean;
-}) {
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0] ?? null);
-  const [presenceConfirmed, setPresenceConfirmed] = useState(false);
-  const [prayerText, setPrayerText] = useState("");
-  const [prayerSent, setPrayerSent] = useState(false);
-
-  const announcements = [
-    "Próxima reunião: confirme sua presença até quarta.",
-    "Estudo desta semana: Filipenses 4:4-7.",
-    "Lembre-se de trazer um amigo novo na próxima semana!"
-  ];
-
-  return (
-    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
-      {!dataReady && (
-        <View style={s.loadingRow}>
-          <ActivityIndicator color={primaryColor} />
-          <Text style={s.loadingLabel}>Carregando células...</Text>
-        </View>
-      )}
-
-      {groups.length === 0 && dataReady && (
-        <View style={[s.card, s.emptyCard]}>
-          <Text style={s.emptyIcon}>🤝</Text>
-          <Text style={s.emptyTitle}>Nenhuma célula encontrada</Text>
-          <Text style={s.emptyMeta}>Entre em contato com sua liderança para ser adicionado a uma célula.</Text>
-        </View>
-      )}
-
-      {groups.length > 0 && (
-        <>
-          {/* Group selector */}
-          <Text style={s.sectionTitle}>Selecionar Célula</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow}>
-            {groups.map((g) => (
-              <Pressable
-                key={g.id}
-                style={[s.chip, selectedGroup?.id === g.id && { backgroundColor: primaryColor }]}
-                onPress={() => { setSelectedGroup(g); setPresenceConfirmed(false); }}
-              >
-                <Text style={[s.chipText, selectedGroup?.id === g.id && { color: "#fff" }]}>
-                  {g.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </>
-      )}
-
-      {selectedGroup && (
-        <>
-          {/* Group info */}
-          <View style={[s.card, { borderLeftColor: primaryColor, borderLeftWidth: 3 }]}>
-            <Text style={s.cardTitle}>{selectedGroup.name}</Text>
-            <Text style={s.cardMeta}>
-              {selectedGroup.meetingDayOfWeek != null ? weekdayNumLabel(selectedGroup.meetingDayOfWeek) : "Dia a definir"}{" "}
-              {selectedGroup.meetingTime ? `· ${selectedGroup.meetingTime}` : ""}
-            </Text>
-          </View>
-
-          {/* Presence */}
-          <Text style={s.sectionTitle}>Presença</Text>
-          <View style={s.card}>
-            {presenceConfirmed ? (
-              <View style={s.confirmedRow}>
-                <Text style={[s.confirmedIcon, { color: primaryColor }]}>✓</Text>
-                <Text style={s.confirmedText}>Presença confirmada!</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {[
+            { label: "Visitante", done: true },
+            { label: "Conectado", done: true, current: true },
+            { label: "Servindo", done: false }
+          ].map((step, i, arr) => (
+            <View key={step.label} style={{ flexDirection: "row", alignItems: "center", flex: i < arr.length - 1 ? 1 : undefined }}>
+              <View style={s.journeyStep}>
+                <View style={[s.journeyDot, { backgroundColor: step.done ? primary : "#e5e7eb" }]} />
+                <Text style={s.journeyLabel}>{step.label}</Text>
+                {step.current && <Text style={[s.journeyStatus, { color: primary }]}>Atual</Text>}
               </View>
-            ) : (
-              <Pressable
-                style={[s.btnPrimary, { backgroundColor: primaryColor }]}
-                onPress={() => setPresenceConfirmed(true)}
-              >
-                <Text style={s.btnPrimaryText}>Confirmar presença</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {/* Announcements */}
-          <Text style={s.sectionTitle}>Avisos</Text>
-          {announcements.map((a, i) => (
-            <View key={i} style={s.announcementCard}>
-              <Text style={[s.announcementDot, { color: primaryColor }]}>●</Text>
-              <Text style={s.announcementText}>{a}</Text>
+              {i < arr.length - 1 && <View style={[s.journeyLine, { backgroundColor: step.done ? primary : "#e5e7eb", flex: 1 }]} />}
             </View>
           ))}
-
-          {/* Prayer request */}
-          <Text style={s.sectionTitle}>Pedido de Oração</Text>
-          <View style={s.card}>
-            {prayerSent ? (
-              <View style={s.confirmedRow}>
-                <Text style={[s.confirmedIcon, { color: primaryColor }]}>🙏</Text>
-                <Text style={s.confirmedText}>Pedido enviado! Sua liderança irá orar por você.</Text>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={s.prayerInput}
-                  value={prayerText}
-                  onChangeText={setPrayerText}
-                  placeholder="Escreva seu pedido de oração aqui..."
-                  placeholderTextColor="#9ca3af"
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-                <Pressable
-                  style={[s.btnPrimary, { backgroundColor: primaryColor, marginTop: 12 }]}
-                  onPress={() => { if (prayerText.trim()) setPrayerSent(true); }}
-                >
-                  <Text style={s.btnPrimaryText}>Enviar pedido</Text>
-                </Pressable>
-              </>
-            )}
-          </View>
-        </>
-      )}
+        </View>
+      </View>
     </ScrollView>
   );
 }
 
 // ─── Agenda Tab ───────────────────────────────────────────────────────────────
 
-function AgendaTab({
-  events,
-  primaryColor,
-  dataReady
-}: {
-  events: Event[];
-  primaryColor: string;
-  dataReady: boolean;
+function AgendaTab({ events, primary, dataReady, onInscricao }: {
+  events: Event[]; primary: string; dataReady: boolean; onInscricao: (e: Event) => void;
 }) {
   const staticEvents = [
-    { id: "s1", name: "Culto de Celebração", startsAt: nextWeekday(0, 18), type: "culto" },
-    { id: "s2", name: "Reunião de Célula", startsAt: nextWeekday(3, 19.5), type: "celula" },
-    { id: "s3", name: "Treinamento de Líderes", startsAt: nextWeekday(1, 20), type: "formacao" }
+    { id: "s1", name: "Culto de Celebração", startsAt: nextDow(0, 18), type: "culto", paid: false },
+    { id: "s2", name: "Reunião de Célula", startsAt: nextDow(3, 19.5), type: "celula", paid: false },
+    { id: "s3", name: "Retiro de Jovens", startsAt: nextDow(5, 8), type: "retiro", paid: true }
   ];
-  const displayEvents = events.length > 0 ? events : staticEvents;
+  const list = events.length > 0 ? events : staticEvents;
 
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
-      {!dataReady && (
-        <View style={s.loadingRow}>
-          <ActivityIndicator color={primaryColor} />
-          <Text style={s.loadingLabel}>Carregando agenda...</Text>
-        </View>
-      )}
-
+      {!dataReady && <LoadingRow primary={primary} label="Carregando agenda..." />}
       <Text style={s.sectionTitle}>Próximos Eventos</Text>
-
-      {displayEvents.map((event) => (
+      {list.map(event => (
         <View key={event.id} style={s.agendaCard}>
-          <View style={[s.agendaDateBox, { backgroundColor: primaryColor }]}>
-            <Text style={s.agendaDay}>{formatWeekday(event.startsAt)}</Text>
-            <Text style={s.agendaDayNum}>{formatDayNum(event.startsAt)}</Text>
+          <View style={[s.agendaDate, { backgroundColor: primary }]}>
+            <Text style={s.agendaWd}>{formatWd(event.startsAt)}</Text>
+            <Text style={s.agendaDn}>{formatDn(event.startsAt)}</Text>
           </View>
           <View style={s.agendaInfo}>
-            <Text style={s.agendaTitle}>{event.name}</Text>
-            <Text style={s.agendaTime}>{formatHour(event.startsAt)}</Text>
-            <View style={[s.agendaBadge, { backgroundColor: `${primaryColor}20` }]}>
-              <Text style={[s.agendaBadgeText, { color: primaryColor }]}>
-                {eventKindLabel(event.type)}
-              </Text>
+            <Text style={s.cardTitle}>{event.name}</Text>
+            <Text style={s.cardMeta}>{formatHour(event.startsAt)}</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <View style={[s.badge, { backgroundColor: `${primary}20` }]}>
+                <Text style={[s.badgeText, { color: primary }]}>{eventLabel(event.type)}</Text>
+              </View>
+              {"paid" in event && (event as typeof event & { paid?: boolean }).paid && (
+                <View style={[s.badge, { backgroundColor: "#fef3c7" }]}>
+                  <Text style={[s.badgeText, { color: "#92400e" }]}>Pago</Text>
+                </View>
+              )}
             </View>
+            <TouchableOpacity onPress={() => onInscricao(event as Event)} style={[s.cta, { backgroundColor: primary, marginTop: 10, alignSelf: "flex-start" }]}>
+              <Text style={s.ctaText}>Inscrever-se</Text>
+            </TouchableOpacity>
           </View>
         </View>
       ))}
+    </ScrollView>
+  );
+}
+
+// ─── Célula Tab ───────────────────────────────────────────────────────────────
+
+function CelulaTab({ groups, primary, dataReady }: { groups: Group[]; primary: string; dataReady: boolean }) {
+  const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false);
+
+  const announcements = [
+    "Próxima reunião: confirme sua presença até amanhã.",
+    "Estudo desta semana: Filipenses 4:4-7 — Paz de Deus.",
+    "Lembre-se de trazer um amigo novo na semana que vem!"
+  ];
+
+  return (
+    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
+      {!dataReady && <LoadingRow primary={primary} label="Carregando células..." />}
+      {groups.length === 0 && dataReady && (
+        <EmptyState icon="🤝" title="Nenhuma célula encontrada" sub="Entre em contato com sua liderança para ser adicionado a uma célula." />
+      )}
+      {groups.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+          {groups.map(g => (
+            <Pressable key={g.id} style={[s.chip, sel?.id === g.id && { backgroundColor: primary }]} onPress={() => { setSel(g); setConfirmed(false); }}>
+              <Text style={[s.chipText, sel?.id === g.id && { color: "#fff" }]}>{g.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+      {(sel ?? groups[0]) && (
+        <>
+          <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
+            <Text style={s.cardTitle}>{(sel ?? groups[0])!.name}</Text>
+            <Text style={s.cardMeta}>{(sel ?? groups[0])!.meetingDayOfWeek != null ? dowLabel((sel ?? groups[0])!.meetingDayOfWeek!) : "Dia a definir"}</Text>
+          </View>
+
+          <Text style={s.sectionTitle}>Presença</Text>
+          <View style={s.card}>
+            {confirmed
+              ? <View style={s.row}><Text style={{ fontSize: 22, color: primary }}>✓</Text><Text style={[s.cardTitle, { marginLeft: 8 }]}>Presença confirmada!</Text></View>
+              : <Btn label="Confirmar presença" onPress={() => setConfirmed(true)} color={primary} />
+            }
+          </View>
+
+          <Text style={s.sectionTitle}>Avisos</Text>
+          {announcements.map((a, i) => (
+            <View key={i} style={s.announcementRow}>
+              <Text style={{ color: primary, marginRight: 8, fontSize: 10, marginTop: 4 }}>●</Text>
+              <Text style={[s.cardMeta, { flex: 1, lineHeight: 20 }]}>{a}</Text>
+            </View>
+          ))}
+
+          <Text style={s.sectionTitle}>Pedido de Oração</Text>
+          <View style={s.card}>
+            {prayerSent
+              ? <View style={s.row}><Text style={{ fontSize: 22 }}>🙏</Text><Text style={[s.cardMeta, { flex: 1, marginLeft: 8 }]}>Pedido enviado! Sua liderança irá orar por você.</Text></View>
+              : <>
+                <TextInput style={s.prayerInput} value={prayer} onChangeText={setPrayer} placeholder="Escreva seu pedido de oração..." placeholderTextColor="#9ca3af" multiline numberOfLines={4} textAlignVertical="top" />
+                <Btn label="Enviar pedido" onPress={() => { if (prayer.trim()) setPrayerSent(true); }} color={primary} style={{ marginTop: 12 }} />
+              </>
+            }
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
 
 // ─── Perfil Tab ───────────────────────────────────────────────────────────────
 
-function PerfilTab({
-  user,
-  orgName,
-  linkedOrg,
-  primaryColor,
-  onSignOut
-}: {
-  user: FirebaseAuthUser;
-  orgName: string;
-  linkedOrg: Organization | null;
-  primaryColor: string;
-  onSignOut: () => void;
+function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica }: {
+  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null;
+  primary: string; pushToken: string | null; onSignOut: () => void;
+  onOpenEscala: () => void; onOpenMusica: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
-      {/* Avatar */}
       <View style={s.profileHeader}>
-        <View style={[s.profileAvatar, { backgroundColor: primaryColor }]}>
-          <Text style={s.profileAvatarText}>
-            {(user.displayName ?? user.email ?? "M")[0].toUpperCase()}
-          </Text>
+        <View style={[s.profileAvatar, { backgroundColor: primary }]}>
+          <Text style={s.profileAvatarText}>{(user.displayName ?? user.email ?? "M")[0].toUpperCase()}</Text>
         </View>
         <Text style={s.profileName}>{user.displayName ?? "Membro"}</Text>
         <Text style={s.profileEmail}>{user.email}</Text>
-      </View>
-
-      {/* Church info */}
-      <Text style={s.sectionTitle}>Minha Igreja</Text>
-      <View style={[s.card, { borderLeftColor: primaryColor, borderLeftWidth: 3 }]}>
-        <Text style={s.cardTitle}>{orgName}</Text>
-        {linkedOrg?.slug ? (
-          <Text style={s.cardMeta}>Código: {linkedOrg.slug}</Text>
-        ) : (
-          <Text style={s.cardMeta}>Igreja não vinculada</Text>
+        {pushToken && (
+          <View style={[s.badge, { backgroundColor: "#dcfce7", marginTop: 8 }]}>
+            <Text style={[s.badgeText, { color: "#166534" }]}>🔔 Notificações ativas</Text>
+          </View>
         )}
       </View>
 
-      {/* Info cards */}
+      <Text style={s.sectionTitle}>Minha Igreja</Text>
+      <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
+        <Text style={s.cardTitle}>{orgName}</Text>
+        <Text style={s.cardMeta}>{linkedOrg?.slug ? `Código: ${linkedOrg.slug}` : "Igreja não vinculada"}</Text>
+      </View>
+
+      <Text style={s.sectionTitle}>Serviço</Text>
+      <TouchableOpacity style={s.menuRow} onPress={onOpenEscala}>
+        <Text style={s.menuIcon}>📋</Text>
+        <View style={s.fill}><Text style={s.menuLabel}>Minha Escala</Text><Text style={s.menuSub}>Ver e confirmar escalas de serviço</Text></View>
+        <Text style={s.menuChev}>›</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={s.menuRow} onPress={onOpenMusica}>
+        <Text style={s.menuIcon}>🎸</Text>
+        <View style={s.fill}><Text style={s.menuLabel}>Ministério Musical</Text><Text style={s.menuSub}>Repertório, cifras e programação</Text></View>
+        <Text style={s.menuChev}>›</Text>
+      </TouchableOpacity>
+
       <Text style={s.sectionTitle}>Minha Conta</Text>
-      {([
-        { label: "Status", value: "Membro ativo" },
-        { label: "Jornada", value: "Conectando" },
-        { label: "Tribo", value: "A definir" }
-      ] as const).map((item) => (
+      {[{ label: "Status", value: "Membro ativo" }, { label: "Jornada", value: "Conectando" }, { label: "Tribo", value: "A definir" }].map(item => (
         <View key={item.label} style={s.infoRow}>
-          <Text style={s.infoRowLabel}>{item.label}</Text>
-          <Text style={s.infoRowValue}>{item.value}</Text>
+          <Text style={s.infoLabel}>{item.label}</Text>
+          <Text style={s.infoValue}>{item.value}</Text>
         </View>
       ))}
 
-      {/* Sign out */}
-      <Pressable
-        style={({ pressed }) => [s.btnDanger, pressed && s.btnPressed]}
-        onPress={onSignOut}
-      >
-        <Text style={s.btnDangerText}>Sair da conta</Text>
-      </Pressable>
+      <Btn label="Sair da conta" onPress={onSignOut} variant="danger" style={{ marginTop: 8 }} />
     </ScrollView>
+  );
+}
+
+// ─── Doações Screen ───────────────────────────────────────────────────────────
+
+function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName: string; onBack: () => void }) {
+  const [type, setType] = useState<"dizimo" | "oferta" | "missoes" | "outro">("dizimo");
+  const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
+  const [method, setMethod] = useState<"pix" | "cartao">("pix");
+  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const PIX_KEY = "00.000.000/0001-00"; // Substituir pela chave real da igreja
+  const PIX_NAME = orgName;
+  const presets = ["50", "100", "200", "500"];
+
+  async function pickReceipt() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8
+    });
+    if (!result.canceled && result.assets[0]) setReceiptUri(result.assets[0].uri);
+  }
+
+  async function sharePixKey() {
+    try { await Share.share({ message: `Chave PIX: ${PIX_KEY}\nBeneficiário: ${PIX_NAME}` }); } catch {}
+  }
+
+  const finalAmount = amount === "custom" ? customAmount : amount;
+
+  if (submitted) {
+    return (
+      <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+        <ModalHeader title="Doações e Dízimos" onBack={onBack} />
+        <View style={[s.fill, s.center, { padding: 32 }]}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>🙏</Text>
+          <Text style={[s.screenTitle, { textAlign: "center" }]}>Contribuição registrada!</Text>
+          <Text style={[s.screenSub, { textAlign: "center" }]}>
+            {receiptUri ? "Comprovante enviado. Obrigado pela fidelidade!" : "Obrigado pela contribuição! Envie o comprovante quando disponível."}
+          </Text>
+          <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 32, width: "100%" }} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Doações e Dízimos" onBack={onBack} />
+      <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
+
+        {/* Type */}
+        <Text style={s.sectionTitle}>Tipo de contribuição</Text>
+        <View style={s.row}>
+          {([
+            { id: "dizimo", label: "Dízimo" }, { id: "oferta", label: "Oferta" },
+            { id: "missoes", label: "Missões" }, { id: "outro", label: "Outro" }
+          ] as const).map(t => (
+            <Pressable key={t.id} style={[s.typeChip, type === t.id && { backgroundColor: primary, borderColor: primary }]} onPress={() => setType(t.id)}>
+              <Text style={[s.typeChipText, type === t.id && { color: "#fff" }]}>{t.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Amount */}
+        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Valor</Text>
+        <View style={[s.row, { flexWrap: "wrap", gap: 8 }]}>
+          {presets.map(p => (
+            <Pressable key={p} style={[s.amountChip, amount === p && { backgroundColor: primary, borderColor: primary }]} onPress={() => setAmount(p)}>
+              <Text style={[s.amountText, amount === p && { color: "#fff" }]}>R$ {p}</Text>
+            </Pressable>
+          ))}
+          <Pressable style={[s.amountChip, amount === "custom" && { backgroundColor: primary, borderColor: primary }]} onPress={() => setAmount("custom")}>
+            <Text style={[s.amountText, amount === "custom" && { color: "#fff" }]}>Outro valor</Text>
+          </Pressable>
+        </View>
+        {amount === "custom" && (
+          <TextInput style={[s.input, { marginTop: 10 }]} value={customAmount} onChangeText={setCustomAmount} placeholder="R$ 0,00" keyboardType="numeric" placeholderTextColor="#9ca3af" />
+        )}
+
+        {/* Method */}
+        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Forma de pagamento</Text>
+        <View style={s.row}>
+          {([{ id: "pix", label: "PIX" }, { id: "cartao", label: "Cartão de crédito" }] as const).map(m => (
+            <Pressable key={m.id} style={[s.methodBtn, method === m.id && { borderColor: primary, backgroundColor: `${primary}12` }]} onPress={() => setMethod(m.id)}>
+              <Text style={{ fontSize: 20, marginBottom: 4 }}>{m.id === "pix" ? "⚡" : "💳"}</Text>
+              <Text style={[s.methodLabel, method === m.id && { color: primary, fontWeight: "700" }]}>{m.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* PIX details */}
+        {method === "pix" && (
+          <View style={[s.card, { marginTop: 12 }]}>
+            <Text style={[s.eyebrow, { marginBottom: 8 }]}>DADOS PIX</Text>
+
+            {/* QR Code placeholder visual */}
+            <View style={s.qrPlaceholder}>
+              <View style={s.qrFrame}>
+                {Array.from({ length: 5 }).map((_, r) => (
+                  <View key={r} style={s.qrRow}>
+                    {Array.from({ length: 5 }).map((_, c) => (
+                      <View key={c} style={[s.qrCell, ((r + c) % 2 === 0 || (r === 0 || r === 4) || (c === 0 || c === 4)) && { backgroundColor: BRAND_DARK }]} />
+                    ))}
+                  </View>
+                ))}
+              </View>
+              <Text style={s.qrLabel}>QR Code PIX</Text>
+              <Text style={s.qrSub}>Use o app do seu banco para escanear</Text>
+            </View>
+
+            <View style={s.pixRow}>
+              <View style={s.fill}>
+                <Text style={s.pixLabel}>Chave PIX (CNPJ)</Text>
+                <Text style={s.pixKey} selectable>{PIX_KEY}</Text>
+              </View>
+              <TouchableOpacity style={[s.copyBtn, { borderColor: primary }]} onPress={sharePixKey}>
+                <Text style={[s.copyBtnText, { color: primary }]}>Copiar</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={s.pixLabel}>Beneficiário: <Text style={{ fontWeight: "700" }}>{PIX_NAME}</Text></Text>
+          </View>
+        )}
+
+        {/* Card — future gateway */}
+        {method === "cartao" && (
+          <View style={[s.card, { marginTop: 12, alignItems: "center", paddingVertical: 24 }]}>
+            <Text style={{ fontSize: 36, marginBottom: 12 }}>💳</Text>
+            <Text style={[s.cardTitle, { textAlign: "center" }]}>Pagamento por cartão</Text>
+            <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>
+              Em breve disponível via gateway de pagamento integrado.{"\n"}Por ora, use o PIX acima ou procure a secretaria.
+            </Text>
+            <View style={[s.badge, { backgroundColor: "#fef3c7", marginTop: 12 }]}>
+              <Text style={[s.badgeText, { color: "#92400e" }]}>Em breve</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Receipt upload */}
+        {method === "pix" && (
+          <>
+            <Text style={[s.sectionTitle, { marginTop: 16 }]}>Comprovante</Text>
+            <View style={s.card}>
+              {receiptUri
+                ? <>
+                  <Image source={{ uri: receiptUri }} style={s.receiptPreview} resizeMode="cover" />
+                  <TouchableOpacity onPress={() => setReceiptUri(null)} style={{ marginTop: 8 }}>
+                    <Text style={{ color: "#dc2626", fontSize: 13, textAlign: "center" }}>Remover comprovante</Text>
+                  </TouchableOpacity>
+                </>
+                : <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" />
+              }
+            </View>
+          </>
+        )}
+
+        <Btn
+          label={finalAmount ? `Confirmar — R$ ${finalAmount}` : "Confirmar contribuição"}
+          onPress={() => { if (!finalAmount) { Alert.alert("Selecione um valor"); return; } setSubmitted(true); }}
+          color={primary}
+          style={{ marginTop: 20 }}
+        />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Kids Check-in Screen ─────────────────────────────────────────────────────
+
+function KidsCheckinScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
+  const [childName, setChildName] = useState(""); const [room, setRoom] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkIns, setCheckIns] = useState<KidCheckIn[]>([]);
+  const [tab, setTab] = useState<"checkin" | "checkout">("checkin");
+
+  const rooms = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
+
+  function doCheckIn() {
+    if (!childName.trim() || !room) { Alert.alert("Preencha o nome e a sala."); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const code = String(Math.floor(1000 + Math.random() * 9000));
+      const entry: KidCheckIn = {
+        id: Date.now().toString(), childName: childName.trim(), room,
+        code, checkedInAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }), checkedOut: false
+      };
+      setCheckIns(p => [entry, ...p]);
+      setChildName(""); setRoom(""); setLoading(false); setTab("checkout");
+    }, 600);
+  }
+
+  function doCheckOut(id: string) {
+    setCheckIns(p => p.map(c => c.id === id ? { ...c, checkedOut: true } : c));
+  }
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Kids Check-in" onBack={onBack} />
+      <View style={s.segControl}>
+        <Pressable style={[s.seg, tab === "checkin" && { backgroundColor: primary }]} onPress={() => setTab("checkin")}>
+          <Text style={[s.segText, tab === "checkin" && { color: "#fff" }]}>Entrada</Text>
+        </Pressable>
+        <Pressable style={[s.seg, tab === "checkout" && { backgroundColor: primary }]} onPress={() => setTab("checkout")}>
+          <Text style={[s.segText, tab === "checkout" && { color: "#fff" }]}>Saída{checkIns.filter(c => !c.checkedOut).length > 0 ? ` (${checkIns.filter(c => !c.checkedOut).length})` : ""}</Text>
+        </Pressable>
+      </View>
+
+      {tab === "checkin" && (
+        <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
+          <View style={[s.card, { backgroundColor: `${primary}12`, marginBottom: 16 }]}>
+            <Text style={[s.cardMeta, { color: primary, fontWeight: "600" }]}>Responsável: {user.displayName ?? user.email}</Text>
+          </View>
+          <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
+          <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
+          {rooms.map(r => (
+            <Pressable key={r} style={[s.roomRow, room === r && { borderColor: primary, backgroundColor: `${primary}10` }]} onPress={() => setRoom(r)}>
+              <View style={[s.radioOuter, room === r && { borderColor: primary }]}>
+                {room === r && <View style={[s.radioInner, { backgroundColor: primary }]} />}
+              </View>
+              <Text style={[s.roomLabel, room === r && { color: primary, fontWeight: "600" }]}>{r}</Text>
+            </Pressable>
+          ))}
+          <Btn label="Registrar entrada" onPress={doCheckIn} loading={loading} color={primary} style={{ marginTop: 20 }} />
+        </ScrollView>
+      )}
+
+      {tab === "checkout" && (
+        <ScrollView contentContainerStyle={s.tabContent}>
+          {checkIns.length === 0 && <EmptyState icon="👶" title="Nenhuma criança registrada" sub="Faça o check-in na aba Entrada." />}
+          {checkIns.map(c => (
+            <View key={c.id} style={[s.card, c.checkedOut && { opacity: 0.5 }]}>
+              <View style={s.row}>
+                <View style={s.fill}>
+                  <Text style={s.cardTitle}>{c.childName}</Text>
+                  <Text style={s.cardMeta}>{c.room}</Text>
+                  <Text style={s.cardMeta}>Entrada: {c.checkedInAt}</Text>
+                </View>
+                <View style={[s.codeBox, { borderColor: primary }]}>
+                  <Text style={s.codeLabel}>Código</Text>
+                  <Text style={[s.codeValue, { color: primary }]}>{c.code}</Text>
+                </View>
+              </View>
+              {!c.checkedOut
+                ? <Btn label="Registrar saída" onPress={() => doCheckOut(c.id)} color={primary} style={{ marginTop: 12 }} />
+                : <Text style={{ color: "#16a34a", fontWeight: "700", marginTop: 8, textAlign: "center" }}>✓ Saída registrada</Text>
+              }
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+// ─── Escala Screen ────────────────────────────────────────────────────────────
+
+function EscalaScreen({ primary, onBack }: { primary: string; onBack: () => void }) {
+  const [slots, setSlots] = useState<EscalaSlot[]>(MOCK_ESCALA);
+
+  function respond(id: string, status: EscalaStatus) {
+    setSlots(p => p.map(s => s.id === id ? { ...s, status } : s));
+  }
+
+  const statusColor: Record<EscalaStatus, string> = { pendente: "#f59e0b", confirmado: "#16a34a", recusado: "#dc2626" };
+  const statusLabel: Record<EscalaStatus, string> = { pendente: "Aguardando", confirmado: "Confirmado ✓", recusado: "Recusado ✗" };
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Minha Escala" onBack={onBack} />
+      <ScrollView contentContainerStyle={s.tabContent}>
+        <View style={[s.infoBox, { marginBottom: 16 }]}>
+          <Text style={s.infoText}>Você receberá uma notificação quando uma nova escala for publicada. Confirme ou solicite substituição com antecedência.</Text>
+        </View>
+
+        {slots.map(slot => (
+          <View key={slot.id} style={s.card}>
+            <View style={s.row}>
+              <View style={s.fill}>
+                <Text style={s.cardTitle}>{slot.service}</Text>
+                <Text style={s.cardMeta}>{slot.date} · {slot.time}</Text>
+                <View style={[s.badge, { backgroundColor: `${primary}15`, alignSelf: "flex-start", marginTop: 6 }]}>
+                  <Text style={[s.badgeText, { color: primary }]}>Função: {slot.role}</Text>
+                </View>
+              </View>
+              <View style={[s.badge, { backgroundColor: `${statusColor[slot.status]}20`, alignSelf: "flex-start" }]}>
+                <Text style={[s.badgeText, { color: statusColor[slot.status] }]}>{statusLabel[slot.status]}</Text>
+              </View>
+            </View>
+
+            {slot.status === "pendente" && (
+              <View style={[s.row, { marginTop: 14, gap: 10 }]}>
+                <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#dcfce7", borderColor: "#16a34a", flex: 1 }]} onPress={() => respond(slot.id, "confirmado")}>
+                  <Text style={{ color: "#16a34a", fontWeight: "700", textAlign: "center" }}>✓  Confirmar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#fee2e2", borderColor: "#dc2626", flex: 1 }]} onPress={() => respond(slot.id, "recusado")}>
+                  <Text style={{ color: "#dc2626", fontWeight: "700", textAlign: "center" }}>✗  Recusar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {slot.status === "recusado" && (
+              <TextInput style={[s.input, { marginTop: 10 }]} placeholder="Motivo da recusa (opcional)" placeholderTextColor="#9ca3af" />
+            )}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Música Screen ────────────────────────────────────────────────────────────
+
+function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack: () => void; onOpenSong: (s: Song) => void }) {
+  const [view, setView] = useState<"repertorio" | "programacao">("repertorio");
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Ministério Musical" onBack={onBack} />
+      <View style={s.segControl}>
+        <Pressable style={[s.seg, view === "repertorio" && { backgroundColor: primary }]} onPress={() => setView("repertorio")}>
+          <Text style={[s.segText, view === "repertorio" && { color: "#fff" }]}>Repertório</Text>
+        </Pressable>
+        <Pressable style={[s.seg, view === "programacao" && { backgroundColor: primary }]} onPress={() => setView("programacao")}>
+          <Text style={[s.segText, view === "programacao" && { color: "#fff" }]}>Programação</Text>
+        </Pressable>
+      </View>
+
+      {view === "repertorio" && (
+        <ScrollView contentContainerStyle={s.tabContent}>
+          <View style={[s.infoBox, { marginBottom: 16 }]}>
+            <Text style={s.infoText}>🎵  Repertório desta semana — {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+          </View>
+          {MOCK_SONGS.map(song => (
+            <TouchableOpacity key={song.id} style={s.songRow} onPress={() => onOpenSong(song)}>
+              <View style={[s.songKey, { backgroundColor: primary }]}>
+                <Text style={s.songKeyText}>{song.key}</Text>
+              </View>
+              <View style={s.fill}>
+                <Text style={s.cardTitle}>{song.title}</Text>
+                <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
+              </View>
+              <Text style={s.menuChev}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {view === "programacao" && (
+        <ScrollView contentContainerStyle={s.tabContent}>
+          <View style={[s.infoBox, { marginBottom: 16 }]}>
+            <Text style={s.infoText}>📋  Ordem do culto — Domingo {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+          </View>
+          {MOCK_PROGRAMMING.map(item => (
+            <View key={item.order} style={s.progRow}>
+              <View style={[s.progNum, { backgroundColor: primary }]}>
+                <Text style={s.progNumText}>{item.order}</Text>
+              </View>
+              <View style={s.fill}>
+                <Text style={[s.eyebrow, { marginBottom: 2 }]}>{item.type.toUpperCase()}</Text>
+                <Text style={s.cardTitle}>{item.description}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+// ─── Song Detail Screen ───────────────────────────────────────────────────────
+
+function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: string; onBack: () => void }) {
+  const [view, setView] = useState<"cifra" | "letra">("cifra");
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title={song.title} onBack={onBack} />
+      <View style={[s.card, { margin: 16, marginBottom: 0 }]}>
+        <View style={s.row}>
+          <View style={[s.songKey, { backgroundColor: primary, width: 44, height: 44, borderRadius: 10 }]}>
+            <Text style={[s.songKeyText, { fontSize: 18 }]}>{song.key}</Text>
+          </View>
+          <View style={{ marginLeft: 12 }}>
+            <Text style={s.cardTitle}>{song.title}</Text>
+            <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
+          </View>
+        </View>
+      </View>
+      <View style={[s.segControl, { margin: 16, marginTop: 12 }]}>
+        <Pressable style={[s.seg, view === "cifra" && { backgroundColor: primary }]} onPress={() => setView("cifra")}>
+          <Text style={[s.segText, view === "cifra" && { color: "#fff" }]}>Cifra</Text>
+        </Pressable>
+        <Pressable style={[s.seg, view === "letra" && { backgroundColor: primary }]} onPress={() => setView("letra")}>
+          <Text style={[s.segText, view === "letra" && { color: "#fff" }]}>Letra</Text>
+        </Pressable>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {view === "cifra" && (
+          <View style={[s.card, { backgroundColor: BRAND_DARK }]}>
+            <Text style={s.chordsText}>{song.chords}</Text>
+          </View>
+        )}
+        {view === "letra" && (
+          <View style={s.card}>
+            <Text style={s.lyricsText}>{song.lyrics}</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Inscrição Screen ─────────────────────────────────────────────────────────
+
+function InscricaoScreen({ primary, event, user, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; onBack: () => void }) {
+  const [method, setMethod] = useState<"pix" | "cartao" | "free">("free");
+  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [code] = useState(() => "ALVO-" + String(Math.floor(10000 + Math.random() * 90000)));
+
+  const isFree = true; // Substituir por lógica de evento pago
+
+  async function pickReceipt() {
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+    if (!r.canceled && r.assets[0]) setReceiptUri(r.assets[0].uri);
+  }
+
+  if (confirmed) {
+    return (
+      <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+        <ModalHeader title="Inscrição" onBack={onBack} />
+        <View style={[s.fill, s.center, { padding: 32 }]}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>🎫</Text>
+          <Text style={[s.screenTitle, { textAlign: "center" }]}>Inscrição confirmada!</Text>
+          <Text style={[s.screenSub, { textAlign: "center" }]}>{event.name}</Text>
+          <View style={[s.card, { width: "100%", marginTop: 24, alignItems: "center" }]}>
+            <Text style={s.eyebrow}>SEU INGRESSO DIGITAL</Text>
+            <Text style={[s.codeValue, { color: primary, fontSize: 28, letterSpacing: 3, marginTop: 8 }]}>{code}</Text>
+            <Text style={[s.cardMeta, { marginTop: 6 }]}>{formatDate(event.startsAt)} · {formatHour(event.startsAt)}</Text>
+          </View>
+          <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 24, width: "100%" }} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Inscrição" onBack={onBack} />
+      <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
+        <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3, marginBottom: 16 }]}>
+          <Text style={s.cardTitle}>{event.name}</Text>
+          <Text style={s.cardMeta}>{formatDate(event.startsAt)} · {formatHour(event.startsAt)}</Text>
+        </View>
+
+        <Text style={s.sectionTitle}>Seus dados</Text>
+        <View style={s.card}>
+          <Text style={s.cardMeta}>Nome: <Text style={{ fontWeight: "700" }}>{user.displayName ?? "Membro"}</Text></Text>
+          <Text style={[s.cardMeta, { marginTop: 4 }]}>Email: <Text style={{ fontWeight: "700" }}>{user.email}</Text></Text>
+        </View>
+
+        {!isFree && (
+          <>
+            <Text style={s.sectionTitle}>Pagamento</Text>
+            <View style={s.row}>
+              {([{ id: "pix", label: "PIX", icon: "⚡" }, { id: "cartao", label: "Cartão", icon: "💳" }] as const).map(m => (
+                <Pressable key={m.id} style={[s.methodBtn, { flex: 1 }, method === m.id && { borderColor: primary, backgroundColor: `${primary}12` }]} onPress={() => setMethod(m.id)}>
+                  <Text style={{ fontSize: 20 }}>{m.icon}</Text>
+                  <Text style={[s.methodLabel, method === m.id && { color: primary, fontWeight: "700" }]}>{m.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {method === "pix" && (
+              <View style={[s.card, { marginTop: 12 }]}>
+                <Text style={s.pixLabel}>Chave PIX</Text>
+                <Text style={s.pixKey} selectable>00.000.000/0001-00</Text>
+                <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" style={{ marginTop: 12 }} />
+                {receiptUri && <Image source={{ uri: receiptUri }} style={[s.receiptPreview, { marginTop: 10 }]} resizeMode="cover" />}
+              </View>
+            )}
+            {method === "cartao" && (
+              <View style={[s.card, { marginTop: 12, alignItems: "center" }]}>
+                <Text style={[s.cardMeta, { textAlign: "center" }]}>Integração com gateway em breve. Use PIX por enquanto.</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        <Btn label={isFree ? "Confirmar inscrição gratuita" : "Confirmar inscrição"} onPress={() => setConfirmed(true)} color={primary} style={{ marginTop: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Shared UI Components ─────────────────────────────────────────────────────
+
+function ModalHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View style={s.modalHeader}>
+      <TouchableOpacity onPress={onBack} hitSlop={12} style={s.modalBack}>
+        <Text style={[s.backBtn, { fontSize: 20 }]}>←</Text>
+      </TouchableOpacity>
+      <Text style={s.modalTitle} numberOfLines={1}>{title}</Text>
+      <View style={{ width: 40 }} />
+    </View>
+  );
+}
+
+function QuickAction({ icon, label, sub, onPress }: { icon: string; label: string; sub: string; onPress: () => void }) {
+  return (
+    <Pressable style={s.quickAction} onPress={onPress}>
+      <Text style={s.quickIcon}>{icon}</Text>
+      <Text style={s.quickLabel}>{label}</Text>
+      <Text style={s.quickSub}>{sub}</Text>
+    </Pressable>
+  );
+}
+
+function LoadingRow({ primary, label }: { primary: string; label: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <ActivityIndicator color={primary} />
+      <Text style={{ fontSize: 14, color: "#9ca3af" }}>{label}</Text>
+    </View>
+  );
+}
+
+function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
+  return (
+    <View style={[s.card, { alignItems: "center", paddingVertical: 32 }]}>
+      <Text style={{ fontSize: 40, marginBottom: 12 }}>{icon}</Text>
+      <Text style={[s.cardTitle, { textAlign: "center" }]}>{title}</Text>
+      <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6, lineHeight: 20 }]}>{sub}</Text>
+    </View>
+  );
+}
+
+function Field({ label, value, onChange, ...rest }: { label: string; value: string; onChange: (v: string) => void; [key: string]: unknown }) {
+  return (
+    <View style={s.formGroup}>
+      <Text style={s.label}>{label}</Text>
+      <TextInput style={s.input} value={value} onChangeText={onChange} placeholderTextColor="#9ca3af" {...(rest as object)} />
+    </View>
+  );
+}
+
+function Btn({ label, onPress, loading, disabled, variant, color, style }: {
+  label: string; onPress: () => void; loading?: boolean; disabled?: boolean;
+  variant?: "outline" | "danger"; color?: string; style?: object;
+}) {
+  const bg = variant === "danger" ? "#fee2e2" : variant === "outline" ? "transparent" : (color ?? BRAND);
+  const tc = variant === "danger" ? "#dc2626" : variant === "outline" ? (color ?? BRAND) : "#fff";
+  const bc = variant === "outline" ? (color ?? BRAND) : "transparent";
+  return (
+    <Pressable
+      style={({ pressed }) => [s.btn, { backgroundColor: bg, borderColor: bc, borderWidth: variant === "outline" ? 1.5 : 0 }, pressed && { opacity: 0.75 }, (disabled || loading) && { opacity: 0.5 }, style as object]}
+      onPress={onPress}
+      disabled={disabled || loading}
+    >
+      {loading ? <ActivityIndicator color={tc} /> : <Text style={[s.btnText, { color: tc }]}>{label}</Text>}
+    </Pressable>
   );
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatAuthError(err: unknown): string {
-  if (!(err instanceof Error)) return "Erro desconhecido.";
-  const msg = err.message;
-  if (msg.includes("email-already-in-use")) return "Este e-mail já está cadastrado.";
-  if (msg.includes("invalid-email")) return "E-mail inválido.";
-  if (msg.includes("wrong-password") || msg.includes("invalid-credential")) return "Senha incorreta.";
-  if (msg.includes("user-not-found")) return "Usuário não encontrado.";
-  if (msg.includes("weak-password")) return "Senha muito fraca.";
-  if (msg.includes("network-request-failed")) return "Sem conexão com a internet.";
-  return "Erro: " + msg.split(":").pop()?.trim();
+function formatAuthError(e: unknown): string {
+  if (!(e instanceof Error)) return "Erro desconhecido.";
+  const m = e.message;
+  if (m.includes("email-already-in-use")) return "E-mail já cadastrado.";
+  if (m.includes("invalid-email")) return "E-mail inválido.";
+  if (m.includes("wrong-password") || m.includes("invalid-credential")) return "Senha incorreta.";
+  if (m.includes("user-not-found")) return "Usuário não encontrado.";
+  if (m.includes("weak-password")) return "Senha muito fraca.";
+  if (m.includes("network-request-failed")) return "Sem conexão com a internet.";
+  return "Erro: " + (m.split(":").pop()?.trim() ?? m);
 }
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
-  } catch { return iso; }
+  try { return new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }); } catch { return iso; }
 }
-
 function formatHour(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  } catch { return ""; }
+  try { return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); } catch { return ""; }
 }
-
-function formatWeekday(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "").toUpperCase();
-  } catch { return "???"; }
+function formatWd(iso: string): string {
+  try { return new Date(iso).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "").toUpperCase(); } catch { return ""; }
 }
-
-function formatDayNum(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", { day: "numeric" });
-  } catch { return ""; }
+function formatDn(iso: string): string {
+  try { return new Date(iso).toLocaleDateString("pt-BR", { day: "numeric" }); } catch { return ""; }
 }
-
-function weekdayNumLabel(dow: number): string {
-  const days = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-  return days[dow] ?? "Dia " + dow;
+function dowLabel(dow: number): string {
+  return ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dow] ?? "Dia " + dow;
 }
-
-function eventKindLabel(type: string): string {
-  const map: Record<string, string> = {
-    culto: "Culto", celula: "Célula", formacao: "Formação",
-    worship: "Culto", cell: "Célula", training: "Formação"
-  };
-  return map[type.toLowerCase()] ?? type;
+function eventLabel(type: string): string {
+  const m: Record<string, string> = { culto: "Culto", celula: "Célula", formacao: "Formação", retiro: "Retiro", worship: "Culto", cell: "Célula", training: "Formação" };
+  return m[type?.toLowerCase()] ?? type;
 }
-
-function nextWeekday(dow: number, hour: number): string {
-  const d = new Date();
-  const diff = (dow - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  d.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
+function nextDow(dow: number, hour: number): string {
+  const d = new Date(); const diff = (dow - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff); d.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
   return d.toISOString();
 }
 
@@ -1120,217 +1321,158 @@ function nextWeekday(dow: number, hour: number): string {
 const s = StyleSheet.create({
   fill: { flex: 1 },
   center: { alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row", alignItems: "center" },
 
-  // Splash
-  logoMark: {
-    width: 72, height: 72, borderRadius: 20,
-    backgroundColor: BRAND_COLOR, alignItems: "center", justifyContent: "center"
-  },
+  // Splash / Logo
+  logoMark: { width: 72, height: 72, borderRadius: 20, backgroundColor: BRAND, alignItems: "center", justifyContent: "center" },
   logoText: { color: "#fff", fontSize: 36, fontWeight: "800" },
 
   // Welcome
-  welcomeHero: {
-    flex: 1, alignItems: "center", justifyContent: "center",
-    paddingHorizontal: 32, paddingTop: 48
-  },
-  welcomeTitle: {
-    fontSize: 32, fontWeight: "800", color: BRAND_DARK,
-    textAlign: "center", marginTop: 24, lineHeight: 40
-  },
-  welcomeSubtitle: {
-    fontSize: 16, color: "#6b7280", textAlign: "center",
-    marginTop: 12, lineHeight: 24
-  },
+  welcomeHero: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 48 },
+  welcomeTitle: { fontSize: 32, fontWeight: "800", color: BRAND_DARK, textAlign: "center", marginTop: 24, lineHeight: 40 },
+  welcomeSub: { fontSize: 16, color: "#6b7280", textAlign: "center", marginTop: 12, lineHeight: 24 },
   welcomeActions: { paddingHorizontal: 24, paddingBottom: 48, gap: 12 },
 
   // Buttons
-  btnPrimary: {
-    backgroundColor: BRAND_COLOR, borderRadius: 12,
-    paddingVertical: 16, alignItems: "center"
-  },
-  btnPrimaryText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  btnSecondary: {
-    backgroundColor: "transparent", borderRadius: 12,
-    paddingVertical: 16, alignItems: "center",
-    borderWidth: 1.5, borderColor: BRAND_COLOR
-  },
-  btnSecondaryText: { color: BRAND_COLOR, fontSize: 16, fontWeight: "700" },
-  btnDanger: {
-    backgroundColor: "#fee2e2", borderRadius: 12,
-    paddingVertical: 16, alignItems: "center", marginTop: 8
-  },
-  btnDangerText: { color: "#dc2626", fontSize: 16, fontWeight: "700" },
-  btnPressed: { opacity: 0.75 },
-  btnDisabled: { opacity: 0.5 },
+  btn: { borderRadius: 12, paddingVertical: 15, alignItems: "center" },
+  btnText: { fontSize: 16, fontWeight: "700" },
 
   // Screen header
-  screenHeader: {
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4
-  },
-  backBtn: { fontSize: 16, color: BRAND_COLOR, fontWeight: "600" },
-
-  // Form
-  formContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 48, gap: 0 },
+  screenHeader: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  backBtn: { fontSize: 16, color: BRAND, fontWeight: "600" },
+  formContent: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 48 },
   screenTitle: { fontSize: 26, fontWeight: "800", color: BRAND_DARK, marginBottom: 6 },
-  screenSubtitle: { fontSize: 15, color: "#6b7280", marginBottom: 24, lineHeight: 22 },
+  screenSub: { fontSize: 15, color: "#6b7280", marginBottom: 20, lineHeight: 22 },
   formGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "600", color: BRAND_DARK, marginBottom: 6 },
-  input: {
-    borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: BRAND_DARK, backgroundColor: "#fff"
-  },
+  input: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: BRAND_DARK, backgroundColor: "#fff" },
   errorText: { color: "#dc2626", fontSize: 13, marginBottom: 12 },
   linkRow: { alignItems: "center", marginTop: 20 },
   linkText: { fontSize: 14, color: "#6b7280" },
-  linkBold: { fontWeight: "700", color: BRAND_COLOR },
-  warningBox: {
-    backgroundColor: "#fef3c7", borderRadius: 8,
-    padding: 12, marginBottom: 16
-  },
-  warningText: { fontSize: 13, color: "#92400e" },
-  infoBox: {
-    backgroundColor: `${BRAND_COLOR}14`, borderRadius: 8,
-    padding: 14, marginBottom: 16
-  },
+  linkBold: { fontWeight: "700", color: BRAND },
+  warnBox: { backgroundColor: "#fef3c7", borderRadius: 8, padding: 12, marginBottom: 16 },
+  warnText: { fontSize: 13, color: "#92400e" },
+  infoBox: { backgroundColor: `${BRAND}14`, borderRadius: 8, padding: 14 },
   infoText: { fontSize: 14, color: BRAND_DARK, lineHeight: 20 },
-  infoCode: { fontWeight: "700", color: BRAND_COLOR },
-  institutionIcon: { alignItems: "center", marginBottom: 20, marginTop: 12 },
-  institutionEmoji: { fontSize: 52 },
 
   // Main app
-  mainHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16
-  },
-  mainHeaderGreeting: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  mainHeaderOrg: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 2 },
-  avatarCircle: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: "center", justifyContent: "center"
-  },
+  mainHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
+  mainGreeting: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  mainOrg: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 2 },
+  avatarCircle: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#fff", fontSize: 18, fontWeight: "700" },
 
   // Tab bar
-  tabBar: {
-    flexDirection: "row", backgroundColor: "#fff",
-    borderTopWidth: 1, borderTopColor: "#e5e7eb",
-    paddingBottom: 8
-  },
+  tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingBottom: 8 },
   tabItem: { flex: 1, alignItems: "center", paddingTop: 8 },
-  tabIcon: { fontSize: 22, opacity: 0.5 },
+  tabIcon: { fontSize: 22, opacity: 0.4 },
   tabLabel: { fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: "500" },
 
   // Tab content
-  tabContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
-  sectionTitle: {
-    fontSize: 16, fontWeight: "700", color: BRAND_DARK,
-    marginBottom: 10, marginTop: 16
-  },
-
-  // Loading
-  loadingRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
-  loadingLabel: { fontSize: 14, color: "#9ca3af" },
+  tabContent: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: BRAND_DARK, marginBottom: 10, marginTop: 16 },
+  eyebrow: { fontSize: 11, fontWeight: "700", color: "#9ca3af", letterSpacing: 0.8, marginBottom: 4 },
 
   // Cards
-  card: {
-    backgroundColor: "#fff", borderRadius: 14,
-    padding: 16, marginBottom: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2
-  },
-  nextServiceCard: { borderLeftWidth: 4 },
-  cardEyebrow: { fontSize: 11, fontWeight: "700", color: "#9ca3af", letterSpacing: 0.8, marginBottom: 6 },
-  cardTitle: { fontSize: 17, fontWeight: "700", color: BRAND_DARK, marginBottom: 4 },
-  cardMeta: { fontSize: 14, color: "#6b7280" },
-  cardCta: {
-    borderRadius: 8, paddingVertical: 10,
-    alignItems: "center", marginTop: 14
-  },
-  cardCtaText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  cardTitle: { fontSize: 16, fontWeight: "700", color: BRAND_DARK, marginBottom: 3 },
+  cardMeta: { fontSize: 13, color: "#6b7280" },
+  cta: { borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, alignItems: "center" },
+  ctaText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  badge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeText: { fontSize: 11, fontWeight: "700" },
 
   // Quick actions
-  quickActionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 4 },
-  quickAction: {
-    width: "47%", backgroundColor: "#fff", borderRadius: 14,
-    padding: 14, alignItems: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2
-  },
-  quickActionIcon: { fontSize: 28, marginBottom: 8 },
-  quickActionLabel: { fontSize: 14, fontWeight: "700", color: BRAND_DARK, textAlign: "center" },
-  quickActionSub: { fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 2 },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 4 },
+  quickAction: { width: "47%", backgroundColor: "#fff", borderRadius: 14, padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  quickIcon: { fontSize: 28, marginBottom: 8 },
+  quickLabel: { fontSize: 14, fontWeight: "700", color: BRAND_DARK, marginBottom: 2 },
+  quickSub: { fontSize: 11, color: "#9ca3af", lineHeight: 15 },
 
   // Journey
-  journeyRow: { flexDirection: "row", alignItems: "center" },
-  journeyStep: { alignItems: "center", flex: 1 },
+  journeyStep: { alignItems: "center" },
   journeyDot: { width: 14, height: 14, borderRadius: 7, marginBottom: 6 },
-  journeyLine: { flex: 1, height: 2, marginBottom: 20 },
-  journeyStepLabel: { fontSize: 11, color: BRAND_DARK, fontWeight: "600", textAlign: "center" },
-  journeyStepStatus: { fontSize: 10, fontWeight: "700", marginTop: 2 },
-  journeyStepStatusMuted: { fontSize: 10, color: "#9ca3af", marginTop: 2 },
-
-  // Célula
-  chipRow: { marginBottom: 12 },
-  chip: {
-    backgroundColor: "#f3f4f6", borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 8, marginRight: 8
-  },
-  chipText: { fontSize: 14, color: BRAND_DARK, fontWeight: "600" },
-  confirmedRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  confirmedIcon: { fontSize: 24 },
-  confirmedText: { fontSize: 15, fontWeight: "600", color: BRAND_DARK, flex: 1 },
-  announcementCard: {
-    flexDirection: "row", alignItems: "flex-start", gap: 10,
-    backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 8,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 3, elevation: 1
-  },
-  announcementDot: { fontSize: 10, marginTop: 4 },
-  announcementText: { fontSize: 14, color: BRAND_DARK, flex: 1, lineHeight: 20 },
-  prayerInput: {
-    borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: BRAND_DARK, minHeight: 96
-  },
+  journeyLine: { height: 2, marginBottom: 20 },
+  journeyLabel: { fontSize: 11, color: BRAND_DARK, fontWeight: "600", textAlign: "center" },
+  journeyStatus: { fontSize: 10, fontWeight: "700", marginTop: 2 },
 
   // Agenda
-  agendaCard: {
-    flexDirection: "row", backgroundColor: "#fff", borderRadius: 14,
-    marginBottom: 10, overflow: "hidden",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2
-  },
-  agendaDateBox: { width: 60, alignItems: "center", justifyContent: "center", padding: 12 },
-  agendaDay: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "700" },
-  agendaDayNum: { color: "#fff", fontSize: 22, fontWeight: "800", marginTop: 2 },
+  agendaCard: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 14, marginBottom: 10, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  agendaDate: { width: 60, alignItems: "center", justifyContent: "center", padding: 12 },
+  agendaWd: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "700" },
+  agendaDn: { color: "#fff", fontSize: 22, fontWeight: "800", marginTop: 2 },
   agendaInfo: { flex: 1, padding: 14 },
-  agendaTitle: { fontSize: 15, fontWeight: "700", color: BRAND_DARK, marginBottom: 4 },
-  agendaTime: { fontSize: 13, color: "#6b7280", marginBottom: 6 },
-  agendaBadge: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  agendaBadgeText: { fontSize: 11, fontWeight: "700" },
 
-  // Empty state
-  emptyCard: { alignItems: "center", paddingVertical: 32 },
-  emptyIcon: { fontSize: 40, marginBottom: 12 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", color: BRAND_DARK, marginBottom: 6 },
-  emptyMeta: { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 20 },
+  // Célula
+  chip: { backgroundColor: "#f3f4f6", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
+  chipText: { fontSize: 14, color: BRAND_DARK, fontWeight: "600" },
+  announcementRow: { flexDirection: "row", alignItems: "flex-start", backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+  prayerInput: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: BRAND_DARK, minHeight: 96 },
 
   // Perfil
   profileHeader: { alignItems: "center", paddingVertical: 24 },
-  profileAvatar: {
-    width: 80, height: 80, borderRadius: 40,
-    alignItems: "center", justifyContent: "center", marginBottom: 12
-  },
+  profileAvatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   profileAvatarText: { color: "#fff", fontSize: 32, fontWeight: "800" },
   profileName: { fontSize: 20, fontWeight: "800", color: BRAND_DARK },
   profileEmail: { fontSize: 14, color: "#6b7280", marginTop: 4 },
-  infoRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1
-  },
-  infoRowLabel: { fontSize: 14, color: "#6b7280" },
-  infoRowValue: { fontSize: 14, fontWeight: "700", color: BRAND_DARK }
+  menuRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+  menuIcon: { fontSize: 22, marginRight: 12 },
+  menuLabel: { fontSize: 15, fontWeight: "700", color: BRAND_DARK },
+  menuSub: { fontSize: 12, color: "#9ca3af", marginTop: 1 },
+  menuChev: { fontSize: 22, color: "#9ca3af", marginLeft: 8 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+  infoLabel: { fontSize: 14, color: "#6b7280" },
+  infoValue: { fontSize: 14, fontWeight: "700", color: BRAND_DARK },
+
+  // Modal header
+  modalHeader: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
+  modalBack: { width: 40 },
+  modalTitle: { flex: 1, fontSize: 17, fontWeight: "700", color: BRAND_DARK, textAlign: "center" },
+
+  // Segment control
+  segControl: { flexDirection: "row", backgroundColor: "#f3f4f6", borderRadius: 10, margin: 16, padding: 3 },
+  seg: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
+  segText: { fontSize: 14, fontWeight: "600", color: "#6b7280" },
+
+  // Doações
+  typeChip: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, marginBottom: 8 },
+  typeChipText: { fontSize: 13, fontWeight: "600", color: BRAND_DARK },
+  amountChip: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  amountText: { fontSize: 14, fontWeight: "700", color: BRAND_DARK },
+  methodBtn: { flex: 1, borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 12, padding: 14, alignItems: "center", marginHorizontal: 4, gap: 4 },
+  methodLabel: { fontSize: 13, color: "#6b7280" },
+  qrPlaceholder: { alignItems: "center", paddingVertical: 20 },
+  qrFrame: { borderWidth: 2, borderColor: BRAND_DARK, borderRadius: 4, padding: 8, marginBottom: 10 },
+  qrRow: { flexDirection: "row" },
+  qrCell: { width: 12, height: 12, margin: 1, borderRadius: 1, backgroundColor: "#fff" },
+  qrLabel: { fontSize: 13, fontWeight: "700", color: BRAND_DARK },
+  qrSub: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
+  pixRow: { flexDirection: "row", alignItems: "center", marginTop: 12, marginBottom: 8 },
+  pixLabel: { fontSize: 12, color: "#6b7280", marginBottom: 2 },
+  pixKey: { fontSize: 15, fontWeight: "700", color: BRAND_DARK, letterSpacing: 0.5 },
+  copyBtn: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, marginLeft: 12 },
+  copyBtnText: { fontSize: 13, fontWeight: "700" },
+  receiptPreview: { width: "100%", height: 160, borderRadius: 8 },
+
+  // Kids
+  roomRow: { flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10, padding: 12, marginBottom: 8 },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#d1d5db", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  radioInner: { width: 10, height: 10, borderRadius: 5 },
+  roomLabel: { fontSize: 14, color: BRAND_DARK },
+  codeBox: { borderWidth: 2, borderRadius: 10, padding: 10, alignItems: "center", minWidth: 72 },
+  codeLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", marginBottom: 2 },
+  codeValue: { fontSize: 22, fontWeight: "800" },
+
+  // Escala
+  escalaBtn: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },
+
+  // Música
+  songRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2, gap: 12 },
+  songKey: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  songKeyText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  progRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  progNum: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  progNumText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  chordsText: { color: "#e2e8f0", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 15, lineHeight: 26 },
+  lyricsText: { color: BRAND_DARK, fontSize: 15, lineHeight: 26 }
 });
