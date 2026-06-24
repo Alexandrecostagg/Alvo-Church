@@ -1,7 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
-import * as Notifications from "expo-notifications";
+import * as ExpoSplash from "expo-splash-screen";
 import { useEffect, useRef, useState } from "react";
+
+// Garante que o splash some mesmo se algo travar
+setTimeout(() => ExpoSplash.hideAsync().catch(() => {}), 300);
+
 import {
   ActivityIndicator,
   Alert,
@@ -32,15 +36,6 @@ import {
   type FirebaseAuthUser
 } from "@alvo/firebase";
 import type { Event, Group, Organization, TenantRuntimeSnapshot } from "@alvo/types";
-
-// ─── Notification handler (show when app is foreground) ──────────────────────
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false
-  })
-});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,26 +176,30 @@ export default function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [dataReady, setDataReady] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
-  const notifListener = useRef<Notifications.EventSubscription | null>(null);
+  const notifListener = useRef<null>(null);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
+
+  // esconde splash nativo imediatamente após a primeira renderização
+  useEffect(() => { ExpoSplash.hideAsync(); }, []);
 
   // auth listener
   useEffect(() => {
-    if (!configured) { setAuthReady(true); setAuthScreen("welcome"); return; }
+    if (!configured) {
+      setAuthReady(true);
+      setAuthScreen("welcome");
+      return;
+    }
     const unsub = subscribeToFirebaseMobileAuthState(firebaseConfig, (u) => {
       setUser(u);
       setAuthReady(true);
-      setAuthScreen(u ? "splash" : "welcome"); // splash means "go to main"
+      setAuthScreen(u ? "splash" : "welcome");
     });
     return () => unsub();
   }, [configured]);
 
-  // push notifications setup
-  useEffect(() => {
-    registerForPushNotifications().then(token => { if (token) setPushToken(token); });
-    notifListener.current = Notifications.addNotificationReceivedListener(() => {});
-    return () => { if (notifListener.current) Notifications.removeNotificationSubscription(notifListener.current); };
-  }, []);
+  // push notifications — desabilitado no Expo Go (suporte removido no SDK 53)
+  // funciona em development build / produção
+  useEffect(() => { void 0; }, []);
 
   // load tenant data
   useEffect(() => {
@@ -252,22 +251,6 @@ export default function App() {
       onSignOut={handleSignOut}
     />
   );
-}
-
-// ─── Push notification helper ─────────────────────────────────────────────────
-
-async function registerForPushNotifications(): Promise<string | null> {
-  try {
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    let finalStatus = existing;
-    if (existing !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== "granted") return null;
-    const token = await Notifications.getExpoPushTokenAsync();
-    return token.data;
-  } catch { return null; }
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
