@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
+  BookOpen,
   Building2,
   Bot,
   ChevronLeft,
@@ -83,6 +84,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
       items: [
         { label: "Tribos", icon: Tent, href: "/tribes", moduleKey: "tribes", match: (pathname) => pathname.startsWith("/tribes") },
         { label: groupsLabel, icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") },
+        { label: "Tema Semanal", icon: BookOpen, href: "/weekly-theme", moduleKey: "groups", match: (pathname) => pathname.startsWith("/weekly-theme") },
         { label: "Jornadas", icon: MapIcon, href: "/journeys", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/journeys") },
         { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") },
         { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },

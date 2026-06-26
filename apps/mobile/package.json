@@ -1,7 +1,7 @@
 {
   "name": "@alvo/mobile",
   "private": true,
-  "main": "App.tsx",
+  "main": "index.js",
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs expo start",
     "build": "node ../../scripts/with-workspace-env.mjs expo export --platform all",
@@ -19,7 +19,7 @@
     "expo-notifications": "~56.0.18",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
-    "react": "19.2.0",
+    "react": "19.2.3",
     "react-native": "0.85.3"
   },
   "devDependencies": {

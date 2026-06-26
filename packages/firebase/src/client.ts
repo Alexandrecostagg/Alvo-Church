@@ -53,6 +53,7 @@ import {
   getAuth,
   initializeAuth,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -219,6 +220,11 @@ export async function signInWithFirebaseMobileEmailPassword(params: {
 export async function signOutFromFirebaseMobile(config: FirebaseRuntimeConfig) {
   const auth = getFirebaseMobileAuth(config);
   await signOut(auth);
+}
+
+export async function sendPasswordResetEmailMobile(config: FirebaseRuntimeConfig, email: string) {
+  const auth = getFirebaseMobileAuth(config);
+  await sendPasswordResetEmail(auth, email);
 }
 
 export async function registerWithFirebaseMobileEmailPassword(params: {

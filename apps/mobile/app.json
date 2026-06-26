@@ -35,8 +35,7 @@
       "package": "com.getrochurch.app"
     },
     "plugins": [
-      "expo-status-bar",
-      "expo-splash-screen"
+      "expo-status-bar"
     ]
   }
 }

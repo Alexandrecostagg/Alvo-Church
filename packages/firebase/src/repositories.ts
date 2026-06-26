@@ -15,6 +15,7 @@ import {
   type Firestore
 } from "firebase/firestore";
 import type {
+  WeeklyTheme,
   AppRole,
   Event,
   EventCheckIn,
@@ -112,8 +113,9 @@ import {
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
   getBadgesCollectionPath,
-  getMemberBadgesCollectionPath
-} from "./index";
+  getMemberBadgesCollectionPath,
+  getWeeklyThemesCollectionPath
+} from "./paths";
 
 
 
@@ -2668,4 +2670,57 @@ export async function fetchNetworkSnapshotsHistory(
     )
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as NetworkSnapshot));
+}
+
+// ── WeeklyTheme ────────────────────────────────────────────────────────────
+
+export async function saveWeeklyTheme(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  theme: WeeklyTheme
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, getWeeklyThemesCollectionPath(context), theme.id);
+  await setDoc(ref, cleanFirestoreData(theme));
+}
+
+export async function fetchWeeklyThemesForWeek(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  weekStartDate: string
+): Promise<WeeklyTheme[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getWeeklyThemesCollectionPath(context)),
+      where("weekStartDate", "==", weekStartDate)
+    )
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WeeklyTheme));
+}
+
+export async function fetchActiveWeeklyThemeForGroup(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groupId: string,
+  weekStartDate: string
+): Promise<WeeklyTheme | null> {
+  const themes = await fetchWeeklyThemesForWeek(config, context, weekStartDate);
+  // specific assignment takes priority over "all"
+  const specific = themes.find(
+    (t) => t.scope === "specific" && t.groupIds.includes(groupId)
+  );
+  if (specific) return specific;
+  const global = themes.find((t) => t.scope === "all");
+  return global ?? null;
+}
+
+export async function deleteWeeklyTheme(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  themeId: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, getWeeklyThemesCollectionPath(context), themeId);
+  await deleteDoc(ref);
 }

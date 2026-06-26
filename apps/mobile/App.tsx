@@ -1,10 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
-import * as ExpoSplash from "expo-splash-screen";
 import { useEffect, useRef, useState } from "react";
-
-// Garante que o splash some mesmo se algo travar
-setTimeout(() => ExpoSplash.hideAsync().catch(() => {}), 300);
 
 import {
   ActivityIndicator,
@@ -23,13 +19,13 @@ import {
   View
 } from "react-native";
 import {
-  createFirebaseRuntimeConfigFromEnv,
   fetchOrganizationBySlug,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
   fetchGroups,
   isFirebaseWebRuntimeConfigured,
   registerWithFirebaseMobileEmailPassword,
+  sendPasswordResetEmailMobile,
   signInWithFirebaseMobileEmailPassword,
   signOutFromFirebaseMobile,
   subscribeToFirebaseMobileAuthState,
@@ -39,6 +35,19 @@ import type { Event, Group, Organization, TenantRuntimeSnapshot } from "@alvo/ty
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL ?? "http://192.168.1.15:3000";
+
+async function callAi(task: string, input: unknown): Promise<string> {
+  const res = await fetch(`${WEB_API_URL}/api/ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ task, input })
+  });
+  const data = await res.json() as { ok: boolean; content: string; error?: string };
+  if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na IA");
+  return data.content;
+}
+
 type AuthScreen = "splash" | "welcome" | "login" | "register" | "link-institution";
 type Tab = "inicio" | "agenda" | "celula" | "perfil";
 type ModalScreen =
@@ -47,7 +56,8 @@ type ModalScreen =
   | "escala"
   | "musica"
   | "inscricao"
-  | "song-detail";
+  | "song-detail"
+  | "lider-celula";
 
 type EscalaStatus = "pendente" | "confirmado" | "recusado";
 type EscalaSlot = {
@@ -78,10 +88,15 @@ type KidCheckIn = {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const runtimeEnv =
-  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-
-const firebaseConfig = createFirebaseRuntimeConfigFromEnv(runtimeEnv, "EXPO_PUBLIC");
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? "",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  useEmulator: false,
+};
 
 const BRAND = "#d27836";
 const BRAND_DARK = "#1c2433";
@@ -178,9 +193,6 @@ export default function App() {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const notifListener = useRef<null>(null);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
-
-  // esconde splash nativo imediatamente após a primeira renderização
-  useEffect(() => { ExpoSplash.hideAsync(); }, []);
 
   // auth listener
   useEffect(() => {
@@ -293,6 +305,8 @@ function WelcomeScreen({ onLogin, onRegister }: { onLogin: () => void; onRegiste
 function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured: boolean; onBack: () => void; onSuccess: () => void; onRegister: () => void }) {
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false); const [resetLoading, setResetLoading] = useState(false);
+
   async function submit() {
     if (!email.trim() || !password || loading) return;
     try { setLoading(true); setError(null);
@@ -300,6 +314,16 @@ function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured
       onSuccess();
     } catch (e) { setError(formatAuthError(e)); } finally { setLoading(false); }
   }
+
+  async function sendReset() {
+    if (!email.trim()) { setError("Digite seu e-mail acima para receber o link de redefinição."); return; }
+    try {
+      setResetLoading(true); setError(null);
+      await sendPasswordResetEmailMobile(firebaseConfig, email.trim());
+      setResetSent(true);
+    } catch (e) { setError(formatAuthError(e)); } finally { setResetLoading(false); }
+  }
+
   return (
     <SafeAreaView style={s.fill}><StatusBar style="dark" />
       <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -311,7 +335,11 @@ function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured
           <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
           <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="••••••••" />
           {error && <Text style={s.errorText}>{error}</Text>}
+          {resetSent && <View style={[s.infoBox, { marginBottom: 12 }]}><Text style={s.infoText}>✉️  Link enviado para {email.trim()}. Verifique sua caixa de entrada.</Text></View>}
           <Btn label="Entrar" onPress={submit} loading={loading} />
+          <TouchableOpacity onPress={sendReset} style={[s.linkRow, { marginTop: 12 }]} disabled={resetLoading}>
+            <Text style={s.linkText}>{resetLoading ? "Enviando..." : "Esqueci minha senha"}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onRegister} style={s.linkRow}><Text style={s.linkText}>Não tem conta? <Text style={s.linkBold}>Criar conta</Text></Text></TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -429,7 +457,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         <View style={s.fill}>
           {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
-          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} />}
+          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} onOpenLider={() => push("lider-celula")} />}
           {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
 
           {/* Modals */}
@@ -439,6 +467,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
+          {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} onBack={pop} />}
         </View>
 
         {/* Tab Bar — hidden when modal is open */}
@@ -583,7 +612,7 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady }: { groups: Group[]; primary: string; dataReady: boolean }) {
+function CelulaTab({ groups, primary, dataReady, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; onOpenLider: () => void }) {
   const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false);
@@ -597,6 +626,19 @@ function CelulaTab({ groups, primary, dataReady }: { groups: Group[]; primary: s
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando células..." />}
+
+      {/* Banner exclusivo do líder — visível para group_leader e acima */}
+      <TouchableOpacity style={[s.liderBanner, { borderColor: primary }]} onPress={onOpenLider} activeOpacity={0.85}>
+        <View style={[s.liderBannerIcon, { backgroundColor: primary }]}>
+          <Text style={{ fontSize: 22 }}>🎯</Text>
+        </View>
+        <View style={s.fill}>
+          <Text style={[s.liderBannerTitle, { color: primary }]}>Área do Líder</Text>
+          <Text style={s.liderBannerSub}>Roteiro, dinâmica e ferramentas de IA para o seu encontro</Text>
+        </View>
+        <Text style={[s.menuChev, { color: primary }]}>›</Text>
+      </TouchableOpacity>
+
       {groups.length === 0 && dataReady && (
         <EmptyState icon="🤝" title="Nenhuma célula encontrada" sub="Entre em contato com sua liderança para ser adicionado a uma célula." />
       )}
@@ -1190,6 +1232,214 @@ function InscricaoScreen({ primary, event, user, onBack }: { primary: string; ev
   );
 }
 
+// ─── Área do Líder de Célula ──────────────────────────────────────────────────
+
+type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
+
+function LiderCelulaScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
+  const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Tema semanal do pastor
+  const [pastoralTheme, setPastoralTheme] = useState<{ title: string; bibleVerse?: string; description?: string } | null>(null);
+
+  useEffect(() => {
+    const orgId = (user as any)?.organizationId ?? "";
+    if (!orgId) return;
+    fetch(`${WEB_API_URL}/api/weekly-theme?organizationId=${encodeURIComponent(orgId)}`)
+      .then(r => r.json())
+      .then(data => { if (data.theme) setPastoralTheme(data.theme); })
+      .catch(() => {});
+  }, [user]);
+
+  // Roteiro
+  const [theme, setTheme] = useState("");
+  const [verse, setVerse] = useState("");
+  const [groupProfile, setGroupProfile] = useState("");
+
+  // Dinâmica
+  const [dynTheme, setDynTheme] = useState("");
+  const [dynType, setDynType] = useState("quebra-gelo");
+
+  // Relatório
+  const [repGroupName, setRepGroupName] = useState("");
+  const [repTheme, setRepTheme] = useState("");
+  const [repPresent, setRepPresent] = useState("");
+  const [repNotes, setRepNotes] = useState("");
+  const [repPrayer, setRepPrayer] = useState("");
+
+  // Mensagem de ausência
+  const [absMember, setAbsMember] = useState("");
+  const [absWeeks, setAbsWeeks] = useState("2");
+
+  async function run() {
+    setLoading(true); setResult(null); setError(null);
+    try {
+      let content = "";
+      if (activeTool === "roteiro") {
+        if (!theme.trim()) { setError("Informe o tema do encontro."); setLoading(false); return; }
+        content = await callAi("cell_script", { theme, bibleVerse: verse, groupProfile });
+      } else if (activeTool === "dinamica") {
+        if (!dynTheme.trim()) { setError("Informe o tema."); setLoading(false); return; }
+        content = await callAi("cell_dynamic", { theme: dynTheme, dynamicType: dynType, groupProfile });
+      } else if (activeTool === "relatorio") {
+        if (!repGroupName.trim() || !repTheme.trim()) { setError("Preencha grupo e tema."); setLoading(false); return; }
+        content = await callAi("cell_meeting_summary", {
+          groupName: repGroupName,
+          date: new Date().toLocaleDateString("pt-BR"),
+          theme: repTheme,
+          presentCount: parseInt(repPresent) || 0,
+          leaderNotes: repNotes,
+          prayerRequests: repPrayer ? repPrayer.split(",").map(s => s.trim()) : []
+        });
+      } else if (activeTool === "mensagem") {
+        if (!absMember.trim()) { setError("Informe o nome do membro."); setLoading(false); return; }
+        content = await callAi("absence_message", {
+          memberName: absMember,
+          groupName: "minha célula",
+          weeksAbsent: parseInt(absWeeks) || 2
+        });
+      }
+      setResult(content);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao gerar conteúdo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const tools: { id: LiderTool; icon: string; label: string }[] = [
+    { id: "roteiro", icon: "📋", label: "Roteiro" },
+    { id: "dinamica", icon: "🎮", label: "Dinâmica" },
+    { id: "relatorio", icon: "📝", label: "Relatório" },
+    { id: "mensagem", icon: "💬", label: "Ausente" }
+  ];
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Área do Líder" onBack={onBack} />
+
+      {/* Banner tema do pastor */}
+      {pastoralTheme && (
+        <View style={[s.pastoralThemeBanner, { borderColor: primary }]}>
+          <Text style={[s.pastoralThemeLabel, { color: primary }]}>📖 Tema do pastor esta semana</Text>
+          <Text style={s.pastoralThemeTitle}>{pastoralTheme.title}</Text>
+          {pastoralTheme.bibleVerse ? <Text style={s.pastoralThemeVerse}>{pastoralTheme.bibleVerse}</Text> : null}
+          {pastoralTheme.description ? <Text style={s.pastoralThemeDesc}>{pastoralTheme.description}</Text> : null}
+          <TouchableOpacity
+            onPress={() => {
+              setTheme(pastoralTheme.title);
+              if (pastoralTheme.bibleVerse) setVerse(pastoralTheme.bibleVerse);
+              setActiveTool("roteiro");
+            }}
+            style={[s.pastoralThemeBtn, { backgroundColor: primary }]}
+          >
+            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Usar este tema →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Tool selector */}
+      <View style={s.liderToolBar}>
+        {tools.map(t => (
+          <Pressable
+            key={t.id}
+            style={[s.liderToolBtn, activeTool === t.id && { backgroundColor: primary, borderColor: primary }]}
+            onPress={() => { setActiveTool(t.id); setResult(null); setError(null); }}
+          >
+            <Text style={{ fontSize: 16 }}>{t.icon}</Text>
+            <Text style={[s.liderToolLabel, activeTool === t.id && { color: "#fff" }]}>{t.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
+
+        {/* ── Roteiro ── */}
+        {activeTool === "roteiro" && (
+          <>
+            <View style={[s.infoBox, { marginBottom: 16 }]}>
+              <Text style={s.infoText}>A IA monta um roteiro completo com abertura, quebra-gelo, estudo bíblico, aplicação e encerramento.</Text>
+            </View>
+            <Field label="Tema do encontro *" value={theme} onChange={setTheme} placeholder="Ex: Fé em tempos difíceis" />
+            <Field label="Passagem bíblica" value={verse} onChange={setVerse} placeholder="Ex: Hebreus 11:1" />
+            <Field label="Perfil do grupo" value={groupProfile} onChange={setGroupProfile} placeholder="Ex: Jovens adultos, 20-35 anos" />
+          </>
+        )}
+
+        {/* ── Dinâmica ── */}
+        {activeTool === "dinamica" && (
+          <>
+            <View style={[s.infoBox, { marginBottom: 16 }]}>
+              <Text style={s.infoText}>Gera uma dinâmica criativa com passo a passo e materiais necessários.</Text>
+            </View>
+            <Field label="Tema do encontro *" value={dynTheme} onChange={setDynTheme} placeholder="Ex: Gratidão" />
+            <Text style={s.label}>Tipo de dinâmica</Text>
+            <View style={[s.row, { flexWrap: "wrap", gap: 8, marginBottom: 16 }]}>
+              {["quebra-gelo", "reflexão", "comunhão", "louvor", "missão"].map(type => (
+                <Pressable
+                  key={type}
+                  style={[s.typeChip, dynType === type && { backgroundColor: primary, borderColor: primary }]}
+                  onPress={() => setDynType(type)}
+                >
+                  <Text style={[s.typeChipText, dynType === type && { color: "#fff" }]}>{type}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Field label="Perfil do grupo" value={groupProfile} onChange={setGroupProfile} placeholder="Ex: Famílias com filhos" />
+          </>
+        )}
+
+        {/* ── Relatório ── */}
+        {activeTool === "relatorio" && (
+          <>
+            <View style={[s.infoBox, { marginBottom: 16 }]}>
+              <Text style={s.infoText}>Preencha os dados do encontro. A IA gera um relatório formatado para enviar ao pastor.</Text>
+            </View>
+            <Field label="Nome do grupo *" value={repGroupName} onChange={setRepGroupName} placeholder="Ex: CG Centro-Norte" />
+            <Field label="Tema do encontro *" value={repTheme} onChange={setRepTheme} placeholder="Ex: Servindo com alegria" />
+            <Field label="Número de presentes" value={repPresent} onChange={setRepPresent} placeholder="Ex: 14" keyboardType="numeric" />
+            <Field label="Pedidos de oração (separados por vírgula)" value={repPrayer} onChange={setRepPrayer} placeholder="Ex: Família de João, saúde de Maria" />
+            <Field label="Observações do líder" value={repNotes} onChange={setRepNotes} placeholder="Como foi o encontro? Algo de especial?" />
+          </>
+        )}
+
+        {/* ── Mensagem de Ausência ── */}
+        {activeTool === "mensagem" && (
+          <>
+            <View style={[s.infoBox, { marginBottom: 16 }]}>
+              <Text style={s.infoText}>Gera uma mensagem calorosa para enviar ao membro que está faltando, sem pressionar.</Text>
+            </View>
+            <Field label="Nome do membro *" value={absMember} onChange={setAbsMember} placeholder="Ex: Mariana" />
+            <Field label="Semanas sem aparecer" value={absWeeks} onChange={setAbsWeeks} placeholder="2" keyboardType="numeric" />
+          </>
+        )}
+
+        {error && <Text style={s.errorText}>{error}</Text>}
+
+        <Btn
+          label={loading ? "Gerando com IA..." : "Gerar com IA"}
+          onPress={run}
+          loading={loading}
+          color={primary}
+        />
+
+        {result && (
+          <View style={[s.card, { marginTop: 20, backgroundColor: "#fff" }]}>
+            <View style={[s.row, { marginBottom: 12 }]}>
+              <Text style={{ fontSize: 16, marginRight: 6 }}>✨</Text>
+              <Text style={[s.eyebrow, { color: primary }]}>GERADO PELA IA</Text>
+            </View>
+            <Text style={[s.cardMeta, { lineHeight: 22, color: BRAND_DARK }]}>{result}</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
 function ModalHeader({ title, onBack }: { title: string; onBack: () => void }) {
@@ -1346,7 +1596,7 @@ const s = StyleSheet.create({
   avatarText: { color: "#fff", fontSize: 18, fontWeight: "700" },
 
   // Tab bar
-  tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingBottom: 8 },
+  tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingBottom: 24 },
   tabItem: { flex: 1, alignItems: "center", paddingTop: 8 },
   tabIcon: { fontSize: 22, opacity: 0.4 },
   tabLabel: { fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: "500" },
@@ -1445,6 +1695,21 @@ const s = StyleSheet.create({
   codeBox: { borderWidth: 2, borderRadius: 10, padding: 10, alignItems: "center", minWidth: 72 },
   codeLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", marginBottom: 2 },
   codeValue: { fontSize: 22, fontWeight: "800" },
+
+  // Líder de Célula
+  pastoralThemeBanner: { margin: 16, marginBottom: 0, borderWidth: 1.5, borderRadius: 12, padding: 14, backgroundColor: "#faf5ff" },
+  pastoralThemeLabel: { fontSize: 11, fontWeight: "700", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 },
+  pastoralThemeTitle: { fontSize: 16, fontWeight: "800", color: "#1f2937", marginBottom: 2 },
+  pastoralThemeVerse: { fontSize: 13, color: "#7c3aed", fontStyle: "italic", marginBottom: 4 },
+  pastoralThemeDesc: { fontSize: 12, color: "#6b7280", marginBottom: 8 },
+  pastoralThemeBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  liderBanner: { flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderRadius: 14, padding: 14, marginBottom: 16, backgroundColor: "#fff", gap: 12 },
+  liderBannerIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  liderBannerTitle: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
+  liderBannerSub: { fontSize: 12, color: "#6b7280", lineHeight: 16 },
+  liderToolBar: { flexDirection: "row", paddingHorizontal: 16, paddingVertical: 10, gap: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
+  liderToolBtn: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: "#e5e7eb", gap: 3 },
+  liderToolLabel: { fontSize: 11, fontWeight: "600", color: "#6b7280" },
 
   // Escala
   escalaBtn: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 },

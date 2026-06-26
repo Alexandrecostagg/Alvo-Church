@@ -1192,3 +1192,23 @@ export interface MemberCourseProgress {
   completedAt?: string;
   updatedAt: string;
 }
+
+// ─── Tema Semanal de Células ──────────────────────────────────────────────────
+
+export type WeeklyThemeScope =
+  | "all"        // todas as células da organização
+  | "specific";  // apenas as células listadas em groupIds
+
+export interface WeeklyTheme {
+  id: string;
+  organizationId: string;
+  title: string;               // tema da semana
+  bibleVerse?: string;         // passagem bíblica sugerida
+  description?: string;        // orientação extra do pastor
+  scope: WeeklyThemeScope;
+  groupIds: string[];          // vazio = todas as células (quando scope = "all")
+  weekStartDate: string;       // ISO date da segunda-feira da semana (YYYY-MM-DD)
+  createdBy: string;           // userId do pastor/admin
+  createdAt: string;
+}
+

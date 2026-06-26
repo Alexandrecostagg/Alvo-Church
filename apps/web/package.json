@@ -13,6 +13,7 @@
     "format": "prettier --check ."
   },
   "dependencies": {
+    "@alvo/ai": "workspace:*",
     "@alvo/domain": "workspace:*",
     "@alvo/firebase": "workspace:*",
     "@alvo/types": "workspace:*",
