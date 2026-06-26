@@ -20,3 +20,4 @@ apps/web/.wrangler
 firebase-debug.log
 wrangler*.log
 apps/web/dist-cloudflare
+.claude/
