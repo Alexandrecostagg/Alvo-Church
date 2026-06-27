@@ -28,7 +28,7 @@ function roleMeta(role: AppRole) {
 }
 
 export function UsersView() {
-  const { firebaseConfig, organizationId, tenantReady } = useAppAuth();
+  const { firebaseConfig, organizationId, tenantReady, user, refreshRoles } = useAppAuth();
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -53,6 +53,8 @@ export function UsersView() {
       const sdk = await import("@alvo/firebase");
       await sdk.updateTenantUserRoles(firebaseConfig, { organizationId, userId, roles: [newRole] });
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, roles: [newRole] } : u));
+      // Se mudou o próprio usuário, recarrega roles na sessão imediatamente
+      if (userId === user?.uid) await refreshRoles();
     } finally {
       setSavingId(null);
     }

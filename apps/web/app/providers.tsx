@@ -23,6 +23,7 @@ interface AuthContextValue {
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
   switchOrganization: (orgId: string) => void;
+  refreshRoles: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -187,6 +188,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
     setRoles([]);
   }
 
+  async function refreshRoles() {
+    if (!user) return;
+    const sdk = await import("@alvo/firebase");
+    const existing = await sdk.fetchTenantUser(firebaseConfig, {
+      organizationId,
+      userId: user.uid,
+    });
+    if (existing) setRoles(existing.roles);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -201,6 +212,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         hasRole,
         hasAnyRole,
         switchOrganization,
+        refreshRoles,
         signIn: async (email, password) => {
           if (!configured) throw new Error("Firebase nao configurado.");
           const sdk = await import("@alvo/firebase");
