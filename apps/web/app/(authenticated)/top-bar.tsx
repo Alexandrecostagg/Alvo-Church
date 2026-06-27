@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { LogIn, LogOut, User } from "lucide-react";
 import { useAppAuth } from "../providers";
+import { OrgSwitcher } from "../../src/components/org-switcher";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -71,7 +72,8 @@ export function TopBar() {
         <Icon size={18} strokeWidth={2} />
         <span>{current.label}</span>
       </div>
-      <div style={{ marginLeft: "auto" }}>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+        <OrgSwitcher />
         {user ? (
           <button
             onClick={() => signOut()}
@@ -91,6 +93,7 @@ export function TopBar() {
             Entrar
           </button>
         )}
+      </div>
       </div>
     </div>
   );

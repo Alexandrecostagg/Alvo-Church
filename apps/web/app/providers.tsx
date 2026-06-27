@@ -22,11 +22,13 @@ interface AuthContextValue {
   firebaseConfig: FirebaseWebRuntimeConfig;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
+  switchOrganization: (orgId: string) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
+const LS_ORG_KEY = "alvo_active_org";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -55,7 +57,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
-  const [organizationId, setOrganizationId] = useState(DEFAULT_ORGANIZATION_ID);
+  const [organizationId, setOrganizationId] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(LS_ORG_KEY) ?? DEFAULT_ORGANIZATION_ID;
+    }
+    return DEFAULT_ORGANIZATION_ID;
+  });
 
   const firebaseConfig = useMemo(
     () =>
@@ -172,6 +179,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const hasRole = useMemo(() => (role: AppRole) => roles.includes(role), [roles]);
   const hasAnyRole = useMemo(() => (required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
 
+  function switchOrganization(orgId: string) {
+    localStorage.setItem(LS_ORG_KEY, orgId);
+    setOrganizationId(orgId);
+    setTenantReady(false);
+    setTenantRuntime(null);
+    setRoles([]);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -185,6 +200,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         firebaseConfig,
         hasRole,
         hasAnyRole,
+        switchOrganization,
         signIn: async (email, password) => {
           if (!configured) throw new Error("Firebase nao configurado.");
           const sdk = await import("@alvo/firebase");

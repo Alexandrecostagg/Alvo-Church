@@ -603,6 +603,14 @@ export async function fetchOrganizationById(
   return toOrganization(snapshot.id, snapshot.data());
 }
 
+export async function fetchAllOrganizations(
+  config: FirebaseWebRuntimeConfig
+): Promise<import("@alvo/types").Organization[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, "organizations"));
+  return snap.docs.map((d) => toOrganization(d.id, d.data()));
+}
+
 export async function fetchOrganizationBySlug(
   config: FirebaseWebRuntimeConfig,
   slug: string
