@@ -1,305 +1,134 @@
 "use client";
 
-import Link from "next/link";
-import { 
-  QrCode, 
-  Trophy, 
-  Tent, 
-  Zap, 
-  MapPin, 
-  Settings, 
-  LogOut, 
-  Heart,
-  ChevronRight,
-  ShieldCheck,
-  Star,
-  Baby,
-  Handshake,
-  Award
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  createFirebaseWebRuntimeConfigFromEnv,
-  fetchPeople,
-  isFirebaseWebRuntimeConfigured,
-  fetchMemberBadges,
-  fetchMemberJourneyProfile
-} from "@alvo/firebase";
-import type { Person, TribeCode, MemberBadge, MemberJourneyProfile } from "@alvo/types";
+  Building2,
+  KeyRound,
+  LogOut,
+  Mail,
+  Settings,
+  Shield,
+  User,
+} from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 
+const ROLE_LABELS: Record<string, string> = {
+  owner:         "Proprietário",
+  admin:         "Administrador",
+  pastor:        "Pastor",
+  group_leader:  "Líder de célula",
+  staff:         "Equipe",
+  member:        "Membro",
+};
+
 export function MemberProfileView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
-  const [person, setPerson] = useState<Person | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [badges, setBadges] = useState<MemberBadge[]>([]);
-  const [journeyProfile, setJourneyProfile] = useState<MemberJourneyProfile | null>(null);
+  const { user, organizationId, tenantRuntime, signOut } = useAppAuth();
+  const router = useRouter();
 
-  useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setLoading(false);
-      return;
-    }
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? organizationId;
+  const role = (user as any)?.role as string | undefined;
+  const roleLabel = role ? (ROLE_LABELS[role] ?? role) : "Administrador";
 
-    async function loadMemberData() {
-      try {
-        const people = await fetchPeople(firebaseConfig, { organizationId }, 100);
-        // Find person by email or some mapping (in demo, we match first person or by email)
-        const currentPerson = people.find(p => p.email === user?.email) || people[0];
-        setPerson(currentPerson);
+  const initials = (user?.email ?? "?")
+    .split("@")[0]
+    .slice(0, 2)
+    .toUpperCase();
 
-        if (currentPerson) {
-          const [memberBadges, jp] = await Promise.all([
-            fetchMemberBadges(firebaseConfig, { organizationId }, currentPerson.id).catch(() => []),
-            fetchMemberJourneyProfile(firebaseConfig, { organizationId }, currentPerson.id).catch(() => null)
-          ]);
-          setBadges(memberBadges);
-          setJourneyProfile(jp);
-        }
-      } catch (error) {
-        console.error("Failed to load member profile:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void loadMemberData();
-  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
-
-  if (loading) {
-    return (
-      <div className="member-loading">
-        <div className="spinner"></div>
-        <p>Sincronizando seu perfil pastoral...</p>
-      </div>
-    );
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
   }
 
-  const tribeInfo = getTribeInfo(person?.tribePrimaryCode);
-  const tribeAccent = getTribeAccent(person?.tribePrimaryCode);
-
   return (
-    <main className="member-app-shell">
-      <header className="member-header">
-        <div className="member-user-info">
-          <div className="avatar x-large animate-entrance">
-            {getInitials(person?.firstName || user?.email || "U")}
-          </div>
-          <div className="member-welcome animate-entrance" style={{ animationDelay: "0.1s" }}>
-            <p className="eyebrow">Olá, {person?.firstName || "Membro Alvo"}</p>
-            <h1>É bom ter você aqui.</h1>
-            <span className="status-badge" style={{ backgroundColor: tribeAccent.soft, color: tribeAccent.dark }}>
-              <ShieldCheck size={12} />
-              {person?.memberStatus === "member" ? "Membro Ativo" : "Visitante em Jornada"}
+    <div style={{ padding: "2rem 1.5rem", maxWidth: 640, margin: "0 auto" }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "2rem" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "#7F77DD", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <User size={20} color="#fff" />
+        </div>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>Meu perfil</h1>
+          <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "2px 0 0" }}>Conta e configurações do administrador</p>
+        </div>
+      </div>
+
+      {/* Identity card */}
+      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "1.25rem", marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 500, color: "#3C3489", flexShrink: 0 }}>
+          {initials}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, margin: "0 0 4px" }}>{user?.email ?? "—"}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: "#EEEDFE", color: "#3C3489", fontWeight: 500 }}>
+              {roleLabel}
             </span>
           </div>
         </div>
-        <button className="tool-button" aria-label="Notificações">
-          <Settings size={20} />
-        </button>
-      </header>
+      </div>
 
-      <section className="member-quick-actions animate-entrance" style={{ animationDelay: "0.2s" }}>
-        <Link href="/me/kids" className="action-circle-wrapper">
-          <div className="action-circle" style={{ background: '#fef2f2', color: '#ef4444' }}><Baby size={24} /></div>
-          <span>Kids</span>
-        </Link>
-        <Link href="#checkin" className="action-circle-wrapper">
-          <div className="action-circle"><QrCode size={24} /></div>
-          <span>Check-in</span>
-        </Link>
-        <Link href="#prayer" className="action-circle-wrapper">
-          <div className="action-circle"><Heart size={24} /></div>
-          <span>Orar</span>
-        </Link>
-        <Link href="#giving" className="action-circle-wrapper">
-          <div className="action-circle"><Star size={24} /></div>
-          <span>Ofertar</span>
-        </Link>
-      </section>
+      {/* Info rows */}
+      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+        <InfoRow icon={<Mail size={15} />} label="E-mail" value={user?.email ?? "—"} />
+        <InfoRow icon={<Building2 size={15} />} label="Organização" value={orgName ?? "—"} divider />
+        <InfoRow icon={<Shield size={15} />} label="Nível de acesso" value={roleLabel} divider />
+        <InfoRow icon={<KeyRound size={15} />} label="ID do usuário" value={user?.uid ? `${user.uid.slice(0, 12)}…` : "—"} divider mono />
+      </div>
 
-      <section className="member-cards-container animate-entrance" style={{ animationDelay: "0.3s" }}>
-        <article className="member-card-premium">
-          <div className="card-tag" style={{ backgroundColor: "#eff6ff", color: "#2563eb" }}>Próximo Culto</div>
-          <h3>Celebração de Domingo</h3>
-          <div className="card-meta">
-            <MapPin size={14} />
-            <span>Campus Principal • 18:00</span>
-          </div>
-          <button className="primary-pill compact">Lembrar-me</button>
-        </article>
+      {/* Actions */}
+      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+        <ActionRow
+          icon={<Settings size={15} />}
+          label="Configurações da organização"
+          onClick={() => router.push("/settings")}
+        />
+        <ActionRow
+          icon={<LogOut size={15} />}
+          label="Sair da conta"
+          onClick={handleSignOut}
+          danger
+          divider
+        />
+      </div>
 
-        <article className="member-card-premium">
-          <div className="card-tag" style={{ backgroundColor: tribeAccent.soft, color: tribeAccent.dark }}>Minha Tribo</div>
-          <div className="tribe-row">
-             <div className="tribe-icon-small" style={{ backgroundColor: tribeAccent.soft, color: tribeAccent.dark }}>
-                <Tent size={20} />
-             </div>
-             <div>
-               <strong>{tribeInfo.name}</strong>
-               <p style={{ fontSize: '12px', color: 'var(--alvo-ink-soft)' }}>{tribeInfo.summary}</p>
-             </div>
-          </div>
-          <Link href="/tribes/test" className="text-link" style={{ color: tribeAccent.dark, fontSize: '13px' }}>
-            Refazer teste de dons <ChevronRight size={14} />
-          </Link>
-        </article>
-
-        <article className="member-card-premium">
-          <div className="card-tag" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>Atenção</div>
-          <div className="serving-badge">
-             <Zap size={20} color="#f59e0b" />
-             <div>
-                <strong>Você serve hoje!</strong>
-                <p style={{ fontSize: '12px', color: 'var(--alvo-ink-soft)' }}>Equipe de Recepção • 17:30</p>
-             </div>
-          </div>
-          <button className="primary-button compact" style={{ backgroundColor: '#111827' }}>Confirmar Presença</button>
-        </article>
-      </section>
-
-      <section className="member-pass-section animate-entrance" style={{ animationDelay: "0.4s" }}>
-        <div className={`getro-pass-card tribe-${person?.tribePrimaryCode || "default"}`}>
-          <div className="pass-header">
-            <div className="pass-brand">
-              <div className="pass-logo">A</div>
-              <span>ALVO PASS</span>
-            </div>
-            <QrCode size={24} opacity={0.6} />
-          </div>
-          <div className="pass-body">
-            <div className="qr-placeholder">
-              <svg viewBox="0 0 100 100" fill="currentColor">
-                <rect x="10" y="10" width="20" height="20" />
-                <rect x="70" y="10" width="20" height="20" />
-                <rect x="10" y="70" width="20" height="20" />
-                <rect x="35" y="35" width="30" height="30" />
-                <rect x="75" y="75" width="15" height="15" />
-              </svg>
-            </div>
-            <div className="pass-details">
-              <strong>{person?.memberCardCode || "GETRO-00000"}</strong>
-              <p>Escaneie nos parceiros</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="journey-progress-card animate-entrance" style={{ animationDelay: "0.5s" }}>
-        <div className="card-header">
-          <Trophy size={18} />
-          <strong>Minha Jornada</strong>
-        </div>
-        <div className="progress-content">
-          <div className="progress-label">
-            <span>
-              {journeyProfile ? (
-                journeyProfile.currentStage === "exploring" ? "Explorando a fé" :
-                journeyProfile.currentStage === "connecting" ? "Conectando em Célula" :
-                journeyProfile.currentStage === "grounding" ? "Consolidando a Caminhada" :
-                journeyProfile.currentStage === "serving" ? "Membro em Serviço" :
-                journeyProfile.currentStage === "developing" ? "Membro em Desenvolvimento" :
-                journeyProfile.currentStage === "leading" ? "Líder de Célula/Ministério" :
-                journeyProfile.currentStage
-              ) : "Membro em Desenvolvimento"}
-            </span>
-            <b style={{ color: tribeAccent.dark }}>{journeyProfile ? journeyProfile.progressPercent : 72}%</b>
-          </div>
-          <div className="progress-bar-container">
-            <div 
-              className="progress-bar-fill" 
-              style={{ 
-                width: `${journeyProfile ? journeyProfile.progressPercent : 72}%`, 
-                background: `linear-gradient(90deg, ${tribeAccent.dark}, ${tribeAccent.main})` 
-              }} 
-            />
-          </div>
-        </div>
-      </section>
-
-      {badges.length > 0 && (
-        <section className="journey-progress-card animate-entrance" style={{ animationDelay: "0.55s", marginTop: "1rem" }}>
-          <div className="card-header">
-            <Award size={18} style={{ color: "#facc15" }} />
-            <strong>Minhas Conquistas (Badges)</strong>
-          </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", padding: "10px 0" }}>
-            {badges.map((b) => (
-              <div 
-                key={b.id} 
-                style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 6, 
-                  background: "rgba(250, 204, 21, 0.15)", 
-                  border: "1px solid #facc15", 
-                  borderRadius: "12px", 
-                  padding: "6px 12px",
-                  fontSize: "0.8rem",
-                  color: "#facc15",
-                  fontWeight: 700 
-                }}
-              >
-                <Award size={14} />
-                <span>{b.badgeId.replace("badge_", "").replace(/_/g, " ").toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <footer className="member-footer-actions">
-        <button className="member-action-button logout">
-          <LogOut size={18} />
-          <span>Sair do App</span>
-        </button>
-      </footer>
-    </main>
+      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center", marginTop: "1.5rem" }}>
+        Getro Growth · {orgName ?? organizationId}
+      </p>
+    </div>
   );
 }
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0].toUpperCase())
-    .join("");
+function InfoRow({ icon, label, value, divider, mono }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  divider?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div style={{ borderTop: divider ? "0.5px solid var(--color-border-tertiary)" : undefined, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+      <span style={{ color: "var(--color-text-secondary)", display: "flex", flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 13, color: "var(--color-text-secondary)", minWidth: 120 }}>{label}</span>
+      <span style={{ fontSize: 13, fontFamily: mono ? "var(--font-mono)" : undefined, marginLeft: "auto", color: "var(--color-text-primary)" }}>{value}</span>
+    </div>
+  );
 }
 
-function getTribeInfo(code?: TribeCode) {
-  const tribes: Record<string, { name: string; summary: string }> = {
-    ASHER:    { name: "Tribo de Aser",     summary: "Excelência no acolhimento e cuidado de famílias." },
-    LEVI:     { name: "Tribo de Levi",     summary: "Adoração e serviço espiritual no ambiente do culto." },
-    JUDAH:    { name: "Tribo de Judá",     summary: "Liderança, governo e direção ministerial." },
-    ISSACHAR: { name: "Tribo de Issacar",  summary: "Discernimento de tempos e estratégia pastoral." },
-    JOSEPH:   { name: "Tribo de José",     summary: "Administração, recursos e gestão com excelência." },
-    NAPHTALI: { name: "Tribo de Naftali",  summary: "Expressão, artes e comunicação com leveza." },
-    ZEBULUN:  { name: "Tribo de Zebulom",  summary: "Missões, alcance e expansão do Reino." },
-    GAD:      { name: "Tribo de Gade",     summary: "Proteção, intercessão e cobertura espiritual." },
-    MANASSEH: { name: "Tribo de Manassés", summary: "Cura, restauração e cuidado pastoral." },
-    EPHRAIM:  { name: "Tribo de Efraim",   summary: "Ensino, discipulado e formação de líderes." },
-    BENJAMIN: { name: "Tribo de Benjamim", summary: "Juventude, ousadia e vanguarda espiritual." },
-    REUBEN:   { name: "Tribo de Rúben",    summary: "Reconciliação, cuidado familiar e restauração." },
-    default:  { name: "Tribo Indefinida",  summary: "Faça o teste para descobrir seu perfil pastoral." }
-  };
-  return tribes[code as string] || tribes.default;
-}
-function getTribeAccent(code?: TribeCode) {
-  const accents: Record<string, { main: string; soft: string; dark: string }> = {
-    ASHER:    { main: "#10b981", soft: "#ecfdf5", dark: "#065f46" },
-    LEVI:     { main: "#3b82f6", soft: "#eff6ff", dark: "#1e3a8a" },
-    JUDAH:    { main: "#f97316", soft: "#fff7ed", dark: "#7c2d12" },
-    ISSACHAR: { main: "#8b5cf6", soft: "#f5f3ff", dark: "#4c1d95" },
-    JOSEPH:   { main: "#06b6d4", soft: "#ecfeff", dark: "#083344" },
-    NAPHTALI: { main: "#ec4899", soft: "#fdf2f8", dark: "#831843" },
-    ZEBULUN:  { main: "#f59e0b", soft: "#fffbeb", dark: "#78350f" },
-    GAD:      { main: "#64748b", soft: "#f8fafc", dark: "#0f172a" },
-    MANASSEH: { main: "#14b8a6", soft: "#f0fdfa", dark: "#134e4a" },
-    EPHRAIM:  { main: "#84cc16", soft: "#f7fee7", dark: "#365314" },
-    BENJAMIN: { main: "#6366f1", soft: "#eef2ff", dark: "#1e1b4b" },
-    REUBEN:   { main: "#ef4444", soft: "#fef2f2", dark: "#7f1d1d" },
-    default:  { main: "#6366f1", soft: "#f5f3ff", dark: "#4338ca" }
-  };
-  return accents[code as string] || accents.default;
+function ActionRow({ icon, label, onClick, danger, divider }: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  divider?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ width: "100%", borderTop: divider ? "0.5px solid var(--color-border-tertiary)" : undefined, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+    >
+      <span style={{ color: danger ? "var(--color-text-danger)" : "var(--color-text-secondary)", display: "flex", flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 13, color: danger ? "var(--color-text-danger)" : "var(--color-text-primary)" }}>{label}</span>
+    </button>
+  );
 }
