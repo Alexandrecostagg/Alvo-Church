@@ -1197,7 +1197,8 @@ export interface MemberCourseProgress {
 
 export type WeeklyThemeScope =
   | "all"        // todas as células da organização
-  | "specific";  // apenas as células listadas em groupIds
+  | "specific"   // apenas as células listadas em groupIds
+  | "open";      // líder decide o próprio tema livremente
 
 export interface WeeklyTheme {
   id: string;
