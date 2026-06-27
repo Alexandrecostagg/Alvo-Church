@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LogIn, LogOut, User } from "lucide-react";
+import { useAppAuth } from "../providers";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -53,6 +55,8 @@ const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
 
 export function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOut } = useAppAuth();
 
   const current = MODULE_MAP.find((m) => m.match(pathname)) ?? {
     label: "Alvo",
@@ -66,6 +70,27 @@ export function TopBar() {
       <div className="app-topbar-title">
         <Icon size={18} strokeWidth={2} />
         <span>{current.label}</span>
+      </div>
+      <div style={{ marginLeft: "auto" }}>
+        {user ? (
+          <button
+            onClick={() => signOut()}
+            title={`Sair (${user.email ?? user.uid})`}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, color: "#374151" }}
+          >
+            <User size={14} />
+            <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email ?? "Usuário"}</span>
+            <LogOut size={14} />
+          </button>
+        ) : (
+          <button
+            onClick={() => router.push("/login")}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--getro-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600 }}
+          >
+            <LogIn size={14} />
+            Entrar
+          </button>
+        )}
       </div>
     </div>
   );
