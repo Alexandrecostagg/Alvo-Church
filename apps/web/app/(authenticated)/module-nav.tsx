@@ -102,7 +102,8 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Relatórios", icon: FileBarChart2, href: "/reports", match: (pathname: string) => pathname.startsWith("/reports") },
         { label: "Notificações", icon: Bell, href: "/notifications", match: (pathname: string) => pathname.startsWith("/notifications") },
         { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") },
-        { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname.startsWith("/settings") },
+        { label: "Usuários", icon: UsersRound, href: "/settings/users", match: (pathname: string) => pathname.startsWith("/settings/users") },
+        { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname === "/settings" },
       ]
     }
   ];

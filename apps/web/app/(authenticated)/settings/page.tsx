@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { RoleGuard } from "../../../src/components/role-guard";
 
 const SettingsView = dynamic(
   () => import("../../../src/features/settings/settings-view").then((mod) => mod.SettingsView),
@@ -8,5 +9,9 @@ const SettingsView = dynamic(
 );
 
 export default function SettingsPage() {
-  return <SettingsView />;
+  return (
+    <RoleGuard required={["super_admin", "church_admin"]}>
+      <SettingsView />
+    </RoleGuard>
+  );
 }

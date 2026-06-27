@@ -699,6 +699,54 @@ export async function fetchTenantRuntimeSnapshot(
   };
 }
 
+export async function fetchTenantUser(
+  config: FirebaseWebRuntimeConfig,
+  params: { organizationId: string; userId: string }
+): Promise<{ roles: AppRole[]; email: string; isActive: boolean } | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(
+    doc(firestore, getTenantUserDocumentPath({ organizationId: params.organizationId }, params.userId))
+  );
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    roles: (data.roles ?? ["church_admin"]) as AppRole[],
+    email: data.email ?? "",
+    isActive: data.isActive ?? true,
+  };
+}
+
+export async function fetchTenantUsers(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<{ id: string; email: string; roles: AppRole[]; isActive: boolean; createdAt?: string }[]> {
+  const firestore = getFirebaseFirestore(config);
+  const colPath = `organizations/${context.organizationId}/users`;
+  const snap = await getDocs(collection(firestore, colPath));
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      email: data.email ?? "",
+      roles: (data.roles ?? ["member"]) as AppRole[],
+      isActive: data.isActive ?? true,
+      createdAt: data.createdAt,
+    };
+  });
+}
+
+export async function updateTenantUserRoles(
+  config: FirebaseWebRuntimeConfig,
+  params: { organizationId: string; userId: string; roles: AppRole[] }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getTenantUserDocumentPath({ organizationId: params.organizationId }, params.userId)),
+    { roles: params.roles },
+    { merge: true }
+  );
+}
+
 export async function ensureTenantUserAccess(
   config: FirebaseWebRuntimeConfig,
   params: {

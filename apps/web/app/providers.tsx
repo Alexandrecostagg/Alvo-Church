@@ -9,16 +9,19 @@ import {
   type ReactNode
 } from "react";
 import type { FirebaseAuthUser, FirebaseWebRuntimeConfig } from "@alvo/firebase";
-import type { TenantRuntimeSnapshot } from "@alvo/types";
+import type { AppRole, TenantRuntimeSnapshot } from "@alvo/types";
 
 interface AuthContextValue {
   firebaseReady: boolean;
   configured: boolean;
   user: FirebaseAuthUser | null;
+  roles: AppRole[];
   tenantRuntime: TenantRuntimeSnapshot | null;
   tenantReady: boolean;
   organizationId: string;
   firebaseConfig: FirebaseWebRuntimeConfig;
+  hasRole: (role: AppRole) => boolean;
+  hasAnyRole: (roles: AppRole[]) => boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -27,7 +30,6 @@ const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Local, server-safe versions of Firebase config helpers to avoid loading SDK at module evaluation
 function createFirebaseWebRuntimeConfigFromEnv(
   env: Record<string, string | undefined>
 ): FirebaseWebRuntimeConfig {
@@ -50,6 +52,7 @@ function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
 export function AppProviders({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
   const [organizationId, setOrganizationId] = useState(DEFAULT_ORGANIZATION_ID);
@@ -58,13 +61,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
     () =>
       createFirebaseWebRuntimeConfigFromEnv({
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
         NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
       }),
     []
@@ -94,13 +94,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      if (unsubscribe) unsubscribe();
     };
   }, [configured, firebaseConfig]);
 
-  // Derive organizationId from Firebase custom claims after login
   useEffect(() => {
     if (!firebaseReady || !user) {
       setOrganizationId(DEFAULT_ORGANIZATION_ID);
@@ -121,8 +118,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Modo demo: sem usuário logado, libera tudo como guest
     if (!user) {
+      setRoles([]);
       setTenantRuntime(null);
       setTenantReady(true);
       return;
@@ -136,37 +133,44 @@ export function AppProviders({ children }: { children: ReactNode }) {
         const sdk = await import("@alvo/firebase");
         if (cancelled) return;
 
-        await sdk.ensureTenantUserAccess(firebaseConfig, {
+        // Fetch existing roles before overwriting
+        const existingUser = await sdk.fetchTenantUser(firebaseConfig, {
           organizationId,
           userId: currentUser.uid,
-          email: currentUser.email ?? "",
-          roles: ["church_admin"]
         });
 
-        const snapshot = await sdk.fetchTenantRuntimeSnapshot(firebaseConfig, {
-          organizationId
-        });
+        if (cancelled) return;
 
-        if (!cancelled) {
-          setTenantRuntime(snapshot);
+        // Only set default role on first access (no existing user doc)
+        const userRoles: AppRole[] = existingUser?.roles ?? ["church_admin"];
+
+        if (!existingUser) {
+          await sdk.ensureTenantUserAccess(firebaseConfig, {
+            organizationId,
+            userId: currentUser.uid,
+            email: currentUser.email ?? "",
+            roles: userRoles,
+          });
         }
+
+        if (!cancelled) setRoles(userRoles);
+
+        const snapshot = await sdk.fetchTenantRuntimeSnapshot(firebaseConfig, { organizationId });
+
+        if (!cancelled) setTenantRuntime(snapshot);
       } catch {
-        if (!cancelled) {
-          setTenantRuntime(null);
-        }
+        if (!cancelled) setTenantRuntime(null);
       } finally {
-        if (!cancelled) {
-          setTenantReady(true);
-        }
+        if (!cancelled) setTenantReady(true);
       }
     }
 
     void loadTenantRuntime();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
+
+  const hasRole = useMemo(() => (role: AppRole) => roles.includes(role), [roles]);
+  const hasAnyRole = useMemo(() => (required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
 
   return (
     <AuthContext.Provider
@@ -174,27 +178,20 @@ export function AppProviders({ children }: { children: ReactNode }) {
         firebaseReady,
         configured,
         user,
+        roles,
         tenantRuntime,
         tenantReady,
         organizationId,
         firebaseConfig,
+        hasRole,
+        hasAnyRole,
         signIn: async (email, password) => {
-          if (!configured) {
-            throw new Error("Firebase nao configurado.");
-          }
-
+          if (!configured) throw new Error("Firebase nao configurado.");
           const sdk = await import("@alvo/firebase");
-          await sdk.signInWithFirebaseEmailPassword({
-            config: firebaseConfig,
-            email,
-            password
-          });
+          await sdk.signInWithFirebaseEmailPassword({ config: firebaseConfig, email, password });
         },
         signOut: async () => {
-          if (!configured) {
-            return;
-          }
-
+          if (!configured) return;
           const sdk = await import("@alvo/firebase");
           await sdk.signOutFromFirebase(firebaseConfig);
         }
@@ -207,8 +204,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
 export function useAppAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAppAuth deve ser usado dentro de um AppProviders");
-  }
+  if (!context) throw new Error("useAppAuth deve ser usado dentro de um AppProviders");
   return context;
 }
