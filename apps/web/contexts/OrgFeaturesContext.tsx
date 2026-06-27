@@ -55,7 +55,7 @@ export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
       features,
       ready: tenantReady,
       isEnabled: (key: ModuleKey) => {
-        if (!tenantReady) return false;
+        if (!tenantReady) return true;
         if (!modules) return true;
         return isModuleEnabled(modules, key);
       },
