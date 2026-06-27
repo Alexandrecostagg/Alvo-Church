@@ -94,7 +94,6 @@ export function TopBar() {
           </button>
         )}
       </div>
-      </div>
     </div>
   );
 }
