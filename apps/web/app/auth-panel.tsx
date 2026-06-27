@@ -11,7 +11,11 @@ export function AuthPanel() {
   const [isPending, startTransition] = useTransition();
 
   if (!configured) {
-    return null;
+    return (
+      <p style={{ textAlign: "center", color: "#6b7280", fontSize: 14 }}>
+        Firebase não configurado. Verifique as variáveis de ambiente.
+      </p>
+    );
   }
 
   if (user) {
