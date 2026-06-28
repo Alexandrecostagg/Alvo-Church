@@ -24,7 +24,6 @@ import {
   User,
   MapPin,
   HeartHandshake,
-  Tent
 } from "lucide-react";
 
 interface SavedMemberSummary {
@@ -47,9 +46,6 @@ export function MemberNewView() {
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
 
-  const [ministerialInterests, setMinisterialInterests] = useState<string[]>([]);
-  const [availability, setAvailability] = useState<string[]>([]);
-
   const [address, setAddress] = useState({
     postalCode: "",
     street: "",
@@ -67,8 +63,6 @@ export function MemberNewView() {
     setMemberStatus("member");
     setPartnerBenefitsEnabled(false);
     setLgpdConsent(false);
-    setMinisterialInterests([]);
-    setAvailability([]);
     setAddress({
       postalCode: "",
       street: "",
@@ -142,12 +136,6 @@ export function MemberNewView() {
       birthDate: getFormValue(form, "birthDate") || undefined,
       cpf: getFormValue(form, "cpf") || undefined,
       address,
-      occupation: getFormValue(form, "occupation") || undefined,
-      educationLevel: getFormValue(form, "educationLevel") as Person["educationLevel"],
-      householdIncomeRange: getFormValue(
-        form,
-        "householdIncomeRange"
-      ) as Person["householdIncomeRange"],
       consentLgpdAt: lgpdConsent ? new Date().toISOString() : undefined,
       memberCardCode: partnerBenefitsEnabled
         ? `GETRO-${firstName.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
@@ -156,9 +144,6 @@ export function MemberNewView() {
       personType: getFormValue(form, "personType") as Person["personType"],
       memberStatus: memberStatus as Person["memberStatus"],
       status: "active",
-      ministerialInterests: ministerialInterests.length > 0 ? ministerialInterests : undefined,
-      servingProfile: (getFormValue(form, "servingProfile") || undefined) as Person["servingProfile"],
-      availability: availability.length > 0 ? availability : undefined,
     };
     const family: Family | undefined =
       familyId && familyName
@@ -169,7 +154,6 @@ export function MemberNewView() {
             displayName: familyName,
             status: "active",
             address,
-            incomeRange: person.householdIncomeRange,
             notes: getFormValue(form, "familyNotes") || undefined
           }
         : undefined;
@@ -269,8 +253,8 @@ export function MemberNewView() {
         <p className="eyebrow">Secretaria & Cuidado Pastoral</p>
         <h1>Cadastro de Novo Membro</h1>
         <p>
-          Painel unificado para registrar membros, criar vínculos familiares seguros,
-          garantir conformidade LGPD e emitir o Getro Pass digital instantaneamente.
+          Preencha os dados administrativos do membro. Informações pessoais como
+          dons ministeriais e disponibilidade serão completadas pelo próprio membro no app.
         </p>
       </section>
 
@@ -420,8 +404,8 @@ export function MemberNewView() {
             <div className="input-group">
               <label>
                 Status Eclesiástico
-                <select 
-                  name="memberStatus" 
+                <select
+                  name="memberStatus"
                   value={memberStatus}
                   onChange={(e) => setMemberStatus(e.target.value)}
                 >
@@ -431,34 +415,6 @@ export function MemberNewView() {
                   <option value="member">Membro Ativo</option>
                   <option value="leader">Líder / Pastor</option>
                   <option value="volunteer">Voluntário</option>
-                </select>
-              </label>
-              <label>
-                Profissão / Ocupação
-                <input name="occupation" placeholder="Ex: Engenheiro" />
-              </label>
-            </div>
-            <div className="input-group">
-              <label>
-                Escolaridade
-                <select name="educationLevel" defaultValue="not_informed">
-                  <option value="not_informed">Não Informado</option>
-                  <option value="elementary">Fundamental</option>
-                  <option value="high_school">Médio</option>
-                  <option value="technical">Técnico</option>
-                  <option value="undergraduate">Superior</option>
-                  <option value="postgraduate">Pós-Graduação</option>
-                </select>
-              </label>
-              <label>
-                Faixa de Renda Familiar
-                <select name="householdIncomeRange" defaultValue="not_informed">
-                  <option value="not_informed">Não Informada</option>
-                  <option value="up_to_1_minimum_wage">Até 1 salário mínimo</option>
-                  <option value="one_to_3_minimum_wages">1 a 3 salários mínimos</option>
-                  <option value="three_to_5_minimum_wages">3 a 5 salários mínimos</option>
-                  <option value="five_to_10_minimum_wages">5 a 10 salários mínimos</option>
-                  <option value="above_10_minimum_wages">Acima de 10 salários mínimos</option>
                 </select>
               </label>
             </div>
@@ -497,92 +453,6 @@ export function MemberNewView() {
               Observações da Família
               <textarea name="familyNotes" rows={3} placeholder="Notas adicionais sobre a dinâmica familiar..." />
             </label>
-          </fieldset>
-
-          {/* Perfil Ministerial — alimenta IA de Tribos */}
-          <fieldset>
-            <legend><Tent size={18} /> Perfil Ministerial</legend>
-            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "-8px 0 4px", lineHeight: 1.5 }}>
-              Essas informações ajudam o sistema a sugerir a tribo vocacional mais adequada para o membro.
-            </p>
-
-            <div>
-              <label style={{ marginBottom: 10, display: "block" }}>Áreas de interesse ministerial</label>
-              <div className="check-grid">
-                {[
-                  { value: "louvor", label: "🎵 Louvor & Adoração" },
-                  { value: "ensino", label: "📖 Ensino & Discipulado" },
-                  { value: "recepcao", label: "🤝 Recepção & Acolhimento" },
-                  { value: "kids", label: "👶 Ministério Infantil" },
-                  { value: "midia", label: "🎬 Mídia & Comunicação" },
-                  { value: "administracao", label: "📋 Administração" },
-                  { value: "intercessao", label: "🙏 Intercessão & Oração" },
-                  { value: "missoes", label: "🌍 Missões & Evangelismo" },
-                  { value: "cuidado", label: "💚 Cuidado Pastoral" },
-                  { value: "jovens", label: "⚡ Ministério de Jovens" },
-                ].map(({ value, label }) => (
-                  <label key={value} className="check-row check-pill">
-                    <input
-                      type="checkbox"
-                      checked={ministerialInterests.includes(value)}
-                      onChange={(e) => {
-                        setMinisterialInterests(prev =>
-                          e.target.checked ? [...prev, value] : prev.filter(v => v !== value)
-                        );
-                      }}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{ marginBottom: 10, display: "block" }}>Como você se vê servindo?</label>
-              <div className="radio-grid">
-                {[
-                  { value: "leading", label: "🧭 Liderando pessoas" },
-                  { value: "teaching", label: "📚 Ensinando e discipulando" },
-                  { value: "creating", label: "🎨 Criando e expressando" },
-                  { value: "caring", label: "🫶 Cuidando e acolhendo" },
-                  { value: "organizing", label: "⚙️ Organizando e executando" },
-                  { value: "interceding", label: "🙏 Orando e intercedendo" },
-                ].map(({ value, label }) => (
-                  <label key={value} className="check-row check-pill">
-                    <input type="radio" name="servingProfile" value={value} />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{ marginBottom: 10, display: "block" }}>Disponibilidade semanal</label>
-              <div className="check-grid-days">
-                {[
-                  { value: "seg", label: "Seg" },
-                  { value: "ter", label: "Ter" },
-                  { value: "qua", label: "Qua" },
-                  { value: "qui", label: "Qui" },
-                  { value: "sex", label: "Sex" },
-                  { value: "sab", label: "Sáb" },
-                  { value: "dom", label: "Dom" },
-                ].map(({ value, label }) => (
-                  <label key={value} className="check-row day-pill">
-                    <input
-                      type="checkbox"
-                      checked={availability.includes(value)}
-                      onChange={(e) => {
-                        setAvailability(prev =>
-                          e.target.checked ? [...prev, value] : prev.filter(v => v !== value)
-                        );
-                      }}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </div>
           </fieldset>
 
           {/* Privacidade & Getro Pass */}
