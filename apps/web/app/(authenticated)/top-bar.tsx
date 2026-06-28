@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LogIn, LogOut, Menu, User, X } from "lucide-react";
+import { LogIn, LogOut, User } from "lucide-react";
 import { useAppAuth } from "../providers";
 import { OrgSwitcher } from "../../src/components/org-switcher";
 import {
@@ -10,7 +10,6 @@ import {
   Tent, Waypoints, Map as MapIcon, GraduationCap, CalendarRange,
   Handshake, Music, ShieldCheck, Building2, Settings,
 } from "lucide-react";
-import { useMobileDrawer } from "./mobile-drawer-context";
 
 type ModuleInfo = { label: string; icon: React.ElementType };
 
@@ -42,24 +41,17 @@ export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAppAuth();
-  const { open, toggle } = useMobileDrawer();
 
   const current = MODULE_MAP.find((m) => m.match(pathname)) ?? { label: "Alvo", icon: LayoutDashboard };
   const Icon = current.icon;
 
   return (
     <div className="app-topbar">
-      {/* Hamburger — mobile only */}
-      <button className="topbar-hamburger" onClick={toggle} aria-label="Menu">
-        {open ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
       <div className="app-topbar-title">
         <Icon size={18} strokeWidth={2} />
         <span>{current.label}</span>
       </div>
-
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <OrgSwitcher />
         {user ? (
           <button
