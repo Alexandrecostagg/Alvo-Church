@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   limit,
   orderBy,
   query,
@@ -14,6 +15,8 @@ import {
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
+import type { PlanId } from "./plans";
+import { PLAN_LIMITS, currentAiMonth } from "./plans";
 import type {
   WeeklyTheme,
   AppRole,
@@ -2815,4 +2818,70 @@ export async function deleteWeeklyTheme(
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, getWeeklyThemesCollectionPath(context), themeId);
   await deleteDoc(ref);
+}
+
+// ── Plan management ─────────────────────────────────────────────────────────
+
+export async function fetchOrgPlan(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<PlanId> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return "free";
+  return (snap.data()?.plan as PlanId) ?? "free";
+}
+
+export async function setOrgPlan(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  plan: PlanId
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
+  await setDoc(ref, { plan }, { merge: true });
+}
+
+export async function countOrgMembers(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<number> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getPeopleCollectionPath(context)));
+  return snap.size;
+}
+
+// ── AI quota ────────────────────────────────────────────────────────────────
+
+export interface AiQuotaStatus {
+  plan: PlanId;
+  used: number;
+  limit: number;
+  allowed: boolean;
+  month: string;
+}
+
+export async function getAiQuotaStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<AiQuotaStatus> {
+  const plan = await fetchOrgPlan(config, context);
+  const month = currentAiMonth();
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/aiUsage/${month}`);
+  const snap = await getDoc(ref);
+  const used: number = snap.exists() ? (snap.data()?.count ?? 0) : 0;
+  const monthLimit = PLAN_LIMITS[plan].aiQueriesPerMonth;
+  return { plan, used, limit: monthLimit, allowed: used < monthLimit, month };
+}
+
+export async function incrementAiUsage(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<void> {
+  const month = currentAiMonth();
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/aiUsage/${month}`);
+  await setDoc(ref, { count: increment(1), updatedAt: new Date().toISOString() }, { merge: true });
 }

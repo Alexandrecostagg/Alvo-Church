@@ -4,28 +4,31 @@ import { ModuleNav } from "./module-nav";
 import { TopBar } from "./top-bar";
 import { AuthGate } from "./auth-gate";
 import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
+import { PlanProvider } from "../../contexts/PlanContext";
 import { ToastProvider } from "../../contexts/ToastContext";
 import { NetworkSyncLoader } from "./network-sync-loader";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
     <OrgFeaturesProvider>
-      <ToastProvider>
-        <AuthGate>
-          <div className="app-shell">
-            <Suspense fallback={null}>
-              <ModuleNav />
-            </Suspense>
-            <div className="app-content-column">
+      <PlanProvider>
+        <ToastProvider>
+          <AuthGate>
+            <div className="app-shell">
               <Suspense fallback={null}>
-                <TopBar />
+                <ModuleNav />
               </Suspense>
-              {children}
+              <div className="app-content-column">
+                <Suspense fallback={null}>
+                  <TopBar />
+                </Suspense>
+                {children}
+              </div>
             </div>
-          </div>
-          <NetworkSyncLoader />
-        </AuthGate>
-      </ToastProvider>
+            <NetworkSyncLoader />
+          </AuthGate>
+        </ToastProvider>
+      </PlanProvider>
     </OrgFeaturesProvider>
   );
 }

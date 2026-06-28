@@ -6,10 +6,13 @@ import {
   isFirebaseWebRuntimeConfigured,
   saveFamilyMemberProfile,
   saveFamilyProfile,
-  savePersonProfile
+  savePersonProfile,
+  countOrgMembers,
 } from "@alvo/firebase";
 import type { Family, FamilyMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { usePlan } from "../../../contexts/PlanContext";
+import { PLAN_LIMITS } from "@alvo/firebase";
 import { saveLocalMemberProfile } from "../../lib/local-member-store";
 import {
   ShieldCheck,
@@ -35,6 +38,7 @@ interface SavedMemberSummary {
 
 export function MemberNewView() {
   const { configured, user, organizationId, firebaseConfig } = useAppAuth();
+  const { plan } = usePlan();
   const [status, setStatus] = useState<string | null>(null);
   const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
 
@@ -117,6 +121,19 @@ export function MemberNewView() {
       setStatus("Informe nome e sobrenome para criar o cadastro.");
       setLastSavedMember(null);
       return;
+    }
+
+    // Verificação de limite de membros por plano
+    const maxMembers = PLAN_LIMITS[plan].maxMembers;
+    if (isFinite(maxMembers) && configured) {
+      const currentCount = await countOrgMembers(firebaseConfig, { organizationId });
+      if (currentCount >= maxMembers) {
+        setStatus(
+          `⚠️ Limite de ${maxMembers} membros do plano ${plan === "free" ? "Gratuito" : "Comunidade"} atingido. Faça upgrade em Configurações → Plano.`
+        );
+        setLastSavedMember(null);
+        return;
+      }
     }
 
     const familyName = getFormValue(form, "familyName");

@@ -104,6 +104,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") },
         { label: "Usuários", icon: UsersRound, href: "/settings/users", match: (pathname: string) => pathname.startsWith("/settings/users") },
         { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname === "/settings" },
+        { label: "Plano", icon: Layers, href: "/settings/plano", match: (pathname: string) => pathname.startsWith("/settings/plano") },
       ]
     }
   ];

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
+import { PlanGuard } from "../../../src/components/plan-guard";
 
 const TribesView = dynamic(
   () => import("../../../src/features/tribes/tribes-view").then((mod) => mod.TribesView),
@@ -10,8 +11,10 @@ const TribesView = dynamic(
 
 export default function TribesPage() {
   return (
-    <ModuleGuard moduleKey="tribes">
-      <TribesView />
-    </ModuleGuard>
+    <PlanGuard feature="tribes">
+      <ModuleGuard moduleKey="tribes">
+        <TribesView />
+      </ModuleGuard>
+    </PlanGuard>
   );
 }
