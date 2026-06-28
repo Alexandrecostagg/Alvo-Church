@@ -1,32 +1,16 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LogIn, LogOut, User } from "lucide-react";
+import { LogIn, LogOut, Menu, User, X } from "lucide-react";
 import { useAppAuth } from "../providers";
 import { OrgSwitcher } from "../../src/components/org-switcher";
 import {
-  LayoutDashboard,
-  ClipboardList,
-  Tv,
-  Bot,
-  Landmark,
-  UserCircle,
-  UsersRound,
-  UserPlus,
-  Store,
-  MessageSquareText,
-  HeartHandshake,
-  Tent,
-  Waypoints,
-  Map as MapIcon,
-  GraduationCap,
-  CalendarRange,
-  Handshake,
-  Music,
-  ShieldCheck,
-  Building2,
-  Settings,
+  LayoutDashboard, ClipboardList, Tv, Bot, Landmark, UserCircle,
+  UsersRound, UserPlus, Store, MessageSquareText, HeartHandshake,
+  Tent, Waypoints, Map as MapIcon, GraduationCap, CalendarRange,
+  Handshake, Music, ShieldCheck, Building2, Settings,
 } from "lucide-react";
+import { useMobileDrawer } from "./mobile-drawer-context";
 
 type ModuleInfo = { label: string; icon: React.ElementType };
 
@@ -36,7 +20,7 @@ const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p.startsWith("/reception"), label: "Painel Pastor", icon: Tv },
   { match: (p) => p.startsWith("/pastoral-ai"), label: "Cuidado Pastoral", icon: Bot },
   { match: (p) => p.startsWith("/finance"), label: "Finanças", icon: Landmark },
-  { match: (p) => p.startsWith("/me"), label: "Minha Área", icon: UserCircle },
+  { match: (p) => p.startsWith("/me"), label: "Meu Perfil", icon: UserCircle },
   { match: (p) => p.startsWith("/members/new"), label: "Novo Membro", icon: UserPlus },
   { match: (p) => p.startsWith("/members"), label: "Pessoas", icon: UsersRound },
   { match: (p) => p.startsWith("/marketplace"), label: "Marketplace", icon: Store },
@@ -58,36 +42,39 @@ export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAppAuth();
+  const { open, toggle } = useMobileDrawer();
 
-  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? {
-    label: "Alvo",
-    icon: LayoutDashboard,
-  };
-
+  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? { label: "Alvo", icon: LayoutDashboard };
   const Icon = current.icon;
 
   return (
     <div className="app-topbar">
+      {/* Hamburger — mobile only */}
+      <button className="topbar-hamburger" onClick={toggle} aria-label="Menu">
+        {open ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
       <div className="app-topbar-title">
         <Icon size={18} strokeWidth={2} />
         <span>{current.label}</span>
       </div>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
         <OrgSwitcher />
         {user ? (
           <button
             onClick={() => signOut()}
             title={`Sair (${user.email ?? user.uid})`}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, color: "#374151" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13, color: "#374151", flexShrink: 0 }}
           >
             <User size={14} />
-            <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email ?? "Usuário"}</span>
+            <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email ?? "Usuário"}</span>
             <LogOut size={14} />
           </button>
         ) : (
           <button
             onClick={() => router.push("/login")}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--getro-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--getro-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600, flexShrink: 0 }}
           >
             <LogIn size={14} />
             Entrar

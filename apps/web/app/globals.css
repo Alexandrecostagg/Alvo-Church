@@ -9545,3 +9545,92 @@ h1.page-title,
 .app-topbar {
   padding: 0 24px !important;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — app shell drawer
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Shell: single column, sidebar off-screen */
+  .app-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebar becomes a fixed drawer */
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100dvh !important;
+    width: 80vw !important;
+    max-width: 300px;
+    z-index: 200 !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.18);
+  }
+
+  /* Open state triggered by data-mobile-open on app-shell */
+  .app-shell[data-mobile-open="true"] .app-sidebar {
+    transform: translateX(0);
+  }
+
+  /* Overlay backdrop */
+  .mobile-drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+    animation: mobile-fade-in 0.2s ease;
+  }
+
+  @keyframes mobile-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Hide collapse button on mobile */
+  .sidebar-collapse-btn {
+    display: none;
+  }
+
+  /* Topbar adjustments */
+  .app-topbar {
+    padding: 0 16px !important;
+  }
+
+  .app-topbar-title span {
+    font-size: 14px;
+  }
+
+  /* Show hamburger button */
+  .topbar-hamburger {
+    display: flex !important;
+  }
+
+  /* Hide org switcher text on very small screens */
+  .org-switcher-label {
+    display: none;
+  }
+
+  /* Content padding */
+  .app-content-column > *:not(.app-topbar) {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+/* Hamburger always hidden on desktop */
+.topbar-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--alvo-line);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--alvo-ink);
+}
