@@ -55,7 +55,7 @@ export function BrandLogo({
             lineHeight: 1
           }}
         >
-          G
+          E
         </div>
       )}
       {!iconOnly && <div style={{ display: "grid", gap: 2 }}>
@@ -85,7 +85,7 @@ export function BrandLogo({
               color: "var(--alvo-ink-soft, rgba(29, 41, 64, 0.72))"
             }}
           >
-            {brandTheme.brand.poweredByLabel ?? "by Alvo"}
+            {brandTheme.brand.poweredByLabel ?? "by Esdras"}
           </span>
         ) : null}
       </div>}

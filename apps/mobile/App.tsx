@@ -220,7 +220,7 @@ export default function App() {
     let cancelled = false;
     async function load() {
       try {
-        const orgId = linkedOrg?.id ?? "org_alvo_demo";
+        const orgId = linkedOrg?.id ?? "org_esdras_demo";
         const ctx = { organizationId: orgId };
         const [snap, evts, grps] = await Promise.all([
           fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
@@ -404,7 +404,7 @@ function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boo
           <View style={s.center}><Text style={{ fontSize: 52, marginBottom: 20 }}>⛪</Text></View>
           <Text style={s.screenTitle}>Vincular Igreja</Text>
           <Text style={s.screenSub}>Insira o código da sua igreja para conectar sua conta à comunidade.</Text>
-          <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>getro-church</Text></Text></View>
+          <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>esdras-church</Text></Text></View>
           <Field label="Código da Igreja" value={slug} onChange={setSlug} autoCapitalize="none" placeholder="ex: minha-igreja" />
           {error && <Text style={s.errorText}>{error}</Text>}
           <Btn label="Buscar e vincular" onPress={search} loading={loading} disabled={!configured} />
@@ -802,7 +802,7 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
     async function load() {
       try {
         const sdk = await import("@alvo/firebase");
-        const orgId = "org_alvo_demo";
+        const orgId = "org_esdras_demo";
         const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
         if (existing) {
           const d = existing as any;
@@ -823,7 +823,7 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
     setSaving(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const orgId = "org_alvo_demo";
+      const orgId = "org_esdras_demo";
       // reuse ensureTenantUserAccess with merge to save ministerial profile fields
       await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
         ministerialInterests: interests,

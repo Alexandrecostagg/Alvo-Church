@@ -30,7 +30,7 @@ export default function LoginPage() {
               width: 56,
               height: 56,
               borderRadius: 16,
-              background: "var(--getro-primary, #f97316)",
+              background: "var(--esdras-primary, #f97316)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -40,9 +40,9 @@ export default function LoginPage() {
               margin: "0 auto 16px",
             }}
           >
-            G
+            E
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Getro Church</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Plataforma Esdras</h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
             Plataforma de gestão da sua igreja
           </p>

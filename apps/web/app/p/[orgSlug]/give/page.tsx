@@ -155,7 +155,7 @@ export default function PublicGivePage() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={headerStyle}>
-          <Heart size={28} strokeWidth={1.6} style={{ color: "var(--getro-primary-dark)", display: "block", margin: "0 auto" }} />
+          <Heart size={28} strokeWidth={1.6} style={{ color: "var(--esdras-primary-dark)", display: "block", margin: "0 auto" }} />
           <h1 style={titleStyle}>Contribuir</h1>
           <p style={subtitleStyle}>Sua oferta faz diferença</p>
         </div>
@@ -237,10 +237,10 @@ const fieldStyle = { display: "grid", gap: 8 } as const;
 const labelStyle = { fontSize: 13, fontWeight: 600, color: "#374151" } as const;
 const suggestedStyle = { display: "flex", gap: 8, flexWrap: "wrap" as const } as const;
 const chipStyle = { padding: "8px 16px", borderRadius: 999, border: "1.5px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" } as const;
-const chipActiveStyle = { background: "var(--getro-primary-dark)", borderColor: "var(--getro-primary-dark)", color: "#fff" } as const;
+const chipActiveStyle = { background: "var(--esdras-primary-dark)", borderColor: "var(--esdras-primary-dark)", color: "#fff" } as const;
 const inputStyle = { padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(29,41,64,0.18)", fontSize: 15, width: "100%", boxSizing: "border-box" as const, outline: "none", background: "#fff" } as const;
 const pixInfoStyle = { display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0" } as const;
-const submitStyle = { padding: "14px", borderRadius: 12, background: "var(--getro-primary-dark)", color: "#fff", border: "none", fontSize: 15, fontWeight: 600, width: "100%" } as const;
+const submitStyle = { padding: "14px", borderRadius: 12, background: "var(--esdras-primary-dark)", color: "#fff", border: "none", fontSize: 15, fontWeight: 600, width: "100%" } as const;
 const backBtnStyle = { display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#64748b", padding: "0 0 16px", fontWeight: 500 } as const;
 const keyRowStyle = { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid rgba(29,41,64,0.08)", overflow: "hidden" } as const;
 const copyBtnStyle = { display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(29,41,64,0.15)", background: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 } as const;

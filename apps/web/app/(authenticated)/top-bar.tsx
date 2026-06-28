@@ -42,7 +42,7 @@ export function TopBar() {
   const router = useRouter();
   const { user, signOut } = useAppAuth();
 
-  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? { label: "Alvo", icon: LayoutDashboard };
+  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? { label: "Esdras", icon: LayoutDashboard };
   const Icon = current.icon;
 
   return (
@@ -66,7 +66,7 @@ export function TopBar() {
         ) : (
           <button
             onClick={() => router.push("/login")}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--getro-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600, flexShrink: 0 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--esdras-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600, flexShrink: 0 }}
           >
             <LogIn size={14} />
             Entrar

@@ -126,14 +126,14 @@ export default function JoinNetworkPage() {
       <div style={card}>
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--getro-primary-softer)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-            <LinkIcon size={26} style={{ color: "var(--getro-primary-dark)" }} />
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--esdras-primary-softer)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <LinkIcon size={26} style={{ color: "var(--esdras-primary-dark)" }} />
           </div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#1c2433" }}>
             Integrar à Rede
           </h1>
           <p style={{ margin: "6px 0 0", fontSize: 14, color: "#64748b" }}>
-            Código de convite: <strong style={{ color: "var(--getro-primary-dark)", letterSpacing: "0.08em" }}>{code}</strong>
+            Código de convite: <strong style={{ color: "var(--esdras-primary-dark)", letterSpacing: "0.08em" }}>{code}</strong>
           </p>
         </div>
 
@@ -250,6 +250,6 @@ const page: React.CSSProperties = { minHeight: "100vh", display: "flex", alignIt
 const card: React.CSSProperties = { maxWidth: 460, width: "100%", padding: "32px 28px", borderRadius: 20, background: "#fff", border: "1px solid rgba(29,41,64,0.1)", boxShadow: "0 4px 24px rgba(0,0,0,0.07)" };
 const lbl:  React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#374151" };
 const inp:  React.CSSProperties = { padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(29,41,64,0.18)", fontSize: 14, outline: "none", background: "#fff", width: "100%", boxSizing: "border-box" };
-const btn:  React.CSSProperties = { padding: "13px", borderRadius: 12, background: "var(--getro-primary-dark)", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%" };
+const btn:  React.CSSProperties = { padding: "13px", borderRadius: 12, background: "var(--esdras-primary-dark)", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%" };
 const btnSecondary: React.CSSProperties = { flex: 1, padding: "13px", borderRadius: 12, border: "1px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#374151" };
 const notice: React.CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", fontSize: 13, color: "#64748b", lineHeight: 1.5 };

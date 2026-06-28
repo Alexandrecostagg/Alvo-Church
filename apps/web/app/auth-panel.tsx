@@ -5,7 +5,7 @@ import { useAppAuth } from "./providers";
 
 export function AuthPanel() {
   const { configured, firebaseReady, user, signIn, signOut } = useAppAuth();
-  const [email, setEmail] = useState("admin@alvochurch.app");
+  const [email, setEmail] = useState("admin@plataformaesdras.com.br");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -137,7 +137,7 @@ const buttonStyle = {
   border: 0,
   borderRadius: 14,
   padding: "12px 16px",
-  background: "var(--getro-primary)",
+  background: "var(--esdras-primary)",
   color: "#fffaf1",
   fontWeight: 700,
   cursor: "pointer"

@@ -5,8 +5,8 @@ import { TenantTheme } from "./tenant-theme";
 import { StarfieldBackground } from "./starfield-background";
 
 export const metadata: Metadata = {
-  title: "Getro Church",
-  description: "Plataforma para igrejas em movimento."
+  title: "Plataforma Esdras",
+  description: "Plataforma de gestão para igrejas e redes eclesiásticas."
 };
 
 export default function RootLayout({

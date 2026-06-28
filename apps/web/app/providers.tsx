@@ -28,7 +28,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
 }
 
-const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
+const DEFAULT_ORGANIZATION_ID = "org_esdras_demo";
 const LS_ORG_KEY = "alvo_active_org";
 
 const AuthContext = createContext<AuthContextValue | null>(null);

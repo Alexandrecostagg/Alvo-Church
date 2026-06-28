@@ -219,7 +219,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
     ["member", "leader", "volunteer"].includes(person.memberStatus)
   ).length;
   const visitorCount = people.filter((person) => person.memberStatus === "visitor").length;
-  const getroPassCount = people.filter((person) => person.partnerBenefitsEnabled).length;
+  const esdrasPassCount = people.filter((person) => person.partnerBenefitsEnabled).length;
   const activeBenefitCount = partnerBenefits.filter(
     (benefit) => benefit.status === "active"
   ).length;
@@ -340,10 +340,10 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         ) : null}
 
         <article style={cardStyle}>
-          <strong>Getro Pass e convenios</strong>
+          <strong>Esdras Pass e convênios</strong>
           <p style={metaStyle}>
             {partners.length} parceiro(s), {activeBenefitCount} beneficio(s) ativo(s),{" "}
-            {getroPassCount} membro(s) habilitado(s) e {benefitValidations.length} validacao(oes)
+            {esdrasPassCount} membro(s) habilitado(s) e {benefitValidations.length} validacao(oes)
           </p>
           <p style={pathStyle}>
             Parceiros: <code>{getPartnersCollectionPath({ organizationId })}</code>

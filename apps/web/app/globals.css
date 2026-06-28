@@ -6044,8 +6044,8 @@ code {
   margin-top: 0.5rem;
 }
 
-/* Getro Pass Card - Premium Glassmorphism */
-.getro-pass-card {
+/* Esdras Pass Card - Premium Glassmorphism */
+.esdras-pass-card {
   position: relative;
   border-radius: 2rem;
   padding: 1.75rem;
@@ -6062,7 +6062,7 @@ code {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
 }
 
-.getro-pass-card:hover {
+.esdras-pass-card:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 
     0 15px 30px rgba(0, 0, 0, 0.15),
@@ -6070,23 +6070,23 @@ code {
     inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-.getro-pass-card.tribe-ASHER { 
+.esdras-pass-card.tribe-ASHER { 
   background: 
     radial-gradient(circle at top right, rgba(16, 185, 129, 0.4), transparent 50%),
     linear-gradient(135deg, #064e3b 0%, #065f46 100%); 
 }
-.getro-pass-card.tribe-LEVI { 
+.esdras-pass-card.tribe-LEVI { 
   background: 
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.4), transparent 50%),
     linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); 
 }
-.getro-pass-card.tribe-JUDAH { 
+.esdras-pass-card.tribe-JUDAH { 
   background: 
     radial-gradient(circle at top right, rgba(249, 115, 22, 0.4), transparent 50%),
     linear-gradient(135deg, #7c2d12 0%, #9a3412 100%); 
 }
 
-.getro-pass-card::before {
+.esdras-pass-card::before {
   content: "";
   position: absolute;
  top: -50%;
@@ -6658,7 +6658,7 @@ code {
   100% { transform: translateX(100%); }
 }
 
-.getro-pass-card::after {
+.esdras-pass-card::after {
   content: "";
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -9371,11 +9371,11 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: var(--getro-primary-soft);
+  background: var(--esdras-primary-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--getro-primary-dark);
+  color: var(--esdras-primary-dark);
   flex-shrink: 0;
 }
 
@@ -9432,7 +9432,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 }
 
 .empty-state svg {
-  color: var(--getro-primary);
+  color: var(--esdras-primary);
   opacity: 0.7;
 }
 
@@ -9458,7 +9458,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   padding: 9px 16px;
   border-radius: 10px;
   border: none;
-  background: var(--getro-primary);
+  background: var(--esdras-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 700;

@@ -35,7 +35,7 @@ export default function WifiPortalPage() {
 
     try {
       // Envia os dados de cadastro para a Cloudflare Worker API
-      const response = await fetch("https://worker-api.alvochurch.app/wifi/intake", {
+      const response = await fetch("https://worker-api.plataformaesdras.com.br/wifi/intake", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -152,7 +152,7 @@ export default function WifiPortalPage() {
               >
                 <Wifi size={32} />
               </div>
-              <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>Alvo Wi-Fi</h1>
+              <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>Esdras Wi-Fi</h1>
               <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem", marginTop: 4 }}>
                 Cadastre-se rapidamente para liberar seu acesso à internet de alta velocidade.
               </p>

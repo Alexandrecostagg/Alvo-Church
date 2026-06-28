@@ -178,7 +178,7 @@ export function ModuleNav() {
       <div className="sidebar-footer">
         <div className="sidebar-status">
           <ShieldCheck size={14} />
-          <span>Getro Growth · {ORG_TIER_LABELS[orgTier]}</span>
+          <span>Esdras · {ORG_TIER_LABELS[orgTier]}</span>
         </div>
         {!collapsed && (orgTier === "network" || orgTier === "denomination") && (
           <div className="sidebar-tier-badge">

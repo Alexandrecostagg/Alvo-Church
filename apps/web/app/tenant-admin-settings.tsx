@@ -29,23 +29,23 @@ const BRAND_MODE_OPTIONS: OrganizationBrandMode[] = [
   "co_branded",
   "white_label"
 ];
-const GETRO_IDENTITY = {
-  name: "Getro Church",
-  legalName: "Getro Church Tecnologia para Igrejas Ltda.",
-  publicName: "Getro Church",
-  displayName: "Getro Church",
-  slug: "getro-church",
+const ESDRAS_IDENTITY = {
+  name: "Plataforma Esdras",
+  legalName: "Plataforma Esdras Tecnologia para Igrejas Ltda.",
+  publicName: "Plataforma Esdras",
+  displayName: "Plataforma Esdras",
+  slug: "plataforma-esdras",
   branding: {
     brandMode: "co_branded",
-    publicProductName: "Getro Church",
-    publicShortName: "Getro",
+    publicProductName: "Plataforma Esdras",
+    publicShortName: "Esdras",
     primaryColor: "#d27836",
     secondaryColor: "#1c2433",
     accentColor: "#e8dcc7",
     surfaceColor: "#f7f3ea",
     textColor: "#1c2433",
     showPoweredByAlvo: true,
-    poweredByLabel: "by Alvo"
+    poweredByLabel: "by Esdras"
   }
 } as const;
 const MODULE_ORDER = [
@@ -174,9 +174,9 @@ export function TenantAdminSettings() {
     }
   }
 
-  async function handleApplyGetroIdentity() {
+  async function handleApplyEsdrasIdentity() {
     if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setError("Firebase nao configurado para aplicar a identidade Getro.");
+      setError("Firebase nao configurado para aplicar a identidade Esdras.");
       return;
     }
 
@@ -194,15 +194,15 @@ export function TenantAdminSettings() {
 
     const nextOrganization: Organization = {
       ...currentTenantRuntime.organization,
-      name: GETRO_IDENTITY.name,
-      legalName: GETRO_IDENTITY.legalName,
-      publicName: GETRO_IDENTITY.publicName,
-      displayName: GETRO_IDENTITY.displayName,
-      slug: GETRO_IDENTITY.slug
+      name: ESDRAS_IDENTITY.name,
+      legalName: ESDRAS_IDENTITY.legalName,
+      publicName: ESDRAS_IDENTITY.publicName,
+      displayName: ESDRAS_IDENTITY.displayName,
+      slug: ESDRAS_IDENTITY.slug
     };
     const nextBranding: OrganizationSettingsSnapshot["branding"] = {
       ...draft.branding,
-      ...GETRO_IDENTITY.branding
+      ...ESDRAS_IDENTITY.branding
     };
 
     try {
@@ -219,12 +219,12 @@ export function TenantAdminSettings() {
         ...draft,
         branding: nextBranding
       });
-      setStatus("Identidade Getro aplicada no Firestore. Atualize a pagina para ver o tenant renomeado.");
+      setStatus("Identidade Esdras aplicada no Firestore. Atualize a pagina para ver o tenant renomeado.");
     } catch (nextError) {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : "Nao foi possivel aplicar a identidade Getro."
+          : "Nao foi possivel aplicar a identidade Esdras."
       );
     } finally {
       setSaving(false);
@@ -327,7 +327,7 @@ export function TenantAdminSettings() {
           </span>
           {draft.branding.showPoweredByAlvo ? (
             <span style={{ color: brandTheme.colors.inkSoft }}>
-              {draft.branding.poweredByLabel ?? "by Alvo"}
+              {draft.branding.poweredByLabel ?? "by Esdras"}
             </span>
           ) : null}
         </div>
@@ -518,7 +518,7 @@ export function TenantAdminSettings() {
                 })
               }
             />
-            Exibir assinatura “by Alvo”
+            Exibir assinatura “by Esdras”
           </label>
         </article>
 
@@ -672,11 +672,11 @@ export function TenantAdminSettings() {
           {saving ? "Salvando..." : "Salvar configuracoes"}
         </button>
         <button
-          onClick={() => void handleApplyGetroIdentity()}
+          onClick={() => void handleApplyEsdrasIdentity()}
           style={secondaryButtonStyle}
           disabled={saving}
         >
-          Aplicar identidade Getro
+          Aplicar identidade Esdras
         </button>
       </div>
     </section>
@@ -965,6 +965,6 @@ const saveButtonStyle = {
 const secondaryButtonStyle = {
   ...saveButtonStyle,
   background: "#fff7ed",
-  color: "var(--getro-primary-dark)",
+  color: "var(--esdras-primary-dark)",
   border: "1px solid rgba(210, 120, 54, 0.35)"
 } as const;
