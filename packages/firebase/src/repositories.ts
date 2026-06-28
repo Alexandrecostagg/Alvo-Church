@@ -710,7 +710,17 @@ export async function fetchTenantRuntimeSnapshot(
 export async function fetchTenantUser(
   config: FirebaseWebRuntimeConfig,
   params: { organizationId: string; userId: string }
-): Promise<{ roles: AppRole[]; email: string; isActive: boolean } | null> {
+): Promise<{
+  roles: AppRole[];
+  email: string;
+  isActive: boolean;
+  ministerialInterests?: string[];
+  servingProfile?: string;
+  availability?: string[];
+  occupation?: string;
+  educationLevel?: string;
+  householdIncomeRange?: string;
+} | null> {
   const firestore = getFirebaseFirestore(config);
   const snap = await getDoc(
     doc(firestore, getTenantUserDocumentPath({ organizationId: params.organizationId }, params.userId))
@@ -721,6 +731,12 @@ export async function fetchTenantUser(
     roles: (data.roles ?? ["church_admin"]) as AppRole[],
     email: data.email ?? "",
     isActive: data.isActive ?? true,
+    ministerialInterests: data.ministerialInterests,
+    servingProfile: data.servingProfile,
+    availability: data.availability,
+    occupation: data.occupation,
+    educationLevel: data.educationLevel,
+    householdIncomeRange: data.householdIncomeRange,
   };
 }
 
@@ -741,6 +757,26 @@ export async function fetchTenantUsers(
       createdAt: data.createdAt,
     };
   });
+}
+
+export async function saveMemberProfile(
+  config: FirebaseWebRuntimeConfig,
+  params: { organizationId: string; userId: string },
+  profile: {
+    ministerialInterests?: string[];
+    servingProfile?: string;
+    availability?: string[];
+    occupation?: string;
+    educationLevel?: string;
+    householdIncomeRange?: string;
+  }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getTenantUserDocumentPath({ organizationId: params.organizationId }, params.userId)),
+    profile,
+    { merge: true }
+  );
 }
 
 export async function updateTenantUserRoles(

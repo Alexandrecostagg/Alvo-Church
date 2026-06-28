@@ -57,7 +57,8 @@ type ModalScreen =
   | "musica"
   | "inscricao"
   | "song-detail"
-  | "lider-celula";
+  | "lider-celula"
+  | "meu-perfil";
 
 type EscalaStatus = "pendente" | "confirmado" | "recusado";
 type EscalaSlot = {
@@ -458,7 +459,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
           {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} onOpenLider={() => push("lider-celula")} />}
-          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
+          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} onBack={pop} />}
@@ -468,6 +469,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
         </View>
 
         {/* Tab Bar — hidden when modal is open */}
@@ -692,10 +694,10 @@ function CelulaTab({ groups, primary, dataReady, onOpenLider }: { groups: Group[
 
 // ─── Perfil Tab ───────────────────────────────────────────────────────────────
 
-function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica }: {
+function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil }: {
   user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null;
   primary: string; pushToken: string | null; onSignOut: () => void;
-  onOpenEscala: () => void; onOpenMusica: () => void;
+  onOpenEscala: () => void; onOpenMusica: () => void; onOpenMeuPerfil: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
@@ -717,6 +719,16 @@ function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, on
         <Text style={s.cardTitle}>{orgName}</Text>
         <Text style={s.cardMeta}>{linkedOrg?.slug ? `Código: ${linkedOrg.slug}` : "Igreja não vinculada"}</Text>
       </View>
+
+      <Text style={s.sectionTitle}>Meu Perfil</Text>
+      <TouchableOpacity style={s.menuRow} onPress={onOpenMeuPerfil}>
+        <Text style={s.menuIcon}>✨</Text>
+        <View style={s.fill}>
+          <Text style={s.menuLabel}>Perfil Ministerial</Text>
+          <Text style={s.menuSub}>Dons, disponibilidade e informações pessoais</Text>
+        </View>
+        <Text style={s.menuChev}>›</Text>
+      </TouchableOpacity>
 
       <Text style={s.sectionTitle}>Serviço</Text>
       <TouchableOpacity style={s.menuRow} onPress={onOpenEscala}>
@@ -742,6 +754,219 @@ function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, on
     </ScrollView>
   );
 }
+
+// ─── Meu Perfil Screen ────────────────────────────────────────────────────────
+
+const MINISTERIAL_INTERESTS = [
+  { value: "louvor",        label: "🎵 Louvor & Adoração" },
+  { value: "ensino",        label: "📖 Ensino & Discipulado" },
+  { value: "recepcao",      label: "🤝 Recepção & Acolhimento" },
+  { value: "kids",          label: "👶 Ministério Infantil" },
+  { value: "midia",         label: "🎬 Mídia & Comunicação" },
+  { value: "administracao", label: "📋 Administração" },
+  { value: "intercessao",   label: "🙏 Intercessão & Oração" },
+  { value: "missoes",       label: "🌍 Missões & Evangelismo" },
+  { value: "cuidado",       label: "💚 Cuidado Pastoral" },
+  { value: "jovens",        label: "⚡ Ministério de Jovens" },
+];
+
+const SERVING_PROFILES = [
+  { value: "leading",     label: "🧭 Liderando pessoas" },
+  { value: "teaching",    label: "📚 Ensinando e discipulando" },
+  { value: "creating",    label: "🎨 Criando e expressando" },
+  { value: "caring",      label: "🫶 Cuidando e acolhendo" },
+  { value: "organizing",  label: "⚙️ Organizando e executando" },
+  { value: "interceding", label: "🙏 Orando e intercedendo" },
+];
+
+const WEEKDAYS = [
+  { value: "seg", label: "Seg" }, { value: "ter", label: "Ter" },
+  { value: "qua", label: "Qua" }, { value: "qui", label: "Qui" },
+  { value: "sex", label: "Sex" }, { value: "sab", label: "Sáb" },
+  { value: "dom", label: "Dom" },
+];
+
+function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
+  const [interests, setInterests] = useState<string[]>([]);
+  const [serving, setServing] = useState<string>("");
+  const [availability, setAvailability] = useState<string[]>([]);
+  const [occupation, setOccupation] = useState("");
+  const [education, setEducation] = useState("not_informed");
+  const [income, setIncome] = useState("not_informed");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load existing profile from Firestore users doc
+  useEffect(() => {
+    async function load() {
+      try {
+        const sdk = await import("@alvo/firebase");
+        const orgId = "org_alvo_demo";
+        const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
+        if (existing) {
+          const d = existing as any;
+          if (d.ministerialInterests) setInterests(d.ministerialInterests);
+          if (d.servingProfile) setServing(d.servingProfile);
+          if (d.availability) setAvailability(d.availability);
+          if (d.occupation) setOccupation(d.occupation);
+          if (d.educationLevel) setEducation(d.educationLevel);
+          if (d.householdIncomeRange) setIncome(d.householdIncomeRange);
+        }
+      } catch {}
+      setLoaded(true);
+    }
+    void load();
+  }, [user.uid]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const sdk = await import("@alvo/firebase");
+      const orgId = "org_alvo_demo";
+      // reuse ensureTenantUserAccess with merge to save ministerial profile fields
+      await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
+        ministerialInterests: interests,
+        servingProfile: serving || undefined,
+        availability,
+        occupation: occupation || undefined,
+        educationLevel: education,
+        householdIncomeRange: income,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleInterest(v: string) {
+    setInterests(prev => prev.includes(v) ? prev.filter(i => i !== v) : [...prev, v]);
+  }
+  function toggleDay(v: string) {
+    setAvailability(prev => prev.includes(v) ? prev.filter(i => i !== v) : [...prev, v]);
+  }
+
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Perfil Ministerial" onBack={onBack} />
+      {!loaded ? (
+        <View style={[s.fill, s.center]}><ActivityIndicator color={primary} /></View>
+      ) : (
+        <ScrollView contentContainerStyle={[s.tabContent, { paddingBottom: 40 }]} keyboardShouldPersistTaps="handled">
+
+          {/* Informações pessoais */}
+          <Text style={s.sectionTitle}>Informações pessoais</Text>
+          <View style={s.card}>
+            <Field label="Profissão / Ocupação" value={occupation} onChange={setOccupation} placeholder="Ex: Engenheiro, Professor..." />
+            <Text style={[s.label, { marginTop: 12 }]}>Escolaridade</Text>
+            <View style={mpStyles.optionRow}>
+              {[
+                { v: "not_informed", l: "Não inf." },
+                { v: "high_school", l: "Médio" },
+                { v: "undergraduate", l: "Superior" },
+                { v: "postgraduate", l: "Pós" },
+              ].map(({ v, l }) => (
+                <Pressable key={v} onPress={() => setEducation(v)}
+                  style={[mpStyles.chip, education === v && { backgroundColor: primary, borderColor: primary }]}>
+                  <Text style={[mpStyles.chipText, education === v && { color: "#fff" }]}>{l}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={[s.label, { marginTop: 12 }]}>Faixa de renda familiar</Text>
+            <View style={mpStyles.optionRow}>
+              {[
+                { v: "not_informed", l: "Não inf." },
+                { v: "up_to_1_minimum_wage", l: "Até 1 SM" },
+                { v: "one_to_3_minimum_wages", l: "1–3 SM" },
+                { v: "three_to_5_minimum_wages", l: "3–5 SM" },
+                { v: "above_10_minimum_wages", l: "+10 SM" },
+              ].map(({ v, l }) => (
+                <Pressable key={v} onPress={() => setIncome(v)}
+                  style={[mpStyles.chip, income === v && { backgroundColor: primary, borderColor: primary }]}>
+                  <Text style={[mpStyles.chipText, income === v && { color: "#fff" }]}>{l}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Dons ministeriais */}
+          <Text style={s.sectionTitle}>Áreas de interesse ministerial</Text>
+          <View style={s.card}>
+            <Text style={[s.cardMeta, { marginBottom: 12 }]}>Selecione as áreas onde você sente chamado a servir:</Text>
+            <View style={mpStyles.pillGrid}>
+              {MINISTERIAL_INTERESTS.map(({ value, label }) => {
+                const active = interests.includes(value);
+                return (
+                  <Pressable key={value} onPress={() => toggleInterest(value)}
+                    style={[mpStyles.pill, active && { backgroundColor: primary, borderColor: primary }]}>
+                    <Text style={[mpStyles.pillText, active && { color: "#fff" }]}>{label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Como se vê servindo */}
+          <Text style={s.sectionTitle}>Como você se vê servindo?</Text>
+          <View style={s.card}>
+            {SERVING_PROFILES.map(({ value, label }) => (
+              <Pressable key={value} onPress={() => setServing(value)}
+                style={[mpStyles.radioRow, serving === value && { borderColor: primary, backgroundColor: `${primary}12` }]}>
+                <View style={[mpStyles.radioCircle, serving === value && { borderColor: primary }]}>
+                  {serving === value && <View style={[mpStyles.radioDot, { backgroundColor: primary }]} />}
+                </View>
+                <Text style={[mpStyles.radioLabel, serving === value && { color: primary, fontWeight: "600" }]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Disponibilidade */}
+          <Text style={s.sectionTitle}>Disponibilidade semanal</Text>
+          <View style={[s.card, { flexDirection: "row", flexWrap: "wrap", gap: 8 }]}>
+            {WEEKDAYS.map(({ value, label }) => {
+              const active = availability.includes(value);
+              return (
+                <Pressable key={value} onPress={() => toggleDay(value)}
+                  style={[mpStyles.dayPill, active && { backgroundColor: primary, borderColor: primary }]}>
+                  <Text style={[mpStyles.dayText, active && { color: "#fff" }]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {saved && (
+            <View style={mpStyles.savedBanner}>
+              <Text style={mpStyles.savedText}>✓ Perfil salvo com sucesso!</Text>
+            </View>
+          )}
+
+          <Btn label={saving ? "Salvando..." : "Salvar Perfil"} onPress={handleSave}
+            loading={saving} disabled={saving} color={primary} style={{ marginTop: 8 }} />
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+const mpStyles = StyleSheet.create({
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#d1d5db", backgroundColor: "#fff" },
+  chipText: { fontSize: 13, color: "#374151" },
+  pillGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  pill: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1.5, borderColor: "#d1d5db", backgroundColor: "#fff" },
+  pillText: { fontSize: 13, color: "#374151" },
+  radioRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1.5, borderColor: "#e5e7eb", marginBottom: 8 },
+  radioCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#d1d5db", alignItems: "center", justifyContent: "center" },
+  radioDot: { width: 10, height: 10, borderRadius: 5 },
+  radioLabel: { fontSize: 14, color: "#374151", flex: 1 },
+  dayPill: { width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: "#d1d5db", backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  dayText: { fontSize: 13, fontWeight: "600", color: "#374151" },
+  savedBanner: { backgroundColor: "#dcfce7", borderRadius: 10, padding: 14, marginBottom: 8, alignItems: "center" },
+  savedText: { color: "#166534", fontWeight: "600", fontSize: 14 },
+});
 
 // ─── Doações Screen ───────────────────────────────────────────────────────────
 
