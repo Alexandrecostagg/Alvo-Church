@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { OrganizationFeaturesSettings } from "@alvo/types";
 import { isModuleEnabled, type ModuleKey, type ModulesConfig } from "@alvo/domain";
 import { useAppAuth } from "../app/providers";
+import type { AppRole } from "@alvo/types";
 
 export type GroupsModelType = "cell" | "gc" | "leadership" | "generic";
 export type OrgTier = "solo" | "campus" | "network" | "denomination";
@@ -30,7 +31,8 @@ interface OrgFeaturesContextValue {
 const OrgFeaturesContext = createContext<OrgFeaturesContextValue | null>(null);
 
 export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
-  const { tenantRuntime, tenantReady } = useAppAuth();
+  const { tenantRuntime, tenantReady, roles } = useAppAuth();
+  const isSuperAdmin = roles.includes("super_admin" as AppRole);
   const features = tenantRuntime?.settings?.features ?? null;
   const branding = tenantRuntime?.settings?.branding ?? null;
   const org      = tenantRuntime?.organization ?? null;
@@ -56,6 +58,7 @@ export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
       ready: tenantReady,
       isEnabled: (key: ModuleKey) => {
         if (!tenantReady) return true;
+        if (isSuperAdmin) return true;  // super_admin vê tudo
         if (!modules) return true;
         return isModuleEnabled(modules, key);
       },
@@ -67,7 +70,7 @@ export function OrgFeaturesProvider({ children }: { children: ReactNode }) {
       groupsModelType: modelType,
       orgTier,
     };
-  }, [features, branding, org, tenantReady]);
+  }, [features, branding, org, tenantReady, isSuperAdmin]);
 
   return (
     <OrgFeaturesContext.Provider value={value}>
