@@ -15,6 +15,21 @@
       "id": "60605570c4774907b4f4d5b6395dd4c4"
     }
   ],
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
   "vars": {
     "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "alvo-church.firebaseapp.com",
