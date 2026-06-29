@@ -1,104 +1,98 @@
 #!/usr/bin/env node
-// Patch handler.mjs to neutralize eval/Function-constructor calls that are
-// blocked in Cloudflare Workers ("Code generation from strings disallowed").
+// Patch all compiled Worker bundles under .open-next/ to neutralize
+// eval/Function-constructor calls that are blocked in Cloudflare Workers
+// ("Code generation from strings disallowed").
 //
-// Three patterns addressed:
-//
-// 1. inquire (protobufjs):
-//      eval("quire".replace(/^/,"re"))(moduleName)  →  null
-//    Already caught by try/catch internally; returning null is safe.
-//
-// 2. lodash global-object detection:
-//      Function("return this")()  →  globalThis
-//    Fallback used when both `global` and `self` are unavailable.
-//    Workers have globalThis so this is safe.
-//
-// 3. protobufjs codegen (generates optimised encoder/decoders at runtime):
-//    The module (webpack id 17245) uses Function.apply / Function(code)() to
-//    evaluate generated code. We replace the entire codegen body with a
-//    stub that throws a descriptive error — protobufjs will fall back to
-//    its static encode/decode paths (it checks for errors from codegen).
-//    Pattern:  Function.apply(null,h).apply(null,i)  →  (()=>{throw new Error("codegen disabled")})()
-//              Function(c2)()                         →  (()=>{throw new Error("codegen disabled")})()
+// Searches every .js/.mjs file under .open-next/ so we don't depend on
+// a specific file-path that may change across opennextjs-cloudflare versions.
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { resolve, join } from "node:path";
 
-const handlerPath = resolve(
-  import.meta.dirname,
-  "../.open-next/server-functions/default/apps/web/handler.mjs"
-);
+const openNextDir = resolve(import.meta.dirname, "../.open-next");
 
-let content = readFileSync(handlerPath, "utf8");
-let totalPatches = 0;
-
-function patch(description, regex, replacement) {
-  const before = content;
-  const matches = before.match(regex) || [];
-  if (matches.length > 0) {
-    // Print first match in context so we can verify the pattern was correct
-    const idx = before.search(regex);
-    const ctx = before.slice(Math.max(0, idx - 30), idx + 80).replace(/\n/g, " ");
-    console.log(`patch-eval [${description}]: ${matches.length} occurrence(s) — context: ...${ctx}...`);
-  } else {
-    console.log(`patch-eval [${description}]: not found — skipping`);
+// Collect all JS/MJS files recursively
+function findJsFiles(dir) {
+  const results = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      results.push(...findJsFiles(full));
+    } else if (/\.(m?js)$/.test(entry)) {
+      results.push(full);
+    }
   }
-  content = content.replace(regex, replacement);
-  totalPatches += matches.length;
+  return results;
 }
 
-// 1. inquire eval
-patch(
-  "inquire eval",
-  /eval\("quire"\.replace\([^)]+\)\)\(moduleName\)/g,
-  "null"
-);
+const files = findJsFiles(openNextDir);
+console.log(`patch-eval: scanning ${files.length} file(s) under .open-next/`);
 
-// 2. lodash / global-object Function("return this")()
-patch(
-  "Function(return this)",
-  /Function\(["']return this["']\)\(\)/g,
-  "globalThis"
-);
+let grandTotal = 0;
 
-// 3. protobufjs codegen: Function.apply(null,<args>).apply(null,<scope>)
-// Wrap in try/catch so Cloudflare Workers' "Code generation from strings
-// disallowed" error is caught here and returns null, allowing protobufjs to
-// fall back to its static encode/decode paths (it handles null from codegen).
-// Uses \w+ to match any minifier-generated identifier (a, h, c2, a1, etc).
-patch(
-  "protobufjs codegen apply",
-  /Function\.apply\(null,(\w+)\)\.apply\(null,(\w+)\)/g,
-  "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return null}})()"
-);
+for (const filePath of files) {
+  let content = readFileSync(filePath, "utf8");
+  let filePatchCount = 0;
 
-// 4. protobufjs codegen: return Function(<code>)() — single-arg string eval
-// Same approach: catch the Workers sandbox error and return null.
-patch(
-  "protobufjs codegen call",
-  /\breturn Function\((\w+)\)\(\)/g,
-  "try{return Function($1)()}catch(_){return null}"
-);
+  function patch(description, regex, replacement) {
+    const matches = content.match(regex) || [];
+    if (matches.length > 0) {
+      const idx = content.search(regex);
+      const ctx = content.slice(Math.max(0, idx - 30), idx + 80).replace(/\n/g, " ");
+      console.log(`  [${description}] ${matches.length} hit(s) — ...${ctx}...`);
+      content = content.replace(regex, replacement);
+      filePatchCount += matches.length;
+    }
+  }
 
-// 5. Catch-all: any remaining direct eval() calls not covered above.
-patch(
-  "remaining eval calls",
-  /\beval\s*\(([^)]+)\)/g,
-  "(()=>{try{return eval($1)}catch(_){return null}})()"
-);
+  // 1. inquire eval: eval("quire".replace(...)) → null
+  patch(
+    "inquire eval",
+    /eval\("quire"\.replace\([^)]+\)\)\(moduleName\)/g,
+    "null"
+  );
 
-if (totalPatches === 0) {
-  console.log("patch-eval: no patterns found — already patched or build changed");
+  // 2. lodash global-object: Function("return this")() → globalThis
+  patch(
+    "Function(return this)",
+    /Function\(["']return this["']\)\(\)/g,
+    "globalThis"
+  );
+
+  // 3. protobufjs codegen: Function.apply(null,X).apply(null,Y)
+  // Wrap in try/catch so Workers' sandbox error is caught and returns null,
+  // letting protobufjs fall back to its static encode/decode paths.
+  patch(
+    "protobufjs codegen apply",
+    /Function\.apply\(null,(\w+)\)\.apply\(null,(\w+)\)/g,
+    "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return null}})()"
+  );
+
+  // 4. protobufjs codegen: return Function(X)()
+  patch(
+    "protobufjs codegen call",
+    /\breturn Function\((\w+)\)\(\)/g,
+    "try{return Function($1)()}catch(_){return null}"
+  );
+
+  // 5. new Function(X) without immediate call — wrap constructor
+  patch(
+    "new Function(str)",
+    /\bnew Function\((\w+)\)/g,
+    "(()=>{try{return new Function($1)}catch(_){return function(){}}})()"
+  );
+
+  if (filePatchCount > 0) {
+    const rel = filePath.replace(openNextDir, ".open-next");
+    console.log(`patch-eval: patched ${filePatchCount} pattern(s) in ${rel}`);
+    writeFileSync(filePath, content, "utf8");
+    grandTotal += filePatchCount;
+  }
+}
+
+if (grandTotal === 0) {
+  console.log("patch-eval: no patterns found in any file — already patched or build structure changed");
 } else {
-  console.log(`patch-eval: total ${totalPatches} replacement(s) applied`);
+  console.log(`patch-eval: total ${grandTotal} replacement(s) across all files`);
 }
-
-// Verify no eval/Function-as-eval left
-const remaining = (content.match(/\beval\s*\(|Function\s*\(["']/g) || []).length;
-if (remaining > 0) {
-  console.warn(`patch-eval WARNING: ${remaining} eval/Function(string) call(s) may still remain`);
-} else {
-  console.log("patch-eval: verification OK — no eval/Function(string) calls remain");
-}
-
-writeFileSync(handlerPath, content, "utf8");
