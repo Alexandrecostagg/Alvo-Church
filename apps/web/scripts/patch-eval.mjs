@@ -34,14 +34,17 @@ let totalPatches = 0;
 
 function patch(description, regex, replacement) {
   const before = content;
-  content = content.replace(regex, replacement);
-  const count = (before.match(regex) || []).length;
-  if (count > 0) {
-    console.log(`patch-eval [${description}]: replaced ${count} occurrence(s)`);
+  const matches = before.match(regex) || [];
+  if (matches.length > 0) {
+    // Print first match in context so we can verify the pattern was correct
+    const idx = before.search(regex);
+    const ctx = before.slice(Math.max(0, idx - 30), idx + 80).replace(/\n/g, " ");
+    console.log(`patch-eval [${description}]: ${matches.length} occurrence(s) — context: ...${ctx}...`);
   } else {
     console.log(`patch-eval [${description}]: not found — skipping`);
   }
-  totalPatches += count;
+  content = content.replace(regex, replacement);
+  totalPatches += matches.length;
 }
 
 // 1. inquire eval
@@ -58,22 +61,30 @@ patch(
   "globalThis"
 );
 
-// 3. protobufjs codegen: Function.apply(null,h).apply(null,i)
+// 3. protobufjs codegen: Function.apply(null,<args>).apply(null,<scope>)
 // Wrap in try/catch so Cloudflare Workers' "Code generation from strings
 // disallowed" error is caught here and returns null, allowing protobufjs to
 // fall back to its static encode/decode paths (it handles null from codegen).
+// Uses \w+ to match any minifier-generated identifier (a, h, c2, a1, etc).
 patch(
   "protobufjs codegen apply",
-  /Function\.apply\(null,([a-z])\)\.apply\(null,([a-z])\)/g,
+  /Function\.apply\(null,(\w+)\)\.apply\(null,(\w+)\)/g,
   "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return null}})()"
 );
 
-// 4. protobufjs codegen: Function(c2)() — a single-arg string evaluation
+// 4. protobufjs codegen: return Function(<code>)() — single-arg string eval
 // Same approach: catch the Workers sandbox error and return null.
 patch(
   "protobufjs codegen call",
-  /\breturn Function\(([a-z]\d?)\)\(\)/g,
+  /\breturn Function\((\w+)\)\(\)/g,
   "try{return Function($1)()}catch(_){return null}"
+);
+
+// 5. Catch-all: any remaining direct eval() calls not covered above.
+patch(
+  "remaining eval calls",
+  /\beval\s*\(([^)]+)\)/g,
+  "(()=>{try{return eval($1)}catch(_){return null}})()"
 );
 
 if (totalPatches === 0) {
