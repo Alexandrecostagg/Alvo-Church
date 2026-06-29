@@ -59,18 +59,21 @@ patch(
 );
 
 // 3. protobufjs codegen: Function.apply(null,h).apply(null,i)
+// Wrap in try/catch so Cloudflare Workers' "Code generation from strings
+// disallowed" error is caught here and returns null, allowing protobufjs to
+// fall back to its static encode/decode paths (it handles null from codegen).
 patch(
   "protobufjs codegen apply",
-  /Function\.apply\(null,[a-z]\)\.apply\(null,[a-z]\)/g,
-  '(()=>{throw new Error("codegen disabled")})()'
+  /Function\.apply\(null,([a-z])\)\.apply\(null,([a-z])\)/g,
+  "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return null}})()"
 );
 
 // 4. protobufjs codegen: Function(c2)() — a single-arg string evaluation
-// This is `return Function(c2)()` inside codegen. c2 is the generated code string.
+// Same approach: catch the Workers sandbox error and return null.
 patch(
   "protobufjs codegen call",
-  /\breturn Function\([a-z]\d?\)\(\)/g,
-  'throw new Error("codegen disabled")'
+  /\breturn Function\(([a-z]\d?)\)\(\)/g,
+  "try{return Function($1)()}catch(_){return null}"
 );
 
 if (totalPatches === 0) {
