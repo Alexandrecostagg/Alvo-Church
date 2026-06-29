@@ -61,19 +61,22 @@ for (const filePath of files) {
   );
 
   // 3. protobufjs codegen: Function.apply(null,X).apply(null,Y)
-  // Wrap in try/catch so Workers' sandbox error is caught and returns null,
-  // letting protobufjs fall back to its static encode/decode paths.
+  // Returns a no-op function (not null!) so callers can safely access .prototype
+  // and call the result without crashing. protobufjs uses this as its
+  // generated encoder/decoder — a no-op causes it to fall through to
+  // the static encode/decode paths.
   patch(
     "protobufjs codegen apply",
     /Function\.apply\(null,(\w+)\)\.apply\(null,(\w+)\)/g,
-    "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return null}})()"
+    "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return function(_m,w){return w}}})()"
   );
 
   // 4. protobufjs codegen: return Function(X)()
+  // Same: return a passthrough stub instead of null.
   patch(
     "protobufjs codegen call",
     /\breturn Function\((\w+)\)\(\)/g,
-    "try{return Function($1)()}catch(_){return null}"
+    "try{return Function($1)()}catch(_){return function(_m,w){return w}}"
   );
 
   // 5. new Function(X) without immediate call — wrap constructor
