@@ -653,8 +653,8 @@ code {
 
 .mission-copy h2 {
   max-width: 680px;
-  font-size: clamp(2.4rem, 5vw, 5.2rem);
-  line-height: 0.92;
+  font-size: clamp(1.6rem, 2.8vw, 2.8rem);
+  line-height: 1.05;
 }
 
 .mission-copy p {
@@ -5746,8 +5746,8 @@ code {
   }
 
   .mission-copy h2 {
-    font-size: 2.35rem;
-    line-height: 1;
+    font-size: 1.5rem;
+    line-height: 1.1;
   }
 
   .mission-copy p {
@@ -5756,8 +5756,7 @@ code {
 
   .topbar,
   .topbar-actions,
-  .mission-board,
-  .app-sidebar {
+  .mission-board {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -5948,50 +5947,90 @@ code {
   margin: 0;
 }
 
-/* Mobile Sidebar Refinement */
+/* Mobile Sidebar — bottom tab bar */
 @media (max-width: 768px) {
   .app-shell {
     grid-template-columns: 1fr;
   }
 
   .app-sidebar {
+    display: flex;               /* override any grid set by outer query */
     position: fixed;
     bottom: 0;
     top: auto;
     left: 0;
     width: 100%;
     height: auto;
+    max-height: 64px;
     flex-direction: row;
-    padding: 0.5rem 1rem;
+    align-items: center;
+    padding: 0 8px env(safe-area-inset-bottom, 8px);
     gap: 0;
     border-right: none;
     border-top: 1px solid var(--alvo-line);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 100;
   }
 
-  .app-sidebar > .brand-logo,
-  .app-sidebar > .sidebar-status {
+  /* hide non-nav elements inside sidebar */
+  .app-sidebar > .sidebar-header,
+  .app-sidebar > .sidebar-footer {
     display: none;
   }
 
   .app-nav {
+    display: flex;
     flex-direction: row;
+    align-items: center;
     justify-content: space-around;
     width: 100%;
-    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    gap: 0;
+    padding: 0;
+  }
+
+  .app-nav::-webkit-scrollbar { display: none; }
+
+  /* flatten nav groups — show items inline */
+  .nav-group {
+    display: contents;
+  }
+  .nav-group-title {
+    display: none;
+  }
+  .nav-group-items {
+    display: contents;
   }
 
   .app-nav-item {
+    flex: 1 0 52px;
+    max-width: 72px;
     flex-direction: column;
-    padding: 6px;
-    height: auto;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+    height: 56px;
     min-height: 0;
-    font-size: 10px;
-    gap: 4px;
+    font-size: 9px;
+    gap: 3px;
+    border-radius: 8px;
   }
 
   .app-nav-item span {
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 68px;
+    text-align: center;
+  }
+
+  .app-nav-item::before {
+    display: none;
   }
 
   .app-workspace {
