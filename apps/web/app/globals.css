@@ -10082,3 +10082,263 @@ h1.page-title,
   .lp-preview-sidebar { width: 100px; }
   .lp-preview-card-value { font-size: 14px; }
 }
+
+/* ═══════════════════════════════════════════════
+   BANNER GENERATOR
+   ═══════════════════════════════════════════════ */
+.banner-gen-root {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 32px;
+  padding: 28px 32px;
+  max-width: 1100px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .banner-gen-root { grid-template-columns: 1fr; }
+}
+
+/* Form column */
+.banner-gen-form {
+  background: var(--alvo-surface);
+  border: 1px solid var(--alvo-line);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.banner-gen-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--alvo-ink);
+  margin: 0;
+}
+.banner-gen-desc {
+  font-size: 13px;
+  color: var(--alvo-ink-soft);
+  margin: -12px 0 0;
+  line-height: 1.5;
+}
+
+.banner-field { display: flex; flex-direction: column; gap: 6px; }
+.banner-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--alvo-ink);
+}
+.banner-field label .required { color: var(--alvo-red); }
+.banner-field input,
+.banner-field select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--alvo-line);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--alvo-ink);
+  background: var(--alvo-bg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.banner-field input:focus,
+.banner-field select:focus { border-color: var(--alvo-accent); }
+
+/* Toggle group (feed / story) */
+.banner-toggle-group { display: flex; gap: 8px; }
+.banner-toggle {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--alvo-line);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--alvo-ink-soft);
+  background: var(--alvo-bg);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.banner-toggle.active {
+  border-color: #7c3aed;
+  background: rgba(124,58,237,0.08);
+  color: #7c3aed;
+}
+
+/* Style chips */
+.banner-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.banner-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--alvo-line);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--alvo-ink-soft);
+  background: var(--alvo-bg);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.banner-chip.active {
+  border-color: #7c3aed;
+  background: rgba(124,58,237,0.08);
+  color: #7c3aed;
+}
+
+/* Photo upload */
+.banner-photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1.5px dashed var(--alvo-line);
+  border-radius: 10px;
+  color: var(--alvo-ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.banner-photo-upload:hover { border-color: var(--alvo-accent); color: var(--alvo-accent); }
+.banner-photo-preview {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--alvo-line);
+}
+.banner-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.banner-photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Generate button */
+.banner-btn-generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.banner-btn-generate:hover:not(:disabled) { background: #6d28d9; }
+.banner-btn-generate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.banner-error {
+  font-size: 13px;
+  color: var(--alvo-red);
+  background: var(--alvo-red-soft);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+/* Copy preview */
+.banner-copy-preview {
+  background: var(--alvo-surface-muted);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.copy-title { font-size: 15px; font-weight: 700; color: var(--alvo-ink); margin: 0; }
+.copy-sub   { font-size: 13px; color: var(--alvo-ink-soft); margin: 0; }
+.copy-verse { font-size: 12px; font-style: italic; color: var(--alvo-ink-soft); margin: 0; }
+.copy-tags  { font-size: 12px; color: #7c3aed; margin: 0; font-weight: 600; }
+
+/* Preview column */
+.banner-gen-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 80px;
+}
+
+.banner-canvas-wrapper {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1a1040;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.banner-canvas-wrapper canvas {
+  display: block;
+}
+.banner-canvas-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: rgba(255,255,255,0.4);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Actions */
+.banner-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.banner-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.banner-action-btn:hover { opacity: 0.85; }
+.banner-action-btn.secondary {
+  background: var(--alvo-surface-muted);
+  color: var(--alvo-ink);
+  border: 1px solid var(--alvo-line);
+}
+.banner-action-btn.primary {
+  background: var(--alvo-accent);
+  color: #fff;
+}
+.banner-action-btn.whatsapp {
+  background: #25D366;
+  color: #fff;
+}
+
+.banner-credit {
+  font-size: 11px;
+  color: var(--alvo-ink-soft);
+  text-align: center;
+  margin: 0;
+  opacity: 0.7;
+}
+
+/* Spinner */
+.spin { animation: spinAnim 0.8s linear infinite; }
+@keyframes spinAnim { to { transform: rotate(360deg); } }

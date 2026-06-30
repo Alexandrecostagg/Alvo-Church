@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Handshake,
   HeartHandshake,
+  ImagePlay,
   Landmark,
   LayoutDashboard,
   Map as MapIcon,
@@ -91,6 +92,12 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname === "/serving" },
         { label: "Louvor & Cifras", icon: Music, href: "/serving/worship", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving/worship") },
         { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
+      ]
+    },
+    {
+      title: "Mídia",
+      items: [
+        { label: "Banner", icon: ImagePlay, href: "/media/banner", match: (pathname) => pathname.startsWith("/media/banner") },
       ]
     },
     {
