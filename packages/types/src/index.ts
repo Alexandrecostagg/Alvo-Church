@@ -1213,3 +1213,20 @@ export interface WeeklyTheme {
   createdAt: string;
 }
 
+export type ContributionType = "dizimo" | "oferta" | "campanha" | "missao" | "outro";
+
+export interface MemberContribution {
+  id: string;
+  organizationId: string;
+  userId: string;           // Firebase Auth UID do membro
+  personId?: string;        // Link para Person record
+  amount: number;           // valor em R$ (float)
+  type: ContributionType;
+  date: string;             // ISO date YYYY-MM-DD
+  description?: string;     // ex: "Oferta de Missões Junho"
+  culto?: string;           // ex: "Culto Domingo Noite"
+  receiptNumber?: string;
+  registeredBy: string;     // userId de quem registrou (staff/admin)
+  registeredAt: string;     // ISO datetime
+}
+

@@ -1,10 +1,18 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2, ChevronRight, KeyRound, LogOut, Mail, Settings, Shield, User,
+  Heart, TrendingUp, Calendar, Receipt, Loader2,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
+import {
+  createFirebaseWebRuntimeConfigFromEnv,
+  fetchMemberContributions,
+  isFirebaseWebRuntimeConfigured,
+} from "@alvo/firebase";
+import type { MemberContribution, ContributionType } from "@alvo/types";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:   "Super Admin",
@@ -24,6 +32,31 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   member:       { bg: "#F1EFE8", text: "#444441" },
 };
 
+const TYPE_LABELS: Record<ContributionType, string> = {
+  dizimo:   "Dízimo",
+  oferta:   "Oferta",
+  campanha: "Campanha",
+  missao:   "Missões",
+  outro:    "Outro",
+};
+
+const TYPE_COLORS: Record<ContributionType, { bg: string; text: string }> = {
+  dizimo:   { bg: "#E1F5EE", text: "#085041" },
+  oferta:   { bg: "#EEEDFE", text: "#3C3489" },
+  campanha: { bg: "#FAEEDA", text: "#633806" },
+  missao:   { bg: "#FAE8FF", text: "#6B21A8" },
+  outro:    { bg: "#F1EFE8", text: "#444441" },
+};
+
+function formatBRL(value: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 export function MemberProfileView() {
   const { user, organizationId, tenantRuntime, signOut } = useAppAuth();
   const router = useRouter();
@@ -36,6 +69,35 @@ export function MemberProfileView() {
 
   const emailName = (user?.email ?? "?").split("@")[0];
   const initials = emailName.slice(0, 2).toUpperCase();
+
+  // Contributions
+  const [contributions, setContributions] = useState<MemberContribution[]>([]);
+  const [loadingContribs, setLoadingContribs] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid || !organizationId) return;
+    const config = createFirebaseWebRuntimeConfigFromEnv(process.env);
+    if (!isFirebaseWebRuntimeConfigured(config)) return;
+
+    setLoadingContribs(true);
+    fetchMemberContributions(config, { organizationId }, user.uid)
+      .then(setContributions)
+      .catch(() => {}) // silent on permission/missing collection
+      .finally(() => setLoadingContribs(false));
+  }, [user?.uid, organizationId]);
+
+  // Computed stats
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const thisYear = String(now.getFullYear());
+
+  const totalMonth = contributions
+    .filter((c) => c.date.startsWith(thisMonth))
+    .reduce((s, c) => s + c.amount, 0);
+
+  const totalYear = contributions
+    .filter((c) => c.date.startsWith(thisYear))
+    .reduce((s, c) => s + c.amount, 0);
 
   async function handleSignOut() {
     await signOut();
@@ -57,7 +119,6 @@ export function MemberProfileView() {
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* decorative circle */}
         <div style={{ position: "absolute", right: -40, top: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
         <div style={{ position: "absolute", right: 40, bottom: -60, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
 
@@ -105,6 +166,79 @@ export function MemberProfileView() {
         />
       </div>
 
+      {/* ── Contributions section ── */}
+      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ padding: "16px 20px", borderBottom: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", gap: 8 }}>
+          <Heart size={16} color="#534AB7" />
+          <span style={{ fontWeight: 600, fontSize: 15, color: "var(--color-text-primary)" }}>Minhas Contribuições</span>
+        </div>
+
+        {loadingContribs ? (
+          <div style={{ padding: "32px", display: "flex", justifyContent: "center", color: "var(--color-text-secondary)" }}>
+            <Loader2 size={20} className="spin" />
+          </div>
+        ) : contributions.length === 0 ? (
+          <div style={{ padding: "32px 20px", textAlign: "center" }}>
+            <Receipt size={32} strokeWidth={1.3} style={{ color: "var(--color-text-secondary)", marginBottom: 8 }} />
+            <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: "0 0 4px" }}>
+              Nenhuma contribuição registrada ainda.
+            </p>
+            <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, opacity: 0.7 }}>
+              Seus dízimos e ofertas aparecerão aqui quando registrados.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Summary mini cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: "var(--color-border-tertiary)" }}>
+              <SummaryMini icon={<Calendar size={14} />} label="Este mês" value={formatBRL(totalMonth)} />
+              <SummaryMini icon={<TrendingUp size={14} />} label="Este ano" value={formatBRL(totalYear)} />
+              <SummaryMini icon={<Heart size={14} />} label="Total geral" value={contributions.length + " reg."} />
+            </div>
+
+            {/* List */}
+            <div style={{ maxHeight: 340, overflowY: "auto" }}>
+              {contributions.map((c) => {
+                const tc = TYPE_COLORS[c.type] ?? TYPE_COLORS.outro;
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 20px",
+                      borderBottom: "0.5px solid var(--color-border-tertiary)",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                          {formatBRL(c.amount)}
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: tc.bg, color: tc.text }}>
+                          {TYPE_LABELS[c.type]}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>
+                        {formatDate(c.date)}
+                        {c.culto ? ` · ${c.culto}` : ""}
+                        {c.description ? ` · ${c.description}` : ""}
+                      </p>
+                    </div>
+                    {c.receiptNumber && (
+                      <span style={{ fontSize: 11, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>
+                        #{c.receiptNumber}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Actions */}
       <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
         <ActionRow
@@ -124,8 +258,19 @@ export function MemberProfileView() {
       </div>
 
       <p style={{ fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center", marginTop: "1.5rem" }}>
-        Getro Growth · {orgName ?? organizationId}
+        Plataforma Esdras · {orgName ?? organizationId}
       </p>
+    </div>
+  );
+}
+
+function SummaryMini({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div style={{ padding: "12px 16px", background: "var(--color-background-primary)", display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--color-text-secondary)", fontSize: 11 }}>
+        {icon} {label}
+      </div>
+      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>{value}</span>
     </div>
   );
 }

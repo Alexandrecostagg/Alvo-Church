@@ -237,3 +237,7 @@ export function getScheduleSwapRequestsCollectionPath(context: TenantContext) {
 export function getWeeklyThemesCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/weeklyThemes`;
 }
+
+export function getMemberContributionsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/contributions`;
+}

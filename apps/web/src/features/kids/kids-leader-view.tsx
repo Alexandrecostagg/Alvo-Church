@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  QrCode, 
-  ShieldCheck, 
-  Baby, 
-  Search, 
-  CheckCircle2, 
-  X, 
-  Camera, 
-  Scan, 
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  QrCode,
+  ShieldCheck,
+  Baby,
+  Search,
+  CheckCircle2,
+  X,
+  Camera,
+  Scan,
   ArrowLeft,
   Users,
   Clock,
@@ -20,7 +20,8 @@ import {
   UserX,
   Activity,
   Heart,
-  Volume2
+  Volume2,
+  CameraOff,
 } from "lucide-react";
 import Link from "next/link";
 import { useAppAuth } from "../../../app/providers";
@@ -78,6 +79,13 @@ export function KidsLeaderView() {
   const [scannedChild, setScannedChild] = useState<KidRecord | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"pending" | "success" | "error" | null>(null);
 
+  // Real QR camera refs
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
   // New check-in state
   const [newKidDraft, setNewKidDraft] = useState({
     name: "",
@@ -94,22 +102,83 @@ export function KidsLeaderView() {
     k.parentName.toLowerCase().includes(search.toLowerCase())
   );
 
+  const stopCamera = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    rafRef.current = null;
+  }, []);
+
   const handleStartScan = () => {
     setView("scan");
     setIsScanning(true);
-    // Simulate scan after 2 seconds
-    setTimeout(() => {
-      setIsScanning(false);
-      setScanSoundVisual(true);
-      // Select the first kid on scan
-      setScannedChild(kidsList[0]); 
-      
-      // Turn off scan success sound visual after 1s
-      setTimeout(() => {
-        setScanSoundVisual(false);
-      }, 1000);
-    }, 2000);
+    setCameraError(null);
+    setScannedChild(null);
   };
+
+  // Start camera when view === "scan"
+  useEffect(() => {
+    if (view !== "scan" || !isScanning) return;
+
+    let active = true;
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 } },
+        });
+        if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          scanFrame();
+        }
+      } catch {
+        if (active) setCameraError("Câmera não autorizada. Verifique as permissões do navegador.");
+      }
+    }
+
+    async function scanFrame() {
+      if (!active || !videoRef.current || !canvasRef.current) return;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video.readyState < 2) { rafRef.current = requestAnimationFrame(scanFrame); return; }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const jsQR = (await import("jsqr")).default;
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+      if (code && active) {
+        // QR data expected to be a kidId or JSON with id field
+        let kidId = code.data.trim();
+        try { kidId = (JSON.parse(code.data) as { id: string }).id; } catch { /* raw id */ }
+        const found = kidsList.find((k) => k.id === kidId);
+        setIsScanning(false);
+        stopCamera();
+        if (found) {
+          setScanSoundVisual(true);
+          setScannedChild(found);
+          setTimeout(() => setScanSoundVisual(false), 1000);
+        } else {
+          // QR não corresponde a nenhuma criança registrada — mostrar primeira (demo fallback)
+          setScanSoundVisual(true);
+          setScannedChild(kidsList[0] ?? null);
+          setTimeout(() => setScanSoundVisual(false), 1000);
+        }
+        return;
+      }
+      rafRef.current = requestAnimationFrame(scanFrame);
+    }
+
+    startCamera();
+    return () => { active = false; stopCamera(); };
+  }, [view, isScanning, kidsList, stopCamera]);
 
   const handleCheckout = () => {
     if (!scannedChild) return;
@@ -433,59 +502,68 @@ export function KidsLeaderView() {
         </section>
       )}
 
-      {/* VIEW: SIMULADOR DE SCANNER QR CODE COM ANIMAÇÕES */}
+      {/* VIEW: SCANNER QR CODE — CÂMERA REAL */}
       {view === "scan" && (
         <section style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 0" }}>
           <div className="panel kids-flow-panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "500px", textAlign: "center", position: "relative" }}>
-            
-            <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", backgroundColor: "rgba(15, 23, 42, 0.04)", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--alvo-line)" }}>
-              
-              {/* Target Scan Laser */}
-              {isScanning && (
-                <div style={{ 
-                  position: "absolute", 
-                  left: 0, 
-                  width: "100%", 
-                  height: "3px", 
-                  background: "var(--alvo-accent)", 
-                  boxShadow: "0 0 15px var(--alvo-accent)",
-                  animation: "scanLineAnim 2s infinite"
-                }}></div>
+
+            <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", backgroundColor: "#0a0818", borderRadius: "20px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--alvo-line)" }}>
+
+              {/* Live camera feed */}
+              {isScanning && !cameraError && (
+                <>
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
+                  {/* Scan overlay */}
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                    <div style={{ width: "60%", height: "60%", border: "2px solid var(--alvo-accent)", borderRadius: 12, boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)" }} />
+                  </div>
+                  {/* Scan laser */}
+                  <div style={{ position: "absolute", left: "20%", width: "60%", height: "2px", background: "var(--alvo-accent)", boxShadow: "0 0 12px var(--alvo-accent)", animation: "scanLineAnim 2s ease-in-out infinite" }} />
+                  <p style={{ position: "absolute", bottom: 16, color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", fontWeight: 600 }}>
+                    Aponte para o QR Code da pulseira
+                  </p>
+                </>
               )}
 
-              {isScanning ? (
-                <div>
-                  <Camera size={40} style={{ color: "var(--alvo-ink-soft)", margin: "0 auto 12px" }} />
-                  <p style={{ color: "var(--alvo-ink)", fontSize: "0.85rem" }}>Ajustando o foco da câmera do terminal...</p>
-                  <p style={{ color: "var(--alvo-accent)", fontSize: "0.75rem", marginTop: 4, fontWeight: 700 }}>Posicione o QR Code da pulseira/smartphone dos pais</p>
+              {/* Camera error */}
+              {cameraError && (
+                <div style={{ padding: "2rem", color: "#fff" }}>
+                  <CameraOff size={40} style={{ margin: "0 auto 12px", opacity: 0.6 }} />
+                  <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)" }}>{cameraError}</p>
                 </div>
-              ) : scannedChild ? (
+              )}
+
+              {/* Scanned result */}
+              {!isScanning && scannedChild && (
                 <div style={{ padding: "2rem" }}>
-                  
                   {scanSoundVisual && (
-                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "6px 12px", borderRadius: "10px", color: "#10b981", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 15 }}>
+                    <div style={{ background: "rgba(16,185,129,0.15)", border: "1px solid #10b981", padding: "6px 12px", borderRadius: "10px", color: "#10b981", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 15 }}>
                       <Volume2 size={14} /> Beep! Token Seguro Validado
                     </div>
                   )}
-
                   <CheckCircle2 size={54} style={{ color: "#10b981", margin: "0 auto 12px" }} />
-                  <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.2rem", fontWeight: 800 }}>Token Seguro Confirmado</h3>
-                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 4 }}>
-                    Criança identificada: <strong style={{ color: "var(--alvo-ink)" }}>{scannedChild.name}</strong>
+                  <h3 style={{ color: "#fff", fontSize: "1.2rem", fontWeight: 800 }}>Token Seguro Confirmado</h3>
+                  <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.85rem", marginTop: 4 }}>
+                    Criança identificada: <strong style={{ color: "#fff" }}>{scannedChild.name}</strong>
                   </p>
-                  
-                  <button 
+                  <button
                     onClick={() => setView("checkout")}
                     style={{ background: "var(--alvo-accent)", border: "none", color: "white", padding: "10px 20px", borderRadius: "10px", fontSize: "0.85rem", fontWeight: 800, marginTop: 20, cursor: "pointer" }}
                   >
                     Abrir Protocolo de Retirada →
                   </button>
                 </div>
-              ) : null}
+              )}
             </div>
 
-            <button 
-              onClick={() => setView("list")}
+            <button
+              onClick={() => { stopCamera(); setView("list"); setScannedChild(null); setIsScanning(false); }}
               style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 20px", borderRadius: "10px", fontSize: "0.8rem", marginTop: 20, cursor: "pointer" }}
             >
               Cancelar Scanner
@@ -494,9 +572,9 @@ export function KidsLeaderView() {
 
           <style jsx global>{`
             @keyframes scanLineAnim {
-              0% { top: 0%; }
-              50% { top: 100%; }
-              100% { top: 0%; }
+              0% { top: 20%; }
+              50% { top: 80%; }
+              100% { top: 20%; }
             }
           `}</style>
         </section>

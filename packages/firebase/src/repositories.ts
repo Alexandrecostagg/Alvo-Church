@@ -68,7 +68,8 @@ import type {
   Badge,
   MemberBadge,
   NetworkAffiliate,
-  NetworkSnapshot
+  NetworkSnapshot,
+  MemberContribution
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -117,7 +118,8 @@ import {
   getJourneyMissionsCollectionPath,
   getBadgesCollectionPath,
   getMemberBadgesCollectionPath,
-  getWeeklyThemesCollectionPath
+  getWeeklyThemesCollectionPath,
+  getMemberContributionsCollectionPath
 } from "./paths";
 
 
@@ -2884,4 +2886,33 @@ export async function incrementAiUsage(
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, `organizations/${context.organizationId}/aiUsage/${month}`);
   await setDoc(ref, { count: increment(1), updatedAt: new Date().toISOString() }, { merge: true });
+}
+
+// ─── Member Contributions ─────────────────────────────────────────────────────
+
+export async function fetchMemberContributions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  userId: string
+): Promise<MemberContribution[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getMemberContributionsCollectionPath(context)),
+    where("userId", "==", userId),
+    orderBy("date", "desc"),
+    limit(50)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemberContribution));
+}
+
+export async function addMemberContribution(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  contribution: Omit<MemberContribution, "id">
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getMemberContributionsCollectionPath(context)));
+  await setDoc(ref, cleanFirestoreData(contribution));
+  return ref.id;
 }
