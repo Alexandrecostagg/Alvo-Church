@@ -5947,6 +5947,27 @@ code {
   margin: 0;
 }
 
+/* Mobile — Dashboard header fix */
+@media (max-width: 768px) {
+  .header-main {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .welcome-section h1 {
+    font-size: 1.35rem;
+  }
+
+  .command-center {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .global-search-container {
+    height: 40px;
+  }
+}
+
 /* Mobile Sidebar — bottom tab bar */
 @media (max-width: 768px) {
   .app-shell {
