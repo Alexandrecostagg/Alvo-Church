@@ -35,14 +35,52 @@ service cloud.firestore {
         ]);
     }
 
-    match /organizations/{orgId}/users/{userId} {
+    function orgDocPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId);
+    }
+
+    // The signed-in user who provisioned the organization (recorded at creation).
+    function isOrgOwner(orgId) {
+      return signedIn()
+        && exists(orgDocPath(orgId))
+        && get(orgDocPath(orgId)).data.ownerUid == request.auth.uid;
+    }
+
+    // Organization root document: creatable once by its owner, managed by admins.
+    match /organizations/{orgId} {
+      allow get: if isTenantMember(orgId) || isOrgOwner(orgId);
       allow create: if signedIn()
-        && request.auth.uid == userId
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isTenantAdmin(orgId)
+        && (
+          !("ownerUid" in resource.data)
+          || request.resource.data.ownerUid == resource.data.ownerUid
+        );
+      allow delete: if false;
+    }
+
+    match /organizations/{orgId}/users/{userId} {
+      // Only the org owner may bootstrap their own admin access;
+      // everyone else must be provisioned by an existing admin.
+      allow create: if signedIn()
         && request.resource.data.organizationId == orgId
-        && request.resource.data.isActive == true;
+        && (
+          (request.auth.uid == userId && isOrgOwner(orgId))
+          || isTenantAdmin(orgId)
+        );
 
       allow read: if signedIn() && (request.auth.uid == userId || isTenantAdmin(orgId));
-      allow update: if signedIn() && (request.auth.uid == userId || isTenantAdmin(orgId));
+
+      // Users may edit their own profile but never their roles,
+      // active flag or tenant binding.
+      allow update: if isTenantAdmin(orgId)
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(["roles", "isActive", "organizationId"])
+        );
+
       allow delete: if isTenantAdmin(orgId);
     }
 
@@ -51,7 +89,25 @@ service cloud.firestore {
       allow write: if isTenantAdmin(orgId);
     }
 
-    match /organizations/{orgId}/{document=**} {
+    // Financial records: a member can only read their own contributions.
+    match /organizations/{orgId}/contributions/{contributionId} {
+      allow read: if isTenantAdmin(orgId)
+        || (isTenantMember(orgId) && resource.data.userId == request.auth.uid);
+      allow write: if isTenantAdmin(orgId);
+    }
+
+    // Generic tenant collections (one level deep), excluding the
+    // privacy-sensitive collections handled above.
+    match /organizations/{orgId}/{collection}/{documentId} {
+      allow read: if isTenantMember(orgId)
+        && collection != "contributions"
+        && collection != "users";
+      allow write: if isTenantAdmin(orgId)
+        && collection != "users";
+    }
+
+    // Nested subcollections (groups/{id}/members, events/{id}/tickets, ...).
+    match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
       allow read: if isTenantMember(orgId);
       allow write: if isTenantAdmin(orgId);
     }

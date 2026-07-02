@@ -11,6 +11,15 @@ import {
   X,
 } from "lucide-react";
 import type { BannerCopy } from "../../../app/api/media/banner-copy/route";
+import { useAppAuth } from "../../../app/providers";
+
+// Busca a imagem de fundo com o token de auth e devolve um object URL
+// (necessário porque <img>/Image não envia headers Authorization).
+async function fetchBgAsObjectUrl(url: string, idToken: string): Promise<string> {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
+  if (!res.ok) throw new Error("Erro ao gerar imagem de fundo");
+  return URL.createObjectURL(await res.blob());
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,6 +242,7 @@ function roundRect(
 
 export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { user } = useAppAuth();
 
   const [form, setForm] = useState<FormState>({
     tipo: "Culto Domingo",
@@ -260,6 +270,8 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
 
   const generate = useCallback(async (newSeed?: number) => {
     if (!form.tema.trim()) return;
+    if (!user) { setStatus("error"); setErrorMsg("Faça login para gerar banners"); return; }
+    const idToken = await user.getIdToken();
     const useSeed = newSeed ?? seed;
     setStatus("generating-copy");
     setErrorMsg("");
@@ -269,7 +281,7 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
     try {
       const res = await fetch("/api/media/banner-copy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           tipo: form.tipo,
           tema: form.tema,
@@ -292,7 +304,6 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
     setStatus("generating-bg");
     const bgPrompt = `evangelical church worship service, ${form.tema}, ${form.estilo}, dramatic lighting, abstract artistic background, dark moody atmosphere, professional photography, no text, cinematic`;
     const bgProxyUrl = `/api/media/bg-proxy?prompt=${encodeURIComponent(bgPrompt)}&w=1080&h=${form.formato === "story" ? 1920 : 1080}&seed=${useSeed}`;
-    setBgUrl(bgProxyUrl);
 
     // Step 3 — draw canvas
     setStatus("drawing");
@@ -300,30 +311,36 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
     if (!canvas) { setStatus("error"); setErrorMsg("Canvas não encontrado"); return; }
 
     try {
-      await drawBanner(canvas, bgProxyUrl, bannerCopy, form, photoDataUrl, churchName);
+      const bgObjectUrl = await fetchBgAsObjectUrl(bgProxyUrl, idToken);
+      setBgUrl(bgObjectUrl);
+      await drawBanner(canvas, bgObjectUrl, bannerCopy, form, photoDataUrl, churchName);
       setStatus("done");
     } catch (e) {
       setStatus("error");
       setErrorMsg(e instanceof Error ? e.message : "Erro ao compor banner");
     }
-  }, [form, photoDataUrl, seed, churchName]);
+  }, [form, photoDataUrl, seed, churchName, user]);
 
-  const regenerateBg = useCallback(() => {
+  const regenerateBg = useCallback(async () => {
     const newSeed = Math.floor(Math.random() * 9999);
     setSeed(newSeed);
-    if (copy) {
+    if (copy && user) {
       setStatus("generating-bg");
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const idToken = await user.getIdToken();
       const bgPrompt = `evangelical church worship service, ${form.tema}, ${form.estilo}, dramatic lighting, abstract artistic background, dark moody atmosphere, professional photography, no text, cinematic`;
       const bgProxyUrl = `/api/media/bg-proxy?prompt=${encodeURIComponent(bgPrompt)}&w=1080&h=${form.formato === "story" ? 1920 : 1080}&seed=${newSeed}`;
-      setBgUrl(bgProxyUrl);
       setStatus("drawing");
-      drawBanner(canvas, bgProxyUrl, copy, form, photoDataUrl, churchName)
+      fetchBgAsObjectUrl(bgProxyUrl, idToken)
+        .then((bgObjectUrl) => {
+          setBgUrl(bgObjectUrl);
+          return drawBanner(canvas, bgObjectUrl, copy, form, photoDataUrl, churchName);
+        })
         .then(() => setStatus("done"))
         .catch((e) => { setStatus("error"); setErrorMsg(e.message); });
     }
-  }, [copy, form, photoDataUrl, churchName]);
+  }, [copy, form, photoDataUrl, churchName, user]);
 
   const download = () => {
     const canvas = canvasRef.current;

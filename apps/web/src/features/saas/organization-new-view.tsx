@@ -90,7 +90,8 @@ export function OrganizationNewView() {
     }
 
     const now = new Date().toISOString();
-    const organization: Organization = {
+    const organization: Organization & { ownerUid: string } = {
+      ownerUid: user.uid,
       id: organizationId,
       name: displayName,
       displayName,

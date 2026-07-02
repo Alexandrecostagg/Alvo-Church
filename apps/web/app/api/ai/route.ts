@@ -11,6 +11,7 @@ import {
   type AbsenceMessageInput,
   type PastoralSuggestionInput
 } from "@alvo/ai";
+import { verifyFirebaseIdToken } from "../_lib/verify-auth";
 
 type AiTask =
   | "cell_script"
@@ -20,6 +21,11 @@ type AiTask =
   | "pastoral_suggestion";
 
 export async function POST(req: NextRequest) {
+  const uid = await verifyFirebaseIdToken(req);
+  if (!uid) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "Groq API key não configurada" }, { status: 500 });

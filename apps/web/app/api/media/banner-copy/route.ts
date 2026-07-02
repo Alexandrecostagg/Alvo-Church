@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -19,6 +20,11 @@ export interface BannerCopy {
 }
 
 export async function POST(req: NextRequest) {
+  const uid = await verifyFirebaseIdToken(req);
+  if (!uid) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "GROQ_API_KEY não configurada" }, { status: 500 });

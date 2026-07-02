@@ -17,11 +17,15 @@ export interface AiApiResponse {
 export async function callAiTask(
   baseUrl: string,
   task: AiTask,
-  input: unknown
+  input: unknown,
+  idToken?: string
 ): Promise<string> {
   const res = await fetch(`${baseUrl}/api/ai`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ task, input })
   });
 
