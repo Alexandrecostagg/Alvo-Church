@@ -382,7 +382,10 @@ export function CareRadarView() {
                 return (
                   <div key={r.id} style={itemRowStyle}>
                     <div style={{ flex: 1 }}>
-                      <p style={itemNameStyle}>{r.personName}</p>
+                      <p style={itemNameStyle}>
+                        {r.personName}
+                        {r.isPublic && <span style={publicBadgeStyle}>Mural · {r.prayerCount ?? 0} orações</span>}
+                      </p>
                       <p style={itemDetailStyle}>"{r.message}" · há {r.days} dia{r.days === 1 ? "" : "s"}</p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -842,4 +845,16 @@ const resolveBtnStyle: React.CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   whiteSpace: "nowrap",
+};
+
+const publicBadgeStyle: React.CSSProperties = {
+  marginLeft: 8,
+  padding: "2px 8px",
+  borderRadius: 6,
+  fontSize: 10,
+  fontWeight: 700,
+  background: "#EEEDFE",
+  color: "#3C3489",
+  textTransform: "uppercase",
+  letterSpacing: 0.3,
 };

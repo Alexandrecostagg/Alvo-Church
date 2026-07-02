@@ -13,6 +13,7 @@ import {
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,9 +22,11 @@ import {
 import {
   addPrayerRequest,
   fetchOrganizationBySlug,
+  fetchPublicPrayerWall,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
   fetchGroups,
+  incrementPrayerCount,
   isFirebaseWebRuntimeConfigured,
   registerWithFirebaseMobileEmailPassword,
   sendPasswordResetEmailMobile,
@@ -32,7 +35,7 @@ import {
   subscribeToFirebaseMobileAuthState,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, TenantRuntimeSnapshot } from "@alvo/types";
+import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -620,6 +623,23 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
   const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false); const [prayerSending, setPrayerSending] = useState(false);
+  const [prayerPublic, setPrayerPublic] = useState(false);
+  const [wall, setWall] = useState<PrayerRequest[]>([]);
+  const [wallLoading, setWallLoading] = useState(true);
+  const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
+
+  async function loadWall() {
+    try {
+      const items = await fetchPublicPrayerWall(firebaseConfig, { organizationId: orgId }, 50);
+      setWall(items);
+    } catch {
+      // silencioso — mural é conteúdo secundário, não deve travar a tela
+    } finally {
+      setWallLoading(false);
+    }
+  }
+
+  useEffect(() => { if (orgId) void loadWall(); }, [orgId]);
 
   async function submitPrayer() {
     const text = prayer.trim();
@@ -630,13 +650,28 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
         personName: user.displayName ?? user.email ?? "Membro",
         phone: user.phoneNumber ?? undefined,
         message: text,
-        source: "app"
+        source: "app",
+        isPublic: prayerPublic
       });
       setPrayerSent(true);
+      if (prayerPublic) void loadWall();
     } catch {
       Alert.alert("Não foi possível enviar", "Verifique sua conexão e tente novamente.");
     } finally {
       setPrayerSending(false);
+    }
+  }
+
+  async function prayFor(id: string) {
+    if (prayedIds.has(id)) return;
+    setPrayedIds(prev => new Set(prev).add(id));
+    setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: r.prayerCount + 1 } : r));
+    try {
+      await incrementPrayerCount(firebaseConfig, { organizationId: orgId }, id);
+    } catch {
+      // reverte silenciosamente se falhar
+      setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: Math.max(0, r.prayerCount - 1) } : r));
+      setPrayedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
     }
   }
 
@@ -703,10 +738,35 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
               ? <View style={s.row}><Text style={{ fontSize: 22 }}>🙏</Text><Text style={[s.cardMeta, { flex: 1, marginLeft: 8 }]}>Pedido enviado! Sua liderança irá orar por você.</Text></View>
               : <>
                 <TextInput style={s.prayerInput} value={prayer} onChangeText={setPrayer} placeholder="Escreva seu pedido de oração..." placeholderTextColor="#9ca3af" multiline numberOfLines={4} textAlignVertical="top" />
+                <View style={[s.row, { marginTop: 12, justifyContent: "space-between" }]}>
+                  <Text style={[s.cardMeta, { flex: 1, marginRight: 8 }]}>Compartilhar no mural da igreja, para outros orarem junto</Text>
+                  <Switch value={prayerPublic} onValueChange={setPrayerPublic} trackColor={{ true: primary }} />
+                </View>
                 <Btn label="Enviar pedido" onPress={submitPrayer} loading={prayerSending} color={primary} style={{ marginTop: 12 }} />
               </>
             }
           </View>
+
+          <Text style={s.sectionTitle}>Mural de Oração</Text>
+          {wallLoading && <LoadingRow primary={primary} label="Carregando mural..." />}
+          {!wallLoading && wall.length === 0 && (
+            <EmptyState icon="🙏" title="Mural vazio" sub="Quando alguém compartilhar um pedido publicamente, ele aparece aqui para a comunidade orar junto." />
+          )}
+          {wall.map(r => (
+            <View key={r.id} style={s.card}>
+              <Text style={s.cardTitle}>{r.personName}</Text>
+              <Text style={[s.cardMeta, { marginTop: 4, marginBottom: 10 }]}>{r.message}</Text>
+              <TouchableOpacity
+                style={[s.chip, prayedIds.has(r.id) && { backgroundColor: primary }]}
+                onPress={() => prayFor(r.id)}
+                disabled={prayedIds.has(r.id)}
+              >
+                <Text style={[s.chipText, prayedIds.has(r.id) && { color: "#fff" }]}>
+                  🙏 {prayedIds.has(r.id) ? "Você orou" : "Orar por isso"} · {r.prayerCount}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </>
       )}
     </ScrollView>

@@ -1259,5 +1259,9 @@ export interface PrayerRequest {
   createdAt: string;
   respondedAt?: string;
   respondedByUserId?: string;
+  // Mural de oração: quando true, o pedido fica visível para outros membros
+  // orarem junto (sem exigir acompanhamento pastoral). Padrão é privado.
+  isPublic: boolean;
+  prayerCount: number;
 }
 

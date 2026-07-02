@@ -134,17 +134,32 @@ service cloud.firestore {
     }
 
     // Prayer requests: any signed-in tenant member can submit one (from the
-    // app or reception), but only pastoral staff can read/triage/resolve them.
+    // app or reception). Pastoral staff can read/triage/resolve all of them;
+    // regular members can only read ones the author opted to make public
+    // (the community prayer wall), and may only bump the prayer counter.
     match /organizations/{orgId}/prayerRequests/{requestId} {
       allow create: if isTenantMember(orgId)
         && request.resource.data.organizationId == orgId
         && request.resource.data.status == "open"
+        && request.resource.data.isPublic is bool
+        && request.resource.data.prayerCount == 0
         && request.resource.data.message is string
         && request.resource.data.message.size() >= 1
         && request.resource.data.message.size() <= 2000
         && request.resource.data.personName is string
         && request.resource.data.personName.size() <= 160;
-      allow read, update: if isTenantAdmin(orgId);
+
+      allow read: if isTenantAdmin(orgId)
+        || (isTenantMember(orgId) && resource.data.isPublic == true);
+
+      allow update: if isTenantAdmin(orgId)
+        || (
+          isTenantMember(orgId)
+          && resource.data.isPublic == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["prayerCount"])
+          && request.resource.data.prayerCount == resource.data.prayerCount + 1
+        );
+
       allow delete: if isTenantAdmin(orgId);
     }
 

@@ -2989,15 +2989,38 @@ export async function fetchPrayerRequests(
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrayerRequest));
 }
 
+// Mural de oração: pedidos que o próprio autor optou por tornar públicos.
+// Membros comuns não têm permissão de leitura em prayerRequests em geral,
+// só nos que satisfazem isPublic == true (ver firestore.rules).
+export async function fetchPublicPrayerWall(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 100
+): Promise<PrayerRequest[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getPrayerRequestsCollectionPath(context)),
+    where("isPublic", "==", true),
+    orderBy("createdAt", "desc"),
+    limit(maxItems)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrayerRequest));
+}
+
 export async function addPrayerRequest(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  request: Omit<PrayerRequest, "id" | "organizationId" | "createdAt" | "status">
+  request: Omit<PrayerRequest, "id" | "organizationId" | "createdAt" | "status" | "prayerCount" | "isPublic"> & {
+    isPublic?: boolean;
+  }
 ): Promise<string> {
   const firestore = getFirebaseFirestore(config);
   const ref = doc(collection(firestore, getPrayerRequestsCollectionPath(context)));
   const record: PrayerRequest = {
     ...request,
+    isPublic: request.isPublic ?? false,
+    prayerCount: 0,
     id: ref.id,
     organizationId: context.organizationId,
     status: "open",
@@ -3005,6 +3028,17 @@ export async function addPrayerRequest(
   };
   await setDoc(ref, cleanFirestoreData(record));
   return ref.id;
+}
+
+export async function incrementPrayerCount(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  requestId: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await updateDoc(doc(firestore, getPrayerRequestsCollectionPath(context), requestId), {
+    prayerCount: increment(1)
+  });
 }
 
 export async function updatePrayerRequestStatus(
