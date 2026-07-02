@@ -46,6 +46,16 @@ service cloud.firestore {
         && get(orgDocPath(orgId)).data.ownerUid == request.auth.uid;
     }
 
+    // Slug lookup for public forms: single-doc get only (no listing),
+    // exposes just the slug -> organizationId mapping.
+    match /org_slugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+      // Slugs are provisioned via console/admin tooling only; open write
+      // would let any account hijack another church's public form.
+      allow write: if false;
+    }
+
     // Organization root document: creatable once by its owner, managed by admins.
     match /organizations/{orgId} {
       allow get: if isTenantMember(orgId) || isOrgOwner(orgId);
@@ -94,6 +104,33 @@ service cloud.firestore {
       allow read: if isTenantAdmin(orgId)
         || (isTenantMember(orgId) && resource.data.userId == request.auth.uid);
       allow write: if isTenantAdmin(orgId);
+    }
+
+    // Public visitor form: unauthenticated create with strict shape and
+    // size validation. Reads/updates stay restricted to the tenant team.
+    match /organizations/{orgId}/visitorIntakes/{intakeId} {
+      allow create: if request.resource.data.source == "public_form"
+        && request.resource.data.status == "captured"
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.keys().hasOnly([
+          "organizationId", "name", "phone", "email", "birthDate",
+          "neighborhood", "firstVisit", "howHeard", "consentMarketing",
+          "source", "status", "orgSlug", "createdAt"
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.phone.size() <= 14
+        && request.resource.data.firstVisit is bool
+        && request.resource.data.consentMarketing is bool
+        && (request.resource.data.email == null || (request.resource.data.email is string && request.resource.data.email.size() <= 160))
+        && (request.resource.data.birthDate == null || (request.resource.data.birthDate is string && request.resource.data.birthDate.size() <= 10))
+        && (request.resource.data.neighborhood == null || (request.resource.data.neighborhood is string && request.resource.data.neighborhood.size() <= 120))
+        && (request.resource.data.howHeard == null || (request.resource.data.howHeard is string && request.resource.data.howHeard.size() <= 200));
+      allow read: if isTenantMember(orgId);
+      allow update, delete: if isTenantAdmin(orgId);
     }
 
     // Generic tenant collections (one level deep), excluding the

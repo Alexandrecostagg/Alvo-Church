@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getFirebaseFirestore,
-  getVisitorIntakesCollectionPath,
-  getPeopleCollectionPath,
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-} from "@alvo/firebase";
 
-function buildFirebaseConfig() {
-  return {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
-  };
+// Formulário público de visitantes: cria SOMENTE um visitorIntake com os
+// dados do formulário, via API REST do Firestore (o SDK client não roda bem
+// no runtime do Cloudflare Worker). A conversão para um registro em `people`
+// (com dedup por telefone) é feita pela equipe de recepção, autenticada.
+// As regras do Firestore validam campos, tipos e tamanhos deste create.
+
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
+
+function firestoreUrl(path: string) {
+  return `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`;
+}
+
+type FirestoreValue =
+  | { stringValue: string }
+  | { booleanValue: boolean }
+  | { nullValue: null }
+  | { timestampValue: string };
+
+function str(value: string): FirestoreValue { return { stringValue: value }; }
+function optStr(value: string | undefined | null, max: number): FirestoreValue {
+  return value ? { stringValue: value.slice(0, max) } : { nullValue: null };
 }
 
 export async function POST(req: NextRequest) {
@@ -42,62 +43,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "orgSlug, name e phone são obrigatórios." }, { status: 400 });
     }
 
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10) {
+    if (typeof name !== "string" || name.trim().length < 2 || name.length > 120) {
+      return NextResponse.json({ error: "Nome inválido." }, { status: 400 });
+    }
+
+    const digits = String(phone).replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 14) {
       return NextResponse.json({ error: "Telefone inválido." }, { status: 400 });
     }
 
-    const config = buildFirebaseConfig();
-    const db = getFirebaseFirestore(config);
-    const now = serverTimestamp();
-
-    // Resolve orgSlug → organizationId
-    const slugRef = doc(db, "org_slugs", orgSlug);
-    const slugSnap = await getDoc(slugRef);
-    const organizationId: string = slugSnap.exists()
-      ? String(slugSnap.data()["organizationId"])
-      : orgSlug;
-
-    const tenantCtx = { organizationId };
-    const peopleColPath = getPeopleCollectionPath(tenantCtx);
-    const peopleCol = collection(db, peopleColPath);
-
-    // Dedup by phone
-    const dupSnap = await getDocs(query(peopleCol, where("phone", "==", digits)));
-    let personId: string;
-
-    if (!dupSnap.empty) {
-      personId = dupSnap.docs[0].id;
-    } else {
-      const personRef = doc(peopleCol);
-      personId = personRef.id;
-      await setDoc(personRef, {
-        name: name.trim(),
-        phone: digits,
-        email: email?.trim() || null,
-        birthDate: birthDate || null,
-        neighborhood: neighborhood?.trim() || null,
-        status: "visitor",
-        createdAt: now,
-        updatedAt: now,
-      });
+    // Resolve orgSlug → organizationId (org_slugs tem leitura pública por doc)
+    const slugRes = await fetch(firestoreUrl(`org_slugs/${encodeURIComponent(orgSlug)}`));
+    if (!slugRes.ok) {
+      return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
+    }
+    const slugDoc = (await slugRes.json()) as {
+      fields?: { organizationId?: { stringValue?: string } };
+    };
+    const organizationId = slugDoc.fields?.organizationId?.stringValue;
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
     }
 
-    // Create visitorIntake
-    const intakePath = getVisitorIntakesCollectionPath(tenantCtx);
-    const intakeRef = doc(collection(db, intakePath));
-    await setDoc(intakeRef, {
-      personId,
-      organizationId,
-      firstVisit,
-      howHeard: howHeard || null,
-      consentMarketing: consent,
-      source: "public_form",
-      orgSlug,
-      createdAt: now,
-    });
+    const createRes = await fetch(
+      firestoreUrl(`organizations/${encodeURIComponent(organizationId)}/visitorIntakes`),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fields: {
+            organizationId: str(organizationId),
+            name: str(name.trim()),
+            phone: str(digits),
+            email: optStr(email?.trim(), 160),
+            birthDate: optStr(birthDate, 10),
+            neighborhood: optStr(neighborhood?.trim(), 120),
+            firstVisit: { booleanValue: Boolean(firstVisit) },
+            howHeard: optStr(howHeard, 200),
+            consentMarketing: { booleanValue: Boolean(consent) },
+            source: str("public_form"),
+            status: str("captured"),
+            orgSlug: str(orgSlug),
+            createdAt: { timestampValue: new Date().toISOString() },
+          } satisfies Record<string, FirestoreValue>,
+        }),
+      }
+    );
 
-    return NextResponse.json({ ok: true, personId });
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      console.error("[public/visit] firestore create failed:", createRes.status, errText);
+      return NextResponse.json({ error: "Não foi possível registrar a visita." }, { status: 502 });
+    }
+
+    const created = (await createRes.json()) as { name?: string };
+    const intakeId = created.name?.split("/").pop() ?? "";
+
+    return NextResponse.json({ ok: true, intakeId });
   } catch (err) {
     console.error("[public/visit] error:", err);
     return NextResponse.json({ error: "Erro interno." }, { status: 500 });
