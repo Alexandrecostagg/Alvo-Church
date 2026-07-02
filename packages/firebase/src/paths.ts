@@ -241,3 +241,11 @@ export function getWeeklyThemesCollectionPath(context: TenantContext) {
 export function getMemberContributionsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/contributions`;
 }
+
+export function getChurchAttendanceCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/churchAttendance`;
+}
+
+export function getPrayerRequestsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/prayerRequests`;
+}

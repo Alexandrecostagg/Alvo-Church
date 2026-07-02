@@ -1230,3 +1230,34 @@ export interface MemberContribution {
   registeredAt: string;     // ISO datetime
 }
 
+// ─── Radar Pastoral: presença em culto ──────────────────────────────────────
+
+export interface ChurchAttendance {
+  id: string;
+  organizationId: string;
+  personId: string;
+  serviceDate: string;         // ISO date YYYY-MM-DD
+  serviceLabel?: string;       // ex: "Culto Domingo Manhã"
+  registeredByUserId?: string;
+  createdAt: string;
+}
+
+// ─── Radar Pastoral: pedidos de oração ──────────────────────────────────────
+
+export type PrayerRequestStatus = "open" | "in_progress" | "resolved";
+
+export interface PrayerRequest {
+  id: string;
+  organizationId: string;
+  personId?: string;
+  personName: string;
+  phone?: string;
+  message: string;
+  status: PrayerRequestStatus;
+  assignedToUserId?: string;
+  source: "public_form" | "app" | "reception";
+  createdAt: string;
+  respondedAt?: string;
+  respondedByUserId?: string;
+}
+

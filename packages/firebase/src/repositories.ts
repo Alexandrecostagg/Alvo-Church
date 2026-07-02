@@ -69,7 +69,10 @@ import type {
   MemberBadge,
   NetworkAffiliate,
   NetworkSnapshot,
-  MemberContribution
+  MemberContribution,
+  ChurchAttendance,
+  PrayerRequest,
+  PrayerRequestStatus
 } from "@alvo/types";
 import { getFirebaseWebApp, getFirebaseFirestore, type FirebaseWebRuntimeConfig } from "./client";
 import {
@@ -119,7 +122,9 @@ import {
   getBadgesCollectionPath,
   getMemberBadgesCollectionPath,
   getWeeklyThemesCollectionPath,
-  getMemberContributionsCollectionPath
+  getMemberContributionsCollectionPath,
+  getChurchAttendanceCollectionPath,
+  getPrayerRequestsCollectionPath
 } from "./paths";
 
 
@@ -2915,4 +2920,106 @@ export async function addMemberContribution(
   const ref = doc(collection(firestore, getMemberContributionsCollectionPath(context)));
   await setDoc(ref, cleanFirestoreData(contribution));
   return ref.id;
+}
+
+// ─── Radar Pastoral: presença em culto ─────────────────────────────────────
+
+export async function fetchChurchAttendance(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 1500
+): Promise<ChurchAttendance[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getChurchAttendanceCollectionPath(context)),
+    orderBy("serviceDate", "desc"),
+    limit(maxItems)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChurchAttendance));
+}
+
+export async function recordChurchAttendance(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    personIds: readonly string[];
+    serviceDate: string;
+    serviceLabel?: string;
+    registeredByUserId?: string;
+  }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const now = new Date().toISOString();
+  await Promise.all(
+    params.personIds.map((personId) => {
+      const id = `${params.serviceDate}_${personId}`;
+      const record: ChurchAttendance = {
+        id,
+        organizationId: context.organizationId,
+        personId,
+        serviceDate: params.serviceDate,
+        serviceLabel: params.serviceLabel,
+        registeredByUserId: params.registeredByUserId,
+        createdAt: now
+      };
+      return setDoc(
+        doc(firestore, getChurchAttendanceCollectionPath(context), id),
+        cleanFirestoreData(record),
+        { merge: true }
+      );
+    })
+  );
+}
+
+// ─── Radar Pastoral: pedidos de oração ─────────────────────────────────────
+
+export async function fetchPrayerRequests(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 300
+): Promise<PrayerRequest[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getPrayerRequestsCollectionPath(context)),
+    orderBy("createdAt", "desc"),
+    limit(maxItems)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrayerRequest));
+}
+
+export async function addPrayerRequest(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  request: Omit<PrayerRequest, "id" | "organizationId" | "createdAt" | "status">
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getPrayerRequestsCollectionPath(context)));
+  const record: PrayerRequest = {
+    ...request,
+    id: ref.id,
+    organizationId: context.organizationId,
+    status: "open",
+    createdAt: new Date().toISOString()
+  };
+  await setDoc(ref, cleanFirestoreData(record));
+  return ref.id;
+}
+
+export async function updatePrayerRequestStatus(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  params: {
+    requestId: string;
+    status: PrayerRequestStatus;
+    respondedByUserId?: string;
+  }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await updateDoc(doc(firestore, getPrayerRequestsCollectionPath(context), params.requestId), {
+    status: params.status,
+    respondedAt: new Date().toISOString(),
+    respondedByUserId: params.respondedByUserId ?? null
+  });
 }

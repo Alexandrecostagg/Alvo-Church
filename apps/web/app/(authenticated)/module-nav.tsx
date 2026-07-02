@@ -21,6 +21,7 @@ import {
   Map as MapIcon,
   MessageSquareText,
   Music,
+  Radar,
   Settings,
   ShieldCheck,
   Store,
@@ -66,6 +67,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") !== "1" },
         { label: "Painel Pastor", icon: Tv, href: "/reception?pastor=1", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") === "1" },
         { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") },
+        { label: "Radar Pastoral", icon: Radar, href: "/care-radar", match: (pathname) => pathname.startsWith("/care-radar") },
         { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },
       ]
     },
