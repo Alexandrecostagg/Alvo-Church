@@ -133,14 +133,31 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Prayer requests: any signed-in tenant member can submit one (from the
+    // app or reception), but only pastoral staff can read/triage/resolve them.
+    match /organizations/{orgId}/prayerRequests/{requestId} {
+      allow create: if isTenantMember(orgId)
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.status == "open"
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 1
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.personName is string
+        && request.resource.data.personName.size() <= 160;
+      allow read, update: if isTenantAdmin(orgId);
+      allow delete: if isTenantAdmin(orgId);
+    }
+
     // Generic tenant collections (one level deep), excluding the
     // privacy-sensitive collections handled above.
     match /organizations/{orgId}/{collection}/{documentId} {
       allow read: if isTenantMember(orgId)
         && collection != "contributions"
-        && collection != "users";
+        && collection != "users"
+        && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)
-        && collection != "users";
+        && collection != "users"
+        && collection != "prayerRequests";
     }
 
     // Nested subcollections (groups/{id}/members, events/{id}/tickets, ...).

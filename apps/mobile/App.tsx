@@ -19,6 +19,7 @@ import {
   View
 } from "react-native";
 import {
+  addPrayerRequest,
   fetchOrganizationBySlug,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
@@ -430,6 +431,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
+  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_esdras_demo";
 
   function push(screen: ModalScreen) { setModalStack(p => [...p, screen]); }
   function pop() { setModalStack(p => p.slice(0, -1)); }
@@ -458,7 +460,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         <View style={s.fill}>
           {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
-          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} onOpenLider={() => push("lider-celula")} />}
+          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
           {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
@@ -614,10 +616,29 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; onOpenLider: () => void }) {
+function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
   const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
   const [confirmed, setConfirmed] = useState(false);
-  const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false);
+  const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false); const [prayerSending, setPrayerSending] = useState(false);
+
+  async function submitPrayer() {
+    const text = prayer.trim();
+    if (!text || prayerSending) return;
+    setPrayerSending(true);
+    try {
+      await addPrayerRequest(firebaseConfig, { organizationId: orgId }, {
+        personName: user.displayName ?? user.email ?? "Membro",
+        phone: user.phoneNumber ?? undefined,
+        message: text,
+        source: "app"
+      });
+      setPrayerSent(true);
+    } catch {
+      Alert.alert("Não foi possível enviar", "Verifique sua conexão e tente novamente.");
+    } finally {
+      setPrayerSending(false);
+    }
+  }
 
   const announcements = [
     "Próxima reunião: confirme sua presença até amanhã.",
@@ -682,7 +703,7 @@ function CelulaTab({ groups, primary, dataReady, onOpenLider }: { groups: Group[
               ? <View style={s.row}><Text style={{ fontSize: 22 }}>🙏</Text><Text style={[s.cardMeta, { flex: 1, marginLeft: 8 }]}>Pedido enviado! Sua liderança irá orar por você.</Text></View>
               : <>
                 <TextInput style={s.prayerInput} value={prayer} onChangeText={setPrayer} placeholder="Escreva seu pedido de oração..." placeholderTextColor="#9ca3af" multiline numberOfLines={4} textAlignVertical="top" />
-                <Btn label="Enviar pedido" onPress={() => { if (prayer.trim()) setPrayerSent(true); }} color={primary} style={{ marginTop: 12 }} />
+                <Btn label="Enviar pedido" onPress={submitPrayer} loading={prayerSending} color={primary} style={{ marginTop: 12 }} />
               </>
             }
           </View>
