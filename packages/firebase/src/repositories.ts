@@ -16,7 +16,7 @@ import {
   type Firestore
 } from "firebase/firestore";
 import type { PlanId } from "./plans";
-import { PLAN_LIMITS, currentAiMonth } from "./plans";
+import { PLAN_LIMITS, currentAiMonth, planTierToPlanId } from "./plans";
 import type {
   WeeklyTheme,
   AppRole,
@@ -970,7 +970,11 @@ export async function provisionSelfServeOrganization(
   await Promise.all([
     saveOrganizationBrandingSettings(config, branding),
     saveOrganizationSubscriptionSettings(config, subscription),
-    saveOrganizationFeaturesSettings(config, features)
+    saveOrganizationFeaturesSettings(config, features),
+    // Grava o campo `plan` explicitamente — é o que fetchOrgPlan/PlanGuard
+    // realmente leem para liberar Tribos/Finanças/IA Pastoral. Sem isso a
+    // organização fica presa no tier "free" mesmo cadastrada no plano certo.
+    setOrgPlan(config, { organizationId }, "free")
   ]);
 }
 
@@ -2949,7 +2953,11 @@ export async function fetchOrgPlan(
   const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
   const snap = await getDoc(ref);
   if (!snap.exists()) return "free";
-  return (snap.data()?.plan as PlanId) ?? "free";
+  const data = snap.data();
+  // `plan` é o campo canônico lido pelo PlanGuard. Organizações provisionadas
+  // via organization-new-view.tsx / signup só gravam `planTier` — deriva
+  // PlanId a partir dele em vez de cair silenciosamente em "free".
+  return (data?.plan as PlanId) ?? planTierToPlanId(data?.planTier);
 }
 
 export async function setOrgPlan(

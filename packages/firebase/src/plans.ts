@@ -38,3 +38,20 @@ export function currentAiMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+// A ficha de assinatura (OrganizationSubscriptionSettings) usa uma taxonomia
+// de provisionamento ("planTier": base/growth/advanced/enterprise), enquanto
+// o gate de features em produção (PlanGuard/usePlan) usa PlanId. Nenhum
+// fluxo de criação de organização grava o campo `plan` que fetchOrgPlan lê —
+// esta função existe para derivar PlanId a partir do planTier já gravado,
+// como rede de segurança para organizações sem o campo `plan` explícito.
+export function planTierToPlanId(
+  planTier: "base" | "growth" | "advanced" | "enterprise" | undefined
+): PlanId {
+  switch (planTier) {
+    case "growth": return "comunidade";
+    case "advanced": return "pastoral";
+    case "enterprise": return "rede";
+    default: return "free";
+  }
+}

@@ -18,10 +18,12 @@ import {
 import {
   ensureTenantUserAccess,
   isFirebaseWebRuntimeConfigured,
+  planTierToPlanId,
   saveOrganizationBrandingSettings,
   saveOrganizationFeaturesSettings,
   saveOrganizationProfile,
-  saveOrganizationSubscriptionSettings
+  saveOrganizationSubscriptionSettings,
+  setOrgPlan
 } from "@alvo/firebase";
 import type {
   Organization,
@@ -174,6 +176,10 @@ export function OrganizationNewView() {
       await saveOrganizationBrandingSettings(firebaseConfig, branding);
       await saveOrganizationSubscriptionSettings(firebaseConfig, subscription);
       await saveOrganizationFeaturesSettings(firebaseConfig, features);
+      // fetchOrgPlan/PlanGuard leem o campo `plan`, não `planTier` — sem
+      // isto a organização fica presa no tier gratuito mesmo com o plano
+      // pago selecionado aqui.
+      await setOrgPlan(firebaseConfig, { organizationId }, planTierToPlanId(selectedPlanTier));
 
       setStatus(`${displayName} criada em organizations/${organizationId}.`);
       formElement.reset();
