@@ -64,7 +64,7 @@ export function OrganizationNewView() {
   const [primaryColor, setPrimaryColor] = useState("#06b6d4");
 
   const planConfig = planDefaults[planTier];
-  const publicUrl = `${slug || "sua-unidade"}.getro.app`;
+  const publicUrl = `${slug || "sua-unidade"}.esdras.app`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,19 +109,19 @@ export function OrganizationNewView() {
     const branding: OrganizationBrandingSettings = {
       organizationId,
       brandMode,
-      publicProductName: getFormValue(form, "productName") || "Getro Church",
-      publicShortName: getFormValue(form, "shortName") || "Getro",
+      publicProductName: getFormValue(form, "productName") || "Plataforma Esdras",
+      publicShortName: getFormValue(form, "shortName") || "Esdras",
       primaryColor: getFormValue(form, "primaryColor") || "#06b6d4",
       secondaryColor: "#1c2433",
       accentColor: "#e8dcc7",
       surfaceColor: "#f7f3ea",
       textColor: "#1c2433",
       showPoweredByAlvo: Boolean(form.get("showPoweredByAlvo")),
-      poweredByLabel: "by Getro"
+      poweredByLabel: "by Esdras"
     };
     const subscription: OrganizationSubscriptionSettings = {
       organizationId,
-      planCode: `getro-${selectedPlanTier}`,
+      planCode: `esdras-${selectedPlanTier}`,
       planTier: selectedPlanTier,
       billingCycle,
       memberRange,
@@ -229,7 +229,7 @@ export function OrganizationNewView() {
                 Nome da Igreja/Unidade
                 <input
                   name="displayName"
-                  placeholder="Igreja Alvo Sul"
+                  placeholder="Igreja Esdras Sul"
                   required
                   value={displayName}
                   onChange={(event) => {
@@ -253,11 +253,11 @@ export function OrganizationNewView() {
             <div className="form-row">
               <label>
                 Nome público
-                <input name="publicName" placeholder="Alvo Sul" defaultValue={displayName} />
+                <input name="publicName" placeholder="Esdras Sul" defaultValue={displayName} />
               </label>
               <label>
                 Razão social
-                <input name="legalName" placeholder="Igreja Alvo Sul LTDA" />
+                <input name="legalName" placeholder="Igreja Esdras Sul LTDA" />
               </label>
             </div>
             <div className="form-row">
@@ -368,11 +368,11 @@ export function OrganizationNewView() {
             <div className="form-row">
               <label>
                 Nome do Produto
-                <input name="productName" defaultValue="Alvo Church" />
+                <input name="productName" defaultValue="Plataforma Esdras" />
               </label>
               <label>
                 Nome curto
-                <input name="shortName" defaultValue="Getro" />
+                <input name="shortName" defaultValue="Esdras" />
               </label>
             </div>
             <div className="form-row">
@@ -392,7 +392,7 @@ export function OrganizationNewView() {
                   value={brandMode}
                   onChange={(event) => setBrandMode(event.target.value as OrganizationBrandingSettings["brandMode"])}
                 >
-                  <option value="alvo_managed">Marca Alvo Standard</option>
+                  <option value="alvo_managed">Marca Esdras Standard</option>
                   <option value="co_branded">Co-branded (Recomendado)</option>
                   <option value="white_label">White-label Premium</option>
                 </select>
@@ -400,11 +400,11 @@ export function OrganizationNewView() {
             </div>
             <label className="check-row org-check-row">
               <input name="showPoweredByAlvo" type="checkbox" defaultChecked />
-              <span>Exibir selo “by Getro” no rodapé público</span>
+              <span>Exibir selo “by Esdras” no rodapé público</span>
             </label>
             <div className="brand-preview" style={{ "--preview-color": primaryColor } as CSSProperties}>
               <Sparkles size={18} />
-              <span>{brandMode === "white_label" ? "White-label premium" : brandMode === "co_branded" ? "Co-branded recomendado" : "Marca Alvo standard"}</span>
+              <span>{brandMode === "white_label" ? "White-label premium" : brandMode === "co_branded" ? "Co-branded recomendado" : "Marca Esdras standard"}</span>
             </div>
           </fieldset>
         </div>

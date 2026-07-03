@@ -105,7 +105,7 @@ export function TribesView() {
       {/* Stats row */}
       <div className="stats-row">
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary)" }}>
+          <div className="stat-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent)" }}>
             <Tent size={18} />
           </div>
           <div className="stat-body">
@@ -144,7 +144,7 @@ export function TribesView() {
 
       {/* Banner de classificação automática */}
       <div className="tribes-ai-banner">
-        <Bot size={16} style={{ color: "var(--getro-primary)", flexShrink: 0 }} />
+        <Bot size={16} style={{ color: "var(--alvo-accent)", flexShrink: 0 }} />
         <div>
           <strong>Classificação automática por IA</strong>
           <span>
@@ -170,7 +170,7 @@ export function TribesView() {
                 className="tribe-card"
                 onClick={() => setSelectedTribe(isSelected ? null : tribe.code as TribeCode)}
                 style={{
-                  borderColor: isSelected ? tribe.accent.main : "var(--alvo-border)",
+                  borderColor: isSelected ? tribe.accent.main : "var(--alvo-line)",
                   background: isSelected
                     ? `linear-gradient(135deg, ${tribe.accent.soft}, white)`
                     : "var(--alvo-surface)",
@@ -231,7 +231,7 @@ export function TribesView() {
 
           {selectedTribeData.memberCount === 0 ? (
             <div className="empty-state" style={{ padding: "32px 0" }}>
-              <UsersRound size={32} style={{ color: "var(--alvo-border)", margin: "0 auto 12px" }} />
+              <UsersRound size={32} style={{ color: "var(--alvo-line)", margin: "0 auto 12px" }} />
               <p style={{ color: "var(--alvo-ink-soft)", textAlign: "center" }}>
                 Nenhum membro classificado nesta tribo ainda.
               </p>
@@ -260,7 +260,7 @@ export function TribesView() {
                       + {person.tribeSecondaryCode}
                     </span>
                   )}
-                  <ChevronRight size={14} style={{ color: "var(--alvo-border)", marginLeft: "auto" }} />
+                  <ChevronRight size={14} style={{ color: "var(--alvo-line)", marginLeft: "auto" }} />
                 </Link>
               ))}
             </div>
@@ -326,7 +326,7 @@ export function TribesView() {
           align-items: center;
           gap: 8px;
           background: var(--alvo-surface);
-          border: 1px solid var(--alvo-border);
+          border: 1px solid var(--alvo-line);
           border-radius: 10px;
           padding: 8px 12px;
           width: 220px;
@@ -343,8 +343,8 @@ export function TribesView() {
           display: flex;
           align-items: flex-start;
           gap: 10px;
-          background: var(--getro-primary-softer);
-          border: 1px solid var(--getro-primary-soft);
+          background: var(--alvo-accent-soft);
+          border: 1px solid var(--alvo-accent-soft);
           border-radius: 12px;
           padding: 12px 16px;
           font-size: 13px;
@@ -389,11 +389,11 @@ export function TribesView() {
           align-items: center;
           gap: 6px;
           padding-top: 8px;
-          border-top: 1px solid var(--alvo-border);
+          border-top: 1px solid var(--alvo-line);
         }
         .tribe-detail-panel {
           background: var(--alvo-surface);
-          border: 1px solid var(--alvo-border);
+          border: 1px solid var(--alvo-line);
           border-radius: 14px;
           padding: 20px;
           display: flex;
@@ -452,7 +452,7 @@ export function TribesView() {
           font-weight: 700;
           color: var(--alvo-ink-soft);
           background: var(--alvo-surface-muted);
-          border: 1px solid var(--alvo-border);
+          border: 1px solid var(--alvo-line);
           border-radius: 6px;
           padding: 2px 6px;
         }
@@ -467,7 +467,7 @@ export function TribesView() {
           gap: 12px;
           padding: 10px 12px;
           border-radius: 10px;
-          border: 1px solid var(--alvo-border);
+          border: 1px solid var(--alvo-line);
           background: var(--alvo-surface);
         }
       `}</style>

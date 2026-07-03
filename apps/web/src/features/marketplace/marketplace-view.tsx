@@ -86,7 +86,7 @@ export function MarketplaceView() {
             Economia Solidária
           </div>
           <h1>Marketplace da Comunidade</h1>
-          <p>Apoie os empreendimentos dos nossos membros e aproveite descontos exclusivos com seu Getro Pass.</p>
+          <p>Apoie os empreendimentos dos nossos membros e aproveite descontos exclusivos com seu Esdras Passe.</p>
         </div>
 
         <div className="search-bar-container">
@@ -143,7 +143,7 @@ export function MarketplaceView() {
                   )}
                   {business.isMemberBusiness && (
                     <span className="member-badge">
-                      <BadgeCheck size={14} /> Membro Alvo
+                      <BadgeCheck size={14} /> Membro Esdras
                     </span>
                   )}
                 </div>

@@ -11,7 +11,7 @@ interface GroupBannerViewProps {
 }
 
 const COLOR_THEMES = [
-  { name: "Alvo Classic (Laranja)", primary: "#d27836", secondary: "#1c2433", text: "#ffffff", accent: "#f7f3ea" },
+  { name: "Esdras Classic (Laranja)", primary: "#d27836", secondary: "#1c2433", text: "#ffffff", accent: "#f7f3ea" },
   { name: "Sleek Emerald (Verde)", primary: "#10b981", secondary: "#064e3b", text: "#ffffff", accent: "#ecfdf5" },
   { name: "Deep Ruby (Vermelho)", primary: "#dc2626", secondary: "#450a0a", text: "#ffffff", accent: "#fef2f2" },
   { name: "Royal Purple (Roxo)", primary: "#8b5cf6", secondary: "#2e1065", text: "#ffffff", accent: "#faf5ff" },
@@ -79,7 +79,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.lineWidth = 4;
     ctx.strokeRect(30, 30, width - 60, height - 60);
 
-    // 4. Marca D'Água / Logo da Igreja Estilizada Alvo
+    // 4. Marca D'Água / Logo da Igreja Estilizada Esdras
     ctx.textAlign = "center";
     ctx.fillStyle = theme.primary;
     ctx.font = "bold 28px Outfit, sans-serif";
@@ -219,7 +219,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
             <ArrowLeft size={14} style={{ marginRight: 6 }} />
             Voltar para Células
           </Link>
-          <p className="eyebrow" style={{ color: theme.primary }}>Alvo Canvas Engine</p>
+          <p className="eyebrow" style={{ color: theme.primary }}>Esdras Canvas Engine</p>
           <h1>Gerador de Banners de Células</h1>
           <p>
             Crie panfletos dinâmicos profissionais para WhatsApp e Instagram em 1 clique.

@@ -1141,7 +1141,7 @@ export interface WorshipSetlist {
   updatedAt: string;
 }
 
-// Alvo Canvas (Banners de Células)
+// Esdras Canvas (Banners de Células)
 export interface GroupBannerConfig {
   id: string;
   organizationId: string;
@@ -1162,7 +1162,7 @@ export interface Course {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  badgeUnlockedId?: string; // Destrava Badge do Alvo Journeys ao concluir
+  badgeUnlockedId?: string; // Destrava Badge do Esdras Journeys ao concluir
   isActive: boolean;
   createdAt: string;
 }

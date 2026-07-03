@@ -85,7 +85,7 @@ export function MembersView() {
     ["member", "leader", "volunteer"].includes(person.memberStatus)
   );
   const visitors = people.filter((person) => person.memberStatus === "visitor");
-  const getroPassEnabled = people.filter((person) => person.partnerBenefitsEnabled);
+  const esdrasPassEnabled = people.filter((person) => person.partnerBenefitsEnabled);
   const ungroupedPeople = people.filter((person) => !person.primaryFamilyId);
   const peopleWithProtectedData = people.filter(
     (person) => person.cpf || person.birthDate || person.householdIncomeRange
@@ -129,7 +129,7 @@ export function MembersView() {
     },
     {
       label: "04",
-      title: "Liberar Getro Pass",
+      title: "Liberar Esdras Passe",
       detail: "Habilite beneficios externos sem expor CPF, renda ou historico pastoral.",
       href: "/members/new"
     }
@@ -145,7 +145,7 @@ export function MembersView() {
         <h1>Membros, familias e aspirantes</h1>
         <p>
           Visao operacional para lideres acompanharem pessoas, casas, visitantes em
-          transicao e elegibilidade para Getro Pass.
+          transicao e elegibilidade para Esdras Passe.
         </p>
         <div className="directory-actions">
           <Link className="primary-button" href="/members/new">
@@ -194,7 +194,7 @@ export function MembersView() {
             </div>
             <div>
               <span>Pass externo</span>
-              <strong>{getroPassEnabled.length}</strong>
+              <strong>{esdrasPassEnabled.length}</strong>
               <p>podem se identificar em parceiros</p>
             </div>
           </div>
@@ -218,8 +218,8 @@ export function MembersView() {
           <p>visitantes em transicao</p>
         </article>
         <article>
-          <span>Getro Pass</span>
-          <strong>{getroPassEnabled.length}</strong>
+          <span>Esdras Passe</span>
+          <strong>{esdrasPassEnabled.length}</strong>
           <p>pessoas habilitadas</p>
         </article>
       </section>
@@ -262,9 +262,9 @@ export function MembersView() {
               </select>
             </label>
             <label>
-              Getro Pass
+              Esdras Passe
               <select
-                aria-label="Filtrar por Getro Pass"
+                aria-label="Filtrar por Esdras Passe"
                 onChange={(event) => setPassFilter(event.target.value)}
                 value={passFilter}
               >
@@ -290,7 +290,7 @@ export function MembersView() {
                     </small>
                   </div>
                   <span className={person.partnerBenefitsEnabled ? "pass-status on" : "pass-status"}>
-                    {person.partnerBenefitsEnabled ? "Getro Pass" : "Interno"}
+                    {person.partnerBenefitsEnabled ? "Esdras Passe" : "Interno"}
                   </span>
                   <small className="row-action">Abrir ficha</small>
                 </Link>

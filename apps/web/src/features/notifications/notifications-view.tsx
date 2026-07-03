@@ -198,9 +198,9 @@ export function NotificationsView() {
           <button key={f} onClick={() => setFilter(f)}
             style={{
               padding: "6px 14px", borderRadius: 8, border: "1.5px solid",
-              borderColor: filter === f ? "var(--getro-primary-dark)" : "var(--alvo-border)",
-              background: filter === f ? "var(--getro-primary-softer)" : "transparent",
-              color: filter === f ? "var(--getro-primary-dark)" : "var(--alvo-ink-soft)",
+              borderColor: filter === f ? "var(--alvo-accent-dark)" : "var(--alvo-line)",
+              background: filter === f ? "var(--alvo-accent-soft)" : "transparent",
+              color: filter === f ? "var(--alvo-accent-dark)" : "var(--alvo-ink-soft)",
               fontSize: 13, fontWeight: 600, cursor: "pointer",
             }}
           >
@@ -213,7 +213,7 @@ export function NotificationsView() {
       <section className="content-section" style={{ padding: 0, overflow: "hidden" }}>
         {visible.length === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center" }}>
-            <Bell size={32} style={{ color: "var(--alvo-border)", marginBottom: 12 }} />
+            <Bell size={32} style={{ color: "var(--alvo-line)", marginBottom: 12 }} />
             <p style={{ color: "var(--alvo-ink-soft)", fontSize: 14, margin: 0 }}>
               {filter === "unread" ? "Nenhuma notificação não lida." : "Nenhuma notificação."}
             </p>
@@ -230,7 +230,7 @@ export function NotificationsView() {
               style={{
                 display: "flex", alignItems: "flex-start", gap: 14,
                 padding: "14px 18px",
-                borderBottom: i < visible.length - 1 ? "1px solid var(--alvo-border)" : "none",
+                borderBottom: i < visible.length - 1 ? "1px solid var(--alvo-line)" : "none",
                 background: n.read ? "transparent" : "var(--alvo-surface-muted)",
                 textDecoration: "none", cursor: n.href ? "pointer" : "default",
                 transition: "background 0.15s",
@@ -249,7 +249,7 @@ export function NotificationsView() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>{n.time}</span>
                     {!n.read && (
-                      <div style={{ width: 8, height: 8, borderRadius: 4, background: "var(--getro-primary-dark)", flexShrink: 0 }} />
+                      <div style={{ width: 8, height: 8, borderRadius: 4, background: "var(--alvo-accent-dark)", flexShrink: 0 }} />
                     )}
                   </div>
                 </div>

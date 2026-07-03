@@ -85,7 +85,7 @@ export default function PublicGivePage() {
 
   function generatePix() {
     if (!amount || Number(amount) <= 0) return;
-    const key = pixKey || "demo@pix.alvo";
+    const key = pixKey || "demo@pix.esdras";
     const payload = buildPixPayload({
       key,
       receiverName: pixName,
@@ -97,7 +97,7 @@ export default function PublicGivePage() {
   }
 
   async function copyKey() {
-    await navigator.clipboard.writeText(pixKey || "demo@pix.alvo");
+    await navigator.clipboard.writeText(pixKey || "demo@pix.esdras");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -134,7 +134,7 @@ export default function PublicGivePage() {
               </p>
               <div style={keyRowStyle}>
                 <code style={{ flex: 1, fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {pixKey || "demo@pix.alvo"}
+                  {pixKey || "demo@pix.esdras"}
                 </code>
                 <button onClick={copyKey} style={copyBtnStyle}>
                   {copied ? <Check size={14} /> : <Copy size={14} />}

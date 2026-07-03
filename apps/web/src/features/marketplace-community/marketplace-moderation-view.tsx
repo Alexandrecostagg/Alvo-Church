@@ -138,7 +138,7 @@ export function MarketplaceModerationView() {
           id: `store_demo_3_${Date.now()}`,
           organizationId,
           ownerId: user.uid,
-          name: "Getro Digital Code",
+          name: "Esdras Digital Code",
           description: "Criação de sites premium, systems web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
           category: "services",
           status: "pending",
@@ -146,7 +146,7 @@ export function MarketplaceModerationView() {
           bannerImageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60",
           contact: {
             phone: "+55 11 96666-5555",
-            email: "suporte@getrodigital.com.br",
+            email: "suporte@plataformaesdras.com.br",
             address: {
               street: "Av. Paulista",
               number: "1000",
@@ -158,7 +158,7 @@ export function MarketplaceModerationView() {
           },
           socialLinks: {
             whatsapp: "5511966665555",
-            instagram: "getrodigital"
+            instagram: "esdrasdigital"
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()

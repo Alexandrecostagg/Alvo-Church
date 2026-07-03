@@ -8,8 +8,8 @@ function normalizeSearch(query: string) { return query.toLowerCase(); }
 
 export const organization = {
   id: "org_alvo_demo",
-  name: "Getro Church",
-  slug: "getro-church",
+  name: "Plataforma Esdras",
+  slug: "esdras-church",
   status: "active",
   timezone: "America/Belem",
   locale: "pt-BR",
@@ -20,15 +20,15 @@ export const tenantSettings: OrganizationSettingsSnapshot = {
   branding: {
     organizationId: organization.id,
     brandMode: "co_branded",
-    publicProductName: "Getro Church",
-    publicShortName: "Getro",
+    publicProductName: "Plataforma Esdras",
+    publicShortName: "Esdras",
     primaryColor: "#d27836",
     secondaryColor: "#1c2433",
     accentColor: "#e8dcc7",
     surfaceColor: "#f7f3ea",
     textColor: "#1c2433",
     showPoweredByAlvo: true,
-    poweredByLabel: "by Alvo"
+    poweredByLabel: "by Esdras"
   },
   subscription: {
     organizationId: organization.id,
@@ -71,7 +71,7 @@ export const tenantSettings: OrganizationSettingsSnapshot = {
 export const currentUser = {
   id: "user_admin_demo",
   organizationId: organization.id,
-  email: "admin@alvochurch.app",
+  email: "admin@plataformaesdras.com.br",
   roles: ["church_admin"],
   campusIds: [],
   isActive: true
@@ -84,7 +84,7 @@ export const recentPeople = [
     firstName: "Ana",
     lastName: "Silva",
     preferredName: "Ana",
-    email: "ana@alvochurch.app",
+    email: "ana@plataformaesdras.com.br",
     mobilePhone: "+5591991111111",
     whatsappPhone: "+5591991111111",
     birthDate: "1987-06-14",
@@ -115,7 +115,7 @@ export const recentPeople = [
     organizationId: organization.id,
     firstName: "Lucas",
     lastName: "Costa",
-    email: "lucas@alvochurch.app",
+    email: "lucas@plataformaesdras.com.br",
     primaryFamilyId: undefined,
     mobilePhone: "+5591992222222",
     whatsappPhone: "+5591992222222",
@@ -146,7 +146,7 @@ export const recentPeople = [
     organizationId: organization.id,
     firstName: "Marina",
     lastName: "Souza",
-    email: "marina@alvochurch.app",
+    email: "marina@plataformaesdras.com.br",
     mobilePhone: "+5591993333333",
     whatsappPhone: "+5591993333333",
     birthDate: "1992-02-22",
@@ -638,7 +638,7 @@ export const familyInsightMetrics = [
     detail: "LGPD antes de dados sensiveis"
   },
   {
-    label: "Getro Pass ativo",
+    label: "Esdras Passe ativo",
     value: recentPeople.filter((person) => person.partnerBenefitsEnabled).length,
     detail: "validacao externa sem expor CPF"
   }
@@ -832,7 +832,7 @@ export const operationalShortcuts = [
   {
     label: "Novo cadastro",
     title: "Cadastrar membro",
-    description: "Crie pessoa, familia, LGPD e Getro Pass em uma ficha.",
+    description: "Crie pessoa, familia, LGPD e Esdras Passe em uma ficha.",
     href: "/members/new",
     icon: UserPlus,
     meta: "Secretaria"
@@ -957,7 +957,7 @@ export const partnerOrganizations: PartnerOrganization[] = [
     isMemberBusiness: true,
     ownerPersonId: "person_1",
     logoUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=200&auto=format&fit=crop",
-    instagram: "@paodavida_alvo",
+    instagram: "@paodavida_esdras",
     address: {
       street: "Travessa Mauriti",
       number: "1020",
@@ -979,7 +979,7 @@ export const partnerOrganizations: PartnerOrganization[] = [
     isMemberBusiness: true,
     ownerPersonId: "person_2",
     logoUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200&auto=format&fit=crop",
-    website: "https://conectatech.alvo.app",
+    website: "https://conectatech.esdras.app",
     address: {
       street: "Avenida Visconde de Souza Franco",
       number: "500",
@@ -1023,7 +1023,7 @@ export const partnerBenefits = [
     organizationId: organization.id,
     partnerId: "business_1",
     title: "Café da Manhã do Reino",
-    description: "15% de desconto em qualquer combo de café da manhã apresentando o Getro Pass.",
+    description: "15% de desconto em qualquer combo de café da manhã apresentando o Esdras Passe.",
     category: "food",
     status: "active",
     discountLabel: "15%",
@@ -1211,7 +1211,7 @@ export const MOCK_COURSES = [
     id: "course_1",
     organizationId: organization.id,
     title: "DNA da Liderança - Escola de Líderes",
-    description: "Curso oficial de formação de líderes de célula do Alvo Church. Aprenda a pastorear, liderar e multiplicar seu grupo com excelência e profundidade espiritual.",
+    description: "Curso oficial de formação de líderes de célula do Plataforma Esdras. Aprenda a pastorear, liderar e multiplicar seu grupo com excelência e profundidade espiritual.",
     thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
     badgeUnlockedId: "badge_lider_capacitado",
     isActive: true,

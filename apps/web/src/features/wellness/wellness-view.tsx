@@ -240,7 +240,7 @@ export function WellnessView() {
                   </div>
                   <div>
                     <h4>{session.mentorName}</h4>
-                    <span className="specialist-type">Mentor Alvo</span>
+                    <span className="specialist-type">Mentor Esdras</span>
                   </div>
                 </div>
                 <div className="session-time">
@@ -274,7 +274,7 @@ export function WellnessView() {
                   <span className="res-cat">{resource.category === 'mental' ? 'Saúde Mental' : 'Liderança'}</span>
                   <h4>{resource.title}</h4>
                   <div className="res-footer">
-                    <span>Alvo Church</span>
+                    <span>Plataforma Esdras</span>
                     <span>{resource.durationMinutes} min</span>
                   </div>
                 </div>

@@ -42,7 +42,7 @@ export function MemberNewView() {
   const [status, setStatus] = useState<string | null>(null);
   const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
 
-  // Uncontrolled to Controlled input states for dynamic Getro Pass & address prefill
+  // Uncontrolled to Controlled input states for dynamic Esdras Passe & address prefill
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [memberStatus, setMemberStatus] = useState("member");
@@ -472,9 +472,9 @@ export function MemberNewView() {
             </label>
           </fieldset>
 
-          {/* Privacidade & Getro Pass */}
+          {/* Privacidade & Esdras Passe */}
           <fieldset>
-            <legend><HeartHandshake size={18} /> Privacidade & Getro Pass</legend>
+            <legend><HeartHandshake size={18} /> Privacidade & Esdras Passe</legend>
             <label className="check-row highlight-checkbox">
               <input 
                 name="lgpdConsent" 
@@ -491,7 +491,7 @@ export function MemberNewView() {
                 checked={partnerBenefitsEnabled}
                 onChange={(e) => setPartnerBenefitsEnabled(e.target.checked)}
               />
-              <span className="checkbox-text">Habilitar identificação Getro Pass externa</span>
+              <span className="checkbox-text">Habilitar identificação Esdras Passe externa</span>
             </label>
           </fieldset>
 
@@ -503,11 +503,11 @@ export function MemberNewView() {
           </div>
         </form>
 
-        {/* Right: Real-time Getro Pass Preview & LGPD Terms */}
+        {/* Right: Real-time Esdras Passe Preview & LGPD Terms */}
         <div className="preview-panel">
           {/* Card Preview Container */}
           <div className="pass-preview-wrapper">
-            <h3 className="preview-title">Visualização do Getro Pass</h3>
+            <h3 className="preview-title">Visualização do Esdras Passe</h3>
             <div className="digital-card" style={{ '--card-glow': getStatusColor(memberStatus) } as any}>
               <div className="card-mesh"></div>
               <div className="card-header">
@@ -566,13 +566,13 @@ export function MemberNewView() {
                 </div>
               )}
             </div>
-            <h4>Garantia de Privacidade Alvo Church</h4>
+            <h4>Garantia de Privacidade Plataforma Esdras</h4>
             <div className="lgpd-terms-box">
               <p>
                 <strong>Dados Protegidos:</strong> Os dados residenciais, financeiros (faixa de renda), de identificação civil (CPF) e históricos pastorais do membro permanecem estritamente blindados em nossos servidores internos sob conformidade legal.
               </p>
               <p>
-                <strong>Identificação Getro Pass:</strong> Lojas parceiras parceiras da comunidade têm autorização apenas para verificar a elegibilidade de desconto usando o código de benefício digital do Getro Pass, sem qualquer visibilidade sobre informações pessoais ou pastorais.
+                <strong>Identificação Esdras Passe:</strong> Lojas parceiras parceiras da comunidade têm autorização apenas para verificar a elegibilidade de desconto usando o código de benefício digital do Esdras Passe, sem qualquer visibilidade sobre informações pessoais ou pastorais.
               </p>
             </div>
           </div>
@@ -600,8 +600,8 @@ export function MemberNewView() {
                   <dd>{lastSavedMember.familyId ?? "Nenhum vínculo familiar"}</dd>
                 </div>
                 <div>
-                  <dt>Getro Pass</dt>
-                  <dd className="getro-pass-pill">
+                  <dt>Esdras Passe</dt>
+                  <dd className="esdras-pass-pill">
                     {lastSavedMember.memberCardCode ?? "Identificação externa inativa"}
                   </dd>
                 </div>
@@ -890,7 +890,7 @@ export function MemberNewView() {
           letter-spacing: -0.01em;
         }
 
-        /* Digital Getro Pass Card Design */
+        /* Digital Esdras Passe Card Design */
         .digital-card {
           position: relative;
           background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%);
@@ -1174,7 +1174,7 @@ export function MemberNewView() {
           font-family: monospace;
         }
 
-        .getro-pass-pill {
+        .esdras-pass-pill {
           color: #f97316 !important;
         }
 

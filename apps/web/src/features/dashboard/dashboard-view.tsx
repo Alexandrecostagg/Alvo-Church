@@ -371,7 +371,7 @@ export function DashboardView() {
     },
     {
       label: "Perfil",
-      title: "Ficha, família, LGPD e Getro Pass",
+      title: "Ficha, família, LGPD e Esdras Passe",
       detail: `${peopleSource.length} pessoa(s) e ${familiesSource.length} familia(s) formam a base segura do app.`,
       href: "/members",
       status: peopleSource.length ? "Fonte ativa" : "Sem pessoas"
@@ -412,7 +412,7 @@ export function DashboardView() {
     },
     {
       label: "Fortalecer",
-      title: "Servico, Getro Pass e comunicacao ampliam valor",
+      title: "Servico, Esdras Passe e comunicacao ampliam valor",
       description: "Membro serve com escala clara, se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
       href: "/serving",
       icon: Handshake,
@@ -492,7 +492,7 @@ export function DashboardView() {
       records: ["people.memberStatus", "memberCardCode", "consentLgpdAt"],
       nextActions: [
         "Validar dados sensiveis",
-        "Ativar Getro Pass se fizer sentido",
+        "Ativar Esdras Passe se fizer sentido",
         "Definir lider de acompanhamento"
       ]
     },
@@ -696,7 +696,7 @@ export function DashboardView() {
           <div className="header-main">
             <div className="welcome-section">
               <p className="eyebrow">Painel Operacional</p>
-              <h1>Bom dia, {user?.displayName || 'Getro'}.</h1>
+              <h1>Bom dia, {user?.displayName || 'Pastor(a)'}.</h1>
               <div className="sync-status">
                 <Activity size={14} className={syncMessage.includes('Erro') ? 'text-red' : 'text-green'} />
                 <span>{syncMessage}</span>
@@ -909,7 +909,7 @@ export function DashboardView() {
         <section className="workflow-panel" aria-label="Mapa da jornada operacional">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Como o Getro conecta tudo</p>
+              <p className="eyebrow">Como a Esdras conecta tudo</p>
               <h2>Da primeira visita ate o cuidado continuo</h2>
             </div>
             <span className="soft-pill">Fluxo recomendado</span>
@@ -1075,7 +1075,7 @@ export function DashboardView() {
           <div className="family-metric">
             <span>Parceiros ativos</span>
             <strong>{partnerOrganizations.length}</strong>
-            <p>{partnerBenefits.length} beneficios publicados no Getro Pass</p>
+            <p>{partnerBenefits.length} beneficios publicados no Esdras Passe</p>
           </div>
         </div>
 
@@ -1200,7 +1200,7 @@ export function DashboardView() {
           <article className="panel member-pass-panel">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Getro Pass</p>
+                <p className="eyebrow">Esdras Passe</p>
                 <h2>Carteira do membro</h2>
               </div>
               <QrCode size={20} />
@@ -1615,7 +1615,7 @@ export function DashboardView() {
           </div>
 
           <div className="drawer-section member-pass-summary">
-            <h3>Getro Pass</h3>
+            <h3>Esdras Passe</h3>
             <p>
               Codigo {selectedPerson.memberCardCode ?? "nao emitido"} ·{" "}
               {selectedPerson.partnerBenefitsEnabled

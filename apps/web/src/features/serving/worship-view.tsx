@@ -166,7 +166,7 @@ export function WorshipView() {
           <div className="stat-body"><span className="stat-label">Músicas no repertório</span><span className="stat-value">{songs.length}</span></div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary-dark)" }}><Play size={20} /></div>
+          <div className="stat-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent-dark)" }}><Play size={20} /></div>
           <div className="stat-body"><span className="stat-label">Tom selecionado</span><span className="stat-value">{selectedKey}</span></div>
         </div>
         <div className="stat-card">

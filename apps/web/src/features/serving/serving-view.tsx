@@ -667,7 +667,7 @@ export function ServingView() {
           <div className="stat-body"><span className="stat-label">Banco de voluntários</span><span className="stat-value">{availablePeople.length || people.length}</span></div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "var(--getro-primary-soft)", color: "var(--getro-primary-dark)" }}><Handshake size={20} /></div>
+          <div className="stat-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent-dark)" }}><Handshake size={20} /></div>
           <div className="stat-body"><span className="stat-label">Cobertura</span><span className="stat-value">{coverage}%</span></div>
         </div>
       </div>

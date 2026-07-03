@@ -78,7 +78,7 @@ const initialEvents: EventType[] = [
   {
     id: "event_women_2026",
     name: "Conferência Águas Profundas 2026",
-    description: "O maior encontro de mulheres do Alvo Church. Três dias de imersão espiritual profunda na identidade, propósito e cura emocional para abençoar sua vida.",
+    description: "O maior encontro de mulheres do Plataforma Esdras. Três dias de imersão espiritual profunda na identidade, propósito e cura emocional para abençoar sua vida.",
     type: "conference",
     status: "published",
     locationType: "onsite",
@@ -87,12 +87,12 @@ const initialEvents: EventType[] = [
     capacity: 350,
     isPaid: true,
     ticketPrice: 85,
-    location: "Auditório Principal - Alvo Church"
+    location: "Auditório Principal - Plataforma Esdras"
   },
   {
     id: "event_baptism_may",
     name: "Batismo Geral de Outono",
-    description: "A pública profissão de fé e celebração da ressurreição espiritual de dezenas de novos discípulos que descerão às águas no Alvo Church.",
+    description: "A pública profissão de fé e celebração da ressurreição espiritual de dezenas de novos discípulos que descerão às águas no Plataforma Esdras.",
     type: "service",
     status: "published",
     locationType: "onsite",
@@ -114,7 +114,7 @@ const initialEvents: EventType[] = [
     capacity: 200,
     isPaid: true,
     ticketPrice: 220,
-    location: "Sítio Alvo de Recantos - Cotia"
+    location: "Sítio Esdras de Recantos - Cotia"
   }
 ];
 
@@ -141,7 +141,7 @@ const mockScheduleMap: Record<string, VolunteerAssignment[]> = {
 
 const mockWorshipMap: Record<string, WorshipSong[]> = {
   event_women_2026: [
-    { id: "s1", title: "Águas Profundas", artist: "Alvo Worship", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+    { id: "s1", title: "Águas Profundas", artist: "Esdras Worship", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
     { id: "s2", title: "O Lindo Nome", artist: "Hillsong Em Português", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
     { id: "s3", title: "Yeshua", artist: "Alessandro Vilas Boas", key: "Am", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
   ],
@@ -150,7 +150,7 @@ const mockWorshipMap: Record<string, WorshipSong[]> = {
     { id: "s11", title: "A Ele a Glória", artist: "Diante do Trono", key: "C", links: { chords: "https://cifraclub.com.br", spotify: "https://spotify.com" } },
   ],
   event_leadership_camp: [
-    { id: "s20", title: "Tua Presença é o Meu Bem", artist: "Alvo Worship", key: "E", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
+    { id: "s20", title: "Tua Presença é o Meu Bem", artist: "Esdras Worship", key: "E", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
     { id: "s21", title: "Ruach", artist: "Comunidade da Zona Sul", key: "F#m", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com" } },
   ]
 };
@@ -252,7 +252,7 @@ export function EventsView() {
       id: person.id,
       firstName: person.firstName,
       lastName: person.lastName,
-      email: `${person.firstName.toLowerCase()}@alvochurch.com.br`,
+      email: `${person.firstName.toLowerCase()}@plataformaesdras.com.br`,
       registrationDate: new Date(Date.now() - 86400000 * index).toLocaleDateString("pt-BR"),
       status: "confirmed",
       paymentStatus: index % 3 === 0 ? "paid" : index % 3 === 1 ? "free" : "pending",
@@ -342,7 +342,7 @@ export function EventsView() {
       capacity: Number(newEvent.capacity) || 100,
       isPaid: newEvent.isPaid || false,
       ticketPrice: newEvent.isPaid ? Number(newEvent.ticketPrice) : undefined,
-      location: newEvent.location || "Alvo Church"
+      location: newEvent.location || "Plataforma Esdras"
     };
 
     setEvents(prev => [createdEvent, ...prev]);
@@ -769,7 +769,7 @@ export function EventsView() {
                   </div>
                 </div>
 
-                {/* Logística de Cobrança e Notificação do App Getro */}
+                {/* Logística de Cobrança e Notificação do App Esdras */}
                 {activeEvent.isPaid && (
                   <div style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(15, 23, 42, 0.08)", paddingTop: "1.25rem", textAlign: "left" }}>
                     <h5 style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "0 0 0.75rem 0" }}>💰 Cobrança & Integração App</h5>
@@ -806,11 +806,11 @@ export function EventsView() {
                         <div>
                           <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>CHAVE PIX</span>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                            <code style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 700 }}>financeiro@alvo.church</code>
+                            <code style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 700 }}>financeiro@plataformaesdras.com.br</code>
                             <button 
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText("financeiro@alvo.church");
+                                navigator.clipboard.writeText("financeiro@plataformaesdras.com.br");
                                 alert("Chave PIX copiada!");
                               }}
                               style={{ padding: "2px 6px", fontSize: "0.65rem", background: "white", border: "1px solid var(--alvo-line)", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}
@@ -825,7 +825,7 @@ export function EventsView() {
                           <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>DADOS BANCÁRIOS</span>
                           <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", color: "var(--alvo-ink)", lineHeight: 1.3 }}>
                             Banco Cora (403) • Ag. 0001<br />
-                            C/C: 128456-9 • Alvo Church
+                            C/C: 128456-9 • Plataforma Esdras
                           </p>
                         </div>
                       </div>
@@ -834,7 +834,7 @@ export function EventsView() {
                     {/* Notificação Push no App */}
                     <div style={{ marginTop: "0.75rem", background: "var(--alvo-accent-soft)", border: "1px solid rgba(37, 99, 235, 0.12)", padding: "0.85rem", borderRadius: 12 }}>
                       <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--alvo-accent-dark)", display: "block" }}>
-                        📲 Notificação no App Getro
+                        📲 Notificação no App Esdras
                       </span>
                       <p style={{ margin: "4px 0 0 0", fontSize: "0.72rem", color: "var(--alvo-ink-soft)", lineHeight: 1.3 }}>
                         A cobrança está ativa na área pessoal do membro e pode ser paga diretamente via aplicativo.
@@ -947,7 +947,7 @@ export function EventsView() {
                 <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Nome do Evento *</label>
                 <input
                   required
-                  placeholder="Ex: Conferência de Jovens Alvo"
+                  placeholder="Ex: Conferência de Jovens Esdras"
                   value={newEvent.name}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, name: e.target.value }))}
                   style={{ 
@@ -1134,7 +1134,7 @@ export function EventsView() {
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <label style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 700 }}>Local / Link de Transmissão</label>
                 <input
-                  placeholder="Ex: Auditório Kids Alvo Church"
+                  placeholder="Ex: Auditório Kids Plataforma Esdras"
                   value={newEvent.location}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
                   style={{ 

@@ -52,7 +52,7 @@ const mockStores: CommunityStore[] = [
     images: [],
     bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
-    socialLinks: { whatsapp: "91999999992", website: "https://conecta.alvo.app" },
+    socialLinks: { whatsapp: "91999999992", website: "https://conecta.esdras.app" },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }

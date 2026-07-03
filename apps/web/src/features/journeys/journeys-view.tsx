@@ -440,7 +440,7 @@ export function JourneysView() {
     return [
       {
         title: "Acolhimento Inicial",
-        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração do Alvo Church! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`
+        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração do Plataforma Esdras! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`
       },
       {
         title: "Convite para Célula",
@@ -2457,7 +2457,7 @@ function getCarePlan({
     steps.push({
       actionKind: "task",
       actionLabel: "Criar Convite",
-      detail: "Convide para classe de integração Alvo Academy.",
+      detail: "Convide para classe de integração Academia Esdras.",
       template: taskTemplates[3],
       title: "Classe de Integração"
     });

@@ -147,7 +147,7 @@ export function FinanceView() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       sender: "bot",
-      text: "Olá! Sou o Assistente Financeiro Inteligente da Alvo Church. 🤖✨\n\nComo posso abençoar o seu dia hoje?\n\nDigite [1] para contribuir com Dízimos ou [2] para Ofertas de Missões.",
+      text: "Olá! Sou o Assistente Financeiro Inteligente da Plataforma Esdras. 🤖✨\n\nComo posso abençoar o seu dia hoje?\n\nDigite [1] para contribuir com Dízimos ou [2] para Ofertas de Missões.",
       timestamp: "19:14"
     }
   ]);
@@ -287,12 +287,12 @@ export function FinanceView() {
           setCurrentStep("pix");
           setChatMessages(prev => [...prev, {
             sender: "bot",
-            text: `Confirmado! Gerando o seu código PIX no valor de ${formatCurrency(amountNum)} para a Alvo Church.\n\nEscaneie o QR Code abaixo ou utilize a chave PIX Copia e Cola.`,
+            text: `Confirmado! Gerando o seu código PIX no valor de ${formatCurrency(amountNum)} para a Plataforma Esdras.\n\nEscaneie o QR Code abaixo ou utilize a chave PIX Copia e Cola.`,
             timestamp: botTime,
             pixDetails: {
               value: amountNum,
-              qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=00020101021226870014br.gov.bcb.pix2565pix-gateway.alvochurch.app/pay",
-              pixCode: `00020101021226870014br.gov.bcb.pix2565pix-gateway.alvochurch.app/pay/val-${amountNum}-alvo`
+              qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=00020101021226870014br.gov.bcb.pix2565pix-gateway.plataformaesdras.com.br/pay",
+              pixCode: `00020101021226870014br.gov.bcb.pix2565pix-gateway.plataformaesdras.com.br/pay/val-${amountNum}-esdras`
             }
           }]);
         }
@@ -317,7 +317,7 @@ export function FinanceView() {
         ...updated,
         {
           sender: "bot",
-          text: `🎉 *PAGAMENTO CONFIRMADO!*\n\nRecebemos sua contribuição no valor de *${formatCurrency(activeValue)}* com sucesso.\n\nDeus abençoe ricamente sua generosidade e fidelidade! Seu comprovante já foi automaticamente anexado ao extrato contábil digital da Alvo Church.`,
+          text: `🎉 *PAGAMENTO CONFIRMADO!*\n\nRecebemos sua contribuição no valor de *${formatCurrency(activeValue)}* com sucesso.\n\nDeus abençoe ricamente sua generosidade e fidelidade! Seu comprovante já foi automaticamente anexado ao extrato contábil digital da Plataforma Esdras.`,
           timestamp: botTime
         }
       ];
@@ -362,7 +362,7 @@ export function FinanceView() {
     setChatMessages([
       {
         sender: "bot",
-        text: "Olá! Sou o Assistente Financeiro Inteligente da Alvo Church. 🤖✨\n\nComo posso abençoar o seu dia hoje?\n\nDigite [1] para contribuir com Dízimos ou [2] para Ofertas de Missões.",
+        text: "Olá! Sou o Assistente Financeiro Inteligente da Plataforma Esdras. 🤖✨\n\nComo posso abençoar o seu dia hoje?\n\nDigite [1] para contribuir com Dízimos ou [2] para Ofertas de Missões.",
         timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       }
     ]);
@@ -618,7 +618,7 @@ export function FinanceView() {
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px dashed #cbd5e1" }}>
                 <div style={{ textAlign: "center", width: "240px" }}>
                   <div style={{ borderBottom: "1px solid #94a3b8", height: 20 }} />
-                  <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", marginTop: 6, display: "block" }}>Liderança Financeira Alvo</span>
+                  <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", marginTop: 6, display: "block" }}>Liderança Financeira Esdras</span>
                 </div>
                 <div style={{ textAlign: "center", width: "240px" }}>
                   <div style={{ borderBottom: "1px solid #94a3b8", height: 20 }} />
@@ -1102,7 +1102,7 @@ export function FinanceView() {
                 ⛪
               </div>
               <div>
-                <strong style={{ color: "white", fontSize: "0.9rem", display: "block" }}>Alvo Finanças 🤖</strong>
+                <strong style={{ color: "white", fontSize: "0.9rem", display: "block" }}>Esdras Finanças 🤖</strong>
                 <span style={{ color: "#81e6a7", fontSize: "0.75rem", display: "block" }}>online</span>
               </div>
             </div>
@@ -1158,7 +1158,7 @@ export function FinanceView() {
                           style={{ width: 130, height: 130, margin: "0 auto" }} 
                         />
                         <span style={{ fontSize: "0.7rem", color: "#1e293b", display: "block", marginTop: 8, fontWeight: 700 }}>
-                          PIX Gateway Alvo Church
+                          PIX Gateway Plataforma Esdras
                         </span>
                         
                         <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: 6 }}>

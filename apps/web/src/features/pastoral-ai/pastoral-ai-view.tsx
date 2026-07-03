@@ -444,7 +444,7 @@ export function PastoralAiView() {
           <span className={`assistant-dot ${assistantStatus}`} />
           <div>
             <small>Serviço supervisionado</small>
-            <strong>Assistente Alvo ativo</strong>
+            <strong>Assistente Esdras ativo</strong>
             <p>Respostas sugeridas, áudio e encaminhamentos ficam aguardando revisão da liderança autorizada.</p>
           </div>
         </div>

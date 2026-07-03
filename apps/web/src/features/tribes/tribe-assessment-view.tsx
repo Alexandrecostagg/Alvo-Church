@@ -145,7 +145,7 @@ export function TribeAssessmentView() {
           </div>
 
           <div className="assessment-question">
-            <p className="eyebrow">Teste de Dons Alvo</p>
+            <p className="eyebrow">Teste de Dons Esdras</p>
             <h2>{currentQuestion.prompt}</h2>
           </div>
 

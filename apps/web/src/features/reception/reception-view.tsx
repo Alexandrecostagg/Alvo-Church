@@ -285,7 +285,7 @@ export function ReceptionView() {
   // Prepara WhatsApp Follow-up com Templates Reativos
   const openWhatsAppTemplateModal = (visitor: CapturedVisitor) => {
     setActiveTemplateVisitor(visitor);
-    const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na Alvo Church! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
+    const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na Plataforma Esdras! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
     setCustomMsg(templateText);
   };
 
@@ -475,7 +475,7 @@ export function ReceptionView() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", color: "#f97316", fontWeight: 800 }}>Como você conheceu a Alvo Church?</label>
+                  <label style={{ fontSize: "0.9rem", color: "#f97316", fontWeight: 800 }}>Como você conheceu a Plataforma Esdras?</label>
                   <select
                     name="kiosk_source"
                     style={{ width: "100%", padding: "1rem 1.25rem", fontSize: "1.1rem", backgroundColor: "#0f172a", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 16, color: "white", outline: "none" }}
@@ -659,7 +659,7 @@ export function ReceptionView() {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   onClick={() => {
-                    const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na Alvo Church! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
+                    const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na Plataforma Esdras! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
                     setCustomMsg(text);
                   }}
                   style={{
@@ -676,7 +676,7 @@ export function ReceptionView() {
                 </button>
                 <button
                   onClick={() => {
-                    const text = `Olá, ${activeTemplateVisitor.name}! Ficamos muito felizes com a sua visita na Alvo Church por convite de membro! 😊\n\nGostaríamos de te convidar para o nosso encontro de Célula de meio de semana. É um lugar descontraído para fazermos novos amigos e conversar sobre a bíblia. O que acha de nos fazer uma visita?`;
+                    const text = `Olá, ${activeTemplateVisitor.name}! Ficamos muito felizes com a sua visita na Plataforma Esdras por convite de membro! 😊\n\nGostaríamos de te convidar para o nosso encontro de Célula de meio de semana. É um lugar descontraído para fazermos novos amigos e conversar sobre a bíblia. O que acha de nos fazer uma visita?`;
                     setCustomMsg(text);
                   }}
                   style={{

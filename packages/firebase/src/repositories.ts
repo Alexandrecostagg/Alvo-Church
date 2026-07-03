@@ -184,8 +184,8 @@ function toOrganizationBrandingSettings(
     organizationId,
     brandMode:
       (data.brandMode as OrganizationBrandingSettings["brandMode"]) ?? "alvo_managed",
-    publicProductName: String(data.publicProductName ?? "Alvo Church"),
-    publicShortName: String(data.publicShortName ?? "Alvo"),
+    publicProductName: String(data.publicProductName ?? "Plataforma Esdras"),
+    publicShortName: String(data.publicShortName ?? "Esdras"),
     logoLightUrl: data.logoLightUrl ? String(data.logoLightUrl) : undefined,
     logoDarkUrl: data.logoDarkUrl ? String(data.logoDarkUrl) : undefined,
     iconUrl: data.iconUrl ? String(data.iconUrl) : undefined,
@@ -2371,7 +2371,7 @@ function toWorshipSetlist(documentId: string, data: DocumentData): WorshipSetlis
   };
 }
 
-// Alvo Canvas mapper
+// Esdras Canvas mapper
 function toGroupBannerConfig(documentId: string, data: DocumentData): GroupBannerConfig {
   return {
     id: documentId,

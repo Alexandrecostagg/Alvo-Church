@@ -32,7 +32,7 @@ const ORG_TIER_OPTIONS: { value: OrgTier; label: string; desc: string; icon: Rea
 function QRCodeDisplay({ size = 180 }: { size?: number }) {
   return (
     <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
-      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--getro-primary-dark)" }} />
+      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--alvo-accent-dark)" }} />
       <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
         Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
       </span>
@@ -72,7 +72,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
       onClick={() => onChange(!enabled)}
       style={{
         width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-        background: enabled ? "var(--getro-primary)" : "var(--alvo-border)",
+        background: enabled ? "var(--alvo-accent)" : "var(--alvo-line)",
         position: "relative", flexShrink: 0, transition: "background 0.2s",
       }}
       aria-checked={enabled}
@@ -272,7 +272,7 @@ export function SettingsView() {
               <div
                 key={def.key}
                 className="module-card"
-                style={{ borderColor: enabled ? `${def.color}30` : "var(--alvo-border)", opacity: enabled ? 1 : 0.65 }}
+                style={{ borderColor: enabled ? `${def.color}30` : "var(--alvo-line)", opacity: enabled ? 1 : 0.65 }}
               >
                 <div className="module-card-left">
                   <div className="module-icon" style={{ background: `${def.color}18`, color: def.color }}>
@@ -324,12 +324,12 @@ export function SettingsView() {
                 onClick={() => { setGroupsModel(opt.value); setGroupsCustomLabel(""); setGroupsSaved(false); }}
                 style={{
                   textAlign: "left", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
-                  border: `1.5px solid ${groupsModel === opt.value ? "var(--getro-primary)" : "var(--alvo-border)"}`,
-                  background: groupsModel === opt.value ? "var(--getro-primary-softer)" : "var(--alvo-surface)",
+                  border: `1.5px solid ${groupsModel === opt.value ? "var(--alvo-accent)" : "var(--alvo-line)"}`,
+                  background: groupsModel === opt.value ? "var(--alvo-accent-soft)" : "var(--alvo-surface)",
                   transition: "all 0.15s",
                 }}
               >
-                <strong style={{ display: "block", fontSize: 14, color: groupsModel === opt.value ? "var(--getro-primary-dark)" : "var(--alvo-ink)", marginBottom: 4 }}>
+                <strong style={{ display: "block", fontSize: 14, color: groupsModel === opt.value ? "var(--alvo-accent-dark)" : "var(--alvo-ink)", marginBottom: 4 }}>
                   {opt.label}
                 </strong>
                 <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{opt.desc}</span>
@@ -349,7 +349,7 @@ export function SettingsView() {
               placeholder={`Ex: "${GROUPS_MODEL_OPTIONS.find(o => o.value === groupsModel)?.label ?? "Células"}"`}
               value={groupsCustomLabel}
               onChange={e => { setGroupsCustomLabel(e.target.value); setGroupsSaved(false); }}
-              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-line)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
             />
           </div>
         </div>
@@ -386,17 +386,17 @@ export function SettingsView() {
                 onClick={() => { setSelectedTier(opt.value); setTierSaved(false); }}
                 style={{
                   textAlign: "left", padding: "16px", borderRadius: 12, cursor: "pointer",
-                  border: `1.5px solid ${isSelected ? "var(--getro-primary)" : "var(--alvo-border)"}`,
-                  background: isSelected ? "var(--getro-primary-softer)" : "var(--alvo-surface)",
+                  border: `1.5px solid ${isSelected ? "var(--alvo-accent)" : "var(--alvo-line)"}`,
+                  background: isSelected ? "var(--alvo-accent-soft)" : "var(--alvo-surface)",
                   display: "flex", flexDirection: "column", gap: 8, transition: "all 0.15s",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Icon size={16} style={{ color: isSelected ? "var(--getro-primary)" : "var(--alvo-ink-soft)" }} />
-                  <strong style={{ fontSize: 13, color: isSelected ? "var(--getro-primary-dark)" : "var(--alvo-ink)" }}>
+                  <Icon size={16} style={{ color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink-soft)" }} />
+                  <strong style={{ fontSize: 13, color: isSelected ? "var(--alvo-accent-dark)" : "var(--alvo-ink)" }}>
                     {opt.label}
                   </strong>
-                  {isSelected && <CheckCircle size={13} style={{ color: "var(--getro-primary)", marginLeft: "auto" }} />}
+                  {isSelected && <CheckCircle size={13} style={{ color: "var(--alvo-accent)", marginLeft: "auto" }} />}
                 </div>
                 <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{opt.desc}</span>
               </button>
@@ -449,7 +449,7 @@ export function SettingsView() {
               placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
               value={pixKey}
               onChange={e => { setPixKey(e.target.value); setPixSaved(false); }}
-              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-line)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
             />
           </div>
           <div style={{ display: "grid", gap: 6 }}>
@@ -459,10 +459,10 @@ export function SettingsView() {
             </label>
             <input
               type="text"
-              placeholder="Ex: Igreja Alvo Comunidade"
+              placeholder="Ex: Igreja Esdras Comunidade"
               value={pixName}
               onChange={e => { setPixName(e.target.value); setPixSaved(false); }}
-              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-border)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-line)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
             />
           </div>
         </div>
@@ -480,7 +480,7 @@ export function SettingsView() {
               <div key={link.key} style={{
                 padding: "20px 24px", borderRadius: 14,
                 background: link.highlight ? "#fffdf8" : "var(--alvo-surface)",
-                border: link.highlight ? "1px solid rgba(154,52,18,0.2)" : "1px solid var(--alvo-border)",
+                border: link.highlight ? "1px solid rgba(154,52,18,0.2)" : "1px solid var(--alvo-line)",
                 display: "grid", gap: 14,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -493,11 +493,11 @@ export function SettingsView() {
                   </a>
                 </div>
                 {link.highlight && <div style={{ display: "flex", justifyContent: "center" }}><QRCodeDisplay size={160} /></div>}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-border)", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", overflow: "hidden" }}>
                   <code style={{ flex: 1, fontSize: 12, color: "var(--alvo-ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fullUrl}</code>
                   <button
                     onClick={() => copyLink(fullUrl, link.key)}
-                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--alvo-border)", background: "var(--alvo-surface)", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}
+                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface)", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}
                   >
                     {copied === link.key ? <Check size={13} /> : <Copy size={13} />}
                     {copied === link.key ? "Copiado" : "Copiar"}

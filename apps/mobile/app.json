@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Getro Church",
-    "slug": "getro-church",
-    "scheme": "getrochurch",
+    "name": "Plataforma Esdras",
+    "slug": "plataforma-esdras",
+    "scheme": "plataformaesdras",
     "version": "1.0.0",
     "orientation": "portrait",
     "platforms": [
@@ -25,14 +25,14 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "icon": "./assets/generated/icon.png",
-      "bundleIdentifier": "com.getrochurch.app"
+      "bundleIdentifier": "com.plataformaesdras.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/generated/adaptive-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.getrochurch.app"
+      "package": "com.plataformaesdras.app"
     },
     "plugins": [
       "expo-status-bar"

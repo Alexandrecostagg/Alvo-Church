@@ -11,7 +11,7 @@ interface SparklineProps {
   filled?: boolean;
 }
 
-export function Sparkline({ data, color = "var(--getro-primary)", width = 120, height = 36, filled = true }: SparklineProps) {
+export function Sparkline({ data, color = "var(--alvo-accent)", width = 120, height = 36, filled = true }: SparklineProps) {
   if (data.length < 2) return null;
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
@@ -62,7 +62,7 @@ export function BarChart({ data, height = 120, showValues = true }: BarChartProp
                 style={{
                   width: "100%",
                   height: `${Math.max(pct, 4)}%`,
-                  background: item.color ?? "var(--getro-primary)",
+                  background: item.color ?? "var(--alvo-accent)",
                   borderRadius: "4px 4px 0 0",
                   opacity: 0.85,
                   transition: "height 0.3s ease",
@@ -87,7 +87,7 @@ interface DonutProps {
   label?: string;
 }
 
-export function Donut({ value, color = "var(--getro-primary)", size = 80, label }: DonutProps) {
+export function Donut({ value, color = "var(--alvo-accent)", size = 80, label }: DonutProps) {
   const r = (size - 10) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (value / 100) * circ;
@@ -95,7 +95,7 @@ export function Donut({ value, color = "var(--getro-primary)", size = 80, label 
   return (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--alvo-border)" strokeWidth={8} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--alvo-line)" strokeWidth={8} />
         <circle
           cx={size / 2} cy={size / 2} r={r}
           fill="none" stroke={color} strokeWidth={8}
@@ -123,9 +123,9 @@ interface MetricCardProps {
   icon?: React.ReactNode;
 }
 
-export function MetricCard({ label, value, delta, deltaPositive, trend, color = "var(--getro-primary)", icon }: MetricCardProps) {
+export function MetricCard({ label, value, delta, deltaPositive, trend, color = "var(--alvo-accent)", icon }: MetricCardProps) {
   return (
-    <div style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-border)", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>

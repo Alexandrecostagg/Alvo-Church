@@ -33,8 +33,8 @@ export const alvoTheme = {
     xl: 32
   },
   brand: {
-    appName: "Getro Church",
-    shortName: "Getro",
+    appName: "Plataforma Esdras",
+    shortName: "Esdras",
     tagline: "Igrejas em movimento"
   }
 };

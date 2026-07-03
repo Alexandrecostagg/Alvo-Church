@@ -110,7 +110,7 @@ export * from "./pix";
 export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brandMode"]) {
   switch (brandMode) {
     case "alvo_managed":
-      return "Marca Alvo";
+      return "Marca Esdras";
     case "co_branded":
       return "Co-branded";
     case "white_label":

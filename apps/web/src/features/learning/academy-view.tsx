@@ -459,13 +459,13 @@ export function AcademyView() {
 
               <div style={{ display: "flex", justifyContent: "space-around", marginTop: "3rem", borderTop: "1px dashed #cbd5e1", paddingTop: "1.5rem" }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ height: "40px", fontStyle: "italic", color: "var(--alvo-blue)", fontSize: "1.2rem", fontWeight: 600 }}>Getro Costa</div>
+                  <div style={{ height: "40px", fontStyle: "italic", color: "var(--alvo-blue)", fontSize: "1.2rem", fontWeight: 600 }}>Davi Costa</div>
                   <div style={{ width: "200px", height: "1px", backgroundColor: "#94a3b8", margin: "0.25rem 0" }} />
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b" }}>Pr. Getro Costa · Diretor Geral</span>
+                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b" }}>Pr. Davi Costa · Diretor Geral</span>
                 </div>
                 <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <Award size={36} style={{ color: "var(--alvo-blue)" }} />
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", marginTop: 8 }}>Selo de Excelência Alvo</span>
+                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", marginTop: 8 }}>Selo de Excelência Esdras</span>
                 </div>
               </div>
             </div>
@@ -499,7 +499,7 @@ export function AcademyView() {
             Voltar ao painel
           </Link>
           <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>LMS / Escola de Discipulado</p>
-          <h1>Escola de Líderes Alvo</h1>
+          <h1>Escola de Líderes Esdras</h1>
           <p>
             Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
           </p>
@@ -656,7 +656,7 @@ export function AcademyView() {
                       {selectedLesson.durationMinutes} minutos
                     </span>
                     <span>•</span>
-                    <span>Curso Oficial Alvo Academy</span>
+                    <span>Curso Oficial Academia Esdras</span>
                   </div>
                 </div>
 
@@ -886,7 +886,7 @@ export function AcademyView() {
                         }} 
                       />
                       <div>
-                        <strong style={{ color: "white", fontSize: "1.1rem", display: "block" }}>Pastor Getro Costa</strong>
+                        <strong style={{ color: "white", fontSize: "1.1rem", display: "block" }}>Pastor Davi Costa</strong>
                         <span style={{ color: "var(--alvo-blue)", fontSize: "0.85rem", fontWeight: 700 }}>Pastor Presidente · Doutor em Teologia</span>
                         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", marginTop: 8, lineHeight: "1.4" }}>
                           Há mais de 20 anos pastoreando e formando líderes para expansão ministerial saudável. Especialista em crescimento de pequenos grupos e teologia prática.

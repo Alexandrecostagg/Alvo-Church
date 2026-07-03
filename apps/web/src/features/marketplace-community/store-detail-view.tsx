@@ -33,7 +33,7 @@ const mockStore: CommunityStore = {
   images: [],
   bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
   contact: {
-    email: "doces@alvo.app",
+    email: "doces@esdras.app",
     phone: "(91) 99999-9991",
     address: { street: "Av. Gentil Bittencourt", number: "123", city: "Belém", state: "PA" }
   },
@@ -48,7 +48,7 @@ const mockOffers: CommunityOffer[] = [
     organizationId: "org_alvo_demo",
     storeId: "store_1",
     title: "15% de desconto em bolos inteiros",
-    description: "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Getro Pass.",
+    description: "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Esdras Passe.",
     type: "percentage",
     discountPercentage: 15,
     status: "active",
