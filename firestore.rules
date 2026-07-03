@@ -51,9 +51,14 @@ service cloud.firestore {
     match /org_slugs/{slug} {
       allow get: if true;
       allow list: if false;
-      // Slugs are provisioned via console/admin tooling only; open write
-      // would let any account hijack another church's public form.
-      allow write: if false;
+      // Only the owner of the organization being pointed to may claim a
+      // slug, and only once (Firestore rejects create if the doc already
+      // exists) — prevents hijacking another church's public form.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["organizationId", "displayName"])
+        && request.resource.data.organizationId is string
+        && isOrgOwner(request.resource.data.organizationId);
+      allow update, delete: if false;
     }
 
     // Organization root document: creatable once by its owner, managed by admins.

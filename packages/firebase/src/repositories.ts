@@ -877,6 +877,118 @@ export async function saveOrganizationFeaturesSettings(
   );
 }
 
+// ─── Self-serve signup ─────────────────────────────────────────────────────
+
+// Provisiona uma organização nova a partir da LP pública: cria o doc da
+// organização, o acesso de admin do dono, e settings de branding/assinatura/
+// módulos com defaults do plano gratuito. A ordem importa — ver comentário
+// em organization-new-view.tsx sobre a dependência das Firestore rules.
+export async function provisionSelfServeOrganization(
+  config: FirebaseWebRuntimeConfig,
+  params: {
+    organizationId: string;
+    churchName: string;
+    ownerUid: string;
+    ownerEmail: string;
+  }
+): Promise<void> {
+  const { organizationId, churchName, ownerUid, ownerEmail } = params;
+  const now = new Date().toISOString();
+
+  const organization: Organization = {
+    id: organizationId,
+    name: churchName,
+    displayName: churchName,
+    publicName: churchName,
+    slug: organizationId.replace(/^org_/, ""),
+    status: "active",
+    timezone: "America/Sao_Paulo",
+    locale: "pt-BR",
+    countryCode: "BR",
+    organizationType: "church",
+    organizationTier: "solo",
+    ownerUid
+  };
+
+  await saveOrganizationProfile(config, organization);
+
+  await ensureTenantUserAccess(config, {
+    organizationId,
+    userId: ownerUid,
+    email: ownerEmail,
+    roles: ["church_admin"]
+  });
+
+  const branding: OrganizationBrandingSettings = {
+    organizationId,
+    brandMode: "co_branded",
+    publicProductName: "Plataforma Esdras",
+    publicShortName: "Esdras",
+    primaryColor: "#f97316",
+    secondaryColor: "#1c2433",
+    showPoweredByAlvo: true
+  };
+
+  const subscription: OrganizationSubscriptionSettings = {
+    organizationId,
+    planCode: "gratuito",
+    planTier: "base",
+    billingCycle: "monthly",
+    memberRange: "up_to_100",
+    seatLimit: 4,
+    campusLimit: 1,
+    aiQuota: 50,
+    whiteLabelEnabled: false,
+    coBrandingEnabled: true,
+    multiCampusEnabled: false,
+    denominationalModeEnabled: false,
+    startedAt: now
+  };
+
+  const mod = (enabled: boolean, source: "plan" | "addon" | "trial" | "manual") => ({ enabled, source });
+  const features: OrganizationFeaturesSettings = {
+    organizationId,
+    modules: {
+      core: mod(true, "plan"),
+      visitors: mod(true, "plan"),
+      groups: mod(true, "plan"),
+      events: mod(true, "plan"),
+      children: mod(true, "manual"),
+      youth: mod(false, "addon"),
+      volunteers: mod(true, "addon"),
+      tribes: mod(true, "plan"),
+      journeys: mod(true, "plan"),
+      communication: mod(false, "addon"),
+      marketplace: mod(false, "addon"),
+      giving: mod(true, "addon"),
+      publicForms: mod(true, "plan"),
+      finance: mod(true, "addon"),
+      ai: mod(true, "trial")
+    }
+  };
+
+  await Promise.all([
+    saveOrganizationBrandingSettings(config, branding),
+    saveOrganizationSubscriptionSettings(config, subscription),
+    saveOrganizationFeaturesSettings(config, features)
+  ]);
+}
+
+// Reivindica um slug público (org_slugs/{slug}) para a organização recém-
+// criada, usado pelo formulário público de visitantes. Só funciona uma vez
+// por slug — Firestore rejeita create se o doc já existir, e as regras só
+// permitem que o dono da organização faça essa reivindicação.
+export async function claimOrganizationSlug(
+  config: FirebaseWebRuntimeConfig,
+  params: { slug: string; organizationId: string; displayName: string }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(doc(firestore, "org_slugs", params.slug), {
+    organizationId: params.organizationId,
+    displayName: params.displayName
+  });
+}
+
 export async function savePersonProfile(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,

@@ -67,6 +67,10 @@ export interface Organization {
   displayName?: string;
   organizationType?: "church" | "network" | "denomination" | "institution";
   organizationTier?: "solo" | "campus" | "network" | "denomination";
+  // uid do Firebase Auth de quem provisionou a organização — usado pelas
+  // Firestore rules para permitir o bootstrap do primeiro admin (self-serve).
+  // Ausente em organizações antigas/provisionadas manualmente.
+  ownerUid?: string;
 }
 
 export interface OrganizationBrandingSettings {

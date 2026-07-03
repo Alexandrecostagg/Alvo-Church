@@ -191,6 +191,18 @@ export async function signOutFromFirebase(config: FirebaseWebRuntimeConfig) {
   await signOut(auth);
 }
 
+export async function registerWithFirebaseEmailPassword(params: {
+  config: FirebaseWebRuntimeConfig;
+  email: string;
+  password: string;
+  displayName: string;
+}) {
+  const auth = getFirebaseWebAuth(params.config);
+  const credential = await createUserWithEmailAndPassword(auth, params.email, params.password);
+  await updateProfile(credential.user, { displayName: params.displayName });
+  return credential;
+}
+
 export function getFirebaseMobileAuth(config: FirebaseRuntimeConfig) {
   if (!firebaseMobileAuth) {
     const app = getFirebaseWebApp(config);

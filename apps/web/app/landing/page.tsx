@@ -38,7 +38,7 @@ function LPNav() {
         </nav>
         <div className="lp-nav-ctas">
           <Link href="/login" className="lp-btn-ghost">Entrar</Link>
-          <Link href="/login" className="lp-btn-primary">Começar grátis</Link>
+          <Link href="/signup" className="lp-btn-primary">Começar grátis</Link>
         </div>
       </div>
     </header>
@@ -49,7 +49,6 @@ function Hero() {
   return (
     <section className="lp-hero">
       <div className="lp-container lp-hero-inner">
-        <div className="lp-hero-badge">Novo · IA Pastoral integrada</div>
         <h1 className="lp-hero-title">
           Toda a sua igreja,<br />finalmente em um só lugar.
         </h1>
@@ -58,14 +57,20 @@ function Hero() {
           integrados, simples, e feitos para a realidade da igreja brasileira.
         </p>
         <div className="lp-hero-ctas">
-          <Link href="/login" className="lp-btn-primary lp-btn-lg">
+          <Link href="/signup" className="lp-btn-primary lp-btn-lg">
             Começar gratuitamente
           </Link>
           <a href="#modulos" className="lp-btn-ghost lp-btn-lg">
             Ver como funciona →
           </a>
         </div>
-        <p className="lp-hero-note">Grátis até 50 membros. Sem cartão de crédito.</p>
+        <p className="lp-hero-note">
+          Grátis até 100 membros. Sem cartão de crédito.
+          {" · "}
+          <a href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras." target="_blank" rel="noreferrer" className="lp-hero-network-link">
+            Sou uma rede de igrejas →
+          </a>
+        </p>
         <div className="lp-hero-visual">
           <div className="lp-dashboard-preview">
             <div className="lp-preview-topbar">
@@ -244,7 +249,7 @@ function ModuleShowcase() {
               <div className="lp-module-text">
                 <h3>{mod.title}</h3>
                 <p>{mod.description}</p>
-                <Link href="/login" className="lp-btn-primary">
+                <Link href="/signup" className="lp-btn-primary">
                   Experimentar →
                 </Link>
               </div>
@@ -457,9 +462,20 @@ function Pricing() {
                   </li>
                 ))}
               </ul>
-              <Link href="/login" className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}>
-                {plan.cta}
-              </Link>
+              {plan.id === "rede" ? (
+                <a
+                  href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras."
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}
+                >
+                  {plan.cta}
+                </a>
+              ) : (
+                <Link href="/signup" className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}>
+                  {plan.cta}
+                </Link>
+              )}
             </div>
           ))}
         </div>
@@ -479,7 +495,7 @@ function FinalCTA() {
         <h2>Sua igreja merece uma gestão à altura da missão.</h2>
         <p>Comece hoje, gratuitamente. Sem cartão de crédito.</p>
         <div className="lp-hero-ctas">
-          <Link href="/login" className="lp-btn-primary lp-btn-lg lp-btn-white">
+          <Link href="/signup" className="lp-btn-primary lp-btn-lg lp-btn-white">
             Criar conta grátis
           </Link>
         </div>

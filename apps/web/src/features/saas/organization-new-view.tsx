@@ -160,16 +160,20 @@ export function OrganizationNewView() {
     try {
       setIsSaving(true);
       setStatus("Provisionando tenant, branding, assinatura e permissoes...");
+      // A organização e o acesso do dono precisam existir ANTES das
+      // settings: as Firestore rules exigem isTenantAdmin() para gravar
+      // em organizations/{orgId}/settings/*, e isso depende do doc em
+      // organizations/{orgId}/users/{uid} já existir.
       await saveOrganizationProfile(firebaseConfig, organization);
-      await saveOrganizationBrandingSettings(firebaseConfig, branding);
-      await saveOrganizationSubscriptionSettings(firebaseConfig, subscription);
-      await saveOrganizationFeaturesSettings(firebaseConfig, features);
       await ensureTenantUserAccess(firebaseConfig, {
         organizationId,
         userId: user.uid,
         email: user.email ?? "",
         roles: ["church_admin"]
       });
+      await saveOrganizationBrandingSettings(firebaseConfig, branding);
+      await saveOrganizationSubscriptionSettings(firebaseConfig, subscription);
+      await saveOrganizationFeaturesSettings(firebaseConfig, features);
 
       setStatus(`${displayName} criada em organizations/${organizationId}.`);
       formElement.reset();
