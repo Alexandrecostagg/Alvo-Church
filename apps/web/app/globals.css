@@ -10191,10 +10191,20 @@ h1.page-title,
   border-radius: 16px;
   padding: 28px;
   position: relative;
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.lp-plan-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(249,115,22,0.4);
+  box-shadow: 0 24px 48px -12px rgba(15,23,42,0.16);
 }
 .lp-plan-card.highlight {
   border: 2px solid #f97316;
   box-shadow: 0 12px 40px rgba(249,115,22,0.12);
+}
+.lp-plan-card.highlight:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 28px 56px -12px rgba(249,115,22,0.28);
 }
 .lp-plan-badge {
   position: absolute;
@@ -10227,9 +10237,10 @@ h1.page-title,
   font-weight: 600;
   color: #374151;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
 }
-.lp-plan-cta:hover { background: #f8fafc; }
+.lp-plan-cta:hover { background: #f8fafc; border-color: rgba(15,23,42,0.3); }
+.lp-plan-card:hover .lp-plan-cta { transform: translateY(-1px); }
 .lp-plan-cta.primary { background: #f97316; color: #fff; border-color: #f97316; }
 .lp-plan-cta.primary:hover { background: #ea6c0a; }
 .lp-pricing-note { text-align: center; font-size: 13px; color: #94a3b8; }
