@@ -3,16 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, Check, ChevronDown, Layers } from "lucide-react";
 import { useAppAuth } from "../../app/providers";
+import { isPlatformAdmin } from "@alvo/firebase";
 import type { Organization } from "@alvo/types";
 
 export function OrgSwitcher() {
-  const { roles, organizationId, tenantRuntime, firebaseConfig, switchOrganization } = useAppAuth();
-  const isSuperAdmin = roles.includes("super_admin");
+  const { user, organizationId, tenantRuntime, firebaseConfig, switchOrganization } = useAppAuth();
 
   const [open, setOpen] = useState(false);
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
+  // Trocar de organização livremente só faz sentido para quem enxerga TODAS
+  // elas — isto é, o admin da plataforma, não um "super_admin" de tenant
+  // (que é só o topo da hierarquia dentro de uma única igreja).
+  const [canSwitch, setCanSwitch] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user) { setCanSwitch(false); return; }
+    let active = true;
+    isPlatformAdmin(firebaseConfig, user.uid).then((ok) => { if (active) setCanSwitch(ok); });
+    return () => { active = false; };
+  }, [user, firebaseConfig]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -23,16 +34,19 @@ export function OrgSwitcher() {
   }, []);
 
   useEffect(() => {
-    if (!open || !isSuperAdmin || orgs.length > 0) return;
+    if (!open || !canSwitch || orgs.length > 0) return;
     setLoading(true);
     import("@alvo/firebase").then(async (sdk) => {
-      const list = await sdk.fetchAllOrganizations(firebaseConfig);
-      setOrgs(list.sort((a, b) => (a.displayName ?? a.name).localeCompare(b.displayName ?? b.name)));
-      setLoading(false);
+      try {
+        const list = await sdk.fetchAllOrganizations(firebaseConfig);
+        setOrgs(list.sort((a, b) => (a.displayName ?? a.name).localeCompare(b.displayName ?? b.name)));
+      } finally {
+        setLoading(false);
+      }
     });
-  }, [open, isSuperAdmin, orgs.length, firebaseConfig]);
+  }, [open, canSwitch, orgs.length, firebaseConfig]);
 
-  if (!isSuperAdmin) return null;
+  if (!canSwitch) return null;
 
   const activeLabel = tenantRuntime?.organization?.displayName
     ?? tenantRuntime?.organization?.name

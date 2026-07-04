@@ -621,6 +621,69 @@ export async function fetchAllOrganizations(
   return snap.docs.map((d) => toOrganization(d.id, d.data()));
 }
 
+export async function isPlatformAdmin(
+  config: FirebaseWebRuntimeConfig,
+  uid: string
+): Promise<boolean> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, "platformAdmins", uid));
+  return snap.exists();
+}
+
+export interface PlatformOrgSummary {
+  id: string;
+  displayName: string;
+  plan: PlanId;
+  planTier?: string;
+  memberCount: number;
+  aiUsed: number;
+  aiLimit: number;
+  createdAt?: string;
+  lastActivityAt: string | null;
+  daysSinceActivity: number | null;
+}
+
+// Painel do admin da plataforma (não confundir com "super_admin", que é só
+// o topo da hierarquia DENTRO de uma organização). Agrega dados de TODAS as
+// organizações — só funciona para quem está em platformAdmins/{uid}.
+export async function fetchPlatformOverview(
+  config: FirebaseWebRuntimeConfig
+): Promise<PlatformOrgSummary[]> {
+  const orgs = await fetchAllOrganizations(config);
+
+  const summaries = await Promise.all(
+    orgs.map(async (org): Promise<PlatformOrgSummary> => {
+      const ctx = { organizationId: org.id };
+      const [subscription, memberCount, aiQuota, recentAttendance] = await Promise.all([
+        fetchOrganizationSubscriptionSettings(config, ctx).catch(() => null),
+        countOrgMembers(config, ctx).catch(() => 0),
+        getAiQuotaStatus(config, ctx).catch(() => null),
+        fetchChurchAttendance(config, ctx, 1).catch(() => [])
+      ]);
+
+      const lastActivityAt = recentAttendance[0]?.serviceDate ?? subscription?.startedAt ?? null;
+      const daysSinceActivity = lastActivityAt
+        ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / (24 * 60 * 60 * 1000))
+        : null;
+
+      return {
+        id: org.id,
+        displayName: org.displayName ?? org.name,
+        plan: aiQuota?.plan ?? "free",
+        planTier: subscription?.planTier,
+        memberCount,
+        aiUsed: aiQuota?.used ?? 0,
+        aiLimit: aiQuota?.limit ?? 0,
+        createdAt: subscription?.startedAt,
+        lastActivityAt,
+        daysSinceActivity
+      };
+    })
+  );
+
+  return summaries.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
 export async function fetchOrganizationBySlug(
   config: FirebaseWebRuntimeConfig,
   slug: string

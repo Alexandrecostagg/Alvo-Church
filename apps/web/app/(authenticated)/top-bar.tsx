@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogIn, LogOut, User } from "lucide-react";
 import { useAppAuth } from "../providers";
 import { OrgSwitcher } from "../../src/components/org-switcher";
+import { PlatformAdminLink } from "../../src/components/platform-admin-link";
 import {
   LayoutDashboard, ClipboardList, Tv, Bot, Landmark, UserCircle,
   UsersRound, UserPlus, Store, MessageSquareText, HeartHandshake,
@@ -35,6 +36,7 @@ const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p.startsWith("/kids"), label: "Segurança Kids", icon: ShieldCheck },
   { match: (p) => p.startsWith("/saas"), label: "Organizações", icon: Building2 },
   { match: (p) => p.startsWith("/settings"), label: "Configurações", icon: Settings },
+  { match: (p) => p.startsWith("/platform-admin"), label: "Painel Esdras", icon: ShieldCheck },
 ];
 
 export function TopBar() {
@@ -52,6 +54,7 @@ export function TopBar() {
         <span>{current.label}</span>
       </div>
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <PlatformAdminLink />
         <OrgSwitcher />
         {user ? (
           <button

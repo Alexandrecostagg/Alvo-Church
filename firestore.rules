@@ -46,6 +46,20 @@ service cloud.firestore {
         && get(orgDocPath(orgId)).data.ownerUid == request.auth.uid;
     }
 
+    // Platform admin: owner/operator of the Esdras platform itself, distinct
+    // from "super_admin" (which is only a top role *within one tenant*).
+    // Bootstrapped by hand into platformAdmins/{uid}; read-only across every
+    // organization — never grants write access to tenant data.
+    function isPlatformAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));
+    }
+
+    match /platformAdmins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
     // Slug lookup for public forms: single-doc get only (no listing),
     // exposes just the slug -> organizationId mapping.
     match /org_slugs/{slug} {
@@ -63,7 +77,10 @@ service cloud.firestore {
 
     // Organization root document: creatable once by its owner, managed by admins.
     match /organizations/{orgId} {
-      allow get: if isTenantMember(orgId) || isOrgOwner(orgId);
+      allow get: if isTenantMember(orgId) || isOrgOwner(orgId) || isPlatformAdmin();
+      // Listing the whole collection (e.g. fetchAllOrganizations) is only
+      // for the platform admin's cross-tenant dashboard / org switcher.
+      allow list: if isPlatformAdmin();
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isTenantAdmin(orgId)
@@ -100,7 +117,15 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId}/settings/{documentId} {
-      allow read: if isTenantMember(orgId);
+      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      allow write: if isTenantAdmin(orgId);
+    }
+
+    // AI usage counters (organizations/{orgId}/aiUsage/{yyyy-mm}): tenant
+    // reads its own quota; platform admin reads across all orgs to build
+    // the cross-tenant usage view.
+    match /organizations/{orgId}/aiUsage/{documentId} {
+      allow read: if isTenantMember(orgId) || isPlatformAdmin();
       allow write: if isTenantAdmin(orgId);
     }
 
