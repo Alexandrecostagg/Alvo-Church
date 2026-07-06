@@ -113,6 +113,10 @@ export interface OrganizationSubscriptionSettings {
   startedAt: string;
   renewsAt?: string;
   trialEndsAt?: string;
+  // Gateway de pagamento (Asaas) — preenchidos após o primeiro checkout.
+  asaasCustomerId?: string;
+  asaasSubscriptionId?: string;
+  asaasStatus?: string;
 }
 
 export interface OrganizationFeatureModule {

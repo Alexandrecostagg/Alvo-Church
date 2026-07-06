@@ -1,11 +1,16 @@
 "use client";
 
-import { Check, Sparkles, Lock, Zap } from "lucide-react";
+import { useState } from "react";
+import { Check, Sparkles, Lock, Zap, Loader2 } from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
 import { useAppAuth } from "../../../app/providers";
 import type { PlanId } from "@alvo/firebase";
 
 const SALES_WHATSAPP = "5562993330336";
+
+// Planos com preço fechado viram checkout self-service (Asaas). O plano
+// Rede é sob consulta — continua indo pro WhatsApp de vendas.
+const SELF_SERVICE_PLANS = new Set<PlanId>(["comunidade", "pastoral"]);
 
 function upgradeWhatsappHref(planName: string, orgName: string) {
   const message = `Olá! Quero fazer upgrade da minha organização "${orgName}" para o plano ${planName} na Plataforma Esdras.`;
@@ -93,8 +98,35 @@ const REDE_FAIXAS = [
 
 export function PlanoView() {
   const { plan, aiQuota, ready } = usePlan();
-  const { tenantRuntime, organizationId } = useAppAuth();
+  const { tenantRuntime, organizationId, user } = useAppAuth();
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? organizationId;
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PlanId | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  async function startCheckout(planId: PlanId) {
+    if (!user) return;
+    setCheckoutError(null);
+    setCheckoutLoadingPlan(planId);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          organizationId,
+          planId,
+          orgName,
+          email: user.email
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível iniciar o checkout.");
+      window.location.href = data.checkoutUrl;
+    } catch (e) {
+      setCheckoutError(e instanceof Error ? e.message : "Erro ao iniciar checkout.");
+      setCheckoutLoadingPlan(null);
+    }
+  }
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: 900, margin: "0 auto" }}>
@@ -179,26 +211,51 @@ export function PlanoView() {
                 </div>
               ))}
             </div>
-            {p.id !== plan && (
+            {p.id !== plan && SELF_SERVICE_PLANS.has(p.id) && (
+              <button
+                onClick={() => startCheckout(p.id)}
+                disabled={checkoutLoadingPlan !== null}
+                style={{
+                  marginTop: 16, width: "100%", padding: "8px 0",
+                  background: p.highlight ? "#7c3aed" : "transparent",
+                  color: p.highlight ? "#fff" : "var(--color-text-secondary)",
+                  border: p.highlight ? "none" : "0.5px solid var(--color-border-secondary)",
+                  borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  cursor: checkoutLoadingPlan !== null ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  opacity: checkoutLoadingPlan && checkoutLoadingPlan !== p.id ? 0.5 : 1,
+                }}
+              >
+                {checkoutLoadingPlan === p.id ? <Loader2 size={14} className="spin" /> : null}
+                {checkoutLoadingPlan === p.id ? "Abrindo checkout..." : "Fazer upgrade"}
+              </button>
+            )}
+            {p.id !== plan && !SELF_SERVICE_PLANS.has(p.id) && (
               <a
                 href={upgradeWhatsappHref(p.name, orgName)}
                 target="_blank"
                 rel="noreferrer"
                 style={{
                   marginTop: 16, width: "100%", padding: "8px 0",
-                  background: p.highlight ? "#7c3aed" : "transparent",
-                  color: p.highlight ? "#fff" : "var(--color-text-secondary)",
-                  border: p.highlight ? "none" : "0.5px solid var(--color-border-secondary)",
+                  background: "transparent",
+                  color: "var(--color-text-secondary)",
+                  border: "0.5px solid var(--color-border-secondary)",
                   borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer",
                   display: "block", textAlign: "center", textDecoration: "none",
                 }}
               >
-                {p.id === "rede" ? "Falar com vendas" : "Fazer upgrade"}
+                Falar com vendas
               </a>
             )}
           </div>
         ))}
       </div>
+
+      {checkoutError && (
+        <div style={{ padding: "0.75rem 1rem", borderRadius: 8, background: "var(--color-background-danger, #FCEBEB)", color: "var(--color-text-danger, #A32D2D)", fontSize: 13, marginBottom: "1.5rem" }}>
+          {checkoutError}
+        </div>
+      )}
 
       <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "1.25rem" }}>
         <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
