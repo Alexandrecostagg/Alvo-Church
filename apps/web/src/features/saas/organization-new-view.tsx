@@ -10,7 +10,6 @@ import {
   Layers3,
   LockKeyhole,
   Palette,
-  Rocket,
   ShieldCheck,
   Sparkles,
   UsersRound
@@ -193,32 +192,23 @@ export function OrganizationNewView() {
   }
 
   return (
-    <main className="form-page saas-form-page">
-      <section className="form-hero premium-onboarding">
-        <div className="hero-content">
+    <div className="page-root saas-form-page">
+      <header className="page-header">
+        <div className="page-header-left">
           <Link className="back-link" href="/">
-            Voltar ao painel
+            ← Voltar ao painel
           </Link>
-          <p className="eyebrow"><Rocket size={14} /> SaaS Hub · Onboarding</p>
-          <h1>Nova Organização</h1>
-          <p>
-            Expanda o ecossistema criando uma nova organização. Configure a identidade estratégica, 
+          <h1 className="page-title">Nova Organização</h1>
+          <p className="page-subtitle">
+            Expanda o ecossistema criando uma nova organização. Configure a identidade estratégica,
             escolha o modelo pastoral (Tribos) e ative os módulos operacionais.
           </p>
         </div>
-        <aside className="hero-stats-mini">
-           <div className="mini-card-saas">
-              <ShieldCheck size={18} />
-              <strong>99.9%</strong>
-              <span>Uptime Garantido</span>
-           </div>
-           <div className="mini-card-saas">
-              <LockKeyhole size={18} />
-              <strong>Multi-tenant</strong>
-              <span>Isolamento Total</span>
-           </div>
-        </aside>
-      </section>
+        <div className="page-header-actions">
+          <span className="saas-mini-badge"><ShieldCheck size={14} /> 99.9% uptime</span>
+          <span className="saas-mini-badge"><LockKeyhole size={14} /> Multi-tenant</span>
+        </div>
+      </header>
 
       <form className="onboarding-form" onSubmit={handleSubmit}>
         <div className="onboarding-sections">
@@ -422,17 +412,10 @@ export function OrganizationNewView() {
         </div>
 
         <style jsx>{`
-          .onboarding-form { max-width: 1180px; margin: 0 auto; }
-          .premium-onboarding { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; padding: 28px 0 30px; max-width: 1180px; margin: 0 auto; }
-          .premium-onboarding .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: #ea580c; }
-          .premium-onboarding h1 { max-width: 760px; font-size: clamp(48px, 5.4vw, 76px); line-height: 0.98; color: #111827; letter-spacing: 0; }
-          .hero-stats-mini { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 12px; }
-          .mini-card-saas { background: rgba(255,255,255,0.94); padding: 1rem; border-radius: 14px; border: 1px solid rgba(15,23,42,0.10); text-align: left; min-width: 150px; box-shadow: 0 18px 44px -30px rgba(15,23,42,0.45); }
-          .mini-card-saas svg { color: #16a34a; }
-          .mini-card-saas strong { display: block; margin-top: 10px; font-size: 1.1rem; color: #111827; letter-spacing: 0; }
-          .mini-card-saas span { display: block; margin-top: 3px; font-size: 0.72rem; text-transform: uppercase; font-weight: 850; color: #64748b; }
+          .saas-mini-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #475569; background: rgba(255,255,255,0.94); padding: 6px 12px; border-radius: 100px; border: 1px solid rgba(15,23,42,0.10); white-space: nowrap; }
+          .saas-mini-badge svg { color: #16a34a; flex: 0 0 auto; }
 
-          .premium-fieldset { border: 1px solid rgba(15,23,42,0.10); background: rgba(255,255,255,0.96); padding: 2rem; border-radius: 18px; margin-bottom: 24px; box-shadow: 0 18px 44px -30px rgba(15,23,42,0.45); }
+          .premium-fieldset { border: 1px solid rgba(15,23,42,0.10); background: rgba(255,255,255,0.96); padding: 1.5rem; border-radius: 14px; margin-bottom: 20px; }
           .premium-fieldset legend { display: inline-flex; align-items: center; gap: 10px; font-weight: 950; font-size: 1.35rem; margin-bottom: 1.5rem; letter-spacing: 0; color: #0891b2; background: transparent; padding: 0; }
           .premium-fieldset legend svg { color: #ea580c; }
           .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 18px; }
@@ -479,18 +462,15 @@ export function OrganizationNewView() {
           .status-message-saas { display: inline-flex; align-items: center; gap: 8px; margin-top: 1.25rem; padding: 12px 16px; border-radius: 12px; font-weight: 850; color: #166534; background: #ecfdf5; border: 1px solid rgba(22,163,74,0.18); font-size: 0.95rem; }
 
           @media (max-width: 768px) {
-            .premium-onboarding,
             .form-row,
             .form-row.three-columns,
             .modules-grid-selection { grid-template-columns: 1fr; }
-            .premium-onboarding { text-align: left; gap: 1rem; padding-top: 12px; }
-            .hero-stats-mini { grid-template-columns: 1fr 1fr; }
             .premium-fieldset { padding: 1.25rem; border-radius: 16px; }
             .form-actions-saas { padding-bottom: 2rem; }
           }
         `}</style>
       </form>
-    </main>
+    </div>
   );
 }
 
