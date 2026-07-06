@@ -28,7 +28,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
 }
 
-const DEFAULT_ORGANIZATION_ID = "org_esdras_demo";
+const DEFAULT_ORGANIZATION_ID = "org_alvo_demo";
 const LS_ORG_KEY = "alvo_active_org";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -140,6 +140,21 @@ export function AppProviders({ children }: { children: ReactNode }) {
       try {
         const sdk = await import("@alvo/firebase");
         if (cancelled) return;
+
+        // Self-heal: se o organizationId em uso (vindo de localStorage de
+        // uma sessão antiga) não corresponde a nenhuma organização real,
+        // não insiste tentando provisionar acesso nela — volta pro default
+        // em vez de deixar o usuário preso numa conta fantasma.
+        const orgExists = await sdk.fetchOrganizationById(firebaseConfig, organizationId);
+        if (!orgExists) {
+          if (organizationId !== DEFAULT_ORGANIZATION_ID) {
+            localStorage.removeItem(LS_ORG_KEY);
+            if (!cancelled) setOrganizationId(DEFAULT_ORGANIZATION_ID);
+            return;
+          }
+          if (!cancelled) setTenantRuntime(null);
+          return;
+        }
 
         // Fetch existing roles before overwriting
         const existingUser = await sdk.fetchTenantUser(firebaseConfig, {

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Megaphone,
@@ -113,7 +112,6 @@ function getVisitorIntakeStatusLabel(status: VisitorIntake["status"]) {
 }
 
 export function ReceptionView() {
-  const searchParams = useSearchParams();
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   
   // Estado básico
@@ -136,11 +134,9 @@ export function ReceptionView() {
   const [pulpitMode, setPulpitMode] = useState(false);
   const [kioskStep, setKioskStep] = useState<"form" | "success">("form");
 
-  useEffect(() => {
-    if (searchParams.get("pastor") === "1") {
-      setPulpitMode(true);
-    }
-  }, [searchParams]);
+  // A tela sempre abre em "Integração e Boas-vindas" primeiro — mesmo vindo
+  // do atalho "Painel Pastor" (?pastor=1). Entrar no modo púlpito é uma
+  // ação explícita do botão "Painel do Pastor" logo abaixo.
   
   // Template de comunicação por WhatsApp
   const [activeTemplateVisitor, setActiveTemplateVisitor] = useState<CapturedVisitor | null>(null);
