@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
 
   const asaasHeaders = {
     "Content-Type": "application/json",
+    "User-Agent": "PlataformaEsdras/1.0",
     access_token: apiKey
   };
 

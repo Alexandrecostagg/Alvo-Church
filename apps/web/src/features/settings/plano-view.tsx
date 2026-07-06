@@ -102,8 +102,10 @@ export function PlanoView() {
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? organizationId;
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [cpfCnpjPlan, setCpfCnpjPlan] = useState<PlanId | null>(null);
+  const [cpfCnpj, setCpfCnpj] = useState("");
 
-  async function startCheckout(planId: PlanId) {
+  async function startCheckout(planId: PlanId, cpfCnpjValue: string) {
     if (!user) return;
     setCheckoutError(null);
     setCheckoutLoadingPlan(planId);
@@ -116,7 +118,8 @@ export function PlanoView() {
           organizationId,
           planId,
           orgName,
-          email: user.email
+          email: user.email,
+          cpfCnpj: cpfCnpjValue.replace(/\D/g, "")
         })
       });
       const data = await res.json();
@@ -211,9 +214,9 @@ export function PlanoView() {
                 </div>
               ))}
             </div>
-            {p.id !== plan && SELF_SERVICE_PLANS.has(p.id) && (
+            {p.id !== plan && SELF_SERVICE_PLANS.has(p.id) && cpfCnpjPlan !== p.id && (
               <button
-                onClick={() => startCheckout(p.id)}
+                onClick={() => { setCpfCnpjPlan(p.id); setCpfCnpj(""); setCheckoutError(null); }}
                 disabled={checkoutLoadingPlan !== null}
                 style={{
                   marginTop: 16, width: "100%", padding: "8px 0",
@@ -223,12 +226,40 @@ export function PlanoView() {
                   borderRadius: 8, fontSize: 13, fontWeight: 500,
                   cursor: checkoutLoadingPlan !== null ? "default" : "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  opacity: checkoutLoadingPlan && checkoutLoadingPlan !== p.id ? 0.5 : 1,
+                  opacity: checkoutLoadingPlan !== null ? 0.5 : 1,
                 }}
               >
-                {checkoutLoadingPlan === p.id ? <Loader2 size={14} className="spin" /> : null}
-                {checkoutLoadingPlan === p.id ? "Abrindo checkout..." : "Fazer upgrade"}
+                Fazer upgrade
               </button>
+            )}
+            {p.id !== plan && SELF_SERVICE_PLANS.has(p.id) && cpfCnpjPlan === p.id && (
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  CPF ou CNPJ do responsável (exigido pelo gateway de pagamento)
+                  <input
+                    autoFocus
+                    value={cpfCnpj}
+                    onChange={(e) => setCpfCnpj(e.target.value)}
+                    placeholder="000.000.000-00"
+                    style={{ width: "100%", marginTop: 4, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--color-border-secondary)", fontSize: 13 }}
+                  />
+                </label>
+                <button
+                  onClick={() => startCheckout(p.id, cpfCnpj)}
+                  disabled={checkoutLoadingPlan !== null || cpfCnpj.replace(/\D/g, "").length < 11}
+                  style={{
+                    width: "100%", padding: "8px 0",
+                    background: p.highlight ? "#7c3aed" : "#374151",
+                    color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                    cursor: checkoutLoadingPlan !== null ? "default" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    opacity: checkoutLoadingPlan !== null || cpfCnpj.replace(/\D/g, "").length < 11 ? 0.6 : 1,
+                  }}
+                >
+                  {checkoutLoadingPlan === p.id ? <Loader2 size={14} className="spin" /> : null}
+                  {checkoutLoadingPlan === p.id ? "Abrindo checkout..." : "Continuar para pagamento"}
+                </button>
+              </div>
             )}
             {p.id !== plan && !SELF_SERVICE_PLANS.has(p.id) && (
               <a
