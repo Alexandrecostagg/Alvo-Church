@@ -27,7 +27,6 @@ import {
   Store,
   Tent,
   CalendarRange,
-  Tv,
   UserCircle,
   UserPlus,
   UsersRound,
@@ -64,8 +63,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
       title: "Geral",
       items: [
         { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
-        { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") !== "1" },
-        { label: "Painel Pastor", icon: Tv, href: "/reception?pastor=1", moduleKey: "visitors", match: (pathname, searchParams) => pathname.startsWith("/reception") && searchParams.get("pastor") === "1" },
+        { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname) => pathname.startsWith("/reception") },
         { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") },
         { label: "Radar Pastoral", icon: Radar, href: "/care-radar", match: (pathname) => pathname.startsWith("/care-radar") },
         { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },

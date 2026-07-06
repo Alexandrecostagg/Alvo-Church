@@ -6,7 +6,7 @@ import { useAppAuth } from "../providers";
 import { OrgSwitcher } from "../../src/components/org-switcher";
 import { PlatformAdminLink } from "../../src/components/platform-admin-link";
 import {
-  LayoutDashboard, ClipboardList, Tv, Bot, Landmark, UserCircle,
+  LayoutDashboard, ClipboardList, Bot, Landmark, UserCircle,
   UsersRound, UserPlus, Store, MessageSquareText, HeartHandshake,
   Tent, Waypoints, Map as MapIcon, GraduationCap, CalendarRange,
   Handshake, Music, ShieldCheck, Building2, Settings,
@@ -16,8 +16,7 @@ type ModuleInfo = { label: string; icon: React.ElementType };
 
 const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p === "/", label: "Dashboard", icon: LayoutDashboard },
-  { match: (p) => p.startsWith("/reception") && !p.includes("pastor"), label: "Recepção", icon: ClipboardList },
-  { match: (p) => p.startsWith("/reception"), label: "Painel Pastor", icon: Tv },
+  { match: (p) => p.startsWith("/reception"), label: "Recepção", icon: ClipboardList },
   { match: (p) => p.startsWith("/pastoral-ai"), label: "Cuidado Pastoral", icon: Bot },
   { match: (p) => p.startsWith("/finance"), label: "Finanças", icon: Landmark },
   { match: (p) => p.startsWith("/me"), label: "Meu Perfil", icon: UserCircle },
