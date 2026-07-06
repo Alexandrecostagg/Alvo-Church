@@ -2,7 +2,15 @@
 
 import { Check, Sparkles, Lock, Zap } from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
+import { useAppAuth } from "../../../app/providers";
 import type { PlanId } from "@alvo/firebase";
+
+const SALES_WHATSAPP = "5562993330336";
+
+function upgradeWhatsappHref(planName: string, orgName: string) {
+  const message = `Olá! Quero fazer upgrade da minha organização "${orgName}" para o plano ${planName} na Plataforma Esdras.`;
+  return `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(message)}`;
+}
 
 const PLANS: Array<{
   id: PlanId;
@@ -85,6 +93,8 @@ const REDE_FAIXAS = [
 
 export function PlanoView() {
   const { plan, aiQuota, ready } = usePlan();
+  const { tenantRuntime, organizationId } = useAppAuth();
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? organizationId;
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: 900, margin: "0 auto" }}>
@@ -170,17 +180,21 @@ export function PlanoView() {
               ))}
             </div>
             {p.id !== plan && (
-              <button
+              <a
+                href={upgradeWhatsappHref(p.name, orgName)}
+                target="_blank"
+                rel="noreferrer"
                 style={{
                   marginTop: 16, width: "100%", padding: "8px 0",
                   background: p.highlight ? "#7c3aed" : "transparent",
                   color: p.highlight ? "#fff" : "var(--color-text-secondary)",
                   border: p.highlight ? "none" : "0.5px solid var(--color-border-secondary)",
                   borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer",
+                  display: "block", textAlign: "center", textDecoration: "none",
                 }}
               >
                 {p.id === "rede" ? "Falar com vendas" : "Fazer upgrade"}
-              </button>
+              </a>
             )}
           </div>
         ))}
