@@ -9386,8 +9386,8 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 .page-root {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 16px;
+  padding: 20px;
 }
 
 .page-header {
@@ -9558,19 +9558,19 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 /* ─── Títulos de página padronizados (padrão hero do app) ─── */
 h1.page-title,
 .page-title {
-  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 0.95;
+  line-height: 1.1;
   margin: 0;
   color: var(--alvo-ink);
 }
 
 .page-subtitle {
-  font-size: 17px;
+  font-size: 14px;
   color: var(--alvo-ink-soft);
   font-weight: 400;
-  line-height: 1.55;
+  line-height: 1.5;
   margin: 0;
   max-width: 760px;
 }
@@ -9583,7 +9583,7 @@ h1.page-title,
 }
 
 .page-root {
-  gap: 20px !important;
+  gap: 16px !important;
 }
 
 /* Cards em grid — espaçamento mais compacto */
