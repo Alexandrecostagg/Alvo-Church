@@ -191,6 +191,11 @@ export async function signOutFromFirebase(config: FirebaseWebRuntimeConfig) {
   await signOut(auth);
 }
 
+export async function sendPasswordResetEmailWeb(config: FirebaseWebRuntimeConfig, email: string) {
+  const auth = getFirebaseWebAuth(config);
+  await sendPasswordResetEmail(auth, email);
+}
+
 export async function registerWithFirebaseEmailPassword(params: {
   config: FirebaseWebRuntimeConfig;
   email: string;

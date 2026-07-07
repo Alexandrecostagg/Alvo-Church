@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { BrandLogo } from "../brand-logo";
 import { useAppAuth } from "../providers";
 
 function slugify(value: string) {
@@ -92,22 +93,8 @@ export default function SignupPage() {
     >
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: "#f97316",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 28,
-              fontWeight: 900,
-              color: "#fff",
-              margin: "0 auto 16px"
-            }}
-          >
-            E
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <BrandLogo size={56} iconOnly />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Criar sua conta</h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>

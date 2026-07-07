@@ -582,8 +582,7 @@ function Pricing() {
           ))}
         </div>
         <p className="lp-pricing-note">
-          Planos anuais com 20% de desconto · Enterprise sob consulta ·{" "}
-          <Link href="/login">Ver comparativo completo</Link>
+          Planos anuais com 20% de desconto · Enterprise sob consulta
         </p>
       </div>
     </section>
