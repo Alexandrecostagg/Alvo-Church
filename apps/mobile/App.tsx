@@ -224,7 +224,7 @@ export default function App() {
     let cancelled = false;
     async function load() {
       try {
-        const orgId = linkedOrg?.id ?? "org_esdras_demo";
+        const orgId = linkedOrg?.id ?? "org_alvo_demo";
         const ctx = { organizationId: orgId };
         const [snap, evts, grps] = await Promise.all([
           fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
@@ -434,7 +434,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
-  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_esdras_demo";
+  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_alvo_demo";
 
   function push(screen: ModalScreen) { setModalStack(p => [...p, screen]); }
   function pop() { setModalStack(p => p.slice(0, -1)); }
@@ -883,7 +883,7 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
     async function load() {
       try {
         const sdk = await import("@alvo/firebase");
-        const orgId = "org_esdras_demo";
+        const orgId = "org_alvo_demo";
         const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
         if (existing) {
           const d = existing as any;
@@ -904,7 +904,7 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
     setSaving(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const orgId = "org_esdras_demo";
+      const orgId = "org_alvo_demo";
       // reuse ensureTenantUserAccess with merge to save ministerial profile fields
       await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
         ministerialInterests: interests,
