@@ -11,6 +11,7 @@ import {
   type AbsenceMessageInput,
   type PastoralSuggestionInput
 } from "@alvo/ai";
+import { PLAN_LIMITS, planTierToPlanId, type PlanId } from "@alvo/firebase";
 import { verifyFirebaseIdToken } from "../_lib/verify-auth";
 
 type AiTask =
@@ -20,9 +21,75 @@ type AiTask =
   | "absence_message"
   | "pastoral_suggestion";
 
+function projectId() {
+  return process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "alvo-church";
+}
+
+function firestoreDocUrl(path: string) {
+  return `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/${path}`;
+}
+
+function currentAiMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Cota de IA é por organização, avaliada com o próprio ID token de quem
+// chamou — respeita as Firestore rules normais (settings/aiUsage exigem
+// isTenantMember), sem precisar de service account aqui.
+async function checkAndConsumeAiQuota(
+  idToken: string,
+  organizationId: string
+): Promise<{ allowed: boolean; plan: PlanId; used: number; limit: number }> {
+  const headers = { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" };
+
+  const subRes = await fetch(firestoreDocUrl(`organizations/${organizationId}/settings/subscription`), { headers });
+  let plan: PlanId = "free";
+  if (subRes.ok) {
+    const subData = (await subRes.json()) as {
+      fields?: { plan?: { stringValue?: string }; planTier?: { stringValue?: string } };
+    };
+    const explicitPlan = subData.fields?.plan?.stringValue as PlanId | undefined;
+    plan = explicitPlan ?? planTierToPlanId(subData.fields?.planTier?.stringValue as any);
+  }
+
+  const limit = PLAN_LIMITS[plan].aiQueriesPerMonth;
+  const month = currentAiMonth();
+
+  const usageRes = await fetch(firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`), { headers });
+  const used = usageRes.ok
+    ? Number((((await usageRes.json()) as { fields?: { count?: { integerValue?: string } } }).fields?.count?.integerValue) ?? 0)
+    : 0;
+
+  if (used >= limit) {
+    return { allowed: false, plan, used, limit };
+  }
+
+  // Incrementa de forma otimista (lê + grava; não é uma transação atômica,
+  // mas o volume de chamadas simultâneas por organização é baixo o
+  // suficiente pra essa margem de erro ser aceitável aqui).
+  await fetch(`${firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`)}?updateMask.fieldPaths=count&updateMask.fieldPaths=updatedAt`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({
+      fields: {
+        count: { integerValue: String(used + 1) },
+        updatedAt: { stringValue: new Date().toISOString() }
+      }
+    })
+  }).catch(() => {
+    // Falha ao registrar o uso não deve impedir a resposta já gerada —
+    // na pior hipótese a cota fica levemente subcontada neste mês.
+  });
+
+  return { allowed: true, plan, used: used + 1, limit };
+}
+
 export async function POST(req: NextRequest) {
+  const authorization = req.headers.get("authorization") ?? "";
+  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const uid = await verifyFirebaseIdToken(req);
-  if (!uid) {
+  if (!uid || !idToken) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
@@ -31,14 +98,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Groq API key não configurada" }, { status: 500 });
   }
 
-  let body: { task: AiTask; input: unknown };
+  let body: { task: AiTask; input: unknown; organizationId?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const { task, input } = body;
+  const { task, input, organizationId } = body;
+  if (!organizationId) {
+    return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
+  }
+
+  const quota = await checkAndConsumeAiQuota(idToken, organizationId);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: `Cota de IA do mês esgotada (${quota.used}/${quota.limit} consultas no plano atual). Faça upgrade em Configurações → Plano.` },
+      { status: 429 }
+    );
+  }
 
   try {
     let result;

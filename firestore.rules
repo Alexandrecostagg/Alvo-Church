@@ -60,6 +60,54 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // ── Limites por plano ──────────────────────────────────────────────────
+    // Espelha packages/firebase/src/plans.ts (PLAN_LIMITS). Rules não
+    // importam TS, então os números vivem duplicados aqui — se mudar um
+    // lado, mudar o outro.
+    function subscriptionDocPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/settings/subscription;
+    }
+
+    function resolvedPlan(orgId) {
+      let sub = exists(subscriptionDocPath(orgId)) ? get(subscriptionDocPath(orgId)).data : {};
+      return "plan" in sub
+        ? sub.plan
+        : (
+          !("planTier" in sub) ? "free" :
+          sub.planTier == "growth" ? "comunidade" :
+          sub.planTier == "advanced" ? "pastoral" :
+          sub.planTier == "enterprise" ? "rede" :
+          "free"
+        );
+    }
+
+    function memberLimit(orgId) {
+      let plan = resolvedPlan(orgId);
+      return plan == "free" ? 50
+        : plan == "comunidade" ? 300
+        : 999999999; // pastoral / rede / enterprise: sem limite de membros
+    }
+
+    function branchOrgLimit(orgId) {
+      let plan = resolvedPlan(orgId);
+      return plan == "rede" ? 50
+        : plan == "enterprise" ? 999
+        : 0; // free / comunidade / pastoral: sem multi-tenant
+    }
+
+    function orgCounter(orgId, field) {
+      let org = get(orgDocPath(orgId)).data;
+      return field in org ? org[field] : 0;
+    }
+
+    function withinMemberLimit(orgId) {
+      return orgCounter(orgId, "memberCount") < memberLimit(orgId);
+    }
+
+    function withinBranchOrgLimit(orgId) {
+      return orgCounter(orgId, "affiliateCount") < branchOrgLimit(orgId);
+    }
+
     // Slug lookup for public forms: single-doc get only (no listing),
     // exposes just the slug -> organizationId mapping.
     match /org_slugs/{slug} {
@@ -121,12 +169,13 @@ service cloud.firestore {
       allow write: if isTenantAdmin(orgId);
     }
 
-    // AI usage counters (organizations/{orgId}/aiUsage/{yyyy-mm}): tenant
-    // reads its own quota; platform admin reads across all orgs to build
-    // the cross-tenant usage view.
+    // AI usage counters (organizations/{orgId}/aiUsage/{yyyy-mm}): qualquer
+    // membro ativo pode incrementar (é ele quem consome a cota ao usar as
+    // ferramentas de IA, ex: líder de célula no app); platform admin lê
+    // entre todas as orgs pro painel cross-tenant.
     match /organizations/{orgId}/aiUsage/{documentId} {
       allow read: if isTenantMember(orgId) || isPlatformAdmin();
-      allow write: if isTenantAdmin(orgId);
+      allow write: if isTenantMember(orgId);
     }
 
     // Financial records: a member can only read their own contributions.
@@ -193,6 +242,24 @@ service cloud.firestore {
       allow delete: if isTenantAdmin(orgId);
     }
 
+    // Cadastro de pessoas: limitado pelo plano da organização (Gratuito 50,
+    // Comunidade 300, Pastoral/Rede sem limite). O contador memberCount em
+    // organizations/{orgId} é mantido pela própria app (savePersonProfile).
+    match /organizations/{orgId}/people/{personId} {
+      allow read: if isTenantMember(orgId);
+      allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId);
+      allow update, delete: if isTenantAdmin(orgId);
+    }
+
+    // Igrejas filiais (plano Rede): até 50 filiais, só quem está no plano
+    // Rede ou Enterprise pode ter alguma. O contador affiliateCount em
+    // organizations/{orgId} é mantido por saveNetworkAffiliate.
+    match /organizations/{orgId}/affiliates/{affiliateId} {
+      allow read: if isTenantMember(orgId);
+      allow create: if isTenantAdmin(orgId) && withinBranchOrgLimit(orgId);
+      allow update, delete: if isTenantAdmin(orgId);
+    }
+
     // Generic tenant collections (one level deep), excluding the
     // privacy-sensitive collections handled above.
     match /organizations/{orgId}/{collection}/{documentId} {
@@ -202,13 +269,30 @@ service cloud.firestore {
         && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)
         && collection != "users"
-        && collection != "prayerRequests";
+        && collection != "prayerRequests"
+        && collection != "people"
+        && collection != "affiliates";
     }
 
     // Nested subcollections (groups/{id}/members, events/{id}/tickets, ...).
+    // {document=**} também casa com ZERO segmentos extras — ou seja, esse
+    // bloco reabre (via OR) qualquer coleção de 2 segmentos que outro match
+    // acima tenha restringido, com nenhuma das condições extras deles. Por
+    // isso as mesmas exclusões de nome de coleção valem aqui também — foi
+    // exatamente esse bug que deixava passar cadastro de membro acima do
+    // limite do plano (people não tinha "&& document.size() > 0" nem
+    // exclusão, e essa regra tinha "allow write: if isTenantAdmin(orgId)"
+    // sem checar limite nenhum).
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
-      allow read: if isTenantMember(orgId);
-      allow write: if isTenantAdmin(orgId);
+      allow read: if isTenantMember(orgId)
+        && collection != "contributions"
+        && collection != "users"
+        && collection != "prayerRequests";
+      allow write: if isTenantAdmin(orgId)
+        && collection != "users"
+        && collection != "prayerRequests"
+        && collection != "people"
+        && collection != "affiliates";
     }
   }
 }

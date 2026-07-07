@@ -1068,9 +1068,34 @@ export async function savePersonProfile(
   person: Person
 ) {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(doc(firestore, getPeopleCollectionPath(context), person.id), cleanFirestoreData(person), {
-    merge: true
-  });
+  const ref = doc(firestore, getPeopleCollectionPath(context), person.id);
+
+  // Precisa saber se é criação (não update) ANTES de escrever, pra só
+  // incrementar o contador de membros — usado pela regra do Firestore que
+  // barra o cadastro acima do limite do plano — quando é um cadastro novo.
+  const existing = await getDoc(ref);
+  await setDoc(ref, cleanFirestoreData(person), { merge: true });
+
+  if (!existing.exists()) {
+    await updateDoc(doc(firestore, "organizations", context.organizationId), {
+      memberCount: increment(1)
+    }).catch(() => {
+      // Contador é auxiliar (só alimenta o limite de plano); se falhar,
+      // não deve derrubar o cadastro que já foi salvo.
+    });
+  }
+}
+
+export async function deletePersonProfile(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getPeopleCollectionPath(context), personId));
+  await updateDoc(doc(firestore, "organizations", context.organizationId), {
+    memberCount: increment(-1)
+  }).catch(() => {});
 }
 
 export async function updatePersonMemberStatus(
@@ -2890,11 +2915,15 @@ export async function saveNetworkAffiliate(
   affiliate: NetworkAffiliate
 ): Promise<void> {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getNetworkAffiliatesPath(affiliate.parentOrganizationId), affiliate.id),
-    cleanFirestoreData(affiliate),
-    { merge: true }
-  );
+  const ref = doc(firestore, getNetworkAffiliatesPath(affiliate.parentOrganizationId), affiliate.id);
+  const existing = await getDoc(ref);
+  await setDoc(ref, cleanFirestoreData(affiliate), { merge: true });
+
+  if (!existing.exists()) {
+    await updateDoc(doc(firestore, "organizations", affiliate.parentOrganizationId), {
+      affiliateCount: increment(1)
+    }).catch(() => {});
+  }
 }
 
 export async function fetchNetworkAffiliateByInviteCode(

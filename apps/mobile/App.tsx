@@ -41,11 +41,11 @@ import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot }
 
 const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL ?? "http://192.168.1.15:3000";
 
-async function callAi(task: string, input: unknown): Promise<string> {
+async function callAi(task: string, input: unknown, idToken: string, organizationId: string): Promise<string> {
   const res = await fetch(`${WEB_API_URL}/api/ai`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ task, input })
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ task, input, organizationId })
   });
   const data = await res.json() as { ok: boolean; content: string; error?: string };
   if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na IA");
@@ -473,7 +473,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
-          {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
         </View>
 
@@ -1542,7 +1542,7 @@ function InscricaoScreen({ primary, event, user, onBack }: { primary: string; ev
 
 type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
 
-function LiderCelulaScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
+function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -1583,13 +1583,14 @@ function LiderCelulaScreen({ primary, user, onBack }: { primary: string; user: F
   async function run() {
     setLoading(true); setResult(null); setError(null);
     try {
+      const idToken = await user.getIdToken();
       let content = "";
       if (activeTool === "roteiro") {
         if (!theme.trim()) { setError("Informe o tema do encontro."); setLoading(false); return; }
-        content = await callAi("cell_script", { theme, bibleVerse: verse, groupProfile });
+        content = await callAi("cell_script", { theme, bibleVerse: verse, groupProfile }, idToken, orgId);
       } else if (activeTool === "dinamica") {
         if (!dynTheme.trim()) { setError("Informe o tema."); setLoading(false); return; }
-        content = await callAi("cell_dynamic", { theme: dynTheme, dynamicType: dynType, groupProfile });
+        content = await callAi("cell_dynamic", { theme: dynTheme, dynamicType: dynType, groupProfile }, idToken, orgId);
       } else if (activeTool === "relatorio") {
         if (!repGroupName.trim() || !repTheme.trim()) { setError("Preencha grupo e tema."); setLoading(false); return; }
         content = await callAi("cell_meeting_summary", {
@@ -1599,14 +1600,14 @@ function LiderCelulaScreen({ primary, user, onBack }: { primary: string; user: F
           presentCount: parseInt(repPresent) || 0,
           leaderNotes: repNotes,
           prayerRequests: repPrayer ? repPrayer.split(",").map(s => s.trim()) : []
-        });
+        }, idToken, orgId);
       } else if (activeTool === "mensagem") {
         if (!absMember.trim()) { setError("Informe o nome do membro."); setLoading(false); return; }
         content = await callAi("absence_message", {
           memberName: absMember,
           groupName: "minha célula",
           weeksAbsent: parseInt(absWeeks) || 2
-        });
+        }, idToken, orgId);
       }
       setResult(content);
     } catch (e) {
