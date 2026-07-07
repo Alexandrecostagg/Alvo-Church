@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
+import { PlanGuard } from "../../../src/components/plan-guard";
 
 const EventsView = dynamic(
   () => import("../../../src/features/events/events-view").then((mod) => mod.EventsView),
@@ -10,8 +11,10 @@ const EventsView = dynamic(
 
 export default function EventsPage() {
   return (
-    <ModuleGuard moduleKey="events">
-      <EventsView />
-    </ModuleGuard>
+    <PlanGuard feature="events">
+      <ModuleGuard moduleKey="events">
+        <EventsView />
+      </ModuleGuard>
+    </PlanGuard>
   );
 }

@@ -15,7 +15,9 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
 };
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
-  free:       ["members", "events", "communication", "app"],
+  // Free existe pra provar valor, não pra sustentar a operação diária —
+  // Eventos e Comunicação (uso recorrente/retenção) ficam no Comunidade+.
+  free:       ["members", "app"],
   comunidade: ["members", "events", "communication", "app", "tribes", "finance", "groups", "ai_preview"],
   pastoral:   ["members", "events", "communication", "app", "tribes", "finance", "groups",
                "pastoral-ai", "serving", "kids", "learning", "worship", "reports", "journeys"],

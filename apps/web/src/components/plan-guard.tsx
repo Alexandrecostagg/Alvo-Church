@@ -15,8 +15,8 @@ const PLAN_LABELS: Record<PlanId, string> = {
 
 const UPGRADE_TO: Record<PlanFeatureKey, PlanId> = {
   members:       "free",
-  events:        "free",
-  communication: "free",
+  events:        "comunidade",
+  communication: "comunidade",
   app:           "free",
   tribes:        "comunidade",
   finance:       "comunidade",

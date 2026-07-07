@@ -5,8 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
-  BookOpen,
-  Building2,
   Bot,
   ChevronLeft,
   ChevronRight,
@@ -20,15 +18,12 @@ import {
   LayoutDashboard,
   Map as MapIcon,
   MessageSquareText,
-  Music,
-  Radar,
   Settings,
   ShieldCheck,
   Store,
   Tent,
   CalendarRange,
   UserCircle,
-  UserPlus,
   UsersRound,
   Waypoints,
 } from "lucide-react";
@@ -64,8 +59,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
       items: [
         { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
         { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname) => pathname.startsWith("/reception") },
-        { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") },
-        { label: "Radar Pastoral", icon: Radar, href: "/care-radar", match: (pathname) => pathname.startsWith("/care-radar") },
+        { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") || pathname.startsWith("/care-radar") },
         { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },
       ]
     },
@@ -73,8 +67,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
       title: "Membros",
       items: [
         { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname.startsWith("/me") },
-        { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname === "/members" || /^\/members\/[^/]+$/.test(pathname) },
-        { label: "Novo Membro", icon: UserPlus, href: "/members/new", match: (pathname) => pathname.startsWith("/members/new") },
+        { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname.startsWith("/members") },
         { label: "Marketplace", icon: Store, href: "/marketplace-community", moduleKey: "marketplace", match: (pathname) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
         { label: "Comunicação", icon: MessageSquareText, href: "/communication", moduleKey: "communication", match: (pathname) => pathname.startsWith("/communication") },
         { label: "Doações", icon: HeartHandshake, href: "/giving", moduleKey: "giving", match: (pathname) => pathname.startsWith("/giving") },
@@ -84,13 +77,11 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
       title: "Estrategia",
       items: [
         { label: "Tribos", icon: Tent, href: "/tribes", moduleKey: "tribes", match: (pathname) => pathname.startsWith("/tribes") },
-        { label: groupsLabel, icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") },
-        { label: "Tema Semanal", icon: BookOpen, href: "/weekly-theme", moduleKey: "groups", match: (pathname) => pathname.startsWith("/weekly-theme") },
+        { label: groupsLabel, icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") || pathname.startsWith("/weekly-theme") },
         { label: "Jornadas", icon: MapIcon, href: "/journeys", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/journeys") },
         { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") },
         { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
-        { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname === "/serving" },
-        { label: "Louvor & Cifras", icon: Music, href: "/serving/worship", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving/worship") },
+        { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving") },
         { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
       ]
     },
@@ -108,10 +99,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         ] : []),
         { label: "Relatórios", icon: FileBarChart2, href: "/reports", match: (pathname: string) => pathname.startsWith("/reports") },
         { label: "Notificações", icon: Bell, href: "/notifications", match: (pathname: string) => pathname.startsWith("/notifications") },
-        { label: "Organizações", icon: Building2, href: "/saas/organizations/new", match: (pathname: string) => pathname.startsWith("/saas") },
-        { label: "Usuários", icon: UsersRound, href: "/settings/users", match: (pathname: string) => pathname.startsWith("/settings/users") },
-        { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname === "/settings" },
-        { label: "Plano", icon: Layers, href: "/settings/plano", match: (pathname: string) => pathname.startsWith("/settings/plano") },
+        { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname.startsWith("/settings") || pathname.startsWith("/saas") },
       ]
     }
   ];

@@ -3,15 +3,15 @@
 import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
-const GroupsView = dynamic(
-  () => import("../../../src/features/groups/groups-view").then((mod) => mod.GroupsView),
+const GroupsWithThemeView = dynamic(
+  () => import("../../../src/features/groups/groups-with-theme-view").then((mod) => mod.GroupsWithThemeView),
   { ssr: false }
 );
 
 export default function GroupsPage() {
   return (
     <ModuleGuard moduleKey="groups">
-      <GroupsView />
+      <GroupsWithThemeView />
     </ModuleGuard>
   );
 }

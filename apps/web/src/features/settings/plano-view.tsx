@@ -33,8 +33,8 @@ const PLANS: Array<{
     price: "R$ 0",
     priceAnual: "",
     limit: "até 50 membros cadastrados",
-    features: ["Cadastro de membros", "Agenda e eventos", "Comunicados", "App mobile membros"],
-    locked: ["Tribos e vocações", "Finanças", "Células ilimitadas", "IA Pastoral"],
+    features: ["Cadastro de membros", "Recepção e visitantes", "App mobile membros", "Dashboard básico"],
+    locked: ["Agenda e eventos", "Comunicados", "Tribos e vocações", "Finanças", "Células ilimitadas", "IA Pastoral"],
   },
   {
     id: "comunidade",
@@ -44,10 +44,11 @@ const PLANS: Array<{
     limit: "até 300 membros",
     features: [
       "Tudo do Gratuito",
+      "Agenda e eventos",
+      "Comunicados",
       "Tribos e vocações",
       "Finanças",
       "Células ilimitadas",
-      "Recepção e visitantes",
       "50 consultas IA/mês (prévia)",
     ],
     locked: ["IA Pastoral completa", "Escalas", "Kids check-in", "Escola EAD"],

@@ -498,7 +498,7 @@ const PLANS = [
       "Até 300 membros",
       "Tribos & Células",
       "Finanças",
-      "Comunicação",
+      "Eventos & Comunicação",
       "50 consultas de IA/mês",
     ],
     cta: "Começar 14 dias grátis",
