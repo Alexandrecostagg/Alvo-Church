@@ -6,6 +6,12 @@ import Link from "next/link";
 import { BrandLogo } from "../brand-logo";
 import { useAppAuth } from "../providers";
 
+const BRAZIL_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+  "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+  "SP", "SE", "TO"
+];
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -13,6 +19,49 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function isValidCpf(digits: string): boolean {
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  const calc = (len: number) => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += Number(digits[i]) * (len + 1 - i);
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+  return calc(9) === Number(digits[9]) && calc(10) === Number(digits[10]);
+}
+
+function isValidCnpj(digits: string): boolean {
+  if (digits.length !== 14 || /^(\d)\1{13}$/.test(digits)) return false;
+  const calc = (len: number) => {
+    const weights = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += Number(digits[i]) * weights[i];
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  return calc(12) === Number(digits[12]) && calc(13) === Number(digits[13]);
+}
+
+function isValidTaxId(raw: string): boolean {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 11) return isValidCpf(digits);
+  if (digits.length === 14) return isValidCnpj(digits);
+  return false;
+}
+
+// Regras mínimas: 8+ caracteres, letra e número, sem tudo igual e sem
+// sequência óbvia (12345678, abcdefgh) — não é força bruta-proof, mas
+// barra as senhas mais comuns/fracas sem irritar demais o usuário.
+function passwordIssue(password: string): string | null {
+  if (password.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return "A senha precisa ter letras e números.";
+  if (/^(.)\1+$/.test(password)) return "A senha não pode ser um caractere repetido.";
+  const lower = password.toLowerCase();
+  const sequences = ["01234567", "12345678", "23456789", "abcdefgh", "bcdefghi", "qwertyui", "senha123", "12345678"];
+  if (sequences.some((seq) => lower.includes(seq))) return "Essa senha é fácil demais de adivinhar. Escolha outra.";
+  return null;
 }
 
 export default function SignupPage() {
@@ -23,6 +72,9 @@ export default function SignupPage() {
   const [adminName, setAdminName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,8 +84,17 @@ export default function SignupPage() {
       setError("Firebase não configurado.");
       return;
     }
-    if (!churchName.trim() || !adminName.trim() || !email.trim() || password.length < 6) {
-      setError("Preencha todos os campos. A senha precisa ter pelo menos 6 caracteres.");
+    if (!churchName.trim() || !adminName.trim() || !email.trim() || !city.trim() || !state) {
+      setError("Preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (!isValidTaxId(taxId)) {
+      setError("Digite um CPF ou CNPJ válido (do responsável, se a igreja ainda não tiver CNPJ).");
+      return;
+    }
+    const pwIssue = passwordIssue(password);
+    if (pwIssue) {
+      setError(pwIssue);
       return;
     }
 
@@ -56,7 +117,10 @@ export default function SignupPage() {
         organizationId,
         churchName: churchName.trim(),
         ownerUid: credential.user.uid,
-        ownerEmail: email.trim()
+        ownerEmail: email.trim(),
+        taxId: taxId.replace(/\D/g, ""),
+        addressCity: city.trim(),
+        addressState: state
       });
 
       sdk.claimOrganizationSlug(firebaseConfig, {
@@ -91,14 +155,14 @@ export default function SignupPage() {
         padding: 24
       }}
     >
-      <div style={{ width: "100%", maxWidth: 420 }}>
+      <div style={{ width: "100%", maxWidth: 460 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
             <BrandLogo size={56} iconOnly />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Criar sua conta</h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
-            Grátis até 100 membros. Sem cartão de crédito.
+            Grátis até 50 membros. Sem cartão de crédito.
           </p>
         </div>
 
@@ -125,6 +189,48 @@ export default function SignupPage() {
               required
             />
           </label>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label style={labelStyle}>
+              Cidade
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                style={inputStyle}
+                placeholder="Ex: Marabá"
+                autoComplete="address-level2"
+                required
+              />
+            </label>
+            <label style={labelStyle}>
+              Estado
+              <select
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                style={inputStyle}
+                required
+              >
+                <option value="">UF</option>
+                {BRAZIL_STATES.map((uf) => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label style={labelStyle}>
+            CNPJ da igreja (se tiver) ou CPF do responsável
+            <input
+              type="text"
+              value={taxId}
+              onChange={(e) => setTaxId(e.target.value)}
+              style={inputStyle}
+              placeholder="000.000.000-00"
+              required
+            />
+          </label>
+
           <label style={labelStyle}>
             Seu nome
             <input
@@ -155,9 +261,10 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               style={inputStyle}
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
               required
             />
+            <span style={{ fontSize: 11, color: "#9ca3af" }}>Mínimo 8 caracteres, com letras e números.</span>
           </label>
 
           <button type="submit" style={buttonStyle} disabled={isSubmitting || !configured}>
@@ -177,7 +284,7 @@ export default function SignupPage() {
 
 function translateFirebaseError(message: string): string {
   if (message.includes("email-already-in-use")) return "Este email já está cadastrado. Tente entrar.";
-  if (message.includes("weak-password")) return "Senha muito fraca. Use pelo menos 6 caracteres.";
+  if (message.includes("weak-password")) return "Senha muito fraca. Use letras e números, mínimo 8 caracteres.";
   if (message.includes("invalid-email")) return "Email inválido.";
   return "Não foi possível criar sua conta. Tente novamente.";
 }

@@ -953,9 +953,12 @@ export async function provisionSelfServeOrganization(
     churchName: string;
     ownerUid: string;
     ownerEmail: string;
+    taxId?: string;
+    addressCity?: string;
+    addressState?: string;
   }
 ): Promise<void> {
-  const { organizationId, churchName, ownerUid, ownerEmail } = params;
+  const { organizationId, churchName, ownerUid, ownerEmail, taxId, addressCity, addressState } = params;
   const now = new Date().toISOString();
 
   const organization: Organization = {
@@ -970,7 +973,10 @@ export async function provisionSelfServeOrganization(
     countryCode: "BR",
     organizationType: "church",
     organizationTier: "solo",
-    ownerUid
+    ownerUid,
+    taxId,
+    addressCity,
+    addressState
   };
 
   await saveOrganizationProfile(config, organization);

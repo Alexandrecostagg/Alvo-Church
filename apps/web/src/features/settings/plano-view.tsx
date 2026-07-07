@@ -216,7 +216,7 @@ export function PlanoView() {
             </div>
             {p.id !== plan && SELF_SERVICE_PLANS.has(p.id) && cpfCnpjPlan !== p.id && (
               <button
-                onClick={() => { setCpfCnpjPlan(p.id); setCpfCnpj(""); setCheckoutError(null); }}
+                onClick={() => { setCpfCnpjPlan(p.id); setCpfCnpj(tenantRuntime?.organization?.taxId ?? ""); setCheckoutError(null); }}
                 disabled={checkoutLoadingPlan !== null}
                 style={{
                   marginTop: 16, width: "100%", padding: "8px 0",

@@ -155,7 +155,7 @@ export function MemberNewView() {
       address,
       consentLgpdAt: lgpdConsent ? new Date().toISOString() : undefined,
       memberCardCode: partnerBenefitsEnabled
-        ? `GETRO-${firstName.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
+        ? `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
         : undefined,
       partnerBenefitsEnabled,
       personType: getFormValue(form, "personType") as Person["personType"],
@@ -231,8 +231,8 @@ export function MemberNewView() {
 
   // Provisional card code for real-time card visual preview
   const provisionalCardCode = useMemo(() => {
-    if (!firstName) return "GETRO-XXX-0000";
-    return `GETRO-${firstName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`;
+    if (!firstName) return "ESDRAS-XXX-0000";
+    return `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`;
   }, [firstName]);
 
   const getStatusColor = (status: string) => {
