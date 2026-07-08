@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import { AlertTriangle, Building2, Loader2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchPlatformOverview, isPlatformAdmin } from "@alvo/firebase";
@@ -59,7 +60,7 @@ export function PlatformAdminView() {
     setLoading(true);
     fetchPlatformOverview(firebaseConfig)
       .then(setOrgs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar visão da plataforma"))
+      .catch((e) => setError(friendlyError(e, "Erro ao carregar visão da plataforma")))
       .finally(() => setLoading(false));
   }, [authorized, firebaseConfig]);
 

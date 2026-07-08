@@ -260,7 +260,7 @@ export function SettingsView() {
         {!isFirebaseWebRuntimeConfigured(firebaseConfig) && (
           <div className="settings-demo-banner">
             <Info size={14} style={{ color: "#d97706", flexShrink: 0 }} />
-            <span>Modo demo — configure o Firebase para persistir as alterações de módulos</span>
+            <span>Modo demonstração — as alterações de módulos não serão salvas</span>
           </div>
         )}
 

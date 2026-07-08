@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import {
   AlertCircle,
   Award,
@@ -149,7 +150,7 @@ export function CareRadarView() {
         })
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar dados pastorais");
+      setError(friendlyError(e, "Erro ao carregar dados pastorais"));
     } finally {
       setLoading(false);
     }

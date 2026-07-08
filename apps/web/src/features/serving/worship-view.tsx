@@ -45,7 +45,7 @@ export function WorshipView() {
         if (cancelled) return;
 
         if (dbSongs.length === 0) {
-          setStatus("Inicializando repertório padrão no Firestore...");
+          setStatus("Preparando repertório inicial...");
           // Seed mock songs
           await Promise.all(
             MOCK_WORSHIP_SONGS.map(async (song) => {
@@ -121,13 +121,13 @@ export function WorshipView() {
 
     // Salva no Firestore
     if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Salvando no Firestore...");
+      setStatus("Salvando...");
       try {
         await saveWorshipSong(firebaseConfig, { organizationId }, added);
         setStatus("Música salva.");
       } catch (err) {
         console.error(err);
-        setStatus("Erro ao salvar no Firestore. Salvo apenas localmente.");
+        setStatus("Não foi possível salvar. A alteração ficou apenas neste dispositivo.");
       }
     }
 

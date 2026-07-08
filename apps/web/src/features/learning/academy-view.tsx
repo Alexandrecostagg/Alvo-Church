@@ -41,7 +41,7 @@ export function AcademyView() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [status, setStatus] = useState("Sincronizando com Firestore...");
+  const [status, setStatus] = useState("Carregando cursos...");
   const [progress, setProgress] = useState<MemberCourseProgress>({
     id: `progress_temp`,
     organizationId: "demo",
@@ -75,12 +75,12 @@ export function AcademyView() {
     async function loadLmsData() {
       if (!user) return;
       try {
-        setStatus("Sincronizando com o Firestore...");
+        setStatus("Carregando cursos...");
         let dbCourses = await fetchCourses(firebaseConfig, { organizationId });
         if (cancelled) return;
 
         if (dbCourses.length === 0) {
-          setStatus("Inicializando cursos padrões no Firestore...");
+          setStatus("Preparando cursos iniciais...");
           // Seed EAD courses, modules, and lessons
           await Promise.all(
             MOCK_COURSES.map(async (c) => {
@@ -805,7 +805,7 @@ export function AcademyView() {
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <a 
                           href="#"
-                          onClick={(e) => { e.preventDefault(); alert("Download do Guia de Estudo iniciado!"); }}
+                          onClick={(e) => { e.preventDefault(); alert("Este material estará disponível para download em breve."); }}
                           style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white", transition: "all 0.2s" }}
                           className="hover-card"
                         >
@@ -820,7 +820,7 @@ export function AcademyView() {
 
                         <a 
                           href="#"
-                          onClick={(e) => { e.preventDefault(); alert("Download das Lâminas de Aula iniciado!"); }}
+                          onClick={(e) => { e.preventDefault(); alert("Este material estará disponível para download em breve."); }}
                           style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white", transition: "all 0.2s" }}
                           className="hover-card"
                         >

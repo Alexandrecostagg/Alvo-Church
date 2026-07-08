@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { friendlyError } from "../../lib/friendly-error";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   createFirebaseWebRuntimeConfigFromEnv,
@@ -69,7 +70,7 @@ export function MembersView() {
         );
       } catch (error) {
         if (!cancelled) {
-          setStatus(error instanceof Error ? error.message : "Nao foi possivel carregar membros.");
+          setStatus(friendlyError(error, "Nao foi possivel carregar membros."));
         }
       }
     }

@@ -845,7 +845,7 @@ export function EventsView() {
                         onClick={() => {
                           setNotifiedAttendeeId(inspectedAttendee.id);
                           setTimeout(() => {
-                            alert(`Notificação push de cobrança reenviada para o smartphone de ${inspectedAttendee.firstName}!`);
+                            alert(`A cobrança já está visível para ${inspectedAttendee.firstName} no aplicativo. O reenvio de notificação push estará disponível em breve.`);
                           }, 100);
                         }}
                         style={{

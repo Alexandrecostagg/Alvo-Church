@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import {
   Download,
   Share2,
@@ -296,7 +297,7 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
       setCopy(bannerCopy);
     } catch (e) {
       setStatus("error");
-      setErrorMsg(e instanceof Error ? e.message : "Erro ao gerar texto");
+      setErrorMsg(friendlyError(e, "Erro ao gerar texto"));
       return;
     }
 
@@ -317,7 +318,7 @@ export function BannerGenerator({ churchName = "Minha Igreja" }: { churchName?: 
       setStatus("done");
     } catch (e) {
       setStatus("error");
-      setErrorMsg(e instanceof Error ? e.message : "Erro ao compor banner");
+      setErrorMsg(friendlyError(e, "Erro ao compor banner"));
     }
   }, [form, photoDataUrl, seed, churchName, user]);
 

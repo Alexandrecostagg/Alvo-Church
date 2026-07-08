@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { friendlyError } from "../../lib/friendly-error";
 import {
   AlertTriangle,
   CalendarDays,
@@ -120,7 +121,7 @@ export function GroupsView() {
         );
       } catch (error) {
         if (!cancelled) {
-          setStatus(error instanceof Error ? error.message : "Nao foi possivel carregar celulas.");
+          setStatus(friendlyError(error, "Nao foi possivel carregar celulas."));
         }
       }
     }
@@ -220,7 +221,7 @@ export function GroupsView() {
       );
       setStatus("Vinculo com celula salvo no Firestore.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel vincular a celula.");
+      setStatus(friendlyError(error, "Nao foi possivel vincular a celula."));
     }
   }
 
@@ -279,7 +280,7 @@ export function GroupsView() {
       setSelectedGroupId(savedGroup.id);
       setGroupFormSuccess(`✅ "${savedGroup.name}" salva no Firestore!`);
     } catch (error) {
-      setGroupFormError(error instanceof Error ? error.message : "Não foi possível salvar a célula.");
+      setGroupFormError(friendlyError(error, "Não foi possível salvar a célula."));
     } finally {
       setGroupFormSaving(false);
     }
@@ -319,7 +320,7 @@ export function GroupsView() {
       );
       setStatus("Encontro salvo no Firestore.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel abrir o encontro.");
+      setStatus(friendlyError(error, "Nao foi possivel abrir o encontro."));
     }
   }
 
@@ -366,7 +367,7 @@ export function GroupsView() {
       );
       setStatus("Presenca salva no Firestore.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel registrar presenca.");
+      setStatus(friendlyError(error, "Nao foi possivel registrar presenca."));
     }
   }
 
@@ -399,7 +400,7 @@ export function GroupsView() {
       });
       setStatus("Encontro encerrado no Firestore.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel encerrar o encontro.");
+      setStatus(friendlyError(error, "Nao foi possivel encerrar o encontro."));
     }
   }
 

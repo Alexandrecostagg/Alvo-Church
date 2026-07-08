@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { friendlyError } from "../../lib/friendly-error";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   isFirebaseWebRuntimeConfigured,
@@ -224,7 +225,7 @@ export function MemberNewView() {
       
       resetFormState(formElement);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Não foi possível salvar o membro.");
+      setStatus(friendlyError(error, "Não foi possível salvar o membro."));
       setLastSavedMember(null);
     }
   }

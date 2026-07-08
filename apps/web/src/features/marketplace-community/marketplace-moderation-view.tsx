@@ -188,7 +188,7 @@ export function MarketplaceModerationView() {
       setLogs(allLogs);
     } catch (error) {
       console.error("Error generating demo stores:", error);
-      alert("Erro ao gerar lojas de teste no Firestore. Verifique o console.");
+      alert("Não foi possível gerar as lojas de teste. Tente novamente.");
     } finally {
       setGeneratingDemo(false);
     }

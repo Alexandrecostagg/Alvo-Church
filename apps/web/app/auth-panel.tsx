@@ -41,11 +41,8 @@ export function AuthPanel() {
               try {
                 await signOut();
               } catch (nextError) {
-                setError(
-                  nextError instanceof Error
-                    ? nextError.message
-                    : "Não foi possível encerrar a sessão."
-                );
+                setError("Não foi possível encerrar a sessão. Tente novamente.");
+                console.error(nextError);
               }
             })
           }

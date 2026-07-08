@@ -1552,13 +1552,20 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
   const [pastoralTheme, setPastoralTheme] = useState<{ title: string; bibleVerse?: string; description?: string } | null>(null);
 
   useEffect(() => {
-    const orgId = (user as any)?.organizationId ?? "";
     if (!orgId) return;
-    fetch(`${WEB_API_URL}/api/weekly-theme?organizationId=${encodeURIComponent(orgId)}`)
-      .then(r => r.json())
-      .then(data => { if (data.theme) setPastoralTheme(data.theme); })
-      .catch(() => {});
-  }, [user]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const r = await fetch(`${WEB_API_URL}/api/weekly-theme?organizationId=${encodeURIComponent(orgId)}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const data = await r.json();
+        if (!cancelled && data.theme) setPastoralTheme(data.theme);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user, orgId]);
 
   // Roteiro
   const [theme, setTheme] = useState("");

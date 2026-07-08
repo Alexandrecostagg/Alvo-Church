@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -146,7 +147,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         }
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar loja");
+      setError(friendlyError(err, "Erro ao salvar loja"));
       console.error("Error saving store:", err);
     } finally {
       setSaving(false);

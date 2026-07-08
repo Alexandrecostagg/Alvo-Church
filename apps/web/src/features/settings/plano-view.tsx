@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import { Check, Sparkles, Lock, Zap, Loader2, Receipt, AlertTriangle } from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
 import { useAppAuth } from "../../../app/providers";
@@ -186,7 +187,7 @@ export function PlanoView() {
       }
       window.location.href = data.checkoutUrl;
     } catch (e) {
-      setCheckoutError(e instanceof Error ? e.message : "Erro ao iniciar checkout.");
+      setCheckoutError(friendlyError(e, "Erro ao iniciar checkout."));
       setCheckoutLoadingPlan(null);
     }
   }

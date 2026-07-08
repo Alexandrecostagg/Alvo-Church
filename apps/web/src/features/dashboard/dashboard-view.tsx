@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { friendlyError } from "../../lib/friendly-error";
 import {
   Activity,
   Bell,
@@ -159,7 +160,7 @@ export function DashboardView() {
         setSyncMessage(`Painel atualizado: ${nextPeople.length} pessoas e ${nextGroups.length} grupos.`);
       } catch (error) {
         if (!cancelled) {
-          setSyncMessage(error instanceof Error ? error.message : "Erro na sincronizacao.");
+          setSyncMessage(friendlyError(error, "Erro na sincronizacao."));
         }
       }
     }
@@ -590,9 +591,7 @@ export function DashboardView() {
       setReceptionStatus("Visitante salvo no Firestore com jornada e follow-ups criados.");
     } catch (error) {
       setReceptionStatus(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel salvar o visitante no Firestore."
+        friendlyError(error, "Nao foi possivel salvar o visitante no Firestore.")
       );
     }
   }
@@ -643,9 +642,7 @@ export function DashboardView() {
       setTransparencyStatus(`Demonstrativo de ${transparencySummary.month} publicado no Firestore.`);
     } catch (error) {
       setTransparencyStatus(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel publicar o demonstrativo no Firestore."
+        friendlyError(error, "Nao foi possivel publicar o demonstrativo no Firestore.")
       );
     }
   }
@@ -681,9 +678,7 @@ export function DashboardView() {
     } catch (error) {
       setCompletedActionIds((currentIds) => currentIds.filter((id) => id !== actionId));
       setActionSyncStatus(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel salvar o follow-up no Firestore."
+        friendlyError(error, "Nao foi possivel salvar o follow-up no Firestore.")
       );
     }
   }

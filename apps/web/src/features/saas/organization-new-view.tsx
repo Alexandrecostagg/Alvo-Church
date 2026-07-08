@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { friendlyError } from "../../lib/friendly-error";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import {
   Building2,
@@ -185,7 +186,7 @@ export function OrganizationNewView() {
       setDisplayName("");
       setSlug("");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Nao foi possivel criar a instituicao.");
+      setStatus(friendlyError(error, "Nao foi possivel criar a instituicao."));
     } finally {
       setIsSaving(false);
     }

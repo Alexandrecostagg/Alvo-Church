@@ -200,7 +200,7 @@ export function ServingView() {
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setPeople(recentPeople as unknown as Person[]);
-      setStatus("Demonstração (Firebase offline). Pessoas locais carregadas.");
+      setStatus("Modo demonstração — alterações não serão salvas.");
       return;
     }
 
@@ -232,7 +232,7 @@ export function ServingView() {
         );
       } catch (error) {
         if (!cancelled) {
-          setStatus(error instanceof Error ? error.message : "Não foi possível carregar pessoas.");
+          setStatus("Não foi possível carregar pessoas. Verifique sua conexão e tente novamente.");
         }
       }
     }
@@ -327,7 +327,7 @@ export function ServingView() {
       } catch (error) {
         setStatus(
           error instanceof Error
-            ? `Escala atualizada localmente, mas o Firebase retornou: ${error.message}`
+            ? "Escala atualizada aqui, mas não foi possível salvar. Verifique sua conexão."
             : "Escala atualizada localmente, mas não foi possível sincronizar."
         );
       }
@@ -374,12 +374,12 @@ export function ServingView() {
     if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       try {
         await saveServiceAssignment(firebaseConfig, { organizationId }, newAssignment);
-        setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name} e salvo no Firebase.`);
+        setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name}.`);
       } catch (error) {
         setStatus(
           error instanceof Error
-            ? `Escala local criada, mas o Firebase retornou: ${error.message}`
-            : "Escala local criada, mas não foi possível salvar no Firebase."
+            ? "Escala criada aqui, mas não foi possível salvar. Verifique sua conexão."
+            : "Escala criada aqui, mas não foi possível salvar. Verifique sua conexão."
         );
       }
     }
@@ -421,8 +421,8 @@ export function ServingView() {
       } catch (error) {
         setStatus(
           error instanceof Error
-            ? `Cadastro local feito, mas o Firebase retornou: ${error.message}`
-            : "Cadastro local feito, mas não foi possível salvar no Firebase."
+            ? "Cadastro feito aqui, mas não foi possível salvar. Verifique sua conexão."
+            : "Cadastro feito aqui, mas não foi possível salvar. Verifique sua conexão."
         );
       }
     } else {
@@ -563,11 +563,11 @@ export function ServingView() {
           saveServiceAssignment(firebaseConfig, { organizationId }, requestorAssignment),
           saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap)
         ]);
-        setStatus("Troca aprovada e sincronizada no Firebase.");
+        setStatus("Troca aprovada e salva.");
       }
     } catch (error) {
       console.error(error);
-      setStatus(error instanceof Error ? error.message : "Erro ao processar troca.");
+      setStatus("Não foi possível processar a troca. Tente novamente.");
     }
   }
 
@@ -624,12 +624,12 @@ export function ServingView() {
     if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       try {
         await deleteServiceAssignment(firebaseConfig, { organizationId }, assignmentId);
-        setStatus(`${personName} removido da escala e sincronizado no Firebase.`);
+        setStatus(`${personName} removido da escala.`);
       } catch (error) {
         setStatus(
           error instanceof Error
-            ? `Escala removida localmente, mas falhou no Firebase: ${error.message}`
-            : "Escala removida localmente, mas falhou ao sincronizar no Firebase."
+            ? "Escala removida aqui, mas não foi possível salvar. Verifique sua conexão."
+            : "Escala removida aqui, mas não foi possível salvar. Verifique sua conexão."
         );
       }
     }

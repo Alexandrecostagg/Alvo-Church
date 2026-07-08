@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { friendlyError } from "../../lib/friendly-error";
 import Link from "next/link";
 import {
   MapPin,
@@ -93,7 +94,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           setOffers(mockOffers);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao carregar loja");
+        setError(friendlyError(err, "Erro ao carregar loja"));
         console.error("Error loading store:", err);
         setStore(mockStore);
         setOffers(mockOffers);

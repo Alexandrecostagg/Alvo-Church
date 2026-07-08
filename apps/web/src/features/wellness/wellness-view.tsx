@@ -116,7 +116,7 @@ export function WellnessView() {
       
       if (moodId === 'distressed') {
         await triggerEmergencySOS(firebaseConfig, context, user.uid, "Auto-triggered via mood tracker");
-        alert("S.O.S disparado! Nossa equipe entrará em contato em breve.");
+        alert("Seu alerta foi registrado.");
       }
     } catch (error) {
       console.error("Error saving mood:", error);
@@ -151,7 +151,7 @@ export function WellnessView() {
             const context: TenantContext = { organizationId };
             if (confirm("Você deseja disparar um S.O.S Liderança?")) {
               await triggerEmergencySOS(firebaseConfig, context, user.uid, "Manual trigger via SOS button");
-              alert("S.O.S disparado! Nossa equipe entrará em contato em breve.");
+              alert("Seu alerta foi registrado.");
             }
           }}
         >
