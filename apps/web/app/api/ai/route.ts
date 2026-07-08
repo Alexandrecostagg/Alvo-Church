@@ -5,11 +5,13 @@ import {
   generateCellMeetingSummary,
   generateAbsenceMessage,
   generatePastoralSuggestion,
+  classifyTribe,
   type CellScriptInput,
   type CellDynamicInput,
   type CellMeetingSummaryInput,
   type AbsenceMessageInput,
-  type PastoralSuggestionInput
+  type PastoralSuggestionInput,
+  type TribeClassifyInput
 } from "@alvo/ai";
 import { PLAN_LIMITS, planTierToPlanId, type PlanId } from "@alvo/firebase";
 import { verifyFirebaseIdToken } from "../_lib/verify-auth";
@@ -19,7 +21,8 @@ type AiTask =
   | "cell_dynamic"
   | "cell_meeting_summary"
   | "absence_message"
-  | "pastoral_suggestion";
+  | "pastoral_suggestion"
+  | "tribe_classify";
 
 function projectId() {
   return process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "alvo-church";
@@ -136,6 +139,9 @@ export async function POST(req: NextRequest) {
         break;
       case "pastoral_suggestion":
         result = await generatePastoralSuggestion(apiKey, input as PastoralSuggestionInput);
+        break;
+      case "tribe_classify":
+        result = await classifyTribe(apiKey, input as TribeClassifyInput);
         break;
       default:
         return NextResponse.json({ error: `Tarefa desconhecida: ${task}` }, { status: 400 });

@@ -69,13 +69,13 @@ export function GroupsView() {
     meetingTime: "19:30",
     name: "",
     state: "",
-    tribeCode: "",
     type: "cell",
     leaderPersonId: ""
   });
   const [groupFormError, setGroupFormError] = useState("");
   const [groupFormSuccess, setGroupFormSuccess] = useState("");
   const [groupFormSaving, setGroupFormSaving] = useState(false);
+  const [groupFormOpen, setGroupFormOpen] = useState(false);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -249,15 +249,14 @@ export function GroupsView() {
       meetingTime: groupForm.meetingTime || undefined,
       city: groupForm.city.trim() || undefined,
       state: groupForm.state.trim() || undefined,
-      capacity: Number.isNaN(capacity) ? undefined : capacity,
-      tribeCode: (groupForm.tribeCode || undefined) as Group["tribeCode"]
+      capacity: Number.isNaN(capacity) ? undefined : capacity
     };
     setGroups((currentGroups) => [localGroup, ...currentGroups]);
     setSelectedGroupId(localGroup.id);
-    setGroupForm((currentForm) => ({ ...currentForm, name: "", city: "", state: "", tribeCode: "", capacity: "12" }));
+    setGroupForm((currentForm) => ({ ...currentForm, name: "", city: "", state: "", capacity: "12" }));
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setGroupFormSuccess(`✅ "${localGroup.name}" criada! Conecte o Firebase para salvar permanentemente.`);
+      setGroupFormSuccess(`✅ "${localGroup.name}" criada em modo demonstração — entre na sua conta para salvar.`);
       setGroupFormSaving(false);
       return;
     }
@@ -271,14 +270,15 @@ export function GroupsView() {
         meetingTime: localGroup.meetingTime,
         name: localGroup.name,
         state: localGroup.state,
-        type: localGroup.type,
-        tribeCode: localGroup.tribeCode
+        type: localGroup.type
       } as any);
       setGroups((currentGroups) =>
         currentGroups.map((group) => (group.id === localGroup.id ? savedGroup : group))
       );
       setSelectedGroupId(savedGroup.id);
-      setGroupFormSuccess(`✅ "${savedGroup.name}" salva no Firestore!`);
+      setGroupFormSuccess("");
+      setGroupFormOpen(false);
+      setStatus(`✅ Célula "${savedGroup.name}" criada!`);
     } catch (error) {
       setGroupFormError(friendlyError(error, "Não foi possível salvar a célula."));
     } finally {
@@ -475,6 +475,18 @@ export function GroupsView() {
             </div>
           </div>
           <div className="group-card-list">
+            {!groupFormOpen && (
+              <button
+                className="primary-button full"
+                onClick={() => setGroupFormOpen(true)}
+                type="button"
+                style={{ marginBottom: 8 }}
+              >
+                <UserPlus size={15} />
+                + Nova célula
+              </button>
+            )}
+            {groupFormOpen && (
             <div className="quick-group-form antigravity-float-delayed">
               <p className="eyebrow">Nova célula</p>
               {groupFormError && (
@@ -527,30 +539,6 @@ export function GroupsView() {
                   <option value="small_group">Pequeno Grupo</option>
                   <option value="class">Classe / Escola</option>
                   <option value="youth_group">Grupo de Jovens</option>
-                  <option value="ministry_team">Equipe de Ministério</option>
-                </select>
-              </label>
-              <label>
-                Tribo vinculada
-                <select
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, tribeCode: event.target.value }))
-                  }
-                  value={groupForm.tribeCode}
-                >
-                  <option value="">Selecionar tribo...</option>
-                  <option value="LEVI">🔵 Levi — Adoração e Culto</option>
-                  <option value="JUDAH">🟠 Judá — Liderança</option>
-                  <option value="ASHER">🟢 Aser — Acolhimento</option>
-                  <option value="ISSACHAR">🟣 Issacar — Estratégia</option>
-                  <option value="JOSEPH">🩵 José — Administração</option>
-                  <option value="NAPHTALI">🩷 Naftali — Artes</option>
-                  <option value="ZEBULUN">🟡 Zebulom — Missões</option>
-                  <option value="GAD">⚫ Gade — Intercessão</option>
-                  <option value="MANASSEH">🩵 Manassés — Cura</option>
-                  <option value="EPHRAIM">🟢 Efraim — Ensino</option>
-                  <option value="BENJAMIN">💜 Benjamim — Jovens</option>
-                  <option value="REUBEN">🔴 Rúben — Família</option>
                 </select>
               </label>
               <div className="quick-group-grid">
@@ -633,7 +621,15 @@ export function GroupsView() {
                 <UserPlus size={15} />
                 {groupFormSaving ? "Salvando..." : "Criar célula"}
               </button>
+              <button
+                className="ghost-button full"
+                onClick={() => { setGroupFormOpen(false); setGroupFormError(""); }}
+                type="button"
+              >
+                Cancelar
+              </button>
             </div>
+            )}
             {groups.length ? (
               groups.map((group) => {
                 const members = groupMembers.filter((member) => member.groupId === group.id);

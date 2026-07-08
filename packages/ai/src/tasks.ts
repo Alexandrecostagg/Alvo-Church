@@ -200,3 +200,55 @@ ABORDAGEM: (2-3 linhas sobre como o pastor deve conduzir o contato)`
 
   return callGroqWithCascade(apiKey, messages, { maxTokens: 500, temperature: 0.6 });
 }
+
+// ─── 6. Classificação de Tribo ─────────────────────────────────────────────
+
+export interface TribeClassifyInput {
+  memberName: string;
+  ministerialInterests?: string[];
+  servingProfile?: string;
+  availability?: string[];
+  memberStatus?: string;
+  notes?: string;
+}
+
+export async function classifyTribe(
+  apiKey: string,
+  input: TribeClassifyInput
+): Promise<GroqResponse> {
+  const messages = [
+    { role: "system" as const, content: SYSTEM_BASE },
+    {
+      role: "user" as const,
+      content: `Classifique este membro em uma das 12 tribos ministeriais com base no perfil dele.
+
+TRIBOS DISPONÍVEIS (código — vocação):
+LEVI — Adoração e Culto (músicos, vocalistas, técnica de som)
+JUDAH — Liderança (liderar pessoas, discipular, pastorear)
+ASHER — Acolhimento (recepção, hospitalidade, integração de visitantes)
+ISSACHAR — Estratégia (planejamento, visão, análise)
+JOSEPH — Administração (gestão, finanças, processos, organização)
+NAPHTALI — Artes (dança, teatro, design, fotografia, mídia)
+ZEBULUN — Missões (evangelismo, ação social, plantação)
+GAD — Intercessão (oração, vigília, guerra espiritual)
+MANASSEH — Cura (aconselhamento, restauração, cuidado emocional)
+EPHRAIM — Ensino (professores, EBD, treinamento)
+BENJAMIN — Jovens (ministério com adolescentes e jovens)
+REUBEN — Família (casais, crianças, ministério familiar)
+
+PERFIL DO MEMBRO:
+Nome: ${input.memberName}
+${input.ministerialInterests?.length ? `Interesses ministeriais: ${input.ministerialInterests.join(", ")}` : ""}
+${input.servingProfile ? `Perfil de atuação: ${input.servingProfile}` : ""}
+${input.availability?.length ? `Disponibilidade: ${input.availability.join(", ")}` : ""}
+${input.notes ? `Observações: ${input.notes}` : ""}
+
+Responda SOMENTE com JSON válido, sem markdown, neste formato exato:
+{"primary":"CODIGO","secondary":"CODIGO","reason":"1 frase explicando"}
+
+"secondary" pode ser null se não houver segunda vocação clara. Use apenas os códigos listados.`
+    }
+  ];
+
+  return callGroqWithCascade(apiKey, messages, { maxTokens: 200, temperature: 0.2 });
+}

@@ -9,13 +9,15 @@ import {
   fetchFamilyMembers,
   fetchPeople,
   fetchPersonById,
+  fetchGroups,
+  fetchGroupMembers,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import {
   getTribeDisplayLabel,
   getTribeMinistrySummary
 } from "@alvo/domain";
-import type { Family, FamilyMember, Person } from "@alvo/types";
+import type { Family, FamilyMember, Group, Person } from "@alvo/types";
 import {
   Tent,
   QrCode,
@@ -84,6 +86,7 @@ export function MemberProfileView() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
   const [status, setStatus] = useState("Carregando ficha do membro...");
+  const [personGroup, setPersonGroup] = useState<Group | null>(null);
 
   const [activeStage, setActiveStage] = useState("contact");
   const [activeTab, setActiveTab] = useState<"cell" | "finance" | "academy" | "serving">("cell");
@@ -114,9 +117,9 @@ export function MemberProfileView() {
         } else if (mockPerson.memberStatus === "leader" || mockPerson.memberStatus === "volunteer") {
           setActiveStage("leader");
         }
-        setStatus("Exibindo dados simulados de demonstração (Firebase desconectado).");
+        setStatus("Exibindo dados de demonstração.");
       } else {
-        setStatus("Entre no Firebase para abrir a ficha completa.");
+        setStatus("Entre na sua conta para abrir a ficha completa.");
       }
       return;
     }
@@ -132,7 +135,7 @@ export function MemberProfileView() {
         if (cancelled) return;
 
         if (!nextPerson) {
-          setStatus("Membro não encontrado no Firestore.");
+          setStatus("Membro não encontrado.");
           setPerson(null);
           return;
         }
@@ -146,6 +149,18 @@ export function MemberProfileView() {
           setActiveStage("baptism");
         } else if (nextPerson.memberStatus === "leader" || nextPerson.memberStatus === "volunteer") {
           setActiveStage("leader");
+        }
+
+        // Célula da pessoa: procura o vínculo dela entre os grupos ativos
+        try {
+          const allGroups = await fetchGroups(firebaseConfig, { organizationId }, 50);
+          const memberships = await fetchGroupMembers(firebaseConfig, { organizationId }, allGroups, 50);
+          if (!cancelled) {
+            const membership = memberships.find((m) => m.personId === personId);
+            setPersonGroup(membership ? allGroups.find((g) => g.id === membership.groupId) ?? null : null);
+          }
+        } catch {
+          if (!cancelled) setPersonGroup(null);
         }
 
         if (!nextPerson.primaryFamilyId) {
@@ -168,7 +183,7 @@ export function MemberProfileView() {
         setFamily(nextFamily);
         setFamilyMembers(nextFamilyMembers);
         setFamilyPeople(nextPeople.filter((item) => familyPersonIds.has(item.id)));
-        setStatus("Ficha completa sincronizada com o Firestore.");
+        setStatus("Ficha completa carregada.");
       } catch (error) {
         if (!cancelled) {
           setStatus("Exibindo dados simulados da ficha contábil.");
@@ -262,29 +277,47 @@ export function MemberProfileView() {
 
             <article style={S.card}>
               <span style={S.label}>Parcerias / Esdras Passe</span>
-              <strong style={{ ...S.value, color: "#10b981" }}>
-                {person.partnerBenefitsEnabled ? "Habilitado" : "Habilitado"}
+              <strong style={{ ...S.value, color: person.partnerBenefitsEnabled ? "#10b981" : "var(--alvo-ink-soft)" }}>
+                {person.partnerBenefitsEnabled ? "Habilitado" : "Não habilitado"}
               </strong>
-              <p style={S.hint}>Validação de convênios ativada</p>
+              <p style={S.hint}>{person.partnerBenefitsEnabled ? "Validação de convênios ativada" : "Convênios ainda não ativados"}</p>
             </article>
 
             <article style={S.card}>
               <span style={S.label}>Privacidade / LGPD</span>
-              <strong style={{ ...S.value, color: "#10b981" }}>
-                {person.consentLgpdAt ? "Confirmado" : "Confirmado"}
+              <strong style={{ ...S.value, color: person.consentLgpdAt ? "#10b981" : "#d97706" }}>
+                {person.consentLgpdAt ? "Confirmado" : "Pendente"}
               </strong>
-              <p style={S.hint}>Termo de consentimento assinado</p>
+              <p style={S.hint}>{person.consentLgpdAt ? "Termo de consentimento assinado" : "Termo de consentimento ainda não assinado"}</p>
             </article>
 
-            <article style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)" }}>Tribo de Dons</span>
-              <strong style={S.value}>
-                {person.tribePrimaryCode ? getTribeDisplayLabel(person.tribePrimaryCode) : "Asher"}
-              </strong>
-              <p style={{ ...S.hint, color: "var(--alvo-accent)" }}>
-                Hospitalidade, Apoio e Ensino
-              </p>
-            </article>
+            <Link href="/tribes" style={{ textDecoration: "none" }}>
+              <article style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)", height: "100%" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)" }}>Tribo (vocação ministerial)</span>
+                <strong style={S.value}>
+                  {person.tribePrimaryCode ? getTribeDisplayLabel(person.tribePrimaryCode) : "Não classificada"}
+                </strong>
+                <p style={{ ...S.hint, color: "var(--alvo-accent)" }}>
+                  {person.tribePrimaryCode
+                    ? getTribeMinistrySummary(person.tribePrimaryCode)
+                    : "Classifique na página de Tribos"}
+                </p>
+              </article>
+            </Link>
+
+            <Link href="/groups" style={{ textDecoration: "none" }}>
+              <article style={{ ...S.card, backgroundColor: "rgba(16,185,129,0.08)", borderLeft: "4px solid #10b981", height: "100%" }}>
+                <span style={{ fontSize: "0.75rem", color: "#059669" }}>Célula (comunidade)</span>
+                <strong style={S.value}>
+                  {personGroup ? personGroup.name : "Sem célula"}
+                </strong>
+                <p style={{ ...S.hint, color: "#059669" }}>
+                  {personGroup
+                    ? [personGroup.meetingTime, personGroup.city].filter(Boolean).join(" · ") || "Detalhes na página de Células"
+                    : "Vincule na página de Células"}
+                </p>
+              </article>
+            </Link>
           </section>
 
           {/* Linha do Tempo da Jornada Pastoral */}
@@ -536,7 +569,7 @@ export function MemberProfileView() {
                         <p style={{ ...S.hint, fontSize: "0.8rem" }}>
                           Função: <strong style={S.ink}>Baixista / Vocal de Apoio</strong>
                         </p>
-                        <p style={S.hint}>Dons alinhados à Tribo Asher</p>
+                        <p style={S.hint}>{person.tribePrimaryCode ? `Dons alinhados à Tribo ${getTribeDisplayLabel(person.tribePrimaryCode)}` : "Tribo ainda não classificada"}</p>
                       </div>
 
                       <div style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)" }}>

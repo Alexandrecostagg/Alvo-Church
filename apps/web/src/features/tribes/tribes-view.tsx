@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchPeople,
+  savePersonProfile,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { Person, TribeCode } from "@alvo/types";
@@ -30,6 +31,8 @@ export function TribesView() {
   const [realPeople, setRealPeople] = useState<Person[]>([]);
   const [selectedTribe, setSelectedTribe] = useState<TribeCode | null>(null);
   const [search, setSearch] = useState("");
+  const [classifyingIds, setClassifyingIds] = useState<string[]>([]);
+  const [classifyStatus, setClassifyStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
@@ -45,6 +48,71 @@ export function TribesView() {
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const peopleSource = (realPeople.length > 0 ? realPeople : recentPeople) as Person[];
+
+  const VALID_TRIBES = new Set(["LEVI","JUDAH","ASHER","ISSACHAR","JOSEPH","NAPHTALI","ZEBULUN","GAD","MANASSEH","EPHRAIM","BENJAMIN","REUBEN"]);
+
+  async function classifyPerson(person: Person): Promise<boolean> {
+    // Sem dados reais carregados, a lista é demonstração — não grava nada.
+    if (!user || realPeople.length === 0) return false;
+    setClassifyingIds((ids) => [...ids, person.id]);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          task: "tribe_classify",
+          organizationId,
+          input: {
+            memberName: `${person.firstName} ${person.lastName ?? ""}`.trim(),
+            ministerialInterests: person.ministerialInterests,
+            servingProfile: person.servingProfile,
+            availability: person.availability,
+            memberStatus: person.memberStatus
+          }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Falha na classificação");
+      // A IA responde JSON puro: {"primary":"...","secondary":"...","reason":"..."}
+      const raw = data.content ?? "";
+      const jsonMatch = String(raw).match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Resposta da IA fora do formato esperado");
+      const parsed = JSON.parse(jsonMatch[0]) as { primary?: string; secondary?: string | null };
+      const primary = parsed.primary && VALID_TRIBES.has(parsed.primary) ? parsed.primary as TribeCode : undefined;
+      if (!primary) throw new Error("Tribo sugerida inválida");
+      const secondary = parsed.secondary && VALID_TRIBES.has(parsed.secondary) ? parsed.secondary as TribeCode : undefined;
+      const updated: Person = { ...person, tribePrimaryCode: primary, tribeSecondaryCode: secondary };
+      await savePersonProfile(firebaseConfig, { organizationId }, updated);
+      setRealPeople((people) => people.map((x) => (x.id === person.id ? updated : x)));
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    } finally {
+      setClassifyingIds((ids) => ids.filter((id) => id !== person.id));
+    }
+  }
+
+  async function classifyOne(person: Person) {
+    setClassifyStatus(null);
+    const ok = await classifyPerson(person);
+    setClassifyStatus(ok
+      ? `${person.preferredName || person.firstName} classificado(a)!`
+      : `Não foi possível classificar ${person.preferredName || person.firstName}. Verifique se a ficha tem o perfil ministerial preenchido.`);
+  }
+
+  async function classifyAll(pending: Person[]) {
+    setClassifyStatus("Classificando com IA...");
+    let done = 0;
+    // Uma por vez pra respeitar a cota de IA e não estourar rate limit.
+    for (const person of pending.slice(0, 10)) {
+      if (await classifyPerson(person)) done += 1;
+    }
+    setClassifyStatus(done > 0
+      ? `${done} membro(s) classificados pela IA.`
+      : "Nenhum membro pôde ser classificado. Verifique as fichas e sua cota de IA.");
+  }
 
   const classified   = peopleSource.filter(p => p.tribePrimaryCode);
   const unclassified = peopleSource.filter(p => !p.tribePrimaryCode);
@@ -221,12 +289,22 @@ export function TribesView() {
                 {selectedTribeData.ministrySummary}
               </p>
             </div>
-            <button
-              onClick={() => setSelectedTribe(null)}
-              style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--alvo-ink-soft)", display: "flex" }}
-            >
-              <X size={16} />
-            </button>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+              <Link
+                href="/serving"
+                className="btn-secondary btn-sm"
+                style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
+              >
+                <UsersRound size={13} />
+                Escalar esta tribo
+              </Link>
+              <button
+                onClick={() => setSelectedTribe(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--alvo-ink-soft)", display: "flex" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {selectedTribeData.memberCount === 0 ? (
@@ -278,12 +356,23 @@ export function TribesView() {
                 Membros com Perfil Ministerial preenchido que ainda não receberam tribo
               </p>
             </div>
-            <button className="btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              className="btn-primary btn-sm"
+              style={{ display: "flex", alignItems: "center", gap: 6, opacity: classifyingIds.length > 0 ? 0.6 : 1 }}
+              disabled={classifyingIds.length > 0}
+              onClick={() => void classifyAll(unclassified)}
+            >
               <Bot size={14} />
-              Classificar todos com IA
+              {classifyingIds.length > 0 ? "Classificando..." : "Classificar todos com IA"}
             </button>
           </div>
 
+          {classifyStatus && (
+            <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}>
+              <Sparkles size={13} style={{ color: "var(--alvo-accent)" }} />
+              {classifyStatus}
+            </p>
+          )}
           <div className="unclassified-list">
             {unclassified.slice(0, 10).map(person => (
               <div key={person.id} className="unclassified-row">
@@ -300,9 +389,14 @@ export function TribesView() {
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
-                  <button className="btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <button
+                    className="btn-secondary btn-sm"
+                    style={{ display: "flex", alignItems: "center", gap: 4, opacity: classifyingIds.includes(person.id) ? 0.6 : 1 }}
+                    disabled={classifyingIds.includes(person.id)}
+                    onClick={() => void classifyOne(person)}
+                  >
                     <Sparkles size={12} />
-                    Classificar
+                    {classifyingIds.includes(person.id) ? "..." : "Classificar"}
                   </button>
                   <Link href={`/members/${person.id}`} className="btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <User size={12} />
