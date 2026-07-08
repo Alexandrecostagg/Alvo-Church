@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
+import { OnboardingChecklist } from "./onboarding-checklist";
 import {
   Activity,
   Bell,
@@ -764,6 +765,14 @@ export function DashboardView() {
             </div>
           )}
         </header>
+
+        <OnboardingChecklist
+          organizationId={organizationId}
+          peopleCount={realPeople.length}
+          groupsCount={realGroups.length}
+          eventsCount={realEvents.length}
+          visitorsCount={realIntakes.length}
+        />
 
         <section className="hero-grid">
           <article className="mission-board antigravity-float">
