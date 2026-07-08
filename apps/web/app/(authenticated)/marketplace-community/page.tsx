@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
+import { PlanGuard } from "../../../src/components/plan-guard";
 
 const MarketplaceCommunityView = dynamic(
   () => import("../../../src/features/marketplace-community/marketplace-community-view").then((mod) => mod.MarketplaceCommunityView),
@@ -10,8 +11,10 @@ const MarketplaceCommunityView = dynamic(
 
 export default function Page() {
   return (
-    <ModuleGuard moduleKey="communication">
-      <MarketplaceCommunityView />
-    </ModuleGuard>
+    <PlanGuard feature="marketplace">
+      <ModuleGuard moduleKey="marketplace">
+        <MarketplaceCommunityView />
+      </ModuleGuard>
+    </PlanGuard>
   );
 }

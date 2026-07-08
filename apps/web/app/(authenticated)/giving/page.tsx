@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
+import { PlanGuard } from "../../../src/components/plan-guard";
 
 const GivingView = dynamic(
   () => import("../../../src/features/giving/giving-view").then((mod) => mod.GivingView),
@@ -10,8 +11,10 @@ const GivingView = dynamic(
 
 export default function GivingPage() {
   return (
-    <ModuleGuard moduleKey="giving">
-      <GivingView />
-    </ModuleGuard>
+    <PlanGuard feature="giving">
+      <ModuleGuard moduleKey="giving">
+        <GivingView />
+      </ModuleGuard>
+    </PlanGuard>
   );
 }

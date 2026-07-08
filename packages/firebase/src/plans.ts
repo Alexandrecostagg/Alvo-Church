@@ -18,9 +18,14 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
   // Free existe pra provar valor, não pra sustentar a operação diária —
   // Eventos e Comunicação (uso recorrente/retenção) ficam no Comunidade+.
   free:       ["members", "app"],
-  comunidade: ["members", "events", "communication", "app", "tribes", "finance", "groups", "ai_preview"],
+  // Doações (PIX de terceiros) anda junto com Finanças — quem já cobra
+  // dízimo digital é operacionalmente maduro o bastante pra isso.
+  comunidade: ["members", "events", "communication", "app", "tribes", "finance", "groups", "ai_preview", "giving"],
+  // Marketplace é "recompensa" do topo — baixo custo de incluir, não é
+  // motivo suficiente pra alguém migrar sozinho.
   pastoral:   ["members", "events", "communication", "app", "tribes", "finance", "groups",
-               "pastoral-ai", "serving", "kids", "learning", "worship", "reports", "journeys"],
+               "pastoral-ai", "serving", "kids", "learning", "worship", "reports", "journeys",
+               "giving", "marketplace"],
   rede:       ["all"],
   enterprise: ["all"],
 };
@@ -29,7 +34,8 @@ export type PlanFeatureKey =
   | "members" | "events" | "communication" | "app"
   | "tribes" | "finance" | "groups" | "ai_preview"
   | "pastoral-ai" | "serving" | "kids" | "learning"
-  | "worship" | "reports" | "journeys" | "network" | "all";
+  | "worship" | "reports" | "journeys" | "network"
+  | "giving" | "marketplace" | "all";
 
 export function planHasFeature(plan: PlanId, feature: PlanFeatureKey): boolean {
   const features = PLAN_FEATURES[plan];

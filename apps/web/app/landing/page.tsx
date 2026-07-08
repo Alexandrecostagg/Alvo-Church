@@ -497,7 +497,7 @@ const PLANS = [
     features: [
       "Até 300 membros",
       "Tribos & Células",
-      "Finanças",
+      "Finanças & Doações (PIX)",
       "Eventos & Comunicação",
       "50 consultas de IA/mês",
     ],
@@ -516,7 +516,7 @@ const PLANS = [
       "500 consultas de IA/mês",
       "Escalas & Voluntários",
       "Escola EAD",
-      "Relatórios avançados",
+      "Marketplace da comunidade",
     ],
     cta: "Começar 14 dias grátis",
     highlight: true,

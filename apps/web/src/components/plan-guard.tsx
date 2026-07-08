@@ -30,6 +30,8 @@ const UPGRADE_TO: Record<PlanFeatureKey, PlanId> = {
   reports:       "pastoral",
   journeys:      "pastoral",
   network:       "rede",
+  giving:        "comunidade",
+  marketplace:   "pastoral",
   all:           "rede",
 };
 
