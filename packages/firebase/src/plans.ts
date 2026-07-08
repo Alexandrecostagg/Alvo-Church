@@ -42,6 +42,28 @@ export function planHasFeature(plan: PlanId, feature: PlanFeatureKey): boolean {
   return features.includes("all") || features.includes(feature);
 }
 
+// Dias de carência entre a fatura vencer (billingStatus "overdue") e o
+// acesso ser efetivamente suspenso ("suspended") — dá tempo do pagamento
+// via PIX/boleto compensar antes de travar o sistema do cliente.
+export const BILLING_GRACE_PERIOD_DAYS = 5;
+
+export type BillingStatus = "active" | "overdue" | "suspended";
+
+// billingStatus é gravado como "overdue" pelo webhook assim que o Asaas
+// avisa fatura vencida; a transição pra "suspended" é calculada aqui em
+// vez de precisar de um cron — evita o caso do webhook de suspensão nunca
+// chegar (ou o cliente pagar exatamente no limite do prazo).
+export function resolveBillingStatus(
+  rawStatus: BillingStatus | undefined,
+  overdueSince: string | undefined
+): BillingStatus {
+  if (rawStatus !== "overdue" || !overdueSince) return rawStatus ?? "active";
+  const overdueDate = new Date(overdueSince).getTime();
+  if (Number.isNaN(overdueDate)) return "overdue";
+  const daysSince = (Date.now() - overdueDate) / (1000 * 60 * 60 * 24);
+  return daysSince >= BILLING_GRACE_PERIOD_DAYS ? "suspended" : "overdue";
+}
+
 export function currentAiMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;

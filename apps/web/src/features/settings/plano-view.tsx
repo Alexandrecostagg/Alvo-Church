@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Sparkles, Lock, Zap, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Sparkles, Lock, Zap, Loader2, Receipt, AlertTriangle } from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
 import { useAppAuth } from "../../../app/providers";
 import type { PlanId } from "@alvo/firebase";
+import { linkAsaasSubscription } from "@alvo/firebase";
 
 const SALES_WHATSAPP = "5562993330336";
 
@@ -99,14 +100,64 @@ const REDE_FAIXAS = [
   { label: "50+ igrejas", price: "Enterprise", anual: "sob consulta" },
 ];
 
+interface Invoice {
+  id: string;
+  value: number;
+  status: string;
+  dueDate: string;
+  paymentDate: string | null;
+  invoiceUrl: string | null;
+}
+
+const INVOICE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  PENDING: { label: "Aguardando pagamento", color: "#9a6b00" },
+  OVERDUE: { label: "Vencida", color: "#A32D2D" },
+  CONFIRMED: { label: "Paga", color: "#1b8a4a" },
+  RECEIVED: { label: "Paga", color: "#1b8a4a" },
+  RECEIVED_IN_CASH: { label: "Paga", color: "#1b8a4a" },
+  REFUNDED: { label: "Estornada", color: "#6b7280" },
+};
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDate(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("pt-BR");
+}
+
 export function PlanoView() {
-  const { plan, aiQuota, ready } = usePlan();
-  const { tenantRuntime, organizationId, user } = useAppAuth();
+  const { plan, aiQuota, ready, billingStatus, overdueSince } = usePlan();
+  const { tenantRuntime, organizationId, user, firebaseConfig } = useAppAuth();
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? organizationId;
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [cpfCnpjPlan, setCpfCnpjPlan] = useState<PlanId | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user || !organizationId) return;
+    let cancelled = false;
+    setInvoicesLoading(true);
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch(`/api/billing/invoices?organizationId=${encodeURIComponent(organizationId)}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const data = await res.json();
+        if (!cancelled) setInvoices(res.ok ? data.invoices ?? [] : []);
+      } catch {
+        if (!cancelled) setInvoices([]);
+      } finally {
+        if (!cancelled) setInvoicesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, organizationId]);
 
   async function startCheckout(planId: PlanId, cpfCnpjValue: string) {
     if (!user) return;
@@ -127,6 +178,12 @@ export function PlanoView() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível iniciar o checkout.");
+      if (data.asaasCustomerId && data.asaasSubscriptionId) {
+        await linkAsaasSubscription(firebaseConfig, { organizationId }, {
+          asaasCustomerId: data.asaasCustomerId,
+          asaasSubscriptionId: data.asaasSubscriptionId
+        }).catch(() => undefined);
+      }
       window.location.href = data.checkoutUrl;
     } catch (e) {
       setCheckoutError(e instanceof Error ? e.message : "Erro ao iniciar checkout.");
@@ -140,6 +197,27 @@ export function PlanoView() {
       <p style={{ margin: "0 0 2rem", color: "var(--color-text-secondary)", fontSize: 14 }}>
         Gerencie seu plano e acompanhe o uso de IA.
       </p>
+
+      {ready && billingStatus !== "active" && (
+        <div style={{
+          display: "flex", gap: 10, alignItems: "flex-start",
+          padding: "1rem 1.25rem", borderRadius: 12,
+          background: "var(--color-background-danger, #FCEBEB)",
+          color: "var(--color-text-danger, #A32D2D)",
+          marginBottom: "1rem", fontSize: 13,
+        }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <strong>{billingStatus === "suspended" ? "Sistema suspenso por falta de pagamento." : "Fatura em atraso."}</strong>
+            {" "}
+            {billingStatus === "suspended"
+              ? "Regularize o pagamento abaixo para restaurar o acesso completo."
+              : overdueSince
+                ? `Vencida desde ${new Date(overdueSince).toLocaleDateString("pt-BR")}. Regularize para evitar a suspensão do sistema.`
+                : "Regularize para evitar a suspensão do sistema."}
+          </div>
+        </div>
+      )}
 
       {ready && (
         <div style={{
@@ -306,6 +384,50 @@ export function PlanoView() {
           ))}
         </div>
       </div>
+
+      {(invoicesLoading || (invoices && invoices.length > 0)) && (
+        <div style={{ marginTop: "1.5rem", background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+            <Receipt size={15} />
+            Histórico de faturas
+          </div>
+          {invoicesLoading ? (
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Carregando...</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {invoices!.map((inv) => {
+                const statusInfo = INVOICE_STATUS_LABEL[inv.status] ?? { label: inv.status, color: "#6b7280" };
+                return (
+                  <div key={inv.id} style={{
+                    display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                    padding: "0.6rem 0.75rem", borderRadius: 8,
+                    background: "var(--color-background-secondary)", fontSize: 13,
+                  }}>
+                    <span style={{ minWidth: 90, color: "var(--color-text-secondary)" }}>{formatDate(inv.dueDate)}</span>
+                    <span style={{ fontWeight: 500, minWidth: 90 }}>{formatCurrency(inv.value)}</span>
+                    <span style={{ color: statusInfo.color, fontWeight: 500, minWidth: 130 }}>{statusInfo.label}</span>
+                    {inv.paymentDate && (
+                      <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
+                        pago em {formatDate(inv.paymentDate)}
+                      </span>
+                    )}
+                    {inv.invoiceUrl && (inv.status === "PENDING" || inv.status === "OVERDUE") && (
+                      <a
+                        href={inv.invoiceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ marginLeft: "auto", color: "#7c3aed", fontWeight: 500, textDecoration: "none", fontSize: 12 }}
+                      >
+                        Pagar agora
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: "1.5rem", background: "var(--color-background-secondary)", borderRadius: 10, padding: "1rem 1.25rem", fontSize: 13, color: "var(--color-text-secondary)" }}>
         <div style={{ fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Proteção de margem da IA</div>

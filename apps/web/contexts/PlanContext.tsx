@@ -2,8 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { PlanId, PlanFeatureKey, AiQuotaStatus } from "@alvo/firebase";
-import { fetchOrgPlan, getAiQuotaStatus, incrementAiUsage, planHasFeature } from "@alvo/firebase";
+import { fetchOrgBillingInfo, getAiQuotaStatus, incrementAiUsage, planHasFeature } from "@alvo/firebase";
 import { useAppAuth } from "../app/providers";
+
+type BillingStatus = "active" | "overdue" | "suspended";
 
 interface PlanContextValue {
   plan: PlanId;
@@ -12,6 +14,8 @@ interface PlanContextValue {
   aiQuota: AiQuotaStatus | null;
   refreshAiQuota: () => Promise<void>;
   useAiQuery: () => Promise<boolean>;
+  billingStatus: BillingStatus;
+  overdueSince: string | null;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -21,6 +25,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanId>("free");
   const [ready, setReady] = useState(false);
   const [aiQuota, setAiQuota] = useState<AiQuotaStatus | null>(null);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus>("active");
+  const [overdueSince, setOverdueSince] = useState<string | null>(null);
 
   const isSuperAdmin = roles.includes("super_admin");
 
@@ -29,10 +35,15 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   async function loadPlan() {
     if (!tenantReady || !organizationId) return;
     try {
-      const p = await fetchOrgPlan(firebaseConfig, context);
-      setPlan(isSuperAdmin ? "enterprise" : p);
+      const info = await fetchOrgBillingInfo(firebaseConfig, context);
+      setPlan(isSuperAdmin ? "enterprise" : info.plan);
+      // super_admin (equipe interna) nunca fica travado por inadimplência.
+      setBillingStatus(isSuperAdmin ? "active" : info.billingStatus);
+      setOverdueSince(info.overdueSince ?? null);
     } catch {
       setPlan("free");
+      setBillingStatus("active");
+      setOverdueSince(null);
     } finally {
       setReady(true);
     }
@@ -75,6 +86,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       aiQuota,
       refreshAiQuota,
       useAiQuery,
+      billingStatus,
+      overdueSince,
     }}>
       {children}
     </PlanContext.Provider>

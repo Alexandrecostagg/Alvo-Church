@@ -16,7 +16,7 @@ import {
   type Firestore
 } from "firebase/firestore";
 import type { PlanId } from "./plans";
-import { PLAN_LIMITS, currentAiMonth, planTierToPlanId } from "./plans";
+import { PLAN_LIMITS, currentAiMonth, planTierToPlanId, resolveBillingStatus } from "./plans";
 import type {
   WeeklyTheme,
   AppRole,
@@ -224,7 +224,12 @@ function toOrganizationSubscriptionSettings(
     denominationalModeEnabled: Boolean(data.denominationalModeEnabled),
     startedAt: String(data.startedAt ?? ""),
     renewsAt: data.renewsAt ? String(data.renewsAt) : undefined,
-    trialEndsAt: data.trialEndsAt ? String(data.trialEndsAt) : undefined
+    trialEndsAt: data.trialEndsAt ? String(data.trialEndsAt) : undefined,
+    asaasCustomerId: data.asaasCustomerId ? String(data.asaasCustomerId) : undefined,
+    asaasSubscriptionId: data.asaasSubscriptionId ? String(data.asaasSubscriptionId) : undefined,
+    asaasStatus: data.asaasStatus ? String(data.asaasStatus) : undefined,
+    billingStatus: (data.billingStatus as OrganizationSubscriptionSettings["billingStatus"]) ?? "active",
+    overdueSince: data.overdueSince ? String(data.overdueSince) : undefined
   };
 }
 
@@ -3066,6 +3071,46 @@ export async function setOrgPlan(
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
   await setDoc(ref, { plan }, { merge: true });
+}
+
+// Grava os IDs do Asaas assim que o checkout é criado — não depende do
+// webhook (que só confirma quando o pagador de fato paga) pra já sabermos
+// qual assinatura consultar no histórico de faturas.
+export async function linkAsaasSubscription(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  ids: { asaasCustomerId: string; asaasSubscriptionId: string }
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
+  await setDoc(ref, ids, { merge: true });
+}
+
+export interface OrgBillingInfo {
+  plan: PlanId;
+  billingStatus: "active" | "overdue" | "suspended";
+  overdueSince?: string;
+  asaasSubscriptionId?: string;
+}
+
+export async function fetchOrgBillingInfo(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<OrgBillingInfo> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return { plan: "free", billingStatus: "active" };
+  const data = snap.data();
+  const plan = (data?.plan as PlanId) ?? planTierToPlanId(data?.planTier);
+  const rawStatus = (data?.billingStatus as "active" | "overdue" | "suspended") ?? "active";
+  const overdueSince = data?.overdueSince ? String(data.overdueSince) : undefined;
+  return {
+    plan,
+    billingStatus: resolveBillingStatus(rawStatus, overdueSince),
+    overdueSince,
+    asaasSubscriptionId: data?.asaasSubscriptionId ? String(data.asaasSubscriptionId) : undefined
+  };
 }
 
 export async function countOrgMembers(

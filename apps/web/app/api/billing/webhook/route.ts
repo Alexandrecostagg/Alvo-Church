@@ -12,7 +12,11 @@ const VALUE_TO_PLAN: Record<number, string> = {
 };
 
 const CONFIRMED_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
-const CANCELLED_EVENTS = new Set(["PAYMENT_OVERDUE", "SUBSCRIPTION_DELETED", "PAYMENT_DELETED", "PAYMENT_REFUNDED"]);
+// Fatura vencida entra em carência (billingStatus overdue) — não derruba o
+// plano na hora, só quando o prazo estoura (calculado em resolveBillingStatus,
+// packages/firebase/src/plans.ts) ou quando a assinatura é de fato cancelada.
+const OVERDUE_EVENTS = new Set(["PAYMENT_OVERDUE"]);
+const CANCELLED_EVENTS = new Set(["SUBSCRIPTION_DELETED", "PAYMENT_DELETED", "PAYMENT_REFUNDED"]);
 
 interface AsaasWebhookPayload {
   event: string;
@@ -52,12 +56,22 @@ export async function POST(req: NextRequest) {
       const plan = payload.payment?.value ? VALUE_TO_PLAN[payload.payment.value] : undefined;
       await adminPatchDocument(docPath, {
         ...(plan ? { plan } : {}),
+        billingStatus: "active",
+        overdueSince: null,
         asaasStatus: payload.payment?.status ?? payload.event,
         ...(payload.payment?.subscription ? { asaasSubscriptionId: payload.payment.subscription } : {})
+      });
+    } else if (OVERDUE_EVENTS.has(payload.event)) {
+      await adminPatchDocument(docPath, {
+        billingStatus: "overdue",
+        overdueSince: new Date().toISOString(),
+        asaasStatus: payload.payment?.status ?? payload.event
       });
     } else if (CANCELLED_EVENTS.has(payload.event)) {
       await adminPatchDocument(docPath, {
         plan: "free",
+        billingStatus: "active",
+        overdueSince: null,
         asaasStatus: payload.payment?.status ?? payload.event
       });
     }

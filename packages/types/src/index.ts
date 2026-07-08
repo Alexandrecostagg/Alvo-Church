@@ -122,6 +122,10 @@ export interface OrganizationSubscriptionSettings {
   asaasCustomerId?: string;
   asaasSubscriptionId?: string;
   asaasStatus?: string;
+  // Situação de cobrança — "overdue" começa quando o Asaas avisa fatura
+  // vencida (via webhook), "suspended" quando o prazo de carência estoura.
+  billingStatus?: "active" | "overdue" | "suspended";
+  overdueSince?: string;
 }
 
 export interface OrganizationFeatureModule {
