@@ -4,20 +4,31 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
+  addMemberContribution,
   createFirebaseWebRuntimeConfigFromEnv,
   fetchFamilyById,
   fetchFamilyMembers,
+  fetchMemberContributionsByPersonId,
   fetchPeople,
   fetchPersonById,
   fetchGroups,
   fetchGroupMembers,
+  fetchServiceAssignments,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import {
   getTribeDisplayLabel,
   getTribeMinistrySummary
 } from "@alvo/domain";
-import type { Family, FamilyMember, Group, Person } from "@alvo/types";
+import type {
+  ContributionType,
+  Family,
+  FamilyMember,
+  Group,
+  MemberContribution,
+  Person,
+  ServiceAssignment
+} from "@alvo/types";
 import {
   Tent,
   QrCode,
@@ -49,6 +60,22 @@ const JOURNEY_STAGES = [
   { code: "baptism", label: "Batismo / Aliança", desc: "Membro formal da igreja" },
   { code: "leader", label: "Liderança", desc: "Líder de Célula ou Voluntário" }
 ];
+
+const MINISTRY_NAMES: Record<string, string> = {
+  reception: "Recepção e Portaria",
+  media: "Mídia, Som e Transmissão",
+  worship: "Louvor e Banda",
+  kids: "Crianças",
+  operations: "Limpeza e Organização"
+};
+
+const CONTRIBUTION_TYPE_LABELS: Record<ContributionType, string> = {
+  dizimo: "Dízimo",
+  oferta: "Oferta",
+  campanha: "Campanha",
+  missao: "Missões",
+  outro: "Outro"
+};
 
 const S = {
   card: {
@@ -91,12 +118,10 @@ export function MemberProfileView() {
   const [activeStage, setActiveStage] = useState("contact");
   const [activeTab, setActiveTab] = useState<"cell" | "finance" | "academy" | "serving">("cell");
 
-  const [contributions, setContributions] = useState([
-    { id: 1, date: "10/05/2026", category: "Dízimo", amount: 250.00, method: "PIX", note: "Conciliação automática via Gateway" },
-    { id: 2, date: "02/05/2026", category: "Missões", amount: 80.00, method: "Cartão", note: "Fundo Missionário Esdras" }
-  ]);
+  const [contributions, setContributions] = useState<MemberContribution[]>([]);
+  const [assignments, setAssignments] = useState<ServiceAssignment[]>([]);
   const [newAmount, setNewAmount] = useState("");
-  const [newCategory, setNewCategory] = useState("Dízimo");
+  const [newCategory, setNewCategory] = useState<ContributionType>("dizimo");
 
   useEffect(() => {
     if (!personId) {
@@ -163,6 +188,17 @@ export function MemberProfileView() {
           if (!cancelled) setPersonGroup(null);
         }
 
+        // Escalas e contribuições reais da pessoa (para as abas Servir/Finanças)
+        const [allAssignments, nextContributions] = await Promise.all([
+          fetchServiceAssignments(firebaseConfig, { organizationId }, 300).catch(() => [] as ServiceAssignment[]),
+          fetchMemberContributionsByPersonId(firebaseConfig, { organizationId }, personId).catch(() => [] as MemberContribution[])
+        ]);
+
+        if (cancelled) return;
+
+        setAssignments(allAssignments.filter((item) => item.personId === personId));
+        setContributions(nextContributions);
+
         if (!nextPerson.primaryFamilyId) {
           setFamily(null);
           setFamilyMembers([]);
@@ -205,19 +241,48 @@ export function MemberProfileView() {
     return contributions.reduce((sum, item) => sum + item.amount, 0);
   }, [contributions]);
 
-  const handleAddContribution = (e: React.FormEvent) => {
+  const servingSummary = useMemo(() => {
+    if (!assignments.length) return null;
+
+    const sorted = [...assignments].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
+    const ministryCodes = Array.from(new Set(sorted.map((item) => item.ministryCode)));
+    const now = new Date();
+    const upcoming = assignments
+      .filter((item) => !["declined", "absent"].includes(item.status) && new Date(item.serviceDate) >= now)
+      .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))[0] ?? null;
+
+    return { latest: sorted[0], ministryCodes, upcoming };
+  }, [assignments]);
+
+  const handleAddContribution = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountVal = parseFloat(newAmount);
     if (isNaN(amountVal) || amountVal <= 0) return;
 
-    const entry = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString("pt-BR"),
-      category: newCategory,
+    const nowIso = new Date().toISOString();
+    const entry: MemberContribution = {
+      id: `contribution_${Date.now()}`,
+      organizationId,
+      userId: "",
+      personId,
       amount: amountVal,
-      method: "Lançamento Manual",
-      note: "Registrado diretamente na ficha do membro"
+      type: newCategory,
+      date: nowIso.slice(0, 10),
+      description: "Registrado diretamente na ficha do membro",
+      registeredBy: user?.uid ?? "",
+      registeredAt: nowIso
     };
+
+    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      try {
+        const { id: _localId, ...payload } = entry;
+        const savedId = await addMemberContribution(firebaseConfig, { organizationId }, payload);
+        entry.id = savedId;
+      } catch {
+        setStatus("Não foi possível salvar a contribuição. Verifique sua conexão e tente novamente.");
+        return;
+      }
+    }
 
     setContributions(prev => [entry, ...prev]);
     setNewAmount("");
@@ -483,12 +548,14 @@ export function MemberProfileView() {
                         <div style={{ display: "flex", gap: "0.5rem" }}>
                           <select
                             value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value)}
+                            onChange={(e) => setNewCategory(e.target.value as ContributionType)}
                             style={{ flex: 1, padding: "8px", backgroundColor: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 8, color: "var(--alvo-ink)" }}
                           >
-                            <option>Dízimo</option>
-                            <option>Oferta</option>
-                            <option>Missões</option>
+                            <option value="dizimo">Dízimo</option>
+                            <option value="oferta">Oferta</option>
+                            <option value="missao">Missões</option>
+                            <option value="campanha">Campanha</option>
+                            <option value="outro">Outro</option>
                           </select>
                           <input
                             type="number"
@@ -514,14 +581,20 @@ export function MemberProfileView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {contributions.map((item) => (
-                          <tr key={item.id} style={{ borderBottom: "1px solid var(--alvo-line)" }}>
-                            <td style={{ padding: "12px 0" }}>{item.date}</td>
-                            <td style={{ padding: "12px 0", fontWeight: 700 }}>{item.category}</td>
-                            <td style={{ padding: "12px 0" }}>
-                              <span style={{ backgroundColor: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", padding: "2px 8px", borderRadius: 6, fontSize: "0.75rem" }}>{item.method}</span>
+                        {contributions.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ padding: "16px 0", color: "var(--alvo-ink-soft)" }}>
+                              Nenhuma contribuição registrada para este membro.
                             </td>
-                            <td style={{ padding: "12px 0", color: "var(--alvo-ink-soft)" }}>{item.note}</td>
+                          </tr>
+                        ) : contributions.map((item) => (
+                          <tr key={item.id} style={{ borderBottom: "1px solid var(--alvo-line)" }}>
+                            <td style={{ padding: "12px 0" }}>{formatDate(item.date)}</td>
+                            <td style={{ padding: "12px 0", fontWeight: 700 }}>{CONTRIBUTION_TYPE_LABELS[item.type] ?? item.type}</td>
+                            <td style={{ padding: "12px 0" }}>
+                              <span style={{ backgroundColor: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", padding: "2px 8px", borderRadius: 6, fontSize: "0.75rem" }}>{item.culto || "Lançamento Manual"}</span>
+                            </td>
+                            <td style={{ padding: "12px 0", color: "var(--alvo-ink-soft)" }}>{item.description || "—"}</td>
                             <td style={{ padding: "12px 0", textAlign: "right", color: "#10b981", fontWeight: 700 }}>R$ {item.amount.toFixed(2)}</td>
                           </tr>
                         ))}
@@ -562,27 +635,64 @@ export function MemberProfileView() {
                       Ministérios Ativos & Próximas Escalas
                     </h3>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                      <div style={{ ...S.card, backgroundColor: "rgba(139,92,246,0.05)", borderLeft: "4px solid #8b5cf6" }}>
-                        <span style={{ fontSize: "0.75rem", color: "#8b5cf6", textTransform: "uppercase", fontWeight: 800 }}>Ministério Principal</span>
-                        <strong style={{ ...S.value, fontSize: "1.25rem" }}>Louvor e Adoração</strong>
-                        <p style={{ ...S.hint, fontSize: "0.8rem" }}>
-                          Função: <strong style={S.ink}>Baixista / Vocal de Apoio</strong>
-                        </p>
-                        <p style={S.hint}>{person.tribePrimaryCode ? `Dons alinhados à Tribo ${getTribeDisplayLabel(person.tribePrimaryCode)}` : "Tribo ainda não classificada"}</p>
-                      </div>
+                    {servingSummary ? (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                        <div style={{ ...S.card, backgroundColor: "rgba(139,92,246,0.05)", borderLeft: "4px solid #8b5cf6" }}>
+                          <span style={{ fontSize: "0.75rem", color: "#8b5cf6", textTransform: "uppercase", fontWeight: 800 }}>Ministério Principal</span>
+                          <strong style={{ ...S.value, fontSize: "1.25rem" }}>
+                            {MINISTRY_NAMES[servingSummary.latest.ministryCode] ?? servingSummary.latest.ministryCode}
+                          </strong>
+                          <p style={{ ...S.hint, fontSize: "0.8rem" }}>
+                            Função: <strong style={S.ink}>{servingSummary.latest.role}</strong>
+                          </p>
+                          {servingSummary.ministryCodes.length > 1 && (
+                            <p style={S.hint}>
+                              Também serve em: {servingSummary.ministryCodes
+                                .slice(1)
+                                .map((code) => MINISTRY_NAMES[code] ?? code)
+                                .join(", ")}
+                            </p>
+                          )}
+                        </div>
 
-                      <div style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)" }}>
-                        <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Próxima Escala</span>
-                        <strong style={{ ...S.value, fontSize: "1.25rem" }}>Domingo da Noite</strong>
-                        <p style={{ ...S.hint, fontSize: "0.8rem" }}>
-                          Data: <strong style={S.ink}>24/05/2026 às 18:30</strong>
-                        </p>
-                        <p style={{ ...S.hint, color: "#10b981", fontWeight: 700 }}>
-                          ✓ Presença confirmada no aplicativo
+                        <div style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)" }}>
+                          <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Próxima Escala</span>
+                          {servingSummary.upcoming ? (
+                            <>
+                              <strong style={{ ...S.value, fontSize: "1.25rem" }}>
+                                {MINISTRY_NAMES[servingSummary.upcoming.ministryCode] ?? servingSummary.upcoming.ministryCode}
+                              </strong>
+                              <p style={{ ...S.hint, fontSize: "0.8rem" }}>
+                                Data: <strong style={S.ink}>{formatDateTime(servingSummary.upcoming.serviceDate)}</strong>
+                              </p>
+                              {["confirmed", "present"].includes(servingSummary.upcoming.status) ? (
+                                <p style={{ ...S.hint, color: "#10b981", fontWeight: 700 }}>
+                                  ✓ Presença confirmada
+                                </p>
+                              ) : (
+                                <p style={{ ...S.hint, color: "#f59e0b", fontWeight: 700 }}>
+                                  Aguardando confirmação
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <strong style={{ ...S.value, fontSize: "1.25rem" }}>Sem escala futura</strong>
+                              <p style={{ ...S.hint, fontSize: "0.8rem" }}>
+                                Nenhuma escala agendada para os próximos cultos.
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={S.cardMuted}>
+                        <strong style={{ ...S.value, fontSize: "1.1rem" }}>Nenhum ministério ativo</strong>
+                        <p style={{ ...S.hint, fontSize: "0.85rem", lineHeight: "1.4" }}>
+                          Esta pessoa ainda não foi escalada em nenhum ministério. Use a área de Escalas para incluí-la em uma equipe de voluntariado.
                         </p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -685,6 +795,14 @@ function formatDate(value: string) {
   try {
     return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(value));
   } catch (e) {
+    return value;
+  }
+}
+
+function formatDateTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  } catch {
     return value;
   }
 }

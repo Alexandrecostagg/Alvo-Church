@@ -3174,6 +3174,23 @@ export async function fetchMemberContributions(
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemberContribution));
 }
 
+export async function fetchMemberContributionsByPersonId(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string
+): Promise<MemberContribution[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getMemberContributionsCollectionPath(context)),
+    where("personId", "==", personId),
+    limit(50)
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as MemberContribution))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
 export async function addMemberContribution(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
