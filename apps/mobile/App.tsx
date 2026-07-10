@@ -1,5 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -481,13 +482,17 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         {!modal && (
           <View style={s.tabBar}>
             {([
-              { id: "inicio", label: "Início", icon: "🏠" },
-              { id: "agenda", label: "Agenda", icon: "📅" },
-              { id: "celula", label: "Célula", icon: "🤝" },
-              { id: "perfil", label: "Perfil", icon: "👤" }
+              { id: "inicio", label: "Início", icon: "home-outline" as const, iconActive: "home" as const },
+              { id: "agenda", label: "Agenda", icon: "calendar-outline" as const, iconActive: "calendar" as const },
+              { id: "celula", label: "Célula", icon: "people-outline" as const, iconActive: "people" as const },
+              { id: "perfil", label: "Perfil", icon: "person-outline" as const, iconActive: "person" as const }
             ] as const).map(item => (
               <TouchableOpacity key={item.id} style={s.tabItem} onPress={() => setTab(item.id)}>
-                <Text style={[s.tabIcon, tab === item.id && { opacity: 1 }]}>{item.icon}</Text>
+                <Ionicons
+                  name={tab === item.id ? item.iconActive : item.icon}
+                  size={22}
+                  color={tab === item.id ? primary : "#9ca3af"}
+                />
                 <Text style={[s.tabLabel, tab === item.id && { color: primary, fontWeight: "700" }]}>{item.label}</Text>
               </TouchableOpacity>
             ))}
@@ -531,10 +536,10 @@ function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids
       {/* Quick actions */}
       <Text style={s.sectionTitle}>Acesso rápido</Text>
       <View style={s.quickGrid}>
-        <QuickAction icon="💰" label="Dízimos e Doações" sub="PIX e cartão" onPress={onOpenDoacoes} />
-        <QuickAction icon="👶" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />
-        <QuickAction icon="📋" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />
-        <QuickAction icon="🎸" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />
+        <QuickAction icon="heart" tint="#c2410c" bg="#fff3e8" label="Dízimos e Doações" sub="PIX e cartão" onPress={onOpenDoacoes} />
+        <QuickAction icon="happy-outline" tint="#3b6d11" bg="#eaf3de" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />
+        <QuickAction icon="checkbox-outline" tint="#185fa5" bg="#e6f1fb" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />
+        <QuickAction icon="musical-notes" tint="#534ab7" bg="#eeedfe" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />
       </View>
 
       {/* My cell */}
@@ -549,26 +554,71 @@ function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids
       )}
 
       {/* Journey */}
-      <Text style={s.sectionTitle}>Minha Jornada</Text>
-      <View style={s.card}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {[
-            { label: "Visitante", done: true },
-            { label: "Conectado", done: true, current: true },
-            { label: "Servindo", done: false }
-          ].map((step, i, arr) => (
-            <View key={step.label} style={{ flexDirection: "row", alignItems: "center", flex: i < arr.length - 1 ? 1 : undefined }}>
-              <View style={s.journeyStep}>
-                <View style={[s.journeyDot, { backgroundColor: step.done ? primary : "#e5e7eb" }]} />
-                <Text style={s.journeyLabel}>{step.label}</Text>
-                {step.current && <Text style={[s.journeyStatus, { color: primary }]}>Atual</Text>}
-              </View>
-              {i < arr.length - 1 && <View style={[s.journeyLine, { backgroundColor: step.done ? primary : "#e5e7eb", flex: 1 }]} />}
-            </View>
-          ))}
-        </View>
-      </View>
+      <JourneySection primary={primary} />
     </ScrollView>
+  );
+}
+
+// ─── Journey (jornada gamificada) ─────────────────────────────────────────────
+
+type JourneyStepDef = {
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  nudge: string;
+};
+
+// Vocabulário alinhado ao JourneyStage do backend (@alvo/types): exploring → connecting/grounding → serving.
+// Ainda não busca o MemberJourneyProfile real (falta resolver personId a partir do uid no mobile) — a etapa
+// atual segue fixa em "connecting" por enquanto, mas a UI já está pronta para receber dados reais.
+const JOURNEY_STEPS: JourneyStepDef[] = [
+  { key: "exploring", label: "Chegou", icon: "footsteps-outline", nudge: "" },
+  { key: "connecting", label: "Conectado", icon: "people", nudge: "Confirme presença na sua célula para avançar" },
+  { key: "serving", label: "Servindo", icon: "hand-left-outline", nudge: "" }
+];
+const CURRENT_STEP_INDEX = 1;
+
+function JourneySection({ primary }: { primary: string }) {
+  const currentStep = JOURNEY_STEPS[CURRENT_STEP_INDEX];
+  return (
+    <>
+      <Text style={s.sectionTitle}>Minha jornada · etapa {CURRENT_STEP_INDEX + 1} de {JOURNEY_STEPS.length}</Text>
+      <View style={s.card}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          {JOURNEY_STEPS.map((step, i, arr) => {
+            const done = i < CURRENT_STEP_INDEX;
+            const current = i === CURRENT_STEP_INDEX;
+            const locked = i > CURRENT_STEP_INDEX;
+            return (
+              <View key={step.key} style={{ flexDirection: "row", alignItems: "flex-start", flex: i < arr.length - 1 ? 1 : undefined }}>
+                <View style={s.journeyStep}>
+                  <View style={[
+                    s.journeyIconWrap,
+                    done && { backgroundColor: primary },
+                    current && { backgroundColor: `${primary}20`, borderWidth: 2, borderColor: primary },
+                    locked && { backgroundColor: "transparent", borderWidth: 2, borderColor: "#e5e7eb", borderStyle: "dashed" }
+                  ]}>
+                    <Ionicons
+                      name={done ? "checkmark" : step.icon}
+                      size={16}
+                      color={done ? "#fff" : current ? primary : "#9ca3af"}
+                    />
+                  </View>
+                  <Text style={[s.journeyLabel, current && { color: primary, fontWeight: "700" }]}>{step.label}</Text>
+                </View>
+                {i < arr.length - 1 && <View style={[s.journeyLine, { backgroundColor: done ? primary : "#e5e7eb", flex: 1, marginTop: 15 }]} />}
+              </View>
+            );
+          })}
+        </View>
+        {currentStep.nudge ? (
+          <View style={s.journeyNudge}>
+            <Ionicons name="sparkles-outline" size={14} color={primary} />
+            <Text style={[s.journeyNudgeText, { flex: 1 }]}>{currentStep.nudge}</Text>
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
@@ -1768,10 +1818,14 @@ function ModalHeader({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function QuickAction({ icon, label, sub, onPress }: { icon: string; label: string; sub: string; onPress: () => void }) {
+function QuickAction({ icon, tint, bg, label, sub, onPress }: {
+  icon: keyof typeof Ionicons.glyphMap; tint: string; bg: string; label: string; sub: string; onPress: () => void;
+}) {
   return (
     <Pressable style={s.quickAction} onPress={onPress}>
-      <Text style={s.quickIcon}>{icon}</Text>
+      <View style={[s.quickIconWrap, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={20} color={tint} />
+      </View>
       <Text style={s.quickLabel}>{label}</Text>
       <Text style={s.quickSub}>{sub}</Text>
     </Pressable>
@@ -1912,7 +1966,6 @@ const s = StyleSheet.create({
   // Tab bar
   tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingBottom: 24 },
   tabItem: { flex: 1, alignItems: "center", paddingTop: 8 },
-  tabIcon: { fontSize: 22, opacity: 0.4 },
   tabLabel: { fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: "500" },
 
   // Tab content
@@ -1932,16 +1985,17 @@ const s = StyleSheet.create({
   // Quick actions
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 4 },
   quickAction: { width: "47%", backgroundColor: "#fff", borderRadius: 14, padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  quickIcon: { fontSize: 28, marginBottom: 8 },
+  quickIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   quickLabel: { fontSize: 14, fontWeight: "700", color: BRAND_DARK, marginBottom: 2 },
   quickSub: { fontSize: 11, color: "#9ca3af", lineHeight: 15 },
 
   // Journey
-  journeyStep: { alignItems: "center" },
-  journeyDot: { width: 14, height: 14, borderRadius: 7, marginBottom: 6 },
-  journeyLine: { height: 2, marginBottom: 20 },
+  journeyStep: { alignItems: "center", width: 64 },
+  journeyIconWrap: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  journeyLine: { height: 2, marginTop: 0 },
   journeyLabel: { fontSize: 11, color: BRAND_DARK, fontWeight: "600", textAlign: "center" },
-  journeyStatus: { fontSize: 10, fontWeight: "700", marginTop: 2 },
+  journeyNudge: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#f3f4f6" },
+  journeyNudgeText: { fontSize: 12, color: "#6b7280", lineHeight: 16 },
 
   // Agenda
   agendaCard: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 14, marginBottom: 10, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
