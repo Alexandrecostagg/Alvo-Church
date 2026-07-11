@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
+import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
 type WorkerEnv = {
   BRAND_ASSETS_BUCKET?: R2Bucket;
@@ -12,6 +13,10 @@ type WorkerEnv = {
   // — nunca deve ser embutido em código de cliente. É a única coisa que
   // protege esse endpoint de virar um disparador de WhatsApp aberto ao público.
   NOTIFY_API_BEARER_TOKEN?: string;
+  // Service account (JSON) para o cron de NetworkSnapshot — mesma SA usada
+  // pelo backend do web. Configurar via `wrangler secret put`.
+  GOOGLE_SERVICE_ACCOUNT_JSON?: string;
+  FIREBASE_PROJECT_ID?: string;
 };
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
@@ -117,8 +122,6 @@ app.post("/wifi/intake", async (c) => {
   }
 });
 
-export default app;
-
 // Endpoint: upload comprovante (proof) for an event
 app.post("/events/:eventId/upload-proof", async (c) => {
   if (!c.env.BRAND_ASSETS_BUCKET) {
@@ -190,7 +193,8 @@ app.post("/notify/whatsapp", async (c) => {
       Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
       "Content-Type": "application/x-www-form-urlencoded"
     },
-    body: params.toString()
+    body: params.toString(),
+    signal: AbortSignal.timeout(15000)
   }).catch((err) => ({ ok: false, status: 500, text: async () => String(err) }));
 
   if (!resp || !(resp as Response).ok) {
@@ -201,3 +205,13 @@ app.post("/notify/whatsapp", async (c) => {
   const data = await (resp as Response).json().catch(() => ({}));
   return c.json({ success: true, provider: "twilio", result: data });
 });
+
+export default {
+  fetch: app.fetch,
+  // Cron diário (configurado em wrangler.jsonc → triggers.crons): grava o
+  // NetworkSnapshot de cada organização via agregações no servidor, sem
+  // baixar documentos — substitui o cálculo pesado que rodava no navegador.
+  scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
+    ctx.waitUntil(writeDailyNetworkSnapshots(env));
+  }
+};
