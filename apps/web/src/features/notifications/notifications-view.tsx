@@ -10,6 +10,7 @@ import {
   fetchPeople, fetchFollowUpTasks, fetchEvents,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
+import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person, FollowUpTask, Event } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
@@ -142,7 +143,7 @@ export function NotificationsView() {
       if (!isReal || !organizationId) { setNotifs(MOCK_NOTIFS); setLoading(false); return; }
       try {
         const [people, tasks, events] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 500),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 500),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 50),
           fetchEvents(firebaseConfig, { organizationId }),
         ]);

@@ -78,6 +78,7 @@ import {
   publishFinancialTransparencyReport,
   updateFollowUpTaskStatus
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type {
   Family,
   Event,
@@ -137,9 +138,9 @@ export function DashboardView() {
       setSyncMessage("Sincronizando pulso da igreja...");
       try {
         const [nextPeople, nextFamilies, nextGroups, nextEvents, nextJourneys, nextTasks, nextIntakes, nextReports] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 100),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 100),
           fetchFamilies(firebaseConfig, { organizationId }, 50),
-          fetchGroups(firebaseConfig, { organizationId }, 20),
+          cachedFetchGroups(firebaseConfig, { organizationId }, 20),
           fetchEvents(firebaseConfig, { organizationId }, 20),
           fetchVisitorJourneys(firebaseConfig, { organizationId }, 50),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 100),

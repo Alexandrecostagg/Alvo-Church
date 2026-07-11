@@ -36,6 +36,7 @@ import {
   updatePersonMemberStatus,
   updateVisitorJourneyStage
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { loadLocalMemberStore } from "../../lib/local-member-store";
@@ -258,10 +259,10 @@ export function JourneysView() {
 
       try {
         const [nextPeople, nextJourneys, nextTasks, nextGroups] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 120),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 120),
           fetchVisitorJourneys(firebaseConfig, { organizationId }, 80),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 120),
-          fetchGroups(firebaseConfig, { organizationId }, 40)
+          cachedFetchGroups(firebaseConfig, { organizationId }, 40)
         ]);
         const nextGroupMembers = nextGroups.length
           ? await fetchGroupMembers(firebaseConfig, { organizationId }, nextGroups)

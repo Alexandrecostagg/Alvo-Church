@@ -7,13 +7,20 @@ import {
   fetchGroups,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../lib/org-data-cache";
 import type { NetworkSnapshot } from "@alvo/types";
 import { useAppAuth } from "../../app/providers";
+
+// O snapshot é diário — depois que um navegador escreveu o de hoje, não há
+// motivo pra refazer a leitura pesada (até 2000 pessoas + grupos) em cada
+// navegação/reload. A guarda por localStorage derruba esse custo pra 1x/dia
+// por navegador.
+const LS_SNAPSHOT_KEY = "alvo_network_snapshot_written";
 
 /**
  * Writes a daily NetworkSnapshot for the current org so the parent network
  * dashboard can read aggregated managerial data without accessing individual records.
- * Runs once per session, silently in the background.
+ * Runs at most once per day per browser, silently in the background.
  */
 export function useNetworkSnapshotWriter() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
@@ -25,11 +32,18 @@ export function useNetworkSnapshotWriter() {
     const today = new Date().toISOString().slice(0, 10);
     const month = today.slice(0, 7);
 
+    // Já escreveu o snapshot de hoje para esta organização? Então nada a fazer.
+    try {
+      if (localStorage.getItem(LS_SNAPSHOT_KEY) === `${organizationId}:${today}`) return;
+    } catch {
+      // localStorage indisponível — segue com o write normal
+    }
+
     async function writeSnapshot() {
       try {
         const [people, groups] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 2000),
-          fetchGroups(firebaseConfig, { organizationId }),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 2000),
+          cachedFetchGroups(firebaseConfig, { organizationId }),
         ]);
 
         const now = new Date();
@@ -66,6 +80,12 @@ export function useNetworkSnapshotWriter() {
         };
 
         await saveNetworkSnapshot(firebaseConfig, snapshot);
+
+        try {
+          localStorage.setItem(LS_SNAPSHOT_KEY, `${organizationId}:${today}`);
+        } catch {
+          // best-effort
+        }
       } catch (e) {
         // Silent — snapshot write is best-effort
         console.warn("[NetworkSnapshot] write failed:", e);

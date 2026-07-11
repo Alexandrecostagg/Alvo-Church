@@ -33,6 +33,7 @@ import {
   saveScheduleSwapRequest,
   deleteServiceAssignment
 } from "@alvo/firebase";
+import { cachedFetchPeople } from "../../lib/org-data-cache";
 import { getTribeDisplayLabel, checkScheduleConflict, processScheduleSwap } from "@alvo/domain";
 import { recentPeople } from "../../lib/mock-data";
 import type { Person, ServiceAssignment, ServiceAssignmentStatus, ScheduleSwapRequest } from "@alvo/types";
@@ -211,7 +212,7 @@ export function ServingView() {
 
       try {
         const [nextPeople, nextAssignments, nextSwaps] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 160),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 160),
           fetchServiceAssignments(firebaseConfig, { organizationId }, 160),
           fetchScheduleSwapRequests(firebaseConfig, { organizationId }).catch(() => [] as ScheduleSwapRequest[])
         ]);

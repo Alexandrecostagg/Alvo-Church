@@ -52,6 +52,7 @@ import {
   getVisitorJourneysCollectionPath,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../src/lib/org-data-cache";
 import {
   getBrandModeLabel,
   getAttendanceStatusLabel,
@@ -140,10 +141,10 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             fetchVisitorJourneys(firebaseConfig, { organizationId }),
             fetchVisitorIntakes(firebaseConfig, { organizationId }),
             fetchFollowUpTasks(firebaseConfig, { organizationId }),
-            fetchGroups(firebaseConfig, { organizationId }),
+            cachedFetchGroups(firebaseConfig, { organizationId }),
             fetchEvents(firebaseConfig, { organizationId }),
             fetchFinancialTransparencyReports(firebaseConfig, { organizationId }),
-            fetchPeople(firebaseConfig, { organizationId }),
+            cachedFetchPeople(firebaseConfig, { organizationId }),
             fetchFamilies(firebaseConfig, { organizationId }),
             fetchPartnerOrganizations(firebaseConfig, { organizationId }),
             fetchPartnerBenefits(firebaseConfig, { organizationId }),

@@ -33,6 +33,7 @@ import {
   updatePrayerRequestStatus,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type {
   Person,
   Group,
@@ -113,8 +114,8 @@ export function CareRadarView() {
 
     try {
       const [peopleList, groupsList, assignments, attendance, prayers] = await Promise.all([
-        fetchPeople(firebaseConfig, ctx, 500),
-        fetchGroups(firebaseConfig, ctx, 100),
+        cachedFetchPeople(firebaseConfig, ctx, 500),
+        cachedFetchGroups(firebaseConfig, ctx, 100),
         fetchServiceAssignments(firebaseConfig, ctx, 400),
         fetchChurchAttendance(firebaseConfig, ctx, 2000),
         fetchPrayerRequests(firebaseConfig, ctx, 300),

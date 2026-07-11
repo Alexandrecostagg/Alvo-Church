@@ -32,6 +32,7 @@ import {
   fetchVisitorJourneys,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../src/lib/org-data-cache";
 import { useAppAuth } from "./providers";
 
 interface LiveTenantDataProps {
@@ -95,12 +96,12 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
           nextEvents,
           nextFinanceReports
         ] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }),
+          cachedFetchPeople(firebaseConfig, { organizationId }),
           fetchFamilies(firebaseConfig, { organizationId }),
           fetchVisitorJourneys(firebaseConfig, { organizationId }),
           fetchVisitorIntakes(firebaseConfig, { organizationId }),
           fetchFollowUpTasks(firebaseConfig, { organizationId }),
-          fetchGroups(firebaseConfig, { organizationId }),
+          cachedFetchGroups(firebaseConfig, { organizationId }),
           fetchEvents(firebaseConfig, { organizationId }),
           fetchFinancialTransparencyReports(firebaseConfig, { organizationId })
         ]);

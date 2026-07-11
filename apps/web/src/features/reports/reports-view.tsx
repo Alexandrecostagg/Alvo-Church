@@ -9,6 +9,7 @@ import {
   fetchPeople, fetchGroups, fetchEvents,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
+import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type { Person, Group, Event } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { Sparkline, BarChart } from "../../components/charts/NetworkCharts";
@@ -49,8 +50,8 @@ export function ReportsView() {
       if (!isReal || !organizationId) { setLoading(false); return; }
       try {
         const [p, g, e] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 2000),
-          fetchGroups(firebaseConfig, { organizationId }),
+          cachedFetchPeople(firebaseConfig, { organizationId }, 2000),
+          cachedFetchGroups(firebaseConfig, { organizationId }),
           fetchEvents(firebaseConfig, { organizationId }),
         ]);
         setPeople(p); setGroups(g); setEvents(e);

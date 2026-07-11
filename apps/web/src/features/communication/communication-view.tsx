@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchPeople } from "@alvo/firebase";
+import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person } from "@alvo/types";
 
 const CHANNELS = [
@@ -35,7 +36,7 @@ export function CommunicationView() {
   useEffect(() => {
     if (!composing || !configured || !organizationId || people.length > 0) return;
     setLoadingPeople(true);
-    fetchPeople(firebaseConfig, { organizationId }, 300)
+    cachedFetchPeople(firebaseConfig, { organizationId }, 300)
       .then(setPeople)
       .catch(() => setError("Não foi possível carregar a lista de pessoas."))
       .finally(() => setLoadingPeople(false));

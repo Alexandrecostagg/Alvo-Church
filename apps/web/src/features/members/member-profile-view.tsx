@@ -176,50 +176,72 @@ export function MemberProfileView() {
           setActiveStage("leader");
         }
 
+        // Os três blocos abaixo (célula, escalas/contribuições e família) são
+        // independentes entre si — só dependem de nextPerson. Rodam em
+        // paralelo: antes eram 3 estágios em série e a ficha levava a SOMA
+        // das latências; agora leva a do mais lento.
+
         // Célula da pessoa: procura o vínculo dela entre os grupos ativos
-        try {
-          const allGroups = await fetchGroups(firebaseConfig, { organizationId }, 50);
-          const memberships = await fetchGroupMembers(firebaseConfig, { organizationId }, allGroups, 50);
-          if (!cancelled) {
-            const membership = memberships.find((m) => m.personId === personId);
-            setPersonGroup(membership ? allGroups.find((g) => g.id === membership.groupId) ?? null : null);
+        const groupTask = (async () => {
+          try {
+            const allGroups = await fetchGroups(firebaseConfig, { organizationId }, 50);
+            const memberships = await fetchGroupMembers(firebaseConfig, { organizationId }, allGroups, 50);
+            if (!cancelled) {
+              const membership = memberships.find((m) => m.personId === personId);
+              setPersonGroup(membership ? allGroups.find((g) => g.id === membership.groupId) ?? null : null);
+            }
+          } catch {
+            if (!cancelled) setPersonGroup(null);
           }
-        } catch {
-          if (!cancelled) setPersonGroup(null);
-        }
+        })();
 
         // Escalas e contribuições reais da pessoa (para as abas Servir/Finanças)
-        const [allAssignments, nextContributions] = await Promise.all([
-          fetchServiceAssignments(firebaseConfig, { organizationId }, 300).catch(() => [] as ServiceAssignment[]),
-          fetchMemberContributionsByPersonId(firebaseConfig, { organizationId }, personId).catch(() => [] as MemberContribution[])
-        ]);
+        const servingTask = (async () => {
+          const [allAssignments, nextContributions] = await Promise.all([
+            fetchServiceAssignments(firebaseConfig, { organizationId }, 300).catch(() => [] as ServiceAssignment[]),
+            fetchMemberContributionsByPersonId(firebaseConfig, { organizationId }, personId).catch(() => [] as MemberContribution[])
+          ]);
+          if (cancelled) return;
+          setAssignments(allAssignments.filter((item) => item.personId === personId));
+          setContributions(nextContributions);
+        })();
+
+        // Família vinculada (quando existe)
+        const familyTask = (async (): Promise<"with-family" | "no-family"> => {
+          if (!nextPerson.primaryFamilyId) {
+            if (!cancelled) {
+              setFamily(null);
+              setFamilyMembers([]);
+              setFamilyPeople([]);
+            }
+            return "no-family";
+          }
+
+          const [nextFamily, nextFamilyMembers, nextPeople] = await Promise.all([
+            fetchFamilyById(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
+            fetchFamilyMembers(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
+            fetchPeople(firebaseConfig, { organizationId }, 80)
+          ]);
+
+          if (!cancelled) {
+            const familyPersonIds = new Set(nextFamilyMembers.map((member) => member.personId));
+            setFamily(nextFamily);
+            setFamilyMembers(nextFamilyMembers);
+            setFamilyPeople(nextPeople.filter((item) => familyPersonIds.has(item.id)));
+          }
+          return "with-family";
+        })();
+
+        // groupTask e servingTask nunca rejeitam (têm catch interno); só a
+        // família pode falhar — e mantém a mesma mensagem de erro de antes.
+        const [, , familyOutcome] = await Promise.all([groupTask, servingTask, familyTask]);
 
         if (cancelled) return;
-
-        setAssignments(allAssignments.filter((item) => item.personId === personId));
-        setContributions(nextContributions);
-
-        if (!nextPerson.primaryFamilyId) {
-          setFamily(null);
-          setFamilyMembers([]);
-          setFamilyPeople([]);
-          setStatus("Ficha carregada sem família vinculada.");
-          return;
-        }
-
-        const [nextFamily, nextFamilyMembers, nextPeople] = await Promise.all([
-          fetchFamilyById(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
-          fetchFamilyMembers(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
-          fetchPeople(firebaseConfig, { organizationId }, 80)
-        ]);
-
-        if (cancelled) return;
-
-        const familyPersonIds = new Set(nextFamilyMembers.map((member) => member.personId));
-        setFamily(nextFamily);
-        setFamilyMembers(nextFamilyMembers);
-        setFamilyPeople(nextPeople.filter((item) => familyPersonIds.has(item.id)));
-        setStatus("Ficha completa carregada.");
+        setStatus(
+          familyOutcome === "no-family"
+            ? "Ficha carregada sem família vinculada."
+            : "Ficha completa carregada."
+        );
       } catch (error) {
         if (!cancelled) {
           setStatus("Exibindo dados simulados da ficha contábil.");

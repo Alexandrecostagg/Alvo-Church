@@ -6,6 +6,7 @@ import {
   savePersonProfile,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { recentPeople, tribeDefinitions } from "../../lib/mock-data";
@@ -38,7 +39,7 @@ export function TribesView() {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
     async function load() {
       try {
-        const people = await fetchPeople(firebaseConfig, { organizationId }, 300);
+        const people = await cachedFetchPeople(firebaseConfig, { organizationId }, 300);
         setRealPeople(people);
       } catch (e) {
         console.error("Failed to load people:", e);
