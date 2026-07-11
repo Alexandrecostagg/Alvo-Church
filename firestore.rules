@@ -179,10 +179,27 @@ service cloud.firestore {
     }
 
     // Financial records: a member can only read their own contributions.
+    // Admin lança contribuição já confirmada manualmente a qualquer momento.
+    // Membro comum só pode criar a PRÓPRIA contribuição, e só como "pending"
+    // (autodeclarada via PIX real pelo app) — igreja confirma depois de
+    // conferir o comprovante/extrato, mesmo espírito de moderação usado em
+    // prayerRequests abaixo. Depois de criada, só admin edita/confirma.
     match /organizations/{orgId}/contributions/{contributionId} {
       allow read: if isTenantAdmin(orgId)
         || (isTenantMember(orgId) && resource.data.userId == request.auth.uid);
-      allow write: if isTenantAdmin(orgId);
+
+      allow create: if isTenantAdmin(orgId)
+        || (
+          isTenantMember(orgId)
+          && request.resource.data.organizationId == orgId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.registeredBy == request.auth.uid
+          && request.resource.data.status == "pending"
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+        );
+
+      allow update, delete: if isTenantAdmin(orgId);
     }
 
     // Public visitor form: unauthenticated create with strict shape and

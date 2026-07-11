@@ -27,7 +27,8 @@ import {
   HeartHandshake
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import type { FinancialTransparencyReport } from "@alvo/types";
+import type { FinancialTransparencyReport, MemberContribution } from "@alvo/types";
+import { fetchAllContributions, confirmMemberContribution } from "@alvo/firebase";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -121,8 +122,42 @@ interface ChatMessage {
 }
 
 export function FinanceView() {
-  const { configured } = useAppAuth();
-  
+  const { configured, user, organizationId, firebaseConfig } = useAppAuth();
+
+  // Contribuições reais vindas do app (PIX autodeclarado) — os relatórios
+  // mensais abaixo (income/expenses/missions) continuam sendo lançamento
+  // manual da liderança; isto aqui é o que os membros registraram sozinhos
+  // pelo app mobile e que precisa de confirmação humana antes de contar
+  // como recebido de fato.
+  const [contributions, setContributions] = useState<MemberContribution[]>([]);
+  const [contribLoading, setContribLoading] = useState(true);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!configured || !organizationId) { setContribLoading(false); return; }
+    let cancelled = false;
+    fetchAllContributions(firebaseConfig, { organizationId }, 200)
+      .then((list) => { if (!cancelled) setContributions(list); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setContribLoading(false); });
+    return () => { cancelled = true; };
+  }, [configured, organizationId, firebaseConfig]);
+
+  async function handleConfirmContribution(id: string) {
+    if (!organizationId || !user) return;
+    setConfirmingId(id);
+    try {
+      await confirmMemberContribution(firebaseConfig, { organizationId }, id, user.uid);
+      setContributions((prev) => prev.map((c) => c.id === id ? { ...c, status: "confirmed", confirmedBy: user.uid, confirmedAt: new Date().toISOString() } : c));
+    } catch {
+      // silencioso — admin pode tentar de novo pelo botão
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
+  const pendingContributions = contributions.filter((c) => c.status === "pending");
+
   // Estados Reativos Principais
   const [reports, setReports] = useState<ExtendedReport[]>(initialMockReports);
   const [filterQuery, setFilterQuery] = useState("");
@@ -665,6 +700,77 @@ export function FinanceView() {
            </button>
         </div>
       </header>
+
+      {/* Contribuições reais recebidas via PIX pelo app mobile — precisam de
+          confirmação humana antes de entrar no relatório mensal manual abaixo. */}
+      {!contribLoading && contributions.length > 0 && (
+        <section
+          className="no-print"
+          style={{
+            marginTop: "1.5rem",
+            background: "#1e293b",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16,
+            padding: "1.25rem 1.5rem"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
+              <Smartphone size={18} style={{ color: "#f97316" }} />
+              Contribuições via PIX (app)
+            </h3>
+            {pendingContributions.length > 0 && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24", background: "rgba(251,191,36,0.12)", padding: "4px 10px", borderRadius: 100 }}>
+                {pendingContributions.length} pendente{pendingContributions.length > 1 ? "s" : ""} de confirmação
+              </span>
+            )}
+          </div>
+
+          {pendingContributions.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
+              Nenhuma contribuição pendente — {contributions.length} registro{contributions.length > 1 ? "s" : ""} no total, todos conferidos.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pendingContributions.slice(0, 8).map((c) => (
+                <div
+                  key={c.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "0.75rem 1rem",
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: 10
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: "white", fontSize: 14 }}>{formatCurrency(c.amount)}</strong>
+                    <span style={{ marginLeft: 8, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                      {c.type} · {new Date(c.date).toLocaleDateString("pt-BR")}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleConfirmContribution(c.id)}
+                    disabled={confirmingId === c.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: "#16a34a", color: "white", border: "none",
+                      borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 600,
+                      cursor: confirmingId === c.id ? "default" : "pointer",
+                      opacity: confirmingId === c.id ? 0.6 : 1
+                    }}
+                  >
+                    <Check size={14} />
+                    {confirmingId === c.id ? "Confirmando..." : "Confirmar recebimento"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Main Grid: Insights Contábeis + WhatsApp Smartphone Sim */}
       <section className="finance-layout" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: "2.5rem", marginTop: "2rem" }}>

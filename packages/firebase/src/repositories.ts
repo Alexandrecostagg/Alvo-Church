@@ -3202,6 +3202,42 @@ export async function addMemberContribution(
   return ref.id;
 }
 
+// Visão de admin: todas as contribuições da organização (não só as de um
+// membro), usado pelo painel de Finanças. As Firestore rules já permitem
+// isso (isTenantAdmin lê qualquer contribuição) — só falha se quem chamar
+// não for admin, o que é o comportamento esperado.
+export async function fetchAllContributions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  take = 200
+): Promise<MemberContribution[]> {
+  const firestore = getFirebaseFirestore(config);
+  const q = query(
+    collection(firestore, getMemberContributionsCollectionPath(context)),
+    orderBy("date", "desc"),
+    limit(take)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemberContribution));
+}
+
+// Confirma uma contribuição autodeclarada pelo membro (status "pending",
+// criada via PIX no app) depois da liderança conferir o comprovante/extrato.
+export async function confirmMemberContribution(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  contributionId: string,
+  confirmedByUid: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(firestore, getMemberContributionsCollectionPath(context), contributionId);
+  await updateDoc(ref, {
+    status: "confirmed",
+    confirmedBy: confirmedByUid,
+    confirmedAt: new Date().toISOString()
+  });
+}
+
 // ─── Radar Pastoral: presença em culto ─────────────────────────────────────
 
 export async function fetchChurchAttendance(

@@ -8,6 +8,10 @@ type WorkerEnv = {
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
   TWILIO_WHATSAPP_FROM?: string;
+  // Segredo compartilhado só com o backend do web (apps/web/app/api/communication/*)
+  // — nunca deve ser embutido em código de cliente. É a única coisa que
+  // protege esse endpoint de virar um disparador de WhatsApp aberto ao público.
+  NOTIFY_API_BEARER_TOKEN?: string;
 };
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
@@ -145,6 +149,17 @@ app.post("/events/:eventId/upload-proof", async (c) => {
 
 // Endpoint: send WhatsApp message via Twilio
 app.post("/notify/whatsapp", async (c) => {
+  // Este endpoint dispara mensagem (e custo) pela conta Twilio da plataforma —
+  // só pode ser chamado pelo backend do web, nunca direto por um cliente.
+  const configuredToken = c.env.NOTIFY_API_BEARER_TOKEN;
+  const authorization = c.req.header("authorization");
+  if (!configuredToken) {
+    return jsonError("NOTIFY_API_BEARER_TOKEN nao configurado no Worker.", 503);
+  }
+  if (!authorization || authorization !== `Bearer ${configuredToken}`) {
+    return jsonError("Nao autorizado para notificacao.", 401);
+  }
+
   const body = await c.req.json().catch(() => ({}));
   const to = String(body.to ?? "");
   const message = String(body.message ?? "");

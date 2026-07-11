@@ -32,6 +32,10 @@ export function getOrganizationSubscriptionDocumentPath(context: TenantContext) 
   return `${getOrganizationSettingsCollectionPath(context)}/subscription`;
 }
 
+export function getOrganizationGivingDocumentPath(context: TenantContext) {
+  return `${getOrganizationSettingsCollectionPath(context)}/giving`;
+}
+
 export function getOrganizationFeaturesDocumentPath(context: TenantContext) {
   return `${getOrganizationSettingsCollectionPath(context)}/features`;
 }

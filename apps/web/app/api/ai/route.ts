@@ -37,6 +37,27 @@ function currentAiMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Tarefas restritas a liderança pastoral — mesmo em org no plano certo,
+// um membro comum não deve conseguir chamar isso direto pela API (a tela
+// já tem RoleGuard, mas a API precisa aplicar a mesma regra por conta própria,
+// já que quem chama pode ser o app mobile ou uma chamada manual).
+const PASTORAL_ONLY_TASKS = new Set<AiTask>(["pastoral_suggestion"]);
+const PASTORAL_ROLES = ["super_admin", "church_admin", "pastor"];
+
+async function hasPastoralRole(idToken: string, organizationId: string, uid: string): Promise<boolean> {
+  const res = await fetch(
+    firestoreDocUrl(`organizations/${organizationId}/users/${uid}`),
+    { headers: { Authorization: `Bearer ${idToken}` } }
+  );
+  if (!res.ok) return false;
+  const data = (await res.json()) as {
+    fields?: { roles?: { arrayValue?: { values?: Array<{ stringValue?: string }> } }; isActive?: { booleanValue?: boolean } };
+  };
+  const roles = data.fields?.roles?.arrayValue?.values?.map((v) => v.stringValue) ?? [];
+  const isActive = data.fields?.isActive?.booleanValue ?? false;
+  return isActive && roles.some((r) => PASTORAL_ROLES.includes(r ?? ""));
+}
+
 // Cota de IA é por organização, avaliada com o próprio ID token de quem
 // chamou — respeita as Firestore rules normais (settings/aiUsage exigem
 // isTenantMember), sem precisar de service account aqui.
@@ -111,6 +132,13 @@ export async function POST(req: NextRequest) {
   const { task, input, organizationId } = body;
   if (!organizationId) {
     return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
+  }
+
+  if (PASTORAL_ONLY_TASKS.has(task) && !(await hasPastoralRole(idToken, organizationId, uid))) {
+    return NextResponse.json(
+      { error: "Este recurso é restrito à liderança pastoral da organização." },
+      { status: 403 }
+    );
   }
 
   const quota = await checkAndConsumeAiQuota(idToken, organizationId);

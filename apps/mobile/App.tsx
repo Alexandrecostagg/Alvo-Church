@@ -40,7 +40,12 @@ import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL ?? "http://192.168.1.15:3000";
+// Fallback aponta para a URL de produção real (nunca para um IP de rede local de
+// desenvolvimento) — se EXPO_PUBLIC_WEB_API_URL não estiver definida no ambiente de
+// build, o pior cenário é o app tentar falar com produção, não com a máquina de
+// quem programou. Para builds de loja (EAS), defina EXPO_PUBLIC_WEB_API_URL
+// explicitamente (eas secret ou env do profile de build) apontando pra produção.
+const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL ?? "https://alvo-church-web.alexandrecostagg.workers.dev";
 
 async function callAi(task: string, input: unknown, idToken: string, organizationId: string): Promise<string> {
   const res = await fetch(`${WEB_API_URL}/api/ai`, {
@@ -468,7 +473,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
-          {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} onBack={pop} />}
+          {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} onBack={pop} />}
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
@@ -1101,15 +1106,19 @@ const mpStyles = StyleSheet.create({
 
 // ─── Doações Screen ───────────────────────────────────────────────────────────
 
-function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName: string; onBack: () => void }) {
+function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
+  primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
+}) {
   const [type, setType] = useState<"dizimo" | "oferta" | "missoes" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<"pix" | "cartao">("pix");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [pix, setPix] = useState<{ payload: string; qrDataUrl: string; pixKey: string; receiverName: string } | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
 
-  const PIX_KEY = "00.000.000/0001-00"; // Substituir pela chave real da igreja
-  const PIX_NAME = orgName;
   const presets = ["50", "100", "200", "500"];
 
   async function pickReceipt() {
@@ -1121,10 +1130,67 @@ function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName:
   }
 
   async function sharePixKey() {
-    try { await Share.share({ message: `Chave PIX: ${PIX_KEY}\nBeneficiário: ${PIX_NAME}` }); } catch {}
+    if (!pix) return;
+    try { await Share.share({ message: `PIX copia e cola:\n${pix.payload}\n\nChave: ${pix.pixKey}\nBeneficiário: ${pix.receiverName}` }); } catch {}
   }
 
   const finalAmount = amount === "custom" ? customAmount : amount;
+  const finalAmountNumber = Number(finalAmount);
+
+  // Gera o PIX real (BR Code + QR) assim que método=PIX e valor válido —
+  // via /api/giving/pix, que lê a chave PIX que a igreja configurou de
+  // verdade em Configurações → Doações. Se a igreja não configurou chave
+  // ainda, a API devolve erro claro em vez de mostrar algo falso.
+  useEffect(() => {
+    if (method !== "pix" || !finalAmountNumber || finalAmountNumber <= 0) { setPix(null); return; }
+    let cancelled = false;
+    async function loadPix() {
+      setPixLoading(true); setPixError(null);
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ organizationId: orgId, amount: finalAmountNumber, description: type })
+        });
+        const data = await res.json() as { ok?: boolean; payload?: string; qrDataUrl?: string; pixKey?: string; receiverName?: string; error?: string };
+        if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível gerar o PIX");
+        if (!cancelled) setPix({ payload: data.payload!, qrDataUrl: data.qrDataUrl!, pixKey: data.pixKey!, receiverName: data.receiverName! });
+      } catch (e) {
+        if (!cancelled) setPixError(e instanceof Error ? e.message : "Erro ao gerar PIX");
+      } finally {
+        if (!cancelled) setPixLoading(false);
+      }
+    }
+    void loadPix();
+    return () => { cancelled = true; };
+  }, [method, finalAmountNumber, orgId, type]);
+
+  async function confirmContribution() {
+    if (!finalAmountNumber || finalAmountNumber <= 0) { Alert.alert("Selecione um valor"); return; }
+    if (method === "pix" && !pix) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
+    setSubmitting(true);
+    try {
+      const { addMemberContribution } = await import("@alvo/firebase");
+      await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
+        organizationId: orgId,
+        userId: user.uid,
+        amount: finalAmountNumber,
+        type,
+        date: new Date().toISOString().slice(0, 10),
+        description: `Contribuição via app${receiptUri ? " (com comprovante)" : ""}`,
+        registeredBy: user.uid,
+        registeredAt: new Date().toISOString(),
+        status: "pending",
+        method: "pix"
+      });
+      setSubmitted(true);
+    } catch {
+      Alert.alert("Não foi possível registrar", "Sua contribuição via PIX foi feita normalmente, mas não conseguimos salvar o registro aqui. Avise a secretaria.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (submitted) {
     return (
@@ -1134,7 +1200,7 @@ function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName:
           <Text style={{ fontSize: 56, marginBottom: 16 }}>🙏</Text>
           <Text style={[s.screenTitle, { textAlign: "center" }]}>Contribuição registrada!</Text>
           <Text style={[s.screenSub, { textAlign: "center" }]}>
-            {receiptUri ? "Comprovante enviado. Obrigado pela fidelidade!" : "Obrigado pela contribuição! Envie o comprovante quando disponível."}
+            Fica com status pendente até a secretaria confirmar o recebimento. Obrigado pela fidelidade!
           </Text>
           <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 32, width: "100%" }} />
         </View>
@@ -1192,31 +1258,32 @@ function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName:
           <View style={[s.card, { marginTop: 12 }]}>
             <Text style={[s.eyebrow, { marginBottom: 8 }]}>DADOS PIX</Text>
 
-            {/* QR Code placeholder visual */}
-            <View style={s.qrPlaceholder}>
-              <View style={s.qrFrame}>
-                {Array.from({ length: 5 }).map((_, r) => (
-                  <View key={r} style={s.qrRow}>
-                    {Array.from({ length: 5 }).map((_, c) => (
-                      <View key={c} style={[s.qrCell, ((r + c) % 2 === 0 || (r === 0 || r === 4) || (c === 0 || c === 4)) && { backgroundColor: BRAND_DARK }]} />
-                    ))}
-                  </View>
-                ))}
-              </View>
-              <Text style={s.qrLabel}>QR Code PIX</Text>
-              <Text style={s.qrSub}>Use o app do seu banco para escanear</Text>
-            </View>
+            {!finalAmountNumber || finalAmountNumber <= 0 ? (
+              <Text style={[s.cardMeta, { textAlign: "center", paddingVertical: 12 }]}>Escolha um valor para gerar o PIX.</Text>
+            ) : pixLoading ? (
+              <View style={s.qrPlaceholder}><LoadingRow primary={primary} label="Gerando PIX..." /></View>
+            ) : pixError ? (
+              <Text style={[s.errorText, { textAlign: "center", paddingVertical: 12 }]}>{pixError}</Text>
+            ) : pix ? (
+              <>
+                <View style={s.qrPlaceholder}>
+                  <Image source={{ uri: pix.qrDataUrl }} style={{ width: 200, height: 200, borderRadius: 4 }} resizeMode="contain" />
+                  <Text style={s.qrLabel}>QR Code PIX</Text>
+                  <Text style={s.qrSub}>Use o app do seu banco para escanear</Text>
+                </View>
 
-            <View style={s.pixRow}>
-              <View style={s.fill}>
-                <Text style={s.pixLabel}>Chave PIX (CNPJ)</Text>
-                <Text style={s.pixKey} selectable>{PIX_KEY}</Text>
-              </View>
-              <TouchableOpacity style={[s.copyBtn, { borderColor: primary }]} onPress={sharePixKey}>
-                <Text style={[s.copyBtnText, { color: primary }]}>Copiar</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={s.pixLabel}>Beneficiário: <Text style={{ fontWeight: "700" }}>{PIX_NAME}</Text></Text>
+                <View style={s.pixRow}>
+                  <View style={s.fill}>
+                    <Text style={s.pixLabel}>Chave PIX</Text>
+                    <Text style={s.pixKey} selectable numberOfLines={1}>{pix.pixKey}</Text>
+                  </View>
+                  <TouchableOpacity style={[s.copyBtn, { borderColor: primary }]} onPress={sharePixKey}>
+                    <Text style={[s.copyBtnText, { color: primary }]}>Copiar código</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={s.pixLabel}>Beneficiário: <Text style={{ fontWeight: "700" }}>{pix.receiverName}</Text></Text>
+              </>
+            ) : null}
           </View>
         )}
 
@@ -1253,11 +1320,18 @@ function DoacoesScreen({ primary, orgName, onBack }: { primary: string; orgName:
         )}
 
         <Btn
-          label={finalAmount ? `Confirmar — R$ ${finalAmount}` : "Confirmar contribuição"}
-          onPress={() => { if (!finalAmount) { Alert.alert("Selecione um valor"); return; } setSubmitted(true); }}
+          label={finalAmount ? `Já paguei — R$ ${finalAmount}` : "Confirmar contribuição"}
+          onPress={confirmContribution}
+          loading={submitting}
+          disabled={method === "pix" && (pixLoading || !pix)}
           color={primary}
           style={{ marginTop: 20 }}
         />
+        {method === "pix" && (
+          <Text style={[s.cardMeta, { textAlign: "center", marginTop: 10 }]}>
+            Pague o PIX acima primeiro, depois toque em "Já paguei". Fica pendente até a secretaria confirmar o recebimento.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );

@@ -1232,6 +1232,9 @@ export interface WeeklyTheme {
 
 export type ContributionType = "dizimo" | "oferta" | "campanha" | "missao" | "outro";
 
+export type ContributionStatus = "pending" | "confirmed";
+export type ContributionMethod = "pix" | "manual" | "cash" | "card";
+
 export interface MemberContribution {
   id: string;
   organizationId: string;
@@ -1243,8 +1246,17 @@ export interface MemberContribution {
   description?: string;     // ex: "Oferta de Missões Junho"
   culto?: string;           // ex: "Culto Domingo Noite"
   receiptNumber?: string;
-  registeredBy: string;     // userId de quem registrou (staff/admin)
+  registeredBy: string;     // userId de quem registrou (staff/admin, ou o próprio membro quando pending)
   registeredAt: string;     // ISO datetime
+  // Auto-declarado pelo app (mobile/web) via PIX: o membro registra que pagou,
+  // fica "pending" até a liderança conferir e confirmar (recibo bate com o extrato).
+  // Registros lançados manualmente por staff continuam sem `status` (tratados como
+  // confirmados, mesmo comportamento de antes).
+  status?: ContributionStatus;
+  method?: ContributionMethod;
+  receiptUrl?: string;      // comprovante enviado pelo membro, quando method === "pix"
+  confirmedBy?: string;     // userId do admin que confirmou o pending
+  confirmedAt?: string;     // ISO datetime da confirmação
 }
 
 // ─── Radar Pastoral: presença em culto ──────────────────────────────────────

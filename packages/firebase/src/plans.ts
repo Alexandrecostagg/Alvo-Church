@@ -71,10 +71,11 @@ export function currentAiMonth(): string {
 
 // A ficha de assinatura (OrganizationSubscriptionSettings) usa uma taxonomia
 // de provisionamento ("planTier": base/growth/advanced/enterprise), enquanto
-// o gate de features em produção (PlanGuard/usePlan) usa PlanId. Nenhum
-// fluxo de criação de organização grava o campo `plan` que fetchOrgPlan lê —
-// esta função existe para derivar PlanId a partir do planTier já gravado,
-// como rede de segurança para organizações sem o campo `plan` explícito.
+// o gate de features em produção (PlanGuard/usePlan) usa PlanId. Os fluxos de
+// criação de organização (provisionSelfServeOrganization, organization-new-view)
+// já gravam o campo `plan` explicitamente via setOrgPlan — esta função continua
+// existindo como rede de segurança para organizações antigas ou criadas por
+// algum caminho que ainda não tenha sido migrado para gravar `plan` direto.
 export function planTierToPlanId(
   planTier: "base" | "growth" | "advanced" | "enterprise" | undefined
 ): PlanId {
