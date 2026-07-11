@@ -53,7 +53,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve orgSlug → organizationId (org_slugs tem leitura pública por doc)
-    const slugRes = await fetch(firestoreUrl(`org_slugs/${encodeURIComponent(orgSlug)}`));
+    const slugRes = await fetch(firestoreUrl(`org_slugs/${encodeURIComponent(orgSlug)}`), {
+      signal: AbortSignal.timeout(8000)
+    });
     if (!slugRes.ok) {
       return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
     }
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(8000),
         body: JSON.stringify({
           fields: {
             organizationId: str(organizationId),

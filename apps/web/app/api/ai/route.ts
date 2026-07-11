@@ -47,7 +47,7 @@ const PASTORAL_ROLES = ["super_admin", "church_admin", "pastor"];
 async function hasPastoralRole(idToken: string, organizationId: string, uid: string): Promise<boolean> {
   const res = await fetch(
     firestoreDocUrl(`organizations/${organizationId}/users/${uid}`),
-    { headers: { Authorization: `Bearer ${idToken}` } }
+    { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) }
   );
   if (!res.ok) return false;
   const data = (await res.json()) as {
@@ -61,13 +61,29 @@ async function hasPastoralRole(idToken: string, organizationId: string, uid: str
 // Cota de IA é por organização, avaliada com o próprio ID token de quem
 // chamou — respeita as Firestore rules normais (settings/aiUsage exigem
 // isTenantMember), sem precisar de service account aqui.
-async function checkAndConsumeAiQuota(
+//
+// As duas leituras (subscription e aiUsage) são independentes e rodam em
+// paralelo. O incremento NÃO acontece aqui: quem chama recebe `consume()`
+// e dispara o registro em paralelo com a geração do LLM, tirando a escrita
+// do caminho crítico da resposta.
+async function checkAiQuota(
   idToken: string,
   organizationId: string
-): Promise<{ allowed: boolean; plan: PlanId; used: number; limit: number }> {
+): Promise<{ allowed: boolean; plan: PlanId; used: number; limit: number; consume: () => Promise<void> }> {
   const headers = { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" };
+  const month = currentAiMonth();
 
-  const subRes = await fetch(firestoreDocUrl(`organizations/${organizationId}/settings/subscription`), { headers });
+  const [subRes, usageRes] = await Promise.all([
+    fetch(firestoreDocUrl(`organizations/${organizationId}/settings/subscription`), {
+      headers,
+      signal: AbortSignal.timeout(8000)
+    }),
+    fetch(firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`), {
+      headers,
+      signal: AbortSignal.timeout(8000)
+    })
+  ]);
+
   let plan: PlanId = "free";
   if (subRes.ok) {
     const subData = (await subRes.json()) as {
@@ -78,35 +94,35 @@ async function checkAndConsumeAiQuota(
   }
 
   const limit = PLAN_LIMITS[plan].aiQueriesPerMonth;
-  const month = currentAiMonth();
-
-  const usageRes = await fetch(firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`), { headers });
   const used = usageRes.ok
     ? Number((((await usageRes.json()) as { fields?: { count?: { integerValue?: string } } }).fields?.count?.integerValue) ?? 0)
     : 0;
 
   if (used >= limit) {
-    return { allowed: false, plan, used, limit };
+    return { allowed: false, plan, used, limit, consume: async () => {} };
   }
 
   // Incrementa de forma otimista (lê + grava; não é uma transação atômica,
   // mas o volume de chamadas simultâneas por organização é baixo o
   // suficiente pra essa margem de erro ser aceitável aqui).
-  await fetch(`${firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`)}?updateMask.fieldPaths=count&updateMask.fieldPaths=updatedAt`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({
-      fields: {
-        count: { integerValue: String(used + 1) },
-        updatedAt: { stringValue: new Date().toISOString() }
-      }
-    })
-  }).catch(() => {
-    // Falha ao registrar o uso não deve impedir a resposta já gerada —
-    // na pior hipótese a cota fica levemente subcontada neste mês.
-  });
+  const consume = async () => {
+    await fetch(`${firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`)}?updateMask.fieldPaths=count&updateMask.fieldPaths=updatedAt`, {
+      method: "PATCH",
+      headers,
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({
+        fields: {
+          count: { integerValue: String(used + 1) },
+          updatedAt: { stringValue: new Date().toISOString() }
+        }
+      })
+    }).catch(() => {
+      // Falha ao registrar o uso não deve impedir a resposta já gerada —
+      // na pior hipótese a cota fica levemente subcontada neste mês.
+    });
+  };
 
-  return { allowed: true, plan, used: used + 1, limit };
+  return { allowed: true, plan, used: used + 1, limit, consume };
 }
 
 export async function POST(req: NextRequest) {
@@ -134,14 +150,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
   }
 
-  if (PASTORAL_ONLY_TASKS.has(task) && !(await hasPastoralRole(idToken, organizationId, uid))) {
+  // Checagem de role (só para tarefas pastorais) e leituras de cota são
+  // independentes — rodam em paralelo. Nenhuma tem efeito colateral, então
+  // é seguro dispará-las juntas mesmo que uma delas negue o acesso.
+  const [pastoralAllowed, quota] = await Promise.all([
+    PASTORAL_ONLY_TASKS.has(task) ? hasPastoralRole(idToken, organizationId, uid) : Promise.resolve(true),
+    checkAiQuota(idToken, organizationId)
+  ]);
+
+  if (!pastoralAllowed) {
     return NextResponse.json(
       { error: "Este recurso é restrito à liderança pastoral da organização." },
       { status: 403 }
     );
   }
 
-  const quota = await checkAndConsumeAiQuota(idToken, organizationId);
   if (!quota.allowed) {
     return NextResponse.json(
       { error: `Cota de IA do mês esgotada (${quota.used}/${quota.limit} consultas no plano atual). Faça upgrade em Configurações → Plano.` },
@@ -150,6 +173,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // O registro de consumo roda em paralelo com a geração — a escrita no
+    // Firestore não bloqueia o início da chamada ao LLM nem a resposta.
+    const consumePromise = quota.consume();
+
     let result;
 
     switch (task) {
@@ -172,9 +199,11 @@ export async function POST(req: NextRequest) {
         result = await classifyTribe(apiKey, input as TribeClassifyInput);
         break;
       default:
+        await consumePromise;
         return NextResponse.json({ error: `Tarefa desconhecida: ${task}` }, { status: 400 });
     }
 
+    await consumePromise;
     return NextResponse.json({ ok: true, content: result.content, model: result.model });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido";

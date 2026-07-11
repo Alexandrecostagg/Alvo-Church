@@ -42,7 +42,8 @@ export async function adminPatchDocument(
   const res = await fetch(`${firestoreBaseUrl()}/${path}?${updateMask}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields: toFirestoreFields(data) })
+    body: JSON.stringify({ fields: toFirestoreFields(data) }),
+    signal: AbortSignal.timeout(8000)
   });
   if (!res.ok) {
     throw new Error(`Firestore admin patch falhou (${path}): ${await res.text()}`);
@@ -52,7 +53,8 @@ export async function adminPatchDocument(
 export async function adminGetDocument(path: string): Promise<Record<string, unknown> | null> {
   const token = await getGoogleAccessToken(FIRESTORE_SCOPE);
   const res = await fetch(`${firestoreBaseUrl()}/${path}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8000)
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Firestore admin get falhou (${path}): ${await res.text()}`);

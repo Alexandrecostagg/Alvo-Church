@@ -7,6 +7,16 @@ function clampInt(value: string | null, fallback: number, min: number, max: numb
   return Math.min(max, Math.max(min, n));
 }
 
+// Hash determinístico simples (FNV-1a) para derivar um seed estável do prompt.
+function hashSeed(input: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) % 1000000;
+}
+
 // Proxies Pollinations.ai image generation to avoid CORS issues with Canvas API.
 // Pollinations is completely free, no API key required.
 export async function GET(req: NextRequest) {
@@ -19,7 +29,12 @@ export async function GET(req: NextRequest) {
   const prompt = searchParams.get("prompt") ?? "church worship abstract background";
   const w = clampInt(searchParams.get("w"), 1080, 256, 2048);
   const h = clampInt(searchParams.get("h"), 1080, 256, 2048);
-  const seed = clampInt(searchParams.get("seed"), Math.floor(Math.random() * 9999), 0, 999999);
+  // Sem seed explícito, deriva um seed estável do prompt em vez de sortear:
+  // a mesma URL passa a produzir sempre a mesma imagem, então o Cache-Control
+  // abaixo vira cache de verdade (antes cada request era uma URL "nova" no
+  // upstream e a geração — cara e lenta — se repetia). O app web sempre envia
+  // seed explícito, então o comportamento de "gerar outra variação" não muda.
+  const seed = clampInt(searchParams.get("seed"), hashSeed(prompt), 0, 999999);
 
   const pollinationsUrl =
     `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
@@ -37,9 +52,10 @@ export async function GET(req: NextRequest) {
   }
 
   const contentType = imgRes.headers.get("Content-Type") ?? "image/jpeg";
-  const buffer = await imgRes.arrayBuffer();
 
-  return new NextResponse(buffer, {
+  // Repassa o corpo em streaming — sem bufferizar a imagem inteira na
+  // memória do Worker antes de começar a responder.
+  return new NextResponse(imgRes.body, {
     headers: {
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=86400, immutable",

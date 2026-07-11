@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   // organização (senão a leitura falha e caímos no catch abaixo).
   const brandingRes = await fetch(
     firestoreDocUrl(`organizations/${organizationId}/settings/branding`),
-    { headers: { Authorization: `Bearer ${idToken}` } }
+    { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) }
   );
   if (!brandingRes.ok) {
     return NextResponse.json({ error: "Não foi possível ler as configurações da organização." }, { status: 403 });

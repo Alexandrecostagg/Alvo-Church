@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
     `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/organizations/${organizationId}:runQuery`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(8000),
       headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         structuredQuery: {
@@ -89,5 +90,11 @@ export async function GET(req: NextRequest) {
   const specific = groupId ? themes.find((t) => t.scope === "specific" && t.groupIds.includes(groupId)) : undefined;
   const theme = specific ?? themes.find((t) => t.scope === "all") ?? null;
 
-  return NextResponse.json({ theme });
+  // O tema muda uma vez por semana — o cliente pode reusar a resposta por
+  // 1h sem nova consulta ao Firestore. `private`: a resposta é autenticada,
+  // então só o cache do próprio cliente (não CDN compartilhado).
+  return NextResponse.json(
+    { theme },
+    { headers: { "Cache-Control": "private, max-age=3600" } }
+  );
 }

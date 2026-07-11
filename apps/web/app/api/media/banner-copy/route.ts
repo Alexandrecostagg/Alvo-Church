@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { callGroqWithCascade } from "@alvo/ai";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export interface BannerCopyInput {
   tipo: string;      // Culto Domingo, Evento, Célula, etc.
@@ -49,30 +48,22 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
   "hashtags": "#tres #ou #quatro hashtags relevantes"
 }`;
 
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 300,
+  // Cascata começa no modelo rápido (20b) — mais que suficiente para um JSON
+  // de 300 tokens — com fallback automático para os maiores, timeout por
+  // tentativa e response_format json (elimina fences de markdown e retries
+  // por JSON malformado).
+  let raw: string;
+  try {
+    const result = await callGroqWithCascade(apiKey, [{ role: "user", content: prompt }], {
+      maxTokens: 300,
       temperature: 0.8,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return NextResponse.json({ error: `Groq: ${err}` }, { status: 502 });
+      jsonMode: true,
+    });
+    raw = result.content || "{}";
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Erro desconhecido";
+    return NextResponse.json({ error: `Groq: ${message}` }, { status: 502 });
   }
-
-  const data = (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-
-  const raw = data.choices[0]?.message?.content ?? "{}";
 
   // strip accidental markdown fences
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

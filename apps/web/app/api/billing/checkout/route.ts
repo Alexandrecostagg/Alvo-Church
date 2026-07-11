@@ -22,7 +22,7 @@ function projectId() {
 // assinar — evita que alguém dispare cobrança pra uma organização alheia.
 async function isTenantAdminOfOrg(idToken: string, organizationId: string, uid: string): Promise<boolean> {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/organizations/${organizationId}/users/${uid}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) });
   if (!res.ok) return false;
   const data = (await res.json()) as { fields?: { roles?: { arrayValue?: { values?: Array<{ stringValue?: string }> } }; isActive?: { booleanValue?: boolean } } };
   const roles = data.fields?.roles?.arrayValue?.values?.map((v) => v.stringValue) ?? [];
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
       method: "POST",
       headers: asaasHeaders,
+      signal: AbortSignal.timeout(10000),
       body: JSON.stringify({
         name: orgName,
         email,
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
     const subscriptionRes = await fetch(`${ASAAS_BASE_URL}/subscriptions`, {
       method: "POST",
       headers: asaasHeaders,
+      signal: AbortSignal.timeout(10000),
       body: JSON.stringify({
         customer: customerData.id,
         billingType: "UNDEFINED",
@@ -114,7 +116,8 @@ export async function POST(req: NextRequest) {
     // 3. Busca a primeira cobrança gerada pela assinatura, pra pegar o
     // link de pagamento hospedado (invoiceUrl).
     const paymentsRes = await fetch(`${ASAAS_BASE_URL}/subscriptions/${subscriptionData.id}/payments`, {
-      headers: asaasHeaders
+      headers: asaasHeaders,
+      signal: AbortSignal.timeout(10000)
     });
     const paymentsData = (await paymentsRes.json()) as { data?: Array<{ invoiceUrl?: string }> };
     const checkoutUrl = paymentsData.data?.[0]?.invoiceUrl;

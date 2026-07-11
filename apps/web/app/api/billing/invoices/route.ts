@@ -9,7 +9,7 @@ function projectId() {
 
 async function isTenantMemberOfOrg(idToken: string, organizationId: string, uid: string): Promise<boolean> {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/organizations/${organizationId}/users/${uid}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) });
   if (!res.ok) return false;
   const data = (await res.json()) as { fields?: { isActive?: { booleanValue?: boolean } } };
   return data.fields?.isActive?.booleanValue ?? false;
@@ -17,7 +17,7 @@ async function isTenantMemberOfOrg(idToken: string, organizationId: string, uid:
 
 async function fetchSubscriptionId(idToken: string, organizationId: string): Promise<string | null> {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/organizations/${organizationId}/settings/subscription`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) });
   if (!res.ok) return null;
   const data = (await res.json()) as { fields?: { asaasSubscriptionId?: { stringValue?: string } } };
   return data.fields?.asaasSubscriptionId?.stringValue ?? null;
@@ -36,7 +36,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "organizationId é obrigatório." }, { status: 400 });
   }
 
-  const allowed = await isTenantMemberOfOrg(idToken, organizationId, uid);
+  // Checagem de membership e leitura do subscriptionId são independentes —
+  // em paralelo (nenhuma tem efeito colateral).
+  const [allowed, subscriptionId] = await Promise.all([
+    isTenantMemberOfOrg(idToken, organizationId, uid),
+    fetchSubscriptionId(idToken, organizationId)
+  ]);
+
   if (!allowed) {
     return NextResponse.json({ error: "Você não tem acesso a esta organização." }, { status: 403 });
   }
@@ -46,14 +52,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, invoices: [] });
   }
 
-  const subscriptionId = await fetchSubscriptionId(idToken, organizationId);
   if (!subscriptionId) {
     return NextResponse.json({ ok: true, invoices: [] });
   }
 
   try {
     const res = await fetch(`${ASAAS_BASE_URL}/subscriptions/${subscriptionId}/payments?limit=12`, {
-      headers: { "User-Agent": "PlataformaEsdras/1.0", access_token: apiKey }
+      headers: { "User-Agent": "PlataformaEsdras/1.0", access_token: apiKey },
+      signal: AbortSignal.timeout(10000)
     });
     const data = (await res.json()) as {
       data?: Array<{
