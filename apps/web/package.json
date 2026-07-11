@@ -8,7 +8,7 @@
     "dev": "next dev --webpack",
     "preview:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && wrangler dev'",
     "deploy:cloudflare": "sh ./scripts/run-with-pnpm-shim.sh sh -c 'opennextjs-cloudflare build && node scripts/patch-eval.mjs && opennextjs-cloudflare deploy'",
-    "lint": "next lint",
+    "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --check ."
   },

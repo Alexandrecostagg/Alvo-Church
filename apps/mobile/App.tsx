@@ -1109,7 +1109,7 @@ const mpStyles = StyleSheet.create({
 function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
 }) {
-  const [type, setType] = useState<"dizimo" | "oferta" | "missoes" | "outro">("dizimo");
+  const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<"pix" | "cartao">("pix");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
@@ -1218,7 +1218,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         <View style={s.row}>
           {([
             { id: "dizimo", label: "Dízimo" }, { id: "oferta", label: "Oferta" },
-            { id: "missoes", label: "Missões" }, { id: "outro", label: "Outro" }
+            { id: "missao", label: "Missões" }, { id: "outro", label: "Outro" }
           ] as const).map(t => (
             <Pressable key={t.id} style={[s.typeChip, type === t.id && { backgroundColor: primary, borderColor: primary }]} onPress={() => setType(t.id)}>
               <Text style={[s.typeChipText, type === t.id && { color: "#fff" }]}>{t.label}</Text>
