@@ -4,7 +4,6 @@ export async function initializeFirebase() {
   };
 }
 
-export { initClient, getClientConfig } from './client';
 export * from "./client";
 export * from "./repositories";
 export * from "./orgFeatures";

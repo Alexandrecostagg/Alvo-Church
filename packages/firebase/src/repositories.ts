@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   getFirestore,
@@ -12,6 +13,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
@@ -1962,9 +1964,12 @@ export async function saveTribeAssessment(
   scores: TribeAssessmentScore[]
 ) {
   const firestore = getFirebaseFirestore(config);
-  
-  // Save main assessment
-  await setDoc(
+
+  // Assessment + scores num único writeBatch: atômico (ou grava tudo, ou
+  // nada) e um único round-trip em vez de 1 + N escritas individuais.
+  const batch = writeBatch(firestore);
+
+  batch.set(
     doc(firestore, getTribeAssessmentsCollectionPath(context), assessment.id),
     cleanFirestoreData({
       ...assessment,
@@ -1974,20 +1979,19 @@ export async function saveTribeAssessment(
     { merge: true }
   );
 
-  // Save scores as sub-collection
-  await Promise.all(
-    scores.map(score => 
-      setDoc(
-        doc(firestore, getTribeAssessmentScoresCollectionPath(context, assessment.id), score.id),
-        cleanFirestoreData({
-          ...score,
-          organizationId: context.organizationId,
-          tribeAssessmentId: assessment.id
-        }),
-        { merge: true }
-      )
-    )
-  );
+  for (const score of scores) {
+    batch.set(
+      doc(firestore, getTribeAssessmentScoresCollectionPath(context, assessment.id), score.id),
+      cleanFirestoreData({
+        ...score,
+        organizationId: context.organizationId,
+        tribeAssessmentId: assessment.id
+      }),
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
 
   return assessment;
 }
@@ -1999,15 +2003,18 @@ export async function fetchLeaderEmotionalPulses(
   maxItems = 30
 ) {
   const firestore = getFirebaseFirestore(config);
+  // Filtro no servidor: antes o limit(maxItems) era aplicado ANTES do filtro
+  // por leaderId — se os primeiros 30 docs fossem de outros líderes, o
+  // resultado vinha vazio mesmo havendo dados (além de baixar docs à toa).
   const pulsesQuery = query(
     collection(firestore, getLeaderEmotionalPulseCollectionPath(context)),
+    where("leaderId", "==", leaderId),
     limit(maxItems)
   );
   const snapshot = await getDocs(pulsesQuery);
 
   return snapshot.docs
     .map((doc) => toLeaderEmotionalPulse(doc.id, doc.data()))
-    .filter(p => p.leaderId === leaderId)
     .sort((a, b) => b.notedAt.localeCompare(a.notedAt));
 }
 
@@ -2034,16 +2041,17 @@ export async function fetchWellBeingResources(
   category?: WellBeingResource["category"]
 ) {
   const firestore = getFirebaseFirestore(config);
-  const resourcesQuery = query(
-    collection(firestore, getWellBeingResourcesCollectionPath(context))
-  );
+  // Quando há categoria, filtra no servidor em vez de baixar a coleção
+  // inteira e filtrar em JS.
+  const resourcesQuery = category
+    ? query(
+        collection(firestore, getWellBeingResourcesCollectionPath(context)),
+        where("category", "==", category)
+      )
+    : query(collection(firestore, getWellBeingResourcesCollectionPath(context)));
   const snapshot = await getDocs(resourcesQuery);
 
-  let resources = snapshot.docs.map((doc) => toWellBeingResource(doc.id, doc.data()));
-  if (category) {
-    resources = resources.filter(r => r.category === category);
-  }
-  return resources;
+  return snapshot.docs.map((doc) => toWellBeingResource(doc.id, doc.data()));
 }
 
 export async function fetchMentoringSessions(
@@ -2052,14 +2060,16 @@ export async function fetchMentoringSessions(
   leaderId: string
 ) {
   const firestore = getFirebaseFirestore(config);
+  // Filtro por líder no servidor — antes baixava as sessões de TODOS os
+  // líderes da organização para filtrar em JS.
   const sessionsQuery = query(
-    collection(firestore, getMentoringSessionsCollectionPath(context))
+    collection(firestore, getMentoringSessionsCollectionPath(context)),
+    where("leaderId", "==", leaderId)
   );
   const snapshot = await getDocs(sessionsQuery);
 
   return snapshot.docs
     .map((doc) => toMentoringSession(doc.id, doc.data()))
-    .filter(s => s.leaderId === leaderId)
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
 }
 
@@ -2275,17 +2285,21 @@ export async function fetchCommunityStoreModerationLogs(
   maxItems = 100
 ) {
   const firestore = getFirebaseFirestore(config);
-  const logsQuery = query(
-    collection(firestore, getCommunityStoreModerationLogsCollectionPath(context)),
-    limit(maxItems)
-  );
+  // Quando há storeId, filtra no servidor — antes o limit(100) global podia
+  // deixar de fora logs da loja pedida (e baixava logs de outras lojas).
+  const logsQuery = storeId
+    ? query(
+        collection(firestore, getCommunityStoreModerationLogsCollectionPath(context)),
+        where("storeId", "==", storeId),
+        limit(maxItems)
+      )
+    : query(
+        collection(firestore, getCommunityStoreModerationLogsCollectionPath(context)),
+        limit(maxItems)
+      );
   const snapshot = await getDocs(logsQuery);
 
-  let logs = snapshot.docs.map((item) => toCommunityStoreModerationLog(item.id, item.data()));
-  if (storeId) {
-    logs = logs.filter(log => log.storeId === storeId);
-  }
-  return logs;
+  return snapshot.docs.map((item) => toCommunityStoreModerationLog(item.id, item.data()));
 }
 
 export async function saveCommunityStoreModerationLog(
@@ -3118,8 +3132,10 @@ export async function countOrgMembers(
   context: TenantContext
 ): Promise<number> {
   const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(collection(firestore, getPeopleCollectionPath(context)));
-  return snap.size;
+  // Agregação no servidor: conta sem baixar os documentos (antes esta função
+  // transferia a coleção `people` inteira só para ler o `.size`).
+  const snap = await getCountFromServer(collection(firestore, getPeopleCollectionPath(context)));
+  return snap.data().count;
 }
 
 // ── AI quota ────────────────────────────────────────────────────────────────
@@ -3136,11 +3152,11 @@ export async function getAiQuotaStatus(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext
 ): Promise<AiQuotaStatus> {
-  const plan = await fetchOrgPlan(config, context);
   const month = currentAiMonth();
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, `organizations/${context.organizationId}/aiUsage/${month}`);
-  const snap = await getDoc(ref);
+  // Plano e uso do mês são leituras independentes — em paralelo.
+  const [plan, snap] = await Promise.all([fetchOrgPlan(config, context), getDoc(ref)]);
   const used: number = snap.exists() ? (snap.data()?.count ?? 0) : 0;
   const monthLimit = PLAN_LIMITS[plan].aiQueriesPerMonth;
   return { plan, used, limit: monthLimit, allowed: used < monthLimit, month };
@@ -3267,8 +3283,15 @@ export async function recordChurchAttendance(
 ): Promise<void> {
   const firestore = getFirebaseFirestore(config);
   const now = new Date().toISOString();
-  await Promise.all(
-    params.personIds.map((personId) => {
+
+  // writeBatch em fatias de 450 (limite do Firestore é 500 writes/batch):
+  // um check-in de culto com centenas de pessoas vira poucos round-trips
+  // atômicos em vez de centenas de setDocs individuais.
+  const BATCH_LIMIT = 450;
+  for (let start = 0; start < params.personIds.length; start += BATCH_LIMIT) {
+    const slice = params.personIds.slice(start, start + BATCH_LIMIT);
+    const batch = writeBatch(firestore);
+    for (const personId of slice) {
       const id = `${params.serviceDate}_${personId}`;
       const record: ChurchAttendance = {
         id,
@@ -3279,13 +3302,14 @@ export async function recordChurchAttendance(
         registeredByUserId: params.registeredByUserId,
         createdAt: now
       };
-      return setDoc(
+      batch.set(
         doc(firestore, getChurchAttendanceCollectionPath(context), id),
         cleanFirestoreData(record),
         { merge: true }
       );
-    })
-  );
+    }
+    await batch.commit();
+  }
 }
 
 // ─── Radar Pastoral: pedidos de oração ─────────────────────────────────────
