@@ -39,6 +39,9 @@
     "NEXT_PUBLIC_FIREBASE_APP_ID": "1:616327426236:web:8b3e265426a5d00ce120b9",
     "NEXT_PUBLIC_USE_FIREBASE_EMULATOR": "false",
     "NEXT_PRIVATE_MINIMAL_MODE": "1",
-    "ASAAS_API_BASE_URL": "https://sandbox.asaas.com/api/v3"
+    // Valores de PRODUÇÃO — o deploy sobrescreve o que estiver no dashboard
+    // da Cloudflare, então estas vars precisam viver aqui no arquivo.
+    "ASAAS_API_BASE_URL": "https://api.asaas.com/v3",
+    "WORKER_API_BASE_URL": "https://alvo-church-worker-api.alexandrecostagg.workers.dev"
   }
 }
