@@ -958,7 +958,7 @@ export function JourneysView() {
       </section>
 
       {/* Cartões de Alerta de Triagem (Gargalos) */}
-      <section className="journey-bottleneck-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginTop: "2rem" }}>
+      <section className="journey-bottleneck-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem", marginTop: "2rem" }}>
         <BottleneckCard
           label="Sem Primeiro Contato"
           value={visitorsWithoutContact.length}
@@ -1064,7 +1064,7 @@ export function JourneysView() {
         </div>
 
         {/* Kanban Board columns */}
-        <div className="journey-lanes" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.25rem", marginTop: "2rem" }}>
+        <div className="journey-lanes" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1.25rem", marginTop: "2rem" }}>
           {lanes.map((lane) => (
             <article 
               className="journey-lane" 
@@ -1126,10 +1126,10 @@ export function JourneysView() {
                         <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: lane.color, display: "flex", alignItems: "center", color: "white", fontWeight: 700, fontSize: "0.85rem", justifyContent: "center" }}>
                           {getInitials(getFullName(person))}
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <span 
-                            style={{ 
-                              fontSize: "0.65rem", 
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontSize: "0.65rem",
                               fontWeight: 900, 
                               textTransform: "uppercase", 
                               color: signal.level === "urgent" ? "#ef4444" : signal.level === "attention" ? "#f59e0b" : "#10b981",
@@ -1142,7 +1142,7 @@ export function JourneysView() {
                           >
                             {signal.label}
                           </span>
-                          <strong style={{ color: "white", display: "block", fontSize: "0.85rem" }}>{getFullName(person)}</strong>
+                          <strong style={{ color: "white", display: "block", fontSize: "0.85rem", overflowWrap: "anywhere" }}>{getFullName(person)}</strong>
                           <small style={{ color: "#64748b", fontSize: "0.7rem", display: "block", marginTop: 4 }}>
                             {personOpenTasks.length} tarefa(s) · {group ? group.name : "sem célula"}
                           </small>
