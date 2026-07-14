@@ -38,7 +38,7 @@ export type OrganizationBrandMode = "alvo_managed" | "co_branded" | "white_label
 export type SubscriptionPlanTier = "base" | "growth" | "advanced" | "enterprise";
 export type BillingCycle = "monthly" | "yearly" | "custom";
 export type MemberRange = "up_to_100" | "101_to_300" | "301_to_800" | "801_plus";
-export type BrandAssetKind = "logoLight" | "logoDark" | "icon" | "favicon";
+export type BrandAssetKind = "logoLight" | "logoDark" | "icon" | "favicon" | "kidsPhoto";
 
 export type TribeCode =
   | "LEVI"
@@ -326,6 +326,7 @@ export interface Person {
   consentLgpdAt?: string;
   memberCardCode?: string;
   partnerBenefitsEnabled?: boolean;
+  photoUrl?: string;            // foto de perfil (ex.: capturada no check-in kids)
   personType: PersonType;
   memberStatus: MemberStatus;
   status: PersonStatus;
@@ -1054,29 +1055,46 @@ export interface TribeReclassificationSnapshot extends TribesDashboardSnapshot {
 
 export type KidsCheckInStatus = "checked_in" | "checked_out" | "cancelled";
 
-export interface KidsCheckIn { 
-  id: string; 
-  organizationId: string; 
-  campusId?: string; 
-  childId: string; 
-  parentId: string; 
-  authorizedPickUpIds: string[]; 
-  checkedInAt: string; 
-  checkedOutAt?: string; 
-  checkedOutByParentId?: string; 
-  status: KidsCheckInStatus; 
-  roomCode?: string; 
-  securityToken: string; 
-  notes?: string; 
+export interface KidsCheckIn {
+  id: string;
+  organizationId: string;
+  campusId?: string;
+  childId: string;                 // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
+  parentId: string;                // responsável que fez o check-in
+  authorizedPickUpIds: string[];   // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
+  checkedInAt: string;
+  checkedOutAt?: string;
+  checkedOutByParentId?: string;
+  checkedInByUserId?: string;      // voluntário/uid que operou a entrada
+  status: KidsCheckInStatus;
+  roomCode?: string;
+  serviceTeamId?: string;          // sala kids (ServiceTeam) onde a criança está
+  securityToken: string;           // payload do QR de retirada
+  // Denormalizado p/ exibição (essencial quando a criança é cadastro rápido, sem Person):
+  childName?: string;
+  guardianName?: string;
+  allergies?: string;
+  securityRestrictions?: string;
+  photoUrl?: string;               // foto tirada na hora
+  photoConsentAt?: string;         // consentimento LGPD do responsável (timestamp)
+  notes?: string;
 }
 
-export interface KidsSecuritySession { 
-  id: string; 
-  organizationId: string; 
-  parentId: string; 
-  token: string; 
-  expiresAt: string; 
-  status: "active" | "used" | "expired"; 
+export interface KidsSecuritySession {
+  id: string;
+  organizationId: string;
+  parentId: string;
+  token: string;
+  expiresAt: string;
+  status: "active" | "used" | "expired";
+}
+
+// Config da Segurança Kids por organização (settings/kids). O admin define
+// quais papéis podem gerar/operar o QR e quais ServiceTeams são "salas kids".
+export interface OrganizationKidsSettings {
+  qrGeneratorRoles: AppRole[];     // papéis autorizados a gerar/operar o check-in por QR
+  kidsTeamIds: string[];           // ServiceTeam.id que representam salas kids
+  updatedAt?: string;
 }
 
 // Leader Wellness Types

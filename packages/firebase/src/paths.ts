@@ -40,6 +40,15 @@ export function getOrganizationFeaturesDocumentPath(context: TenantContext) {
   return `${getOrganizationSettingsCollectionPath(context)}/features`;
 }
 
+export function getOrganizationKidsSettingsDocumentPath(context: TenantContext) {
+  return `${getOrganizationSettingsCollectionPath(context)}/kids`;
+}
+
+// Segurança Kids: registros de check-in/out das crianças.
+export function getKidsCheckInsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/kidsCheckIns`;
+}
+
 export function getOrganizationBrandAssetPath(
   context: TenantContext,
   assetKind: "logoLight" | "logoDark" | "icon" | "favicon",

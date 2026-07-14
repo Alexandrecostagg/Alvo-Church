@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Building2, UsersRound, Layers } from "lucide-react";
+import { Settings, Building2, UsersRound, Layers, ShieldCheck } from "lucide-react";
 import { SettingsView } from "./settings-view";
 import { UsersView } from "./users-view";
 import { PlanoView } from "./plano-view";
+import { KidsSettingsView } from "./kids-settings-view";
 import { OrganizationNewView } from "../saas/organization-new-view";
 
 // Configurações, Organizações, Usuários e Plano viviam em 4 itens de menu
 // separados — juntos aqui como abas de uma página só ("Configurações").
 export function SettingsWithAdminTabsView() {
-  const [tab, setTab] = useState<"settings" | "org" | "users" | "plano">("settings");
+  const [tab, setTab] = useState<"settings" | "org" | "users" | "plano" | "kids">("settings");
 
   return (
     <div>
@@ -19,11 +20,13 @@ export function SettingsWithAdminTabsView() {
         <TabButton active={tab === "org"} onClick={() => setTab("org")} icon={Building2} label="Organizações" />
         <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={UsersRound} label="Usuários" />
         <TabButton active={tab === "plano"} onClick={() => setTab("plano")} icon={Layers} label="Plano" />
+        <TabButton active={tab === "kids"} onClick={() => setTab("kids")} icon={ShieldCheck} label="Segurança Kids" />
       </div>
       {tab === "settings" && <SettingsView />}
       {tab === "org" && <OrganizationNewView />}
       {tab === "users" && <UsersView />}
       {tab === "plano" && <PlanoView />}
+      {tab === "kids" && <div style={{ padding: "20px" }}><KidsSettingsView /></div>}
     </div>
   );
 }

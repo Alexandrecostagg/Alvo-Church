@@ -254,3 +254,41 @@ export async function uploadOrganizationBrandAsset(params: {
 
   return payload as TenantBrandAssetUploadResponse;
 }
+
+// Parte de arquivo aceita tanto o File do navegador quanto o objeto
+// { uri, name, type } que o React Native/Expo usa em FormData.
+export type UploadFilePart = File | Blob | { uri: string; name: string; type: string };
+
+// Upload de foto de criança (Segurança Kids). Reusa o endpoint tenant-assets
+// com assetKind "kidsPhoto"; o worker roteia para o prefixo R2 organizations/
+// {orgId}/kids/{childId}/... Cross-platform (web e mobile).
+export async function uploadKidsPhoto(params: {
+  uploadApiBaseUrl: string;
+  organizationId: string;
+  childId: string;
+  file: UploadFilePart;
+  authToken?: string;
+}): Promise<TenantBrandAssetUploadResponse> {
+  if (!params.uploadApiBaseUrl) {
+    throw new Error("Cloudflare upload API nao configurada.");
+  }
+
+  const formData = new FormData();
+  formData.append("organizationId", params.organizationId);
+  formData.append("assetKind", "kidsPhoto");
+  formData.append("childId", params.childId);
+  // RN aceita { uri, name, type }; DOM aceita File/Blob. Cast evita atrito de tipo.
+  formData.append("file", params.file as unknown as Blob);
+
+  const response = await fetch(`${params.uploadApiBaseUrl.replace(/\/$/, "")}/tenant-assets/upload`, {
+    method: "POST",
+    headers: params.authToken ? { Authorization: `Bearer ${params.authToken}` } : undefined,
+    body: formData
+  });
+
+  const payload = (await response.json()) as Partial<TenantBrandAssetUploadResponse> & { error?: string };
+  if (!response.ok || !payload.success || !payload.publicUrl || !payload.objectKey) {
+    throw new Error(payload.error ?? "Nao foi possivel enviar a foto para a Cloudflare.");
+  }
+  return payload as TenantBrandAssetUploadResponse;
+}

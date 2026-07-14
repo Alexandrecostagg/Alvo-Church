@@ -35,7 +35,19 @@
       "package": "com.plataformaesdras.app"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O app usa a câmera para escanear o QR de retirada da Segurança Kids."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in."
+        }
+      ]
     ]
   }
 }

@@ -1,5 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 
@@ -36,7 +37,7 @@ import {
   subscribeToFirebaseMobileAuthState,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot } from "@alvo/types";
+import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -474,7 +475,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
           {/* Modals */}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
-          {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} onBack={pop} />}
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
@@ -1339,85 +1340,264 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
 
 // ─── Kids Check-in Screen ─────────────────────────────────────────────────────
 
-function KidsCheckinScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
-  const [childName, setChildName] = useState(""); const [room, setRoom] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checkIns, setCheckIns] = useState<KidCheckIn[]>([]);
-  const [tab, setTab] = useState<"checkin" | "checkout">("checkin");
+const DEFAULT_KIDS_ROOMS = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
 
-  const rooms = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
+function newKidsToken() {
+  return `KID-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+}
 
-  function doCheckIn() {
-    if (!childName.trim() || !room) { Alert.alert("Preencha o nome e a sala."); return; }
+// Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho
+// (gera o crachá digital com QR no celular dele, com foto e consentimento) e o
+// voluntário escalado escaneia o QR na retirada para validar e dar baixa.
+function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [canOperate, setCanOperate] = useState(false);
+  const [mode, setMode] = useState<"guardian" | "volunteer">("guardian");
+  const [active, setActive] = useState<KidsCheckIn[]>([]);
+  const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([]);
+
+  // form de check-in (responsável)
+  const [childName, setChildName] = useState("");
+  const [room, setRoom] = useState<{ id: string; name: string } | null>(null);
+  const [allergies, setAllergies] = useState("");
+  const [restrictions, setRestrictions] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // scanner (voluntário)
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState<KidsCheckIn | null>(null);
+  const scanLock = useRef(false);
+
+  const load = async () => {
     setLoading(true);
-    setTimeout(() => {
-      const code = String(Math.floor(1000 + Math.random() * 9000));
-      const entry: KidCheckIn = {
-        id: Date.now().toString(), childName: childName.trim(), room,
-        code, checkedInAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }), checkedOut: false
-      };
-      setCheckIns(p => [entry, ...p]);
-      setChildName(""); setRoom(""); setLoading(false); setTab("checkout");
-    }, 600);
+    try {
+      const sdk = await import("@alvo/firebase");
+      const ctx = { organizationId: orgId };
+      const [settings, tenantUser, checkIns] = await Promise.all([
+        sdk.fetchKidsSettings(firebaseConfig, ctx).catch(() => null) as Promise<OrganizationKidsSettings | null>,
+        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null),
+        sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
+      ]);
+      const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
+      const qrRoles = settings?.qrGeneratorRoles ?? [];
+      const isAdmin = roles.some((r) => r === "super_admin" || r === "church_admin");
+      const op = isAdmin || roles.some((r) => qrRoles.includes(r));
+      setCanOperate(op);
+      setActive(checkIns);
+      let rms: Array<{ id: string; name: string }> = [];
+      if (settings?.kidsTeamIds?.length) {
+        const teams = (await sdk.fetchServiceTeams(firebaseConfig, ctx, 50).catch(() => [])) as ServiceTeam[];
+        rms = teams.filter((t) => settings.kidsTeamIds.includes(t.id)).map((t) => ({ id: t.id, name: t.name }));
+      }
+      if (!rms.length) rms = DEFAULT_KIDS_ROOMS.map((n, i) => ({ id: `room_${i}`, name: n }));
+      setRooms(rms);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { void load(); }, [orgId, user.uid]);
+
+  const myKids = active.filter((c) => c.parentId === user.uid || c.authorizedPickUpIds.includes(user.uid));
+
+  async function takePhoto() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permita o acesso à câmera para tirar a foto."); return; }
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.4, base64: true, allowsEditing: true, aspect: [1, 1] });
+    if (!r.canceled && r.assets[0]?.base64) setPhoto(`data:image/jpeg;base64,${r.assets[0].base64}`);
   }
 
-  function doCheckOut(id: string) {
-    setCheckIns(p => p.map(c => c.id === id ? { ...c, checkedOut: true } : c));
+  async function doCheckIn() {
+    if (!childName.trim() || !room) { Alert.alert("Preencha o nome da criança e a sala."); return; }
+    if (photo && !consent) { Alert.alert("Marque o consentimento para usar a foto."); return; }
+    setSaving(true);
+    try {
+      const sdk = await import("@alvo/firebase");
+      const token = newKidsToken();
+      const nowIso = new Date().toISOString();
+      const checkIn: KidsCheckIn = {
+        id: token,
+        organizationId: orgId,
+        childId: `quick_${token}`,
+        parentId: user.uid,
+        authorizedPickUpIds: [user.uid],
+        checkedInAt: nowIso,
+        checkedInByUserId: user.uid,
+        status: "checked_in",
+        serviceTeamId: room.id.startsWith("room_") ? undefined : room.id,
+        roomCode: room.name,
+        securityToken: token,
+        childName: childName.trim(),
+        guardianName: user.displayName ?? user.email ?? undefined,
+        allergies: allergies.trim() || undefined,
+        securityRestrictions: restrictions.trim() || undefined,
+        photoUrl: photo ?? undefined,
+        photoConsentAt: photo && consent ? nowIso : undefined
+      };
+      await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId }, checkIn);
+      setActive((p) => [checkIn, ...p]);
+      setChildName(""); setRoom(null); setAllergies(""); setRestrictions(""); setPhoto(null); setConsent(false);
+      Alert.alert("Check-in feito!", "O crachá com o QR está disponível abaixo. Mostre-o na retirada.");
+    } catch (e) {
+      Alert.alert("Erro ao registrar", e instanceof Error ? e.message : "Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onBarcode({ data }: { data: string }) {
+    if (scanLock.current) return;
+    scanLock.current = true;
+    try {
+      const sdk = await import("@alvo/firebase");
+      const ci = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId: orgId }, data.trim());
+      setScanning(false);
+      if (!ci) { Alert.alert("QR inválido", "Nenhum check-in encontrado para este código."); }
+      else if (ci.status !== "checked_in") { Alert.alert("Já retirada", "Esta criança não está com check-in ativo."); }
+      else setScanned(ci);
+    } catch {
+      Alert.alert("Erro", "Não foi possível ler o check-in.");
+    } finally {
+      setTimeout(() => { scanLock.current = false; }, 1500);
+    }
+  }
+
+  async function confirmCheckout() {
+    if (!scanned) return;
+    try {
+      const sdk = await import("@alvo/firebase");
+      await sdk.checkoutKidsCheckIn(firebaseConfig, { organizationId: orgId }, scanned.id, user.uid);
+      setActive((p) => p.filter((c) => c.id !== scanned.id));
+      setScanned(null);
+      Alert.alert("Retirada confirmada", "Criança liberada com sucesso.");
+    } catch (e) {
+      Alert.alert("Erro", e instanceof Error ? e.message : "Tente novamente.");
+    }
+  }
+
+  if (loading) {
+    return <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}><ModalHeader title="Segurança Kids" onBack={onBack} /><View style={{ padding: 40, alignItems: "center" }}><ActivityIndicator color={primary} /></View></View>;
   }
 
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
-      <ModalHeader title="Kids Check-in" onBack={onBack} />
-      <View style={s.segControl}>
-        <Pressable style={[s.seg, tab === "checkin" && { backgroundColor: primary }]} onPress={() => setTab("checkin")}>
-          <Text style={[s.segText, tab === "checkin" && { color: "#fff" }]}>Entrada</Text>
-        </Pressable>
-        <Pressable style={[s.seg, tab === "checkout" && { backgroundColor: primary }]} onPress={() => setTab("checkout")}>
-          <Text style={[s.segText, tab === "checkout" && { color: "#fff" }]}>Saída{checkIns.filter(c => !c.checkedOut).length > 0 ? ` (${checkIns.filter(c => !c.checkedOut).length})` : ""}</Text>
-        </Pressable>
-      </View>
+      <ModalHeader title="Segurança Kids" onBack={onBack} />
 
-      {tab === "checkin" && (
+      {canOperate && (
+        <View style={s.segControl}>
+          <Pressable style={[s.seg, mode === "guardian" && { backgroundColor: primary }]} onPress={() => setMode("guardian")}>
+            <Text style={[s.segText, mode === "guardian" && { color: "#fff" }]}>Responsável</Text>
+          </Pressable>
+          <Pressable style={[s.seg, mode === "volunteer" && { backgroundColor: primary }]} onPress={() => setMode("volunteer")}>
+            <Text style={[s.segText, mode === "volunteer" && { color: "#fff" }]}>Voluntário (sala)</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── Responsável: check-in do filho + crachás com QR ── */}
+      {mode === "guardian" && (
         <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
-          <View style={[s.card, { backgroundColor: `${primary}12`, marginBottom: 16 }]}>
-            <Text style={[s.cardMeta, { color: primary, fontWeight: "600" }]}>Responsável: {user.displayName ?? user.email}</Text>
-          </View>
+          {myKids.length > 0 && (
+            <>
+              <Text style={[s.label, { marginBottom: 8 }]}>Crachás ativos</Text>
+              {myKids.map((c) => (
+                <View key={c.id} style={[s.card, { alignItems: "center", marginBottom: 12 }]}>
+                  {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 64, height: 64, borderRadius: 32, marginBottom: 8 }} /> : null}
+                  <Text style={s.cardTitle}>{c.childName}</Text>
+                  <Text style={s.cardMeta}>{c.roomCode}</Text>
+                  {c.allergies ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>Alergias: {c.allergies}</Text> : null}
+                  <Image source={{ uri: `${WEB_API_URL}/api/kids/qr?data=${encodeURIComponent(c.securityToken)}` }} style={{ width: 180, height: 180, marginTop: 10 }} />
+                  <View style={[s.codeBox, { borderColor: primary, marginTop: 8 }]}>
+                    <Text style={s.codeLabel}>Código</Text>
+                    <Text style={[s.codeValue, { color: primary }]}>{c.securityToken}</Text>
+                  </View>
+                  <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>Mostre este QR ao voluntário na retirada.</Text>
+                </View>
+              ))}
+            </>
+          )}
+
+          <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Fazer check-in</Text>
           <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
-          {rooms.map(r => (
-            <Pressable key={r} style={[s.roomRow, room === r && { borderColor: primary, backgroundColor: `${primary}10` }]} onPress={() => setRoom(r)}>
-              <View style={[s.radioOuter, room === r && { borderColor: primary }]}>
-                {room === r && <View style={[s.radioInner, { backgroundColor: primary }]} />}
-              </View>
-              <Text style={[s.roomLabel, room === r && { color: primary, fontWeight: "600" }]}>{r}</Text>
+          {rooms.map((r) => (
+            <Pressable key={r.id} style={[s.roomRow, room?.id === r.id && { borderColor: primary, backgroundColor: `${primary}10` }]} onPress={() => setRoom(r)}>
+              <View style={[s.radioOuter, room?.id === r.id && { borderColor: primary }]}>{room?.id === r.id && <View style={[s.radioInner, { backgroundColor: primary }]} />}</View>
+              <Text style={[s.roomLabel, room?.id === r.id && { color: primary, fontWeight: "600" }]}>{r.name}</Text>
             </Pressable>
           ))}
-          <Btn label="Registrar entrada" onPress={doCheckIn} loading={loading} color={primary} style={{ marginTop: 20 }} />
+          <Field label="Alergias (opcional)" value={allergies} onChange={setAllergies} placeholder="Ex.: amendoim, lactose" />
+          <Field label="Restrições de segurança (opcional)" value={restrictions} onChange={setRestrictions} placeholder="Ex.: retirada só pela mãe" />
+
+          <View style={[s.card, { marginTop: 8 }]}>
+            {photo ? <Image source={{ uri: photo }} style={{ width: 90, height: 90, borderRadius: 12, alignSelf: "center", marginBottom: 10 }} /> : null}
+            <Btn label={photo ? "Refazer foto" : "Tirar foto da criança"} onPress={takePhoto} variant="outline" color={primary} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
+              <Switch value={consent} onValueChange={setConsent} trackColor={{ true: primary }} />
+              <Text style={[s.cardMeta, { flex: 1 }]}>Autorizo a captura e o uso da foto do meu filho(a) para fins de segurança (LGPD).</Text>
+            </View>
+          </View>
+
+          <Btn label="Registrar entrada" onPress={doCheckIn} loading={saving} color={primary} style={{ marginTop: 16 }} />
         </ScrollView>
       )}
 
-      {tab === "checkout" && (
+      {/* ── Voluntário: escanear QR para retirada ── */}
+      {mode === "volunteer" && (
         <ScrollView contentContainerStyle={s.tabContent}>
-          {checkIns.length === 0 && <EmptyState icon="👶" title="Nenhuma criança registrada" sub="Faça o check-in na aba Entrada." />}
-          {checkIns.map(c => (
-            <View key={c.id} style={[s.card, c.checkedOut && { opacity: 0.5 }]}>
-              <View style={s.row}>
-                <View style={s.fill}>
-                  <Text style={s.cardTitle}>{c.childName}</Text>
-                  <Text style={s.cardMeta}>{c.room}</Text>
-                  <Text style={s.cardMeta}>Entrada: {c.checkedInAt}</Text>
-                </View>
-                <View style={[s.codeBox, { borderColor: primary }]}>
-                  <Text style={s.codeLabel}>Código</Text>
-                  <Text style={[s.codeValue, { color: primary }]}>{c.code}</Text>
-                </View>
-              </View>
-              {!c.checkedOut
-                ? <Btn label="Registrar saída" onPress={() => doCheckOut(c.id)} color={primary} style={{ marginTop: 12 }} />
-                : <Text style={{ color: "#16a34a", fontWeight: "700", marginTop: 8, textAlign: "center" }}>✓ Saída registrada</Text>
-              }
+          {scanned ? (
+            <View style={[s.card, { alignItems: "center" }]}>
+              {scanned.photoUrl ? <Image source={{ uri: scanned.photoUrl }} style={{ width: 120, height: 120, borderRadius: 60, marginBottom: 10 }} /> : null}
+              <Text style={s.cardTitle}>{scanned.childName}</Text>
+              <Text style={s.cardMeta}>{scanned.roomCode}</Text>
+              <Text style={s.cardMeta}>Responsável: {scanned.guardianName ?? "—"}</Text>
+              {scanned.allergies ? <Text style={[s.cardMeta, { color: "#dc2626", marginTop: 4 }]}>⚠️ Alergias: {scanned.allergies}</Text> : null}
+              {scanned.securityRestrictions ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>⚠️ {scanned.securityRestrictions}</Text> : null}
+              <Text style={[s.cardMeta, { textAlign: "center", marginTop: 10 }]}>Confira a foto e o responsável antes de liberar.</Text>
+              <Btn label="Confirmar retirada" onPress={confirmCheckout} color="#16a34a" style={{ marginTop: 14, alignSelf: "stretch" }} />
+              <Btn label="Cancelar" onPress={() => setScanned(null)} variant="outline" color={primary} style={{ marginTop: 8, alignSelf: "stretch" }} />
             </View>
-          ))}
+          ) : scanning ? (
+            <View style={[s.card, { padding: 0, overflow: "hidden" }]}>
+              <CameraView style={{ height: 320, width: "100%" }} facing="back" barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={onBarcode} />
+              <View style={{ padding: 12 }}>
+                <Text style={[s.cardMeta, { textAlign: "center", marginBottom: 10 }]}>Aponte para o QR do crachá do responsável.</Text>
+                <Btn label="Cancelar" onPress={() => setScanning(false)} variant="outline" color={primary} />
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={[s.card, { alignItems: "center", marginBottom: 12 }]}>
+                <Ionicons name="qr-code-outline" size={40} color={primary} />
+                <Text style={[s.cardTitle, { marginTop: 8, textAlign: "center" }]}>Retirada por QR</Text>
+                <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>Escaneie o crachá do responsável para validar e liberar a criança.</Text>
+                <Btn
+                  label="Escanear QR"
+                  onPress={async () => {
+                    if (!permission?.granted) { const r = await requestPermission(); if (!r.granted) { Alert.alert("Permita a câmera para escanear."); return; } }
+                    setScanning(true);
+                  }}
+                  color={primary}
+                  style={{ marginTop: 14, alignSelf: "stretch" }}
+                />
+              </View>
+              <Text style={[s.label, { marginBottom: 8 }]}>Crianças na sala ({active.length})</Text>
+              {active.length === 0 && <EmptyState icon="👶" title="Nenhuma criança presente" sub="Os check-ins ativos aparecem aqui." />}
+              {active.map((c) => (
+                <View key={c.id} style={[s.card, { marginBottom: 8 }]}>
+                  <View style={s.row}>
+                    {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10 }} /> : null}
+                    <View style={s.fill}>
+                      <Text style={s.cardTitle}>{c.childName}</Text>
+                      <Text style={s.cardMeta}>{c.roomCode}{c.allergies ? ` · ⚠️ ${c.allergies}` : ""}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
         </ScrollView>
       )}
     </View>

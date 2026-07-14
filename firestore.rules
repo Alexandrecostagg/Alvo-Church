@@ -35,6 +35,23 @@ service cloud.firestore {
         ]);
     }
 
+    // Segurança Kids: quem pode operar o check-in/out (gravar kidsCheckIns).
+    // Honra a config do admin (settings/kids.qrGeneratorRoles); se ausente,
+    // cai para os admins do tenant. Boundary grosseiro no servidor — o app
+    // ainda exige estar escalado na sala.
+    function kidsSettingsPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/settings/kids;
+    }
+    function kidsQrRoles(orgId) {
+      return exists(kidsSettingsPath(orgId)) && ("qrGeneratorRoles" in get(kidsSettingsPath(orgId)).data)
+        ? get(kidsSettingsPath(orgId)).data.qrGeneratorRoles
+        : [];
+    }
+    function canOperateKids(orgId) {
+      return isTenantMember(orgId)
+        && (isTenantAdmin(orgId) || tenantUserData(orgId).roles.hasAny(kidsQrRoles(orgId)));
+    }
+
     function orgDocPath(orgId) {
       return /databases/$(database)/documents/organizations/$(orgId);
     }
@@ -299,6 +316,15 @@ service cloud.firestore {
     match /organizations/{orgId}/programEntitlements/{programId} {
       allow read: if isTenantMember(orgId);
       allow write: if false;
+    }
+
+    // Segurança Kids: check-in/out de crianças (dado sensível de menor).
+    // Leitura por membro do tenant (o responsável precisa ver o check-in
+    // ativo do filho p/ exibir o QR de retirada); escrita só por quem pode
+    // operar a sala (admin + papéis configurados em settings/kids).
+    match /organizations/{orgId}/kidsCheckIns/{checkInId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if canOperateKids(orgId);
     }
 
     // Generic tenant collections (one level deep), excluding the

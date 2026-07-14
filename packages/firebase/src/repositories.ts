@@ -75,6 +75,8 @@ import type {
   MemberBadge,
   NetworkAffiliate,
   NetworkSnapshot,
+  KidsCheckIn,
+  OrganizationKidsSettings,
   MemberContribution,
   ChurchAttendance,
   PrayerRequest,
@@ -126,6 +128,8 @@ import {
   getPlatformProgramModulesCollectionPath,
   getPlatformProgramLessonsCollectionPath,
   getProgramEntitlementsCollectionPath,
+  getKidsCheckInsCollectionPath,
+  getOrganizationKidsSettingsDocumentPath,
   getScheduleSwapRequestsCollectionPath,
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
@@ -2875,6 +2879,123 @@ export async function deleteTrainingLesson(
 ) {
   const firestore = getFirebaseFirestore(config);
   await deleteDoc(doc(firestore, getPlatformProgramLessonsCollectionPath(programId), lessonId));
+}
+
+// ─── Segurança Kids (check-in/out + settings) ─────────────────────────────────
+
+function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    campusId: data.campusId ? String(data.campusId) : undefined,
+    childId: String(data.childId ?? ""),
+    parentId: String(data.parentId ?? ""),
+    authorizedPickUpIds: Array.isArray(data.authorizedPickUpIds) ? data.authorizedPickUpIds.map(String) : [],
+    checkedInAt: String(data.checkedInAt ?? ""),
+    checkedOutAt: data.checkedOutAt ? String(data.checkedOutAt) : undefined,
+    checkedOutByParentId: data.checkedOutByParentId ? String(data.checkedOutByParentId) : undefined,
+    checkedInByUserId: data.checkedInByUserId ? String(data.checkedInByUserId) : undefined,
+    status: (data.status as KidsCheckIn["status"]) ?? "checked_in",
+    roomCode: data.roomCode ? String(data.roomCode) : undefined,
+    serviceTeamId: data.serviceTeamId ? String(data.serviceTeamId) : undefined,
+    securityToken: String(data.securityToken ?? ""),
+    childName: data.childName ? String(data.childName) : undefined,
+    guardianName: data.guardianName ? String(data.guardianName) : undefined,
+    allergies: data.allergies ? String(data.allergies) : undefined,
+    securityRestrictions: data.securityRestrictions ? String(data.securityRestrictions) : undefined,
+    photoUrl: data.photoUrl ? String(data.photoUrl) : undefined,
+    photoConsentAt: data.photoConsentAt ? String(data.photoConsentAt) : undefined,
+    notes: data.notes ? String(data.notes) : undefined
+  };
+}
+
+function toKidsSettings(data: DocumentData): OrganizationKidsSettings {
+  return {
+    qrGeneratorRoles: Array.isArray(data.qrGeneratorRoles) ? (data.qrGeneratorRoles as OrganizationKidsSettings["qrGeneratorRoles"]) : [],
+    kidsTeamIds: Array.isArray(data.kidsTeamIds) ? data.kidsTeamIds.map(String) : [],
+    updatedAt: data.updatedAt ? String(data.updatedAt) : undefined
+  };
+}
+
+export async function saveKidsCheckIn(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  checkIn: KidsCheckIn
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getKidsCheckInsCollectionPath(context), checkIn.id),
+    cleanFirestoreData(checkIn),
+    { merge: true }
+  );
+}
+
+// Check-ins ativos (crianças presentes) da organização.
+export async function fetchActiveKidsCheckIns(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<KidsCheckIn[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("status", "==", "checked_in"))
+  );
+  return snap.docs.map((d) => toKidsCheckIn(d.id, d.data()));
+}
+
+// Resolve um check-in pelo token do QR (usado na retirada).
+export async function fetchKidsCheckInByToken(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  token: string
+): Promise<KidsCheckIn | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("securityToken", "==", token), limit(1))
+  );
+  const d = snap.docs[0];
+  return d ? toKidsCheckIn(d.id, d.data()) : null;
+}
+
+// Retirada: marca checked_out registrando quem retirou.
+export async function checkoutKidsCheckIn(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  checkInId: string,
+  byParentId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getKidsCheckInsCollectionPath(context), checkInId),
+    cleanFirestoreData({
+      status: "checked_out",
+      checkedOutAt: new Date().toISOString(),
+      checkedOutByParentId: byParentId
+    }),
+    { merge: true }
+  );
+}
+
+export async function fetchKidsSettings(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<OrganizationKidsSettings | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getOrganizationKidsSettingsDocumentPath(context)));
+  if (!snap.exists()) return null;
+  return toKidsSettings(snap.data());
+}
+
+export async function saveKidsSettings(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  settings: OrganizationKidsSettings
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getOrganizationKidsSettingsDocumentPath(context)),
+    cleanFirestoreData({ ...settings, updatedAt: new Date().toISOString() }),
+    { merge: true }
+  );
 }
 
 // --- NEW MAPPERS ---

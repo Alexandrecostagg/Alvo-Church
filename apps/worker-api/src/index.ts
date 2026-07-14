@@ -63,6 +63,7 @@ app.post("/tenant-assets/upload", async (c) => {
   const formData = await c.req.formData();
   const organizationId = String(formData.get("organizationId") ?? "");
   const assetKind = String(formData.get("assetKind") ?? "") as BrandAssetKind;
+  const childId = String(formData.get("childId") ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
   const file = formData.get("file");
 
   if (!organizationId || !assetKind || !(file instanceof File)) {
@@ -70,7 +71,11 @@ app.post("/tenant-assets/upload", async (c) => {
   }
 
   const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
-  const objectKey = `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
+  // Fotos de criança (Segurança Kids) vivem sob um prefixo próprio, separado do
+  // branding; as demais mantêm o caminho de branding.
+  const objectKey = assetKind === "kidsPhoto"
+    ? `organizations/${organizationId}/kids/${childId || "unknown"}/${Date.now()}-${fileName}`
+    : `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
 
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
     httpMetadata: {
