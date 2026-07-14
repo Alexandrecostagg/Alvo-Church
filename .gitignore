@@ -21,3 +21,4 @@ firebase-debug.log
 wrangler*.log
 apps/web/dist-cloudflare
 .claude/
+apps/web/.vercel/
