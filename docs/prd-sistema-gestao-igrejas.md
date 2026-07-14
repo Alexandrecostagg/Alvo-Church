@@ -337,6 +337,22 @@ Capacidades:
 - geração de tarefas ou alertas pastorais a partir de conversas relevantes
 - governança de IA com limites, revisão humana e registro de consentimento
 
+### Módulo 15. Rede de igrejas e capacitação em rede
+
+Função:
+Dar à igreja-sede (ou denominação) uma camada de governança sobre suas igrejas afiliadas que vá além de dashboard financeiro/operacional consolidado: permitir que ela crie e distribua trilhas de formação de liderança para toda a rede, nos moldes de movimentos como Rede Inspire (Inspire Day, mentoria pastoral), G12 (trilha de liderança em cascata) e NCD (diagnóstico de saúde por igreja).
+
+Contexto: o produto já possui separadamente um módulo de rede (afiliação de igrejas, convite por código, dashboard consolidado de membros/arrecadação/grupos/engajamento) e um módulo de Academia/LMS (cursos, módulos, aulas, progresso, badges, certificado). Hoje esses dois módulos não se conversam — um curso pertence a uma única igreja (`organizationId`) e não pode ser criado pela rede e propagado às afiliadas. Este módulo cobre exatamente essa lacuna.
+
+Capacidades:
+
+- curso/trilha com escopo de rede, autorado pela organização-sede e visível automaticamente em todas as igrejas afiliadas ativas
+- acompanhamento de conclusão e certificação por igreja e por líder, agregado no dashboard da rede
+- diagnóstico periódico de saúde da igreja aplicado a todas as afiliadas (inspirado no modelo de pesquisa do NCD), com indicação do principal ponto de vazamento de membros por igreja
+- evento-âncora replicável (ex.: "Dia da Rede"), com inscrição e presença rastreadas por igreja afiliada
+- selo/certificação de liderança reconhecida dentro da rede, com níveis de progressão
+- biblioteca de conteúdo compartilhada (materiais de célula, estudos, devocionais) distribuída da sede para as afiliadas
+
 ## 7. Personas principais
 
 ### Pastor sênior
@@ -581,6 +597,11 @@ O MVP deve focar no que gera valor rápido e diferenciação forte.
 - `CommunicationCampaign`
 - `Workflow`
 - `Task`
+- `NetworkAffiliate`
+- `NetworkSnapshot`
+- `Course` (com escopo `organization` | `network` e organização proprietária, quando de rede)
+- `NetworkHealthDiagnostic` (diagnóstico periódico por igreja afiliada, inspirado no NCD)
+- `LeadershipCertification` (nível de certificação de liderança dentro da rede)
 
 ## 15. Permissões e papéis iniciais
 

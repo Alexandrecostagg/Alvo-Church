@@ -375,6 +375,7 @@ Pode entrar depois, sem prejudicar o MVP:
 - IA avançada
 - automações complexas
 - gestão de jovens mais rica
+- capacitação em rede (cursos/trilhas criados pela sede e distribuídos às igrejas afiliadas, diagnóstico periódico por igreja, certificação de liderança em rede — ver Módulo 15 do PRD)
 
 ## 16. Minha recomendação prática
 
@@ -393,3 +394,21 @@ Depois deste roadmap, eu recomendo fazer nesta ordem:
 1. arquitetura técnica do monorepo
 2. backlog do MVP com épicos e histórias
 3. wireframes do web admin e app mobile
+
+## 18. Onda 5 (pós-MVP). Rede e capacitação
+
+Depois que o tier `Denominação`/`Rede de Igrejas` estiver validado comercialmente (ver `modelo-saas-modularizacao-comercial-alvo-church.md`), a onda seguinte conecta o módulo de Network já existente ao módulo de Academia/LMS já existente:
+
+Produto:
+
+- curso/trilha de escopo `network`, criado pela organização-sede e propagado às igrejas afiliadas ativas
+- card de capacitação no dashboard da rede (líderes certificados, trilhas concluídas por igreja), ao lado dos KPIs financeiros e de membros já existentes
+- diagnóstico periódico de saúde por igreja afiliada (inspirado no modelo de pesquisa do NCD), sinalizando o principal ponto de vazamento de membros
+- evento-âncora replicável da rede, com inscrição e presença por igreja afiliada
+
+Técnico:
+
+- `Course` ganha `scope: "organization" | "network"` e `ownerOrganizationId`
+- resolução de cursos visíveis por igreja passa a considerar cursos próprios + cursos de rede herdados via `NetworkAffiliate`
+- agregação de progresso/certificação por igreja no `network-view.tsx`
+- novo repositório Firestore para `NetworkHealthDiagnostic` e `LeadershipCertification`

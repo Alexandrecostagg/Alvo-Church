@@ -58,12 +58,13 @@ export async function adminGetDocument(path: string): Promise<Record<string, unk
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Firestore admin get falhou (${path}): ${await res.text()}`);
-  const data = (await res.json()) as { fields?: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean }> };
+  const data = (await res.json()) as { fields?: Record<string, { stringValue?: string; integerValue?: string; doubleValue?: number; booleanValue?: boolean }> };
   if (!data.fields) return null;
   const plain: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data.fields)) {
     if ("stringValue" in value) plain[key] = value.stringValue;
     else if ("integerValue" in value) plain[key] = Number(value.integerValue);
+    else if ("doubleValue" in value) plain[key] = Number(value.doubleValue);
     else if ("booleanValue" in value) plain[key] = value.booleanValue;
   }
   return plain;

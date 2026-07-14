@@ -64,6 +64,10 @@ import type {
   CourseModule,
   Lesson,
   MemberCourseProgress,
+  TrainingProgram,
+  TrainingProgramModule,
+  TrainingLesson,
+  ProgramEntitlement,
   ScheduleSwapRequest,
   MemberJourneyProfile,
   JourneyMission,
@@ -118,6 +122,10 @@ import {
   getCourseModulesCollectionPath,
   getLessonsCollectionPath,
   getMemberCourseProgressCollectionPath,
+  getPlatformProgramsCollectionPath,
+  getPlatformProgramModulesCollectionPath,
+  getPlatformProgramLessonsCollectionPath,
+  getProgramEntitlementsCollectionPath,
   getScheduleSwapRequestsCollectionPath,
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
@@ -2722,6 +2730,151 @@ export async function saveLesson(
     cleanFirestoreData(lesson),
     { merge: true }
   );
+}
+
+// ─── Loja de Capacitação (catálogo global + entitlements por org) ──────────────
+
+function toTrainingProgram(documentId: string, data: DocumentData): TrainingProgram {
+  return {
+    id: documentId,
+    title: String(data.title ?? ""),
+    description: String(data.description ?? ""),
+    thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : undefined,
+    priceBRL: Number(data.priceBRL ?? 0),
+    isPublished: Boolean(data.isPublished),
+    badgeUnlockedId: data.badgeUnlockedId ? String(data.badgeUnlockedId) : undefined,
+    createdAt: String(data.createdAt ?? ""),
+    updatedAt: String(data.updatedAt ?? "")
+  };
+}
+
+function toTrainingProgramModule(documentId: string, data: DocumentData): TrainingProgramModule {
+  return {
+    id: documentId,
+    programId: String(data.programId ?? ""),
+    title: String(data.title ?? ""),
+    sortOrder: Number(data.sortOrder ?? 0)
+  };
+}
+
+function toTrainingLesson(documentId: string, data: DocumentData): TrainingLesson {
+  return {
+    id: documentId,
+    programId: String(data.programId ?? ""),
+    moduleId: data.moduleId ? String(data.moduleId) : undefined,
+    title: String(data.title ?? ""),
+    videoUrl: String(data.videoUrl ?? ""),
+    durationMinutes: Number(data.durationMinutes ?? 0),
+    sortOrder: Number(data.sortOrder ?? 0)
+  };
+}
+
+function toProgramEntitlement(documentId: string, data: DocumentData): ProgramEntitlement {
+  return {
+    id: documentId,
+    programId: String(data.programId ?? documentId),
+    status: (data.status as ProgramEntitlement["status"]) ?? "active",
+    purchasedAt: String(data.purchasedAt ?? ""),
+    asaasPaymentId: String(data.asaasPaymentId ?? ""),
+    asaasStatus: data.asaasStatus ? String(data.asaasStatus) : undefined
+  };
+}
+
+// Leitura do catálogo. publishedOnly=true é o caso da loja (igrejas);
+// o platform-admin passa false para ver rascunhos.
+export async function fetchTrainingPrograms(
+  config: FirebaseWebRuntimeConfig,
+  publishedOnly = true
+): Promise<TrainingProgram[]> {
+  const firestore = getFirebaseFirestore(config);
+  const col = collection(firestore, getPlatformProgramsCollectionPath());
+  const snap = publishedOnly
+    ? await getDocs(query(col, where("isPublished", "==", true)))
+    : await getDocs(col);
+  return snap.docs.map((d) => toTrainingProgram(d.id, d.data()));
+}
+
+export async function fetchTrainingProgramById(
+  config: FirebaseWebRuntimeConfig,
+  programId: string
+): Promise<TrainingProgram | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getPlatformProgramsCollectionPath(), programId));
+  if (!snap.exists()) return null;
+  return toTrainingProgram(snap.id, snap.data());
+}
+
+export async function fetchTrainingProgramModules(
+  config: FirebaseWebRuntimeConfig,
+  programId: string
+): Promise<TrainingProgramModule[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getPlatformProgramModulesCollectionPath(programId)));
+  return snap.docs.map((d) => toTrainingProgramModule(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function fetchTrainingLessons(
+  config: FirebaseWebRuntimeConfig,
+  programId: string
+): Promise<TrainingLesson[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getPlatformProgramLessonsCollectionPath(programId)));
+  return snap.docs.map((d) => toTrainingLesson(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function fetchProgramEntitlements(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext
+): Promise<ProgramEntitlement[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(collection(firestore, getProgramEntitlementsCollectionPath(context)));
+  return snap.docs.map((d) => toProgramEntitlement(d.id, d.data()));
+}
+
+// Escritas do catálogo — só platform admin (rules gated por isPlatformAdmin).
+export async function saveTrainingProgram(
+  config: FirebaseWebRuntimeConfig,
+  program: TrainingProgram
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getPlatformProgramsCollectionPath(), program.id),
+    cleanFirestoreData(program),
+    { merge: true }
+  );
+}
+
+export async function saveTrainingProgramModule(
+  config: FirebaseWebRuntimeConfig,
+  module: TrainingProgramModule
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getPlatformProgramModulesCollectionPath(module.programId), module.id),
+    cleanFirestoreData(module),
+    { merge: true }
+  );
+}
+
+export async function saveTrainingLesson(
+  config: FirebaseWebRuntimeConfig,
+  lesson: TrainingLesson
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getPlatformProgramLessonsCollectionPath(lesson.programId), lesson.id),
+    cleanFirestoreData(lesson),
+    { merge: true }
+  );
+}
+
+export async function deleteTrainingLesson(
+  config: FirebaseWebRuntimeConfig,
+  programId: string,
+  lessonId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getPlatformProgramLessonsCollectionPath(programId), lessonId));
 }
 
 // --- NEW MAPPERS ---

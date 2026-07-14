@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { friendlyError } from "../../lib/friendly-error";
-import { AlertTriangle, Building2, Loader2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, Building2, GraduationCap, LayoutDashboard, Loader2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
+import { PlatformProgramsView } from "./platform-programs-view";
 import { fetchPlatformOverview, isPlatformAdmin } from "@alvo/firebase";
 import type { PlatformOrgSummary } from "@alvo/firebase";
 import type { PlanId } from "@alvo/firebase";
@@ -47,6 +48,7 @@ export function PlatformAdminView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orgs, setOrgs] = useState<PlatformOrgSummary[]>([]);
+  const [tab, setTab] = useState<"overview" | "programs">("overview");
 
   useEffect(() => {
     if (!user) { setChecking(false); return; }
@@ -107,10 +109,19 @@ export function PlatformAdminView() {
           Visão da plataforma
         </h1>
         <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0 }}>
-          Todas as organizações, planos e uso de IA em um só lugar.
+          {tab === "overview" ? "Todas as organizações, planos e uso de IA em um só lugar." : "Catálogo de trilhas vendidas às igrejas na Loja de Capacitação."}
         </p>
       </div>
 
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
+        <TabButton active={tab === "overview"} onClick={() => setTab("overview")} icon={<LayoutDashboard size={15} />} label="Visão" />
+        <TabButton active={tab === "programs"} onClick={() => setTab("programs")} icon={<GraduationCap size={15} />} label="Capacitação" />
+      </div>
+
+      {tab === "programs" && <PlatformProgramsView />}
+
+      {tab === "overview" && (
+      <>
       {error && (
         <div style={{ padding: 14, borderRadius: 10, background: "#FCEBEB", color: "#A32D2D", marginBottom: 16, fontSize: 13 }}>
           {error}
@@ -205,7 +216,27 @@ export function PlatformAdminView() {
           </p>
         </>
       )}
+      </>
+      )}
     </div>
+  );
+}
+
+function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 14px",
+        border: "none", background: "transparent", cursor: "pointer",
+        fontSize: 13, fontWeight: 600,
+        color: active ? "#534AB7" : "var(--color-text-secondary)",
+        borderBottom: active ? "2px solid #534AB7" : "2px solid transparent",
+        marginBottom: -1
+      }}
+    >
+      {icon} {label}
+    </button>
   );
 }
 

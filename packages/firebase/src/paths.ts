@@ -222,6 +222,25 @@ export function getCoursesCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/courses`;
 }
 
+// ─── Loja de Capacitação ───────────────────────────────────────────────────────
+// Catálogo GLOBAL da Plataforma Esdras (top-level, fora de organizations/).
+export function getPlatformProgramsCollectionPath() {
+  return `platformPrograms`;
+}
+
+export function getPlatformProgramModulesCollectionPath(programId: string) {
+  return `platformPrograms/${programId}/modules`;
+}
+
+export function getPlatformProgramLessonsCollectionPath(programId: string) {
+  return `platformPrograms/${programId}/lessons`;
+}
+
+// Entitlements por org (o que a igreja comprou).
+export function getProgramEntitlementsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/programEntitlements`;
+}
+
 export function getCourseModulesCollectionPath(context: TenantContext, courseId: string) {
   return `organizations/${context.organizationId}/courses/${courseId}/modules`;
 }

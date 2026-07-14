@@ -265,6 +265,7 @@ Compra:
 - white-label
 - hierarquia institucional
 - varios tenants sob uma governanca central
+- capacitacao em rede: trilhas e certificacao de lideranca criadas pela sede e distribuidas automaticamente as igrejas afiliadas, com diagnostico periodico de saude por igreja (ver Modulo 15 do PRD e Onda 5 do roadmap)
 
 ## 12. Vantagens desse modelo
 

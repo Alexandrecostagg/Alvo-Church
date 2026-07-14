@@ -21,6 +21,7 @@ const CANCELLED_EVENTS = new Set(["SUBSCRIPTION_DELETED", "PAYMENT_DELETED", "PA
 interface AsaasWebhookPayload {
   event: string;
   payment?: {
+    id?: string;
     value?: number;
     subscription?: string;
     externalReference?: string;
@@ -42,7 +43,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const organizationId = payload.payment?.externalReference;
+  const externalReference = payload.payment?.externalReference ?? "";
+
+  // Loja de Capacitação: compra avulsa de trilha. externalReference no
+  // formato `program:{orgId}:{programId}` (assinaturas usam o orgId puro,
+  // sem ":", então nunca colidem). Grava/revoga o entitlement da org.
+  if (externalReference.startsWith("program:")) {
+    const [, entOrgId, programId] = externalReference.split(":");
+    if (!entOrgId || !programId) {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
+    const entPath = `organizations/${entOrgId}/programEntitlements/${programId}`;
+    try {
+      if (CONFIRMED_EVENTS.has(payload.event)) {
+        // PATCH é idempotente: re-entrega do mesmo PAYMENT_CONFIRMED só
+        // reafirma status active.
+        await adminPatchDocument(entPath, {
+          programId,
+          status: "active",
+          purchasedAt: new Date().toISOString(),
+          asaasPaymentId: payload.payment?.id ?? "",
+          asaasStatus: payload.payment?.status ?? payload.event
+        });
+      } else if (CANCELLED_EVENTS.has(payload.event)) {
+        // Estorno/cancelamento: revoga (flip de status — não dá pra deletar
+        // via service account patch, e manter o doc preserva o histórico).
+        await adminPatchDocument(entPath, {
+          status: "revoked",
+          asaasStatus: payload.payment?.status ?? payload.event
+        });
+      }
+      return NextResponse.json({ ok: true, program: true });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Erro desconhecido";
+      console.error("[billing/webhook] program error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  const organizationId = externalReference;
   if (!organizationId) {
     // Evento sem referência à nossa organização (ex: teste manual do
     // Asaas) — confirma recebimento sem fazer nada.

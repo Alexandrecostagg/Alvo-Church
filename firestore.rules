@@ -60,6 +60,21 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // Loja de Capacitação: catálogo GLOBAL de trilhas autoradas pela Esdras.
+    // Qualquer membro autenticado navega/lê (a loja mostra só publicadas via
+    // query where isPublished==true; membros com entitlement também leem
+    // trilhas despublicadas que já compraram). Escrita só do platform admin.
+    match /platformPrograms/{programId} {
+      allow get: if signedIn();
+      allow list: if signedIn();
+      allow write: if isPlatformAdmin();
+
+      match /{sub}/{subDoc} { // modules + lessons
+        allow read: if signedIn();
+        allow write: if isPlatformAdmin();
+      }
+    }
+
     // ── Limites por plano ──────────────────────────────────────────────────
     // Espelha packages/firebase/src/plans.ts (PLAN_LIMITS). Rules não
     // importam TS, então os números vivem duplicados aqui — se mudar um
@@ -277,6 +292,15 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Entitlements de trilhas compradas na Loja de Capacitação. Membros leem
+    // (para saber o que a igreja já comprou); NINGUÉM escreve pelo cliente —
+    // só o webhook de pagamento (service account, que ignora as rules). Sem
+    // isso, um admin poderia se auto-conceder acesso gratuito.
+    match /organizations/{orgId}/programEntitlements/{programId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if false;
+    }
+
     // Generic tenant collections (one level deep), excluding the
     // privacy-sensitive collections handled above.
     match /organizations/{orgId}/{collection}/{documentId} {
@@ -288,7 +312,8 @@ service cloud.firestore {
         && collection != "users"
         && collection != "prayerRequests"
         && collection != "people"
-        && collection != "affiliates";
+        && collection != "affiliates"
+        && collection != "programEntitlements";
     }
 
     // Nested subcollections (groups/{id}/members, events/{id}/tickets, ...).
@@ -309,7 +334,8 @@ service cloud.firestore {
         && collection != "users"
         && collection != "prayerRequests"
         && collection != "people"
-        && collection != "affiliates";
+        && collection != "affiliates"
+        && collection != "programEntitlements";
     }
   }
 }

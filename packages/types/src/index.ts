@@ -1210,6 +1210,51 @@ export interface MemberCourseProgress {
   updatedAt: string;
 }
 
+// ─── Loja de Capacitação (catálogo global da Plataforma Esdras) ────────────────
+// Trilhas/programas autorados pela Esdras e vendidos como produto avulso às
+// igrejas. Vivem em coleções TOP-LEVEL (fora de organizations/) — o catálogo é
+// global. Distinto dos Course/Lesson acima, que são o EAD interno org-scoped.
+
+export interface TrainingProgram {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string;
+  priceBRL: number;             // preço em REAIS (não centavos) — convenção do Asaas/repo
+  isPublished: boolean;         // rascunho x visível no catálogo
+  badgeUnlockedId?: string;     // destrava badge/certificado ao concluir (reusa mecanismo do EAD)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainingProgramModule {
+  id: string;
+  programId: string;
+  title: string;
+  sortOrder: number;
+}
+
+export interface TrainingLesson {
+  id: string;
+  programId: string;
+  moduleId?: string;
+  title: string;
+  videoUrl: string;
+  durationMinutes: number;
+  sortOrder: number;
+}
+
+// Entitlement por org: gravado SOMENTE pelo webhook de pagamento (service
+// account). Cliente só lê. "revogar" = flip de status, nunca delete.
+export interface ProgramEntitlement {
+  id: string;                   // = programId
+  programId: string;
+  status: "active" | "revoked";
+  purchasedAt: string;
+  asaasPaymentId: string;
+  asaasStatus?: string;
+}
+
 // ─── Tema Semanal de Células ──────────────────────────────────────────────────
 
 export type WeeklyThemeScope =
