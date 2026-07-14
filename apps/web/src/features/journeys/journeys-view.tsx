@@ -1142,8 +1142,8 @@ export function JourneysView() {
                           >
                             {signal.label}
                           </span>
-                          <strong style={{ color: "white", display: "block", fontSize: "0.85rem", overflowWrap: "anywhere" }}>{getFullName(person)}</strong>
-                          <small style={{ color: "#64748b", fontSize: "0.7rem", display: "block", marginTop: 4 }}>
+                          <strong style={{ color: "white", display: "block", fontSize: "0.85rem", whiteSpace: "normal", overflowWrap: "anywhere" }}>{getFullName(person)}</strong>
+                          <small style={{ color: "#64748b", fontSize: "0.7rem", display: "block", marginTop: 4, whiteSpace: "normal", overflowWrap: "anywhere" }}>
                             {personOpenTasks.length} tarefa(s) · {group ? group.name : "sem célula"}
                           </small>
                         </div>
