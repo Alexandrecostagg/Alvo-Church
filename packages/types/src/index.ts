@@ -98,8 +98,25 @@ export interface OrganizationBrandingSettings {
   poweredByLabel?: string;
   pixKey?: string;
   pixReceiverName?: string;
+  givingWhatsappNumber?: string;   // WhatsApp da igreja p/ o link wa.me na doação pública (só dígitos, com DDI)
   groupsModuleLabel?: string;
   groupsModelType?: "cell" | "gc" | "leadership" | "generic";
+}
+
+// Doação pública (funil sem-app): terceiro não-membro doa via /p/{slug}/give
+// usando o PIX da própria igreja. Registramos só a intenção/lead (o dinheiro
+// nunca passa pela plataforma) — base do CRM de doadores do tenant.
+export interface GivingIntent {
+  id: string;
+  organizationId: string;
+  name: string;
+  whatsapp: string;
+  amount: number;
+  source: "public_give";
+  status: "captured";
+  orgSlug?: string;
+  consentContact: boolean;
+  createdAt: string;
 }
 
 export interface OrganizationSubscriptionSettings {

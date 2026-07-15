@@ -96,6 +96,7 @@ export function SettingsView() {
   const [saved, setSaved] = useState(false);
   const [pixKey, setPixKey] = useState(tenantRuntime?.settings?.branding?.pixKey ?? "");
   const [pixName, setPixName] = useState(tenantRuntime?.settings?.branding?.pixReceiverName ?? "");
+  const [pixWhatsapp, setPixWhatsapp] = useState(tenantRuntime?.settings?.branding?.givingWhatsappNumber ?? "");
   const [pixSaving, setPixSaving] = useState(false);
   const [pixSaved, setPixSaved] = useState(false);
   // Groups config
@@ -159,6 +160,7 @@ export function SettingsView() {
         ...tenantRuntime.settings.branding,
         pixKey: pixKey.trim(),
         pixReceiverName: pixName.trim(),
+        givingWhatsappNumber: pixWhatsapp.replace(/\D/g, ""),
       };
       await saveOrganizationBrandingSettings(firebaseConfig, updated);
       setPixSaved(true);
@@ -462,6 +464,19 @@ export function SettingsView() {
               placeholder="Ex: Igreja Esdras Comunidade"
               value={pixName}
               onChange={e => { setPixName(e.target.value); setPixSaved(false); }}
+              style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-line)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--alvo-ink)" }}>
+              WhatsApp da igreja
+              <span style={{ fontWeight: 400, color: "var(--alvo-ink-soft)", fontSize: 12, marginLeft: 6 }}>(botão "Falar no WhatsApp" na página pública de doação)</span>
+            </label>
+            <input
+              type="tel"
+              placeholder="Ex: 5511999999999 (com DDI 55)"
+              value={pixWhatsapp}
+              onChange={e => { setPixWhatsapp(e.target.value); setPixSaved(false); }}
               style={{ padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--alvo-line)", fontSize: 14, outline: "none", background: "var(--alvo-surface)", color: "var(--alvo-ink)" }}
             />
           </div>

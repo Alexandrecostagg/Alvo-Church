@@ -97,6 +97,11 @@ export function getVisitorIntakesCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/visitorIntakes`;
 }
 
+// Doação pública sem-app: leads/intenções captadas no /p/{slug}/give.
+export function getGivingIntentsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/givingIntents`;
+}
+
 export function getFollowUpTasksCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/followUpTasks`;
 }

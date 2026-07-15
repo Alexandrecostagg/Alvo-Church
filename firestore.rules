@@ -261,6 +261,34 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Doação pública sem-app (/p/{slug}/give): create não autenticado com shape
+    // estrito. NÃO envolve dinheiro (só o lead/intenção) — o PIX é da própria
+    // igreja. Leitura/gestão só do time do tenant.
+    match /organizations/{orgId}/givingIntents/{intentId} {
+      allow create: if request.resource.data.source == "public_give"
+        && request.resource.data.status == "captured"
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.keys().hasOnly([
+          "organizationId", "name", "whatsapp", "amount",
+          "source", "status", "orgSlug", "consentContact", "createdAt"
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 8
+        && request.resource.data.whatsapp.size() <= 20
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.amount <= 1000000
+        && request.resource.data.consentContact is bool
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdAt.size() <= 40
+        && (request.resource.data.orgSlug == null || (request.resource.data.orgSlug is string && request.resource.data.orgSlug.size() <= 120));
+      allow read: if isTenantMember(orgId);
+      allow update, delete: if isTenantAdmin(orgId);
+    }
+
     // Prayer requests: any signed-in tenant member can submit one (from the
     // app or reception). Pastoral staff can read/triage/resolve all of them;
     // regular members can only read ones the author opted to make public

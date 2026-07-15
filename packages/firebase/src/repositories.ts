@@ -77,6 +77,7 @@ import type {
   NetworkSnapshot,
   KidsCheckIn,
   OrganizationKidsSettings,
+  GivingIntent,
   MemberContribution,
   ChurchAttendance,
   PrayerRequest,
@@ -130,6 +131,7 @@ import {
   getProgramEntitlementsCollectionPath,
   getKidsCheckInsCollectionPath,
   getOrganizationKidsSettingsDocumentPath,
+  getGivingIntentsCollectionPath,
   getScheduleSwapRequestsCollectionPath,
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
@@ -2879,6 +2881,57 @@ export async function deleteTrainingLesson(
 ) {
   const firestore = getFirebaseFirestore(config);
   await deleteDoc(doc(firestore, getPlatformProgramLessonsCollectionPath(programId), lessonId));
+}
+
+// ─── Doação pública sem-app (leads/intenções) ─────────────────────────────────
+
+function toGivingIntent(documentId: string, data: DocumentData): GivingIntent {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    name: String(data.name ?? ""),
+    whatsapp: String(data.whatsapp ?? ""),
+    amount: Number(data.amount ?? 0),
+    source: "public_give",
+    status: "captured",
+    orgSlug: data.orgSlug ? String(data.orgSlug) : undefined,
+    consentContact: Boolean(data.consentContact),
+    createdAt: String(data.createdAt ?? "")
+  };
+}
+
+// Create PÚBLICO (não autenticado) — a rule valida o shape estrito. Só os
+// campos permitidos vão no doc (nada de undefined, p/ casar com keys().hasOnly).
+export async function saveGivingIntent(
+  config: FirebaseWebRuntimeConfig,
+  intent: Omit<GivingIntent, "id">
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getGivingIntentsCollectionPath({ organizationId: intent.organizationId })));
+  const data: Record<string, string | number | boolean> = {
+    organizationId: intent.organizationId,
+    name: intent.name,
+    whatsapp: intent.whatsapp,
+    amount: intent.amount,
+    source: "public_give",
+    status: "captured",
+    consentContact: intent.consentContact,
+    createdAt: intent.createdAt
+  };
+  if (intent.orgSlug) data.orgSlug = intent.orgSlug;
+  await setDoc(ref, data);
+}
+
+export async function fetchGivingIntents(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 200
+): Promise<GivingIntent[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(collection(firestore, getGivingIntentsCollectionPath(context)), limit(maxItems)));
+  return snap.docs
+    .map((d) => toGivingIntent(d.id, d.data()))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 // ─── Segurança Kids (check-in/out + settings) ─────────────────────────────────

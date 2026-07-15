@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   isFirebaseWebRuntimeConfigured,
+  saveGivingIntent,
 } from "@alvo/firebase";
 import { buildPixPayload } from "@alvo/domain";
 
@@ -28,10 +29,15 @@ export default function PublicGivePage() {
   const orgSlug = params?.orgSlug as string;
 
   const [amount, setAmount] = useState("");
+  const [donorName, setDonorName] = useState("");
+  const [donorWhatsapp, setDonorWhatsapp] = useState("");
+  const [consent, setConsent] = useState(true);
   const [step, setStep] = useState<"form" | "pix">("form");
   const [pixPayload, setPixPayload] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [pixName, setPixName] = useState("Igreja");
+  const [orgId, setOrgId] = useState("");
+  const [churchWhatsapp, setChurchWhatsapp] = useState("");
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [copied, setCopied] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,15 +58,17 @@ export default function PublicGivePage() {
         const organizationId = slugSnap.exists()
           ? String(slugSnap.data()["organizationId"])
           : orgSlug;
+        setOrgId(organizationId);
 
         const brandingSnap = await getDoc(
           doc(db, getOrganizationBrandingDocumentPath({ organizationId }))
         );
         if (brandingSnap.exists()) {
-          const data = brandingSnap.data() as { pixKey?: string; pixReceiverName?: string; publicShortName?: string };
+          const data = brandingSnap.data() as { pixKey?: string; pixReceiverName?: string; publicShortName?: string; givingWhatsappNumber?: string };
           if (data.pixKey) setPixKey(data.pixKey);
           if (data.pixReceiverName) setPixName(data.pixReceiverName);
           else if (data.publicShortName) setPixName(data.publicShortName);
+          if (data.givingWhatsappNumber) setChurchWhatsapp(data.givingWhatsappNumber);
         }
       } catch (e) {
         console.error("Failed to load org config:", e);
@@ -83,8 +91,8 @@ export default function PublicGivePage() {
     });
   }, [pixPayload]);
 
-  function generatePix() {
-    if (!amount || Number(amount) <= 0) return;
+  async function generatePix() {
+    if (!amount || Number(amount) <= 0 || !donorName.trim() || !donorWhatsapp.trim()) return;
     const key = pixKey || "demo@pix.esdras";
     const payload = buildPixPayload({
       key,
@@ -94,7 +102,33 @@ export default function PublicGivePage() {
     });
     setPixPayload(payload);
     setStep("pix");
+
+    // Registra o lead/intenção (best-effort — não bloqueia o PIX se falhar).
+    // O dinheiro NÃO passa pela plataforma: o PIX é da própria igreja.
+    if (orgId) {
+      try {
+        await saveGivingIntent(buildFirebaseConfig(), {
+          organizationId: orgId,
+          name: donorName.trim(),
+          whatsapp: donorWhatsapp.replace(/\D/g, ""),
+          amount: Number(amount),
+          source: "public_give",
+          status: "captured",
+          orgSlug,
+          consentContact: consent,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error("Falha ao registrar intenção de doação:", e);
+      }
+    }
   }
+
+  const waHref = churchWhatsapp
+    ? `https://wa.me/${churchWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+        `Olá! Acabei de contribuir com R$ ${Number(amount).toFixed(2).replace(".", ",")} via PIX${donorName ? ` — ${donorName}` : ""}.`
+      )}`
+    : "";
 
   async function copyKey() {
     await navigator.clipboard.writeText(pixKey || "demo@pix.esdras");
@@ -103,7 +137,7 @@ export default function PublicGivePage() {
   }
 
   const numericAmount = Number(amount);
-  const canProceed = numericAmount > 0;
+  const canProceed = numericAmount > 0 && donorName.trim().length >= 2 && donorWhatsapp.replace(/\D/g, "").length >= 8;
 
   if (step === "pix") {
     return (
@@ -145,6 +179,20 @@ export default function PublicGivePage() {
             <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.5 }}>
               Beneficiário: <strong>{pixName}</strong>
             </p>
+
+            {waHref && (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+              >
+                Falar no WhatsApp com a igreja
+              </a>
+            )}
+            <p style={{ margin: 0, fontSize: 11, color: "#16a34a", textAlign: "center" }}>
+              ✓ Sua contribuição foi registrada. Deus abençoe!
+            </p>
           </div>
         </div>
       </main>
@@ -166,6 +214,29 @@ export default function PublicGivePage() {
           </div>
         ) : (
           <div style={formStyle}>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Seu nome</label>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Nome completo"
+                value={donorName}
+                onChange={e => setDonorName(e.target.value)}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Seu WhatsApp</label>
+              <input
+                style={inputStyle}
+                type="tel"
+                inputMode="tel"
+                placeholder="(00) 00000-0000"
+                value={donorWhatsapp}
+                onChange={e => setDonorWhatsapp(e.target.value)}
+              />
+            </div>
+
             <div style={fieldStyle}>
               <label style={labelStyle}>Valor da oferta</label>
               <div style={suggestedStyle}>
@@ -204,6 +275,11 @@ export default function PublicGivePage() {
                 </span>
               </div>
             </div>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "#64748b", cursor: "pointer" }}>
+              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>Autorizo a igreja a entrar em contato comigo pelo WhatsApp (LGPD).</span>
+            </label>
 
             <button
               type="button"
