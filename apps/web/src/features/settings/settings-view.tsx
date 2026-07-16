@@ -99,6 +99,13 @@ export function SettingsView() {
   const [pixWhatsapp, setPixWhatsapp] = useState(tenantRuntime?.settings?.branding?.givingWhatsappNumber ?? "");
   const [pixSaving, setPixSaving] = useState(false);
   const [pixSaved, setPixSaved] = useState(false);
+  // Valores já persistidos (baseline), pra saber se há alterações pendentes e
+  // manter o botão em estado "Salvo" (não voltar a parecer que falta salvar).
+  const [pixBaseline, setPixBaseline] = useState({
+    key: (tenantRuntime?.settings?.branding?.pixKey ?? "").trim(),
+    name: (tenantRuntime?.settings?.branding?.pixReceiverName ?? "").trim(),
+    whatsapp: (tenantRuntime?.settings?.branding?.givingWhatsappNumber ?? "").replace(/\D/g, ""),
+  });
   // Groups config
   const [groupsModel, setGroupsModel] = useState<GroupsModelType>(
     (tenantRuntime?.settings?.branding?.groupsModelType as GroupsModelType | undefined) ?? "cell"
@@ -178,6 +185,7 @@ export function SettingsView() {
         givingWhatsappNumber: pixWhatsapp.replace(/\D/g, ""),
       };
       await saveOrganizationBrandingSettings(firebaseConfig, updated);
+      setPixBaseline({ key: updated.pixKey, name: updated.pixReceiverName, whatsapp: updated.givingWhatsappNumber });
       setPixSaved(true);
       setTimeout(() => setPixSaved(false), 3000);
     } catch (e) {
@@ -240,6 +248,13 @@ export function SettingsView() {
   }
 
   const enabledCount = Object.values(moduleState).filter(Boolean).length;
+
+  // Estado do botão PIX: já configurado? há alterações não salvas?
+  const pixConfigured = pixBaseline.key.length > 0;
+  const pixDirty =
+    pixKey.trim() !== pixBaseline.key ||
+    pixName.trim() !== pixBaseline.name ||
+    pixWhatsapp.replace(/\D/g, "") !== pixBaseline.whatsapp;
 
   return (
     <div className="page-root">
@@ -444,14 +459,22 @@ export function SettingsView() {
           </div>
           <button
             onClick={savePixConfig}
-            disabled={pixSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig)}
+            disabled={pixSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || (pixConfigured && !pixDirty && !pixSaved)}
             className="btn-primary btn-sm"
-            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center",
+              // Verde = configurado e sem alterações pendentes (estado "salvo" persistente)
+              ...((pixSaved || (pixConfigured && !pixDirty)) ? { background: "var(--alvo-green)", opacity: 1 } : {}),
+            }}
           >
             {pixSaving ? (
               <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</>
             ) : pixSaved ? (
               <><CheckCircle size={14} /> Salvo!</>
+            ) : pixConfigured && !pixDirty ? (
+              <><CheckCircle size={14} /> Salvo</>
+            ) : pixConfigured ? (
+              <><Save size={14} /> Salvar alterações</>
             ) : (
               <><Save size={14} /> Salvar</>
             )}
