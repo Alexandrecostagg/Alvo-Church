@@ -10,6 +10,12 @@
   --alvo-accent-soft: rgba(37, 99, 235, 0.08);
   --alvo-accent-gold: #eab308;
   --alvo-accent-dark: #1e3a8a;
+  /* Aliases da marca Esdras — antes indefinidos, o que deixava .btn-primary
+     com fundo transparente + texto branco (botão invisível). */
+  --esdras-primary: var(--alvo-accent);
+  --esdras-primary-soft: var(--alvo-accent-soft);
+  --esdras-primary-softer: rgba(37, 99, 235, 0.04);
+  --esdras-primary-dark: var(--alvo-accent-dark);
   --alvo-green: #16a34a;
   --alvo-green-soft: rgba(22, 163, 74, 0.08);
   --alvo-blue: #0891b2;
