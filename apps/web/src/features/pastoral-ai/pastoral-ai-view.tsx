@@ -3,28 +3,30 @@
 import Link from "next/link";
 import {
   AlertTriangle,
-  Bot,
   CheckCircle2,
   Copy,
   History,
-  HeartHandshake,
   MessageCircle,
   Mic,
   Plus,
   RotateCcw,
   Send,
-  Settings2,
-  ShieldCheck,
   Sparkles,
-  UsersRound,
   Waypoints
 } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useAppAuth } from "../../../app/providers";
+import {
+  fetchPrayerRequests,
+  addPrayerRequest,
+  updatePrayerRequestStatus,
+  isFirebaseWebRuntimeConfigured
+} from "@alvo/firebase";
+import type { PrayerRequest } from "@alvo/types";
 
 type AssistantStatus = "online" | "review" | "paused";
 type RequestStatus = "new" | "triage" | "assigned" | "resolved";
 type RequestPriority = "urgent" | "important" | "normal";
-type AssistantMode = "assistive" | "supervised" | "paused";
 type RequestFilter = "all" | RequestStatus;
 
 type PastoralRequest = {
@@ -40,33 +42,12 @@ type PastoralRequest = {
   phone?: string;
 };
 
-type CellPresence = {
-  id: string;
-  group: string;
-  leader: string;
-  expected: number;
-  confirmed: number;
-  missing: number;
-  status: string;
-};
-
 type ActivityLog = {
   id: string;
   title: string;
   detail: string;
   createdAt: string;
 };
-
-type PersistedPastoralAiState = {
-  requests: PastoralRequest[];
-  cellPresences: CellPresence[];
-  assistantMode: AssistantMode;
-  reviewSensitive: boolean;
-  voiceReplies: boolean;
-  activityLog: ActivityLog[];
-};
-
-const storageKey = "alvo:pastoral-ai-workspace:v1";
 
 const assistantStatus: AssistantStatus = "online";
 
@@ -109,43 +90,6 @@ const initialPastoralRequests: PastoralRequest[] = [
   }
 ];
 
-const initialCellPresences: CellPresence[] = [
-  {
-    id: "cell_1",
-    group: "CG Centro",
-    leader: "Rafael Lima",
-    expected: 18,
-    confirmed: 15,
-    missing: 3,
-    status: "Presença recebida pelo WhatsApp"
-  },
-  {
-    id: "cell_2",
-    group: "CG Famílias Norte",
-    leader: "Patrícia Costa",
-    expected: 22,
-    confirmed: 12,
-    missing: 10,
-    status: "Aguardando confirmação do líder"
-  },
-  {
-    id: "cell_3",
-    group: "CG Jovens",
-    leader: "Lucas Andrade",
-    expected: 26,
-    confirmed: 24,
-    missing: 2,
-    status: "Mensagem de incentivo enviada"
-  }
-];
-
-const automations = [
-  "Boas-vindas para visitantes cadastrados na recepção",
-  "Lembrete de presença para líderes de células",
-  "Triagem de pedidos de oração com revisão humana",
-  "Encaminhamento de cesta básica para Ação Social"
-];
-
 const priorityLabel: Record<RequestPriority, string> = {
   urgent: "Urgente",
   important: "Importante",
@@ -167,9 +111,46 @@ const filterLabel: Record<RequestFilter, string> = {
   resolved: "Resolvidas"
 };
 
+// Um id "req_..." é do mock local; qualquer outro é doc real do Firestore.
+const isRealRequest = (id: string) => !id.startsWith("req_");
+
+function formatHm(iso: string) {
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(d);
+}
+
+// prayerRequests (fonte real, unificada com o Radar Pastoral) → shape da fila.
+function prayerToRequest(p: PrayerRequest): PastoralRequest {
+  const statusMap: Record<PrayerRequest["status"], RequestStatus> = {
+    open: "new",
+    in_progress: "assigned",
+    resolved: "resolved"
+  };
+  const channelMap: Record<PrayerRequest["source"], string> = {
+    public_form: "Formulário público",
+    app: "App",
+    reception: "Recepção"
+  };
+  return {
+    id: p.id,
+    person: p.personName,
+    category: p.category ?? "Cuidado",
+    channel: channelMap[p.source] ?? "—",
+    priority: p.priority ?? "normal",
+    status: statusMap[p.status] ?? "new",
+    summary: p.message,
+    owner: p.careOwner ?? (p.assignedToUserId ? "Equipe pastoral" : "—"),
+    receivedAt: formatHm(p.createdAt),
+    phone: p.phone
+  };
+}
+
 export function PastoralAiView() {
+  const { user, organizationId, firebaseConfig } = useAppAuth();
+  const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
   const [requests, setRequests] = useState<PastoralRequest[]>(initialPastoralRequests);
-  const [cellPresences, setCellPresences] = useState<CellPresence[]>(initialCellPresences);
   const [selectedRequestId, setSelectedRequestId] = useState(initialPastoralRequests[0]?.id ?? "");
   const [requestFilter, setRequestFilter] = useState<RequestFilter>("all");
   const [draftRequest, setDraftRequest] = useState({
@@ -180,93 +161,92 @@ export function PastoralAiView() {
     owner: "Recepção",
     phone: ""
   });
-  const [assistantMode, setAssistantMode] = useState<AssistantMode>("supervised");
-  const [reviewSensitive, setReviewSensitive] = useState(true);
-  const [voiceReplies, setVoiceReplies] = useState(true);
   const [activityLog, setActivityLog] = useState<ActivityLog[]>([
     {
       id: "log_initial",
-      title: "Fila inicial carregada",
-      detail: "Solicitações simuladas prontas para revisão pastoral.",
+      title: "Fila carregada",
+      detail: "Pedidos de cuidado prontos para acompanhamento pastoral.",
       createdAt: "Agora"
     }
   ]);
-  const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [responseDraft, setResponseDraft] = useState("");
   const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
   const filteredRequests = requests.filter((request) =>
     requestFilter === "all" ? true : request.status === requestFilter
   );
   const selectedPhoneDigits = selectedRequest?.phone?.replace(/\D/g, "") ?? "";
-  const whatsappUrl = selectedPhoneDigits
-    ? `https://wa.me/55${selectedPhoneDigits}?text=${encodeURIComponent(responseDraft)}`
+  const whatsappNumber = selectedPhoneDigits
+    ? (selectedPhoneDigits.startsWith("55") ? selectedPhoneDigits : `55${selectedPhoneDigits}`)
+    : "";
+  const whatsappUrl = whatsappNumber
+    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(responseDraft)}`
     : "";
 
-  useEffect(() => {
+  // Carrega os pedidos reais (prayerRequests, unificados com o Radar Pastoral).
+  // Se não houver Firebase ou a fila estiver vazia, mantém o mock de demonstração.
+  const reloadPrayers = useCallback(async () => {
+    if (!configured) return;
     try {
-      const rawState = window.localStorage.getItem(storageKey);
-      if (!rawState) {
-        setHasLoadedLocalState(true);
-        return;
-      }
-
-      const parsedState = JSON.parse(rawState) as Partial<PersistedPastoralAiState>;
-      if (Array.isArray(parsedState.requests) && parsedState.requests.length > 0) {
-        setRequests(parsedState.requests);
-        setSelectedRequestId(parsedState.requests[0].id);
-      }
-      if (Array.isArray(parsedState.cellPresences) && parsedState.cellPresences.length > 0) {
-        setCellPresences(parsedState.cellPresences);
-      }
-      if (parsedState.assistantMode) setAssistantMode(parsedState.assistantMode);
-      if (typeof parsedState.reviewSensitive === "boolean") setReviewSensitive(parsedState.reviewSensitive);
-      if (typeof parsedState.voiceReplies === "boolean") setVoiceReplies(parsedState.voiceReplies);
-      if (Array.isArray(parsedState.activityLog) && parsedState.activityLog.length > 0) {
-        setActivityLog(parsedState.activityLog);
-      }
-    } catch {
-      // Invalid local workspace state should not block the pastoral queue.
-    } finally {
-      setHasLoadedLocalState(true);
+      const list = await fetchPrayerRequests(firebaseConfig, { organizationId }, 200);
+      if (!list.length) return;
+      const mapped = list.map(prayerToRequest);
+      setRequests(mapped);
+      setSelectedRequestId((prev) => (mapped.some((r) => r.id === prev) ? prev : mapped[0].id));
+    } catch (e) {
+      console.error("Falha ao carregar pedidos de cuidado:", e);
     }
-  }, []);
+  }, [configured, firebaseConfig, organizationId]);
 
-  useEffect(() => {
-    if (!hasLoadedLocalState) return;
+  useEffect(() => { void reloadPrayers(); }, [reloadPrayers]);
 
-    const stateToPersist: PersistedPastoralAiState = {
-      requests,
-      cellPresences,
-      assistantMode,
-      reviewSensitive,
-      voiceReplies,
-      activityLog
-    };
-
-    window.localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
-  }, [activityLog, assistantMode, cellPresences, hasLoadedLocalState, requests, reviewSensitive, voiceReplies]);
-
+  // Resposta sugerida: gera com IA de verdade (task care_reply via /api/ai,
+  // DeepSeek→Groq em cascata). Enquanto carrega, mostra um rascunho base; se a
+  // IA falhar ou não estiver configurada, o rascunho base permanece.
   useEffect(() => {
     if (!selectedRequest) return;
-
+    const first = selectedRequest.person.split(" ")[0];
     setResponseDraft(
-      `Olá, ${selectedRequest.person.split(" ")[0]}. Recebemos sua mensagem e vamos caminhar com você. Já encaminhei seu pedido para a equipe responsável.`
+      `Olá, ${first}. Recebemos sua mensagem e vamos caminhar com você. Já encaminhei seu pedido para a equipe responsável.`
     );
-  }, [selectedRequest?.id]);
+    if (!configured || !user) return;
+
+    let cancelled = false;
+    const requestId = selectedRequest.id;
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            task: "care_reply",
+            organizationId,
+            input: {
+              personName: selectedRequest.person,
+              request: selectedRequest.summary,
+              category: selectedRequest.category
+            }
+          })
+        });
+        const data = (await res.json()) as { ok?: boolean; content?: string };
+        // Só aplica se ainda for o mesmo pedido selecionado.
+        if (!cancelled && res.ok && data.content && requestId === selectedRequest.id) {
+          setResponseDraft(data.content.trim());
+        }
+      } catch {
+        // Mantém o rascunho base em caso de erro/limite de cota.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedRequest?.id, configured, user, organizationId]);
 
   const metrics = useMemo(() => {
     const urgent = requests.filter((request) => request.priority === "urgent").length;
     const open = requests.filter((request) => request.status !== "resolved").length;
-    const confirmed = cellPresences.reduce((sum, cell) => sum + cell.confirmed, 0);
-    const expected = cellPresences.reduce((sum, cell) => sum + cell.expected, 0);
-
-    return {
-      urgent,
-      open,
-      presenceRate: Math.round((confirmed / Math.max(expected, 1)) * 100),
-      automations: automations.length
-    };
-  }, [cellPresences, requests]);
+    const inProgress = requests.filter((request) => request.status === "triage" || request.status === "assigned").length;
+    const withPhone = requests.filter((request) => !!request.phone).length;
+    return { urgent, open, inProgress, withPhone };
+  }, [requests]);
 
   const addActivity = (title: string, detail: string) => {
     setActivityLog((current) => [
@@ -328,31 +308,30 @@ export function PastoralAiView() {
     }
   };
 
-  const handleResolveRequest = () => {
+  const handleResolveRequest = async () => {
     if (!selectedRequest) return;
-    updateSelectedRequest("resolved");
+    if (configured && isRealRequest(selectedRequest.id)) {
+      try {
+        await updatePrayerRequestStatus(firebaseConfig, { organizationId }, {
+          requestId: selectedRequest.id,
+          status: "resolved",
+          respondedByUserId: user?.uid
+        });
+        await reloadPrayers();
+      } catch (e) {
+        console.error("Falha ao resolver:", e);
+      }
+    } else {
+      updateSelectedRequest("resolved");
+    }
     addActivity("Solicitação resolvida", `${selectedRequest.person} saiu da fila aberta.`);
   };
 
-  const handleCellReminder = (cellId: string) => {
-    setCellPresences((current) =>
-      current.map((cell) =>
-        cell.id === cellId
-          ? {
-              ...cell,
-              status: "Lembrete enviado ao líder pelo WhatsApp"
-            }
-          : cell
-      )
-    );
 
-    const cell = cellPresences.find((item) => item.id === cellId);
-    if (cell) {
-      addActivity("Lembrete de presença enviado", `${cell.leader} recebeu lembrete para ${cell.group}.`);
-    }
-  };
+  const resetDraft = () =>
+    setDraftRequest({ person: "", category: "Oração", priority: "normal", summary: "", owner: "Recepção", phone: "" });
 
-  const handleCreateRequest = (event: FormEvent<HTMLFormElement>) => {
+  const handleCreateRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const person = draftRequest.person.trim();
@@ -363,10 +342,30 @@ export function PastoralAiView() {
       return;
     }
 
-    const createdAt = new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit"
-    }).format(new Date());
+    if (configured) {
+      try {
+        await addPrayerRequest(firebaseConfig, { organizationId }, {
+          personName: person,
+          phone: draftRequest.phone.trim() || undefined,
+          message: summary,
+          category: draftRequest.category || undefined,
+          priority: draftRequest.priority,
+          careOwner: draftRequest.owner || undefined,
+          source: "reception"
+        });
+        await reloadPrayers();
+        setRequestFilter("all");
+        resetDraft();
+        addActivity("Solicitação registrada", `${person} entrou na fila de cuidado.`);
+        return;
+      } catch (e) {
+        console.error("Falha ao registrar solicitação:", e);
+        addActivity("Erro ao registrar", "Não foi possível salvar. Tente novamente.");
+        return;
+      }
+    }
+
+    // Fallback local (demo / sem Firebase).
     const nextRequest: PastoralRequest = {
       id: `req_${Date.now()}`,
       person,
@@ -376,43 +375,25 @@ export function PastoralAiView() {
       status: "new",
       summary,
       owner: draftRequest.owner || "Recepção",
-      receivedAt: createdAt,
+      receivedAt: formatHm(new Date().toISOString()),
       phone: draftRequest.phone.trim() || undefined
     };
-
     setRequests((current) => [nextRequest, ...current]);
     setSelectedRequestId(nextRequest.id);
     setRequestFilter("all");
-    setDraftRequest({
-      person: "",
-      category: "Oração",
-      priority: "normal",
-      summary: "",
-      owner: "Recepção",
-      phone: ""
-    });
-    addActivity("Solicitação criada manualmente", `${person} entrou na fila de cuidado.`);
+    resetDraft();
+    addActivity("Solicitação criada (demo)", `${person} entrou na fila de cuidado.`);
   };
 
-  const handleResetDemo = () => {
-    setRequests(initialPastoralRequests);
-    setCellPresences(initialCellPresences);
-    setSelectedRequestId(initialPastoralRequests[0]?.id ?? "");
+  const handleRefresh = () => {
+    if (configured) {
+      void reloadPrayers();
+    } else {
+      setRequests(initialPastoralRequests);
+      setSelectedRequestId(initialPastoralRequests[0]?.id ?? "");
+    }
     setRequestFilter("all");
-    setAssistantMode("supervised");
-    setReviewSensitive(true);
-    setVoiceReplies(true);
-    setActivityLog([
-      {
-        id: `log_reset_${Date.now()}`,
-        title: "Ambiente restaurado",
-        detail: "Dados de demonstração da Cuidado Pastoral foram recarregados.",
-        createdAt: new Intl.DateTimeFormat("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit"
-        }).format(new Date())
-      }
-    ]);
+    addActivity("Fila atualizada", "Pedidos de cuidado recarregados.");
   };
 
   return (
@@ -434,9 +415,9 @@ export function PastoralAiView() {
             <Link href="/reception" className="pastoral-ai-nav-action is-active">
               Recepção
             </Link>
-            <button type="button" onClick={handleResetDemo}>
+            <button type="button" onClick={handleRefresh}>
               <RotateCcw size={16} />
-              Restaurar demo
+              Atualizar
             </button>
           </div>
         </div>
@@ -465,15 +446,15 @@ export function PastoralAiView() {
         </article>
         <article className="tone-green">
           <Waypoints size={22} />
-          <span>Presença em células</span>
-          <strong>{metrics.presenceRate}%</strong>
-          <small>confirmada por líderes no WhatsApp</small>
+          <span>Em atendimento</span>
+          <strong>{metrics.inProgress}</strong>
+          <small>em triagem ou encaminhadas</small>
         </article>
         <article className="tone-purple">
-          <Bot size={22} />
-          <span>Automações ativas</span>
-          <strong>{metrics.automations}</strong>
-          <small>com limites e revisão pastoral</small>
+          <MessageCircle size={22} />
+          <span>Com WhatsApp</span>
+          <strong>{metrics.withPhone}</strong>
+          <small>têm contato para resposta</small>
         </article>
       </section>
 
@@ -484,10 +465,6 @@ export function PastoralAiView() {
               <span className="eyebrow">Fila de cuidado</span>
               <h2>Solicitações recebidas</h2>
             </div>
-            <button type="button">
-              <ShieldCheck size={17} />
-              Revisar regras
-            </button>
           </div>
 
           <form className="quick-request-form" onSubmit={handleCreateRequest}>
@@ -608,7 +585,7 @@ export function PastoralAiView() {
         </article>
 
         <article className="pastoral-ai-panel request-detail">
-          <span className="eyebrow">Resumo sugerido pela IA</span>
+          <span className="eyebrow">Pedido de cuidado</span>
           <h2>{selectedRequest.person}</h2>
           <p>{selectedRequest.summary}</p>
 
@@ -672,90 +649,6 @@ export function PastoralAiView() {
               <Send size={17} />
               Abrir WhatsApp
             </a>
-          </div>
-        </article>
-      </section>
-
-      <section className="pastoral-ai-lower-grid">
-        <article className="pastoral-ai-panel">
-          <div className="panel-heading compact">
-            <div>
-              <span className="eyebrow">Células e CGs</span>
-              <h2>Presença por WhatsApp</h2>
-            </div>
-            <UsersRound size={22} />
-          </div>
-
-          <div className="cell-list">
-            {cellPresences.map((cell) => (
-              <div key={cell.id} className="cell-row">
-                <div>
-                  <strong>{cell.group}</strong>
-                  <span>{cell.leader}</span>
-                  <p>{cell.status}</p>
-                </div>
-                <div className="presence-meter" aria-label={`${cell.confirmed} de ${cell.expected} confirmados`}>
-                  <span style={{ width: `${Math.round((cell.confirmed / cell.expected) * 100)}%` }} />
-                </div>
-                <small>{cell.confirmed}/{cell.expected}</small>
-                <button type="button" onClick={() => handleCellReminder(cell.id)}>
-                  Lembrar
-                </button>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="pastoral-ai-panel">
-          <div className="panel-heading compact">
-            <div>
-              <span className="eyebrow">Governança</span>
-              <h2>Automações com supervisão</h2>
-            </div>
-            <Settings2 size={22} />
-          </div>
-
-          <div className="assistant-config">
-            <label>
-              <span>Modo do assistente</span>
-              <select value={assistantMode} onChange={(event) => setAssistantMode(event.target.value as AssistantMode)}>
-                <option value="assistive">Assistivo</option>
-                <option value="supervised">Supervisionado</option>
-                <option value="paused">Pausado</option>
-              </select>
-            </label>
-
-            <label className="toggle-row">
-              <input
-                checked={reviewSensitive}
-                onChange={(event) => setReviewSensitive(event.target.checked)}
-                type="checkbox"
-              />
-              <span>Revisar pedidos sensíveis antes do envio</span>
-            </label>
-
-            <label className="toggle-row">
-              <input
-                checked={voiceReplies}
-                onChange={(event) => setVoiceReplies(event.target.checked)}
-                type="checkbox"
-              />
-              <span>Permitir respostas em áudio</span>
-            </label>
-          </div>
-
-          <div className="automation-list">
-            {automations.map((automation) => (
-              <div key={automation}>
-                <CheckCircle2 size={18} />
-                <span>{automation}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="guardrail-note">
-            <HeartHandshake size={19} />
-            <p>Pedidos sensíveis entram como sugestão. A decisão e o contato final continuam com a liderança autorizada.</p>
           </div>
         </article>
       </section>

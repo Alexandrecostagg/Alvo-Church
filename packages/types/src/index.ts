@@ -1364,6 +1364,11 @@ export interface PrayerRequest {
   message: string;
   status: PrayerRequestStatus;
   assignedToUserId?: string;
+  // Triagem de cuidado (usado pela tela de Cuidado Pastoral): categoria do
+  // pedido, prioridade e equipe/responsável (rótulo livre).
+  category?: string;
+  priority?: "urgent" | "important" | "normal";
+  careOwner?: string;
   source: "public_form" | "app" | "reception";
   createdAt: string;
   respondedAt?: string;
