@@ -1186,7 +1186,8 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         method: "pix"
       });
       setSubmitted(true);
-    } catch {
+    } catch (e: any) {
+      if (__DEV__) console.warn("addMemberContribution falhou:", e?.code || e?.message || e);
       Alert.alert("Não foi possível registrar", "Sua contribuição via PIX foi feita normalmente, mas não conseguimos salvar o registro aqui. Avise a secretaria.");
     } finally {
       setSubmitting(false);
