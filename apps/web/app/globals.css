@@ -8022,11 +8022,12 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 }
 
 .finance-hero h1 {
-  max-width: 980px;
+  max-width: none;
   color: #111827;
   font-size: clamp(44px, 4.5vw, 64px);
   line-height: 0.98;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .finance-hero p:not(.eyebrow) {
@@ -8385,6 +8386,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 
   .finance-hero h1 {
     font-size: 42px;
+    white-space: normal;
   }
 
   .finance-hero .topbar-actions,

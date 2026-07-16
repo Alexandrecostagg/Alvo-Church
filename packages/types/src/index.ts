@@ -623,6 +623,22 @@ export interface FinancialTransparencyEntry {
   note: string;
 }
 
+// Lançamento financeiro individual (ledger real da tela de Finanças). Entradas
+// e saídas persistidas; o income também soma as MemberContribution confirmadas.
+export type FinancialTransactionKind = "income" | "expense" | "missions";
+
+export interface FinancialTransaction {
+  id: string;
+  organizationId: string;
+  kind: FinancialTransactionKind;
+  label: string;
+  amount: number;              // sempre positivo; o kind define o sinal
+  note?: string;
+  date: string;                // ISO — data do lançamento
+  createdByUserId?: string;
+  createdAt: string;
+}
+
 export interface FinancialTransparencyReport {
   id: string;
   organizationId: string;

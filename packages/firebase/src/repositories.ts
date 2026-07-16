@@ -28,6 +28,7 @@ import type {
   Family,
   FamilyMember,
   FinancialTransparencyReport,
+  FinancialTransaction,
   FollowUpTask,
   Group,
   GroupAttendance,
@@ -96,6 +97,7 @@ import {
   getFamilyMembersCollectionPath,
   getFollowUpTasksCollectionPath,
   getFinanceReportsCollectionPath,
+  getFinancialTransactionsCollectionPath,
   getGroupAttendanceCollectionPath,
   getGroupMembersCollectionPath,
   getGroupMeetingsCollectionPath,
@@ -2881,6 +2883,60 @@ export async function deleteTrainingLesson(
 ) {
   const firestore = getFirebaseFirestore(config);
   await deleteDoc(doc(firestore, getPlatformProgramLessonsCollectionPath(programId), lessonId));
+}
+
+// ─── Ledger financeiro (lançamentos individuais) ──────────────────────────────
+
+function toFinancialTransaction(documentId: string, data: DocumentData): FinancialTransaction {
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    kind: (data.kind as FinancialTransaction["kind"]) ?? "expense",
+    label: String(data.label ?? ""),
+    amount: Number(data.amount ?? 0),
+    note: data.note ? String(data.note) : undefined,
+    date: String(data.date ?? ""),
+    createdByUserId: data.createdByUserId ? String(data.createdByUserId) : undefined,
+    createdAt: String(data.createdAt ?? "")
+  };
+}
+
+export async function addFinancialTransaction(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  tx: Omit<FinancialTransaction, "id" | "organizationId" | "createdAt">
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getFinancialTransactionsCollectionPath(context)));
+  const record: FinancialTransaction = {
+    ...tx,
+    id: ref.id,
+    organizationId: context.organizationId,
+    createdAt: new Date().toISOString()
+  };
+  await setDoc(ref, cleanFirestoreData(record));
+  return ref.id;
+}
+
+export async function fetchFinancialTransactions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 500
+): Promise<FinancialTransaction[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(collection(firestore, getFinancialTransactionsCollectionPath(context)), orderBy("date", "desc"), limit(maxItems))
+  );
+  return snap.docs.map((d) => toFinancialTransaction(d.id, d.data()));
+}
+
+export async function deleteFinancialTransaction(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  transactionId: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getFinancialTransactionsCollectionPath(context), transactionId));
 }
 
 // ─── Doação pública sem-app (leads/intenções) ─────────────────────────────────

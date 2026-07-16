@@ -289,6 +289,12 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Ledger financeiro (lançamentos de entrada/saída/missões): dado sensível —
+    // só a liderança administrativa lê e escreve.
+    match /organizations/{orgId}/financialTransactions/{transactionId} {
+      allow read, write: if isTenantAdmin(orgId);
+    }
+
     // Prayer requests: any signed-in tenant member can submit one (from the
     // app or reception). Pastoral staff can read/triage/resolve all of them;
     // regular members can only read ones the author opted to make public
@@ -360,6 +366,7 @@ service cloud.firestore {
     match /organizations/{orgId}/{collection}/{documentId} {
       allow read: if isTenantMember(orgId)
         && collection != "contributions"
+        && collection != "financialTransactions"
         && collection != "users"
         && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)
@@ -382,6 +389,7 @@ service cloud.firestore {
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
       allow read: if isTenantMember(orgId)
         && collection != "contributions"
+        && collection != "financialTransactions"
         && collection != "users"
         && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)

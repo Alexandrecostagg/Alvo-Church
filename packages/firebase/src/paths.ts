@@ -110,6 +110,11 @@ export function getFinanceReportsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/financeReports`;
 }
 
+// Ledger financeiro: lançamentos individuais (entradas/saídas/missões).
+export function getFinancialTransactionsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/financialTransactions`;
+}
+
 export function getGroupsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/groups`;
 }
