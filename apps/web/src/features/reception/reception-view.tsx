@@ -903,23 +903,31 @@ export function ReceptionView() {
           </div>
           <div className="reception-step-lane">
             <div>
-              <QrCode size={20} style={{ color: "var(--alvo-blue)" }} />
-              <strong>1. Capturar</strong>
+              <div className="reception-step-head">
+                <QrCode size={20} style={{ color: "var(--alvo-blue)" }} />
+                <strong>1. Capturar</strong>
+              </div>
               <p>Voluntário ou Totem de entrada registra dados.</p>
             </div>
             <div>
-              <Megaphone size={20} style={{ color: "#a855f7" }} />
-              <strong>2. Saudar</strong>
+              <div className="reception-step-head">
+                <Megaphone size={20} style={{ color: "#a855f7" }} />
+                <strong>2. Saudar</strong>
+              </div>
               <p>Boas-vindas públicas no púlpito pelo pastor.</p>
             </div>
             <div>
-              <Smartphone size={20} style={{ color: "var(--alvo-accent)" }} />
-              <strong>3. Conectar</strong>
+              <div className="reception-step-head">
+                <Smartphone size={20} style={{ color: "var(--alvo-accent)" }} />
+                <strong>3. Conectar</strong>
+              </div>
               <p>Acolhimento envia WhatsApp personalizado.</p>
             </div>
             <div>
-              <MessageSquareText size={20} style={{ color: "var(--alvo-green)" }} />
-              <strong>4. Integrar</strong>
+              <div className="reception-step-head">
+                <MessageSquareText size={20} style={{ color: "var(--alvo-green)" }} />
+                <strong>4. Integrar</strong>
+              </div>
               <p>Membro acompanha e encaminha para célula.</p>
             </div>
           </div>

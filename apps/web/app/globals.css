@@ -2381,10 +2381,23 @@ code {
   transform: translateY(-1px);
 }
 
+.shortcut-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shortcut-card-headtext {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .shortcut-icon {
   display: inline-grid;
   width: 38px;
   height: 38px;
+  flex-shrink: 0;
   place-items: center;
   border-radius: 12px;
   background: #111827;
@@ -2737,7 +2750,7 @@ code {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.reception-step-lane div {
+.reception-step-lane > div {
   min-width: 0;
   padding: 14px;
   border: 1px solid var(--alvo-line);
@@ -2752,6 +2765,22 @@ code {
 .reception-step-lane strong {
   display: block;
   margin-top: 12px;
+}
+
+/* Ícone ao lado do título (mesmo padrão dos cards da dashboard) */
+.reception-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.reception-step-head svg {
+  flex-shrink: 0;
+}
+
+.reception-step-lane .reception-step-head strong {
+  margin-top: 0;
 }
 
 .reception-step-lane p {
@@ -7662,7 +7691,7 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   margin-top: 18px;
 }
 
-.reception-step-lane div {
+.reception-step-lane > div {
   min-height: 170px;
   padding: 18px;
   border-color: rgba(15, 23, 42, 0.10);
@@ -8617,6 +8646,12 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   letter-spacing: 0;
 }
 
+/* Títulos das seções (ex.: "Solicitações recebidas", "Automações com
+   supervisão") em uma linha só, sem quebrar por causa do botão ao lado. */
+.panel-heading h2 {
+  white-space: nowrap;
+}
+
 .panel-heading button,
 .primary-action,
 .secondary-action {
@@ -9187,6 +9222,11 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   .detail-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  /* No mobile o título tem a linha inteira; libera a quebra p/ não estourar. */
+  .panel-heading h2 {
+    white-space: normal;
   }
 
   .detail-actions button,

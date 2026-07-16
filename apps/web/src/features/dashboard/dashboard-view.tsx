@@ -56,12 +56,7 @@ import {
   shouldRecommendTribeReview,
   tribeQuestionnaireV1
 } from "@alvo/domain";
-import { AuthPanel } from "../../../app/auth-panel";
-import { AuthStatusCard } from "../../../app/auth-status";
 import { BrandLogo } from "../../../app/brand-logo";
-import { LiveOperations } from "../../../app/live-operations";
-import { LiveTenantData } from "../../../app/live-data";
-import { TenantAdminSettings } from "../../../app/tenant-admin-settings";
 import { useAppAuth } from "../../../app/providers";
 import {
   createVisitorIntakeWorkflow,
@@ -899,11 +894,15 @@ export function DashboardView() {
                   }
                 }}
               >
-                <div className="shortcut-icon">
-                  <shortcut.icon size={19} />
+                <div className="shortcut-card-head">
+                  <div className="shortcut-icon">
+                    <shortcut.icon size={19} />
+                  </div>
+                  <div className="shortcut-card-headtext">
+                    <span>{shortcut.label}</span>
+                    <strong>{shortcut.title}</strong>
+                  </div>
                 </div>
-                <span>{shortcut.label}</span>
-                <strong>{shortcut.title}</strong>
                 <p>{shortcut.description}</p>
                 <small>{shortcut.meta}</small>
               </Link>
@@ -1534,14 +1533,6 @@ export function DashboardView() {
           </article>
         </section>
 
-        <section className="integration-strip" id="billing">
-          <AuthStatusCard />
-          <AuthPanel />
-          <LiveTenantData organizationId={organization.id} />
-        </section>
-
-        <LiveOperations organizationId={organization.id} />
-        <TenantAdminSettings />
       </section>
 
       {selectedPerson ? (
