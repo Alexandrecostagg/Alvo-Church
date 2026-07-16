@@ -4,12 +4,14 @@ import {
   generateCellDynamic,
   generateCellMeetingSummary,
   generateAbsenceMessage,
+  generateCareReply,
   generatePastoralSuggestion,
   classifyTribe,
   type CellScriptInput,
   type CellDynamicInput,
   type CellMeetingSummaryInput,
   type AbsenceMessageInput,
+  type CareReplyInput,
   type PastoralSuggestionInput,
   type TribeClassifyInput
 } from "@alvo/ai";
@@ -21,6 +23,7 @@ type AiTask =
   | "cell_dynamic"
   | "cell_meeting_summary"
   | "absence_message"
+  | "care_reply"
   | "pastoral_suggestion"
   | "tribe_classify";
 
@@ -133,9 +136,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "Groq API key não configurada" }, { status: 500 });
+  // Cascata de provedores: DeepSeek (principal) → Groq (fallback). Basta uma
+  // das chaves estar configurada. A troca de provedor acontece no @alvo/ai.
+  const keys = {
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+    groqApiKey: process.env.GROQ_API_KEY
+  };
+  if (!keys.deepseekApiKey && !keys.groqApiKey) {
+    return NextResponse.json({ error: "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY)." }, { status: 500 });
   }
 
   let body: { task: AiTask; input: unknown; organizationId?: string };
@@ -181,22 +189,25 @@ export async function POST(req: NextRequest) {
 
     switch (task) {
       case "cell_script":
-        result = await generateCellScript(apiKey, input as CellScriptInput);
+        result = await generateCellScript(keys, input as CellScriptInput);
         break;
       case "cell_dynamic":
-        result = await generateCellDynamic(apiKey, input as CellDynamicInput);
+        result = await generateCellDynamic(keys, input as CellDynamicInput);
         break;
       case "cell_meeting_summary":
-        result = await generateCellMeetingSummary(apiKey, input as CellMeetingSummaryInput);
+        result = await generateCellMeetingSummary(keys, input as CellMeetingSummaryInput);
         break;
       case "absence_message":
-        result = await generateAbsenceMessage(apiKey, input as AbsenceMessageInput);
+        result = await generateAbsenceMessage(keys, input as AbsenceMessageInput);
+        break;
+      case "care_reply":
+        result = await generateCareReply(keys, input as CareReplyInput);
         break;
       case "pastoral_suggestion":
-        result = await generatePastoralSuggestion(apiKey, input as PastoralSuggestionInput);
+        result = await generatePastoralSuggestion(keys, input as PastoralSuggestionInput);
         break;
       case "tribe_classify":
-        result = await classifyTribe(apiKey, input as TribeClassifyInput);
+        result = await classifyTribe(keys, input as TribeClassifyInput);
         break;
       default:
         await consumePromise;

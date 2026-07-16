@@ -5,6 +5,7 @@ export type AiTask =
   | "cell_dynamic"
   | "cell_meeting_summary"
   | "absence_message"
+  | "care_reply"
   | "pastoral_suggestion";
 
 export interface AiApiResponse {

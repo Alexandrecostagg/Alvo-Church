@@ -1,4 +1,4 @@
-import { callGroqWithCascade, type GroqResponse } from "./groq";
+import { callChatWithFallback, type AiKeys, type AiResponse } from "./fallback";
 
 const SYSTEM_BASE = `Você é um assistente pastoral da plataforma Plataforma Esdras.
 Responda sempre em português brasileiro.
@@ -15,9 +15,9 @@ export interface CellScriptInput {
 }
 
 export async function generateCellScript(
-  apiKey: string,
+  keys: AiKeys,
   input: CellScriptInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const duration = input.duration ?? 90;
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -41,7 +41,7 @@ Seja específico e prático. O líder deve conseguir conduzir sem improviso.`
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 1500, temperature: 0.75 });
+  return callChatWithFallback(keys, messages, { maxTokens: 1500, temperature: 0.75 });
 }
 
 // ─── 2. Dinâmica do Encontro ───────────────────────────────────────────────
@@ -53,9 +53,9 @@ export interface CellDynamicInput {
 }
 
 export async function generateCellDynamic(
-  apiKey: string,
+  keys: AiKeys,
   input: CellDynamicInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
     {
@@ -78,7 +78,7 @@ Seja criativo, prático e adequado para um ambiente cristão.`
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 800, temperature: 0.85 });
+  return callChatWithFallback(keys, messages, { maxTokens: 800, temperature: 0.85 });
 }
 
 // ─── 3. Resumo Pós-Encontro ────────────────────────────────────────────────
@@ -95,9 +95,9 @@ export interface CellMeetingSummaryInput {
 }
 
 export async function generateCellMeetingSummary(
-  apiKey: string,
+  keys: AiKeys,
   input: CellMeetingSummaryInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
     {
@@ -123,7 +123,7 @@ Seja objetivo. Máximo 200 palavras.`
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 600, temperature: 0.5 });
+  return callChatWithFallback(keys, messages, { maxTokens: 600, temperature: 0.5 });
 }
 
 // ─── 4. Sugestão de Mensagem para Membro Ausente ──────────────────────────
@@ -136,9 +136,9 @@ export interface AbsenceMessageInput {
 }
 
 export async function generateAbsenceMessage(
-  apiKey: string,
+  keys: AiKeys,
   input: AbsenceMessageInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
     {
@@ -161,7 +161,43 @@ Gere apenas o texto da mensagem, sem explicações adicionais.`
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 300, temperature: 0.8 });
+  return callChatWithFallback(keys, messages, { maxTokens: 300, temperature: 0.8 });
+}
+
+// ─── 4b. Resposta a Pedido de Cuidado/Oração ──────────────────────────────
+
+export interface CareReplyInput {
+  personName: string;
+  request: string;              // o pedido/mensagem que a pessoa enviou
+  category?: string;            // ex.: "oração", "aconselhamento", "visita"
+}
+
+export async function generateCareReply(
+  keys: AiKeys,
+  input: CareReplyInput
+): Promise<AiResponse> {
+  const messages = [
+    { role: "system" as const, content: SYSTEM_BASE },
+    {
+      role: "user" as const,
+      content: `Escreva uma resposta de WhatsApp para a equipe pastoral enviar a alguém que pediu cuidado/oração.
+
+Nome: ${input.personName}
+${input.category ? `Tipo: ${input.category}` : ""}
+Pedido: ${input.request}
+
+A resposta deve:
+- Ser acolhedora, empática e pessoal (use o primeiro nome)
+- Reconhecer o pedido específico sem repeti-lo mecanicamente
+- Transmitir que a igreja recebeu e vai acompanhar
+- Ter entre 3-5 linhas, tom de amigo/pastor, não corporativo
+- Não prometer o que não foi dito; nunca inventar dados
+
+Gere apenas o texto da mensagem, sem explicações.`
+    }
+  ];
+
+  return callChatWithFallback(keys, messages, { maxTokens: 300, temperature: 0.8 });
 }
 
 // ─── 5. Sugestão de Ação Pastoral (Score baixo) ───────────────────────────
@@ -175,9 +211,9 @@ export interface PastoralSuggestionInput {
 }
 
 export async function generatePastoralSuggestion(
-  apiKey: string,
+  keys: AiKeys,
   input: PastoralSuggestionInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
     {
@@ -198,7 +234,7 @@ ABORDAGEM: (2-3 linhas sobre como o pastor deve conduzir o contato)`
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 500, temperature: 0.6 });
+  return callChatWithFallback(keys, messages, { maxTokens: 500, temperature: 0.6 });
 }
 
 // ─── 6. Classificação de Tribo ─────────────────────────────────────────────
@@ -213,9 +249,9 @@ export interface TribeClassifyInput {
 }
 
 export async function classifyTribe(
-  apiKey: string,
+  keys: AiKeys,
   input: TribeClassifyInput
-): Promise<GroqResponse> {
+): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
     {
@@ -250,5 +286,5 @@ Responda SOMENTE com JSON válido, sem markdown, neste formato exato:
     }
   ];
 
-  return callGroqWithCascade(apiKey, messages, { maxTokens: 200, temperature: 0.2 });
+  return callChatWithFallback(keys, messages, { maxTokens: 200, temperature: 0.2 });
 }
