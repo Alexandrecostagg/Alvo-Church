@@ -152,12 +152,27 @@ export function SettingsView() {
     }
   }
 
+  // Branding base para salvar: usa o doc existente ou cria um mínimo válido
+  // (orgs novas/demo podem não ter settings/branding ainda — sem isso, salvar
+  // PIX/grupos ficava travado). saveOrganizationBrandingSettings faz merge.
+  function brandingBase() {
+    return tenantRuntime?.settings?.branding ?? {
+      organizationId,
+      brandMode: "alvo_managed" as const,
+      publicProductName: tenantRuntime?.organization?.name ?? "Igreja",
+      publicShortName: tenantRuntime?.organization?.name ?? "Igreja",
+      primaryColor: "#d27836",
+      showPoweredByAlvo: true
+    };
+  }
+
   async function savePixConfig() {
-    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding) return;
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
     setPixSaving(true);
     try {
       const updated = {
-        ...tenantRuntime.settings.branding,
+        ...brandingBase(),
+        organizationId,
         pixKey: pixKey.trim(),
         pixReceiverName: pixName.trim(),
         givingWhatsappNumber: pixWhatsapp.replace(/\D/g, ""),
@@ -173,11 +188,12 @@ export function SettingsView() {
   }
 
   async function saveGroupsConfig() {
-    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding) return;
+    if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
     setGroupsSaving(true);
     try {
       await saveOrganizationBrandingSettings(firebaseConfig, {
-        ...tenantRuntime.settings.branding,
+        ...brandingBase(),
+        organizationId,
         groupsModelType: groupsModel,
         groupsModuleLabel: groupsCustomLabel.trim() || undefined,
       });
@@ -308,7 +324,7 @@ export function SettingsView() {
           </div>
           <button
             onClick={saveGroupsConfig}
-            disabled={groupsSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding}
+            disabled={groupsSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig)}
             className="btn-primary btn-sm"
             style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
           >
@@ -428,7 +444,7 @@ export function SettingsView() {
           </div>
           <button
             onClick={savePixConfig}
-            disabled={pixSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.settings?.branding}
+            disabled={pixSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig)}
             className="btn-primary btn-sm"
             style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
           >
