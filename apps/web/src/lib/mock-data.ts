@@ -1226,13 +1226,143 @@ export const MOCK_COURSES = [
     badgeUnlockedId: "badge_primeiro_passo",
     isActive: true,
     createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_3",
+    organizationId: organization.id,
+    title: "Da Porta ao Altar: Jornada de Integração do Novo Membro",
+    description: "Um caminho estruturado para transformar visitantes em membros comprometidos, com foco em vínculo, pertencimento e compromisso em cada etapa da jornada.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_jornada_completa",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_4",
+    organizationId: organization.id,
+    title: "Multiplica: Formando Líderes que Formam Líderes",
+    description: "Formação em cascata para quem quer acolher, formar e enviar novos líderes, multiplicando grupos com saúde e profundidade.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_multiplicador_lideres",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_5",
+    organizationId: organization.id,
+    title: "Igreja Viva: O Papel do Membro no Corpo de Cristo",
+    description: "Curso para todo novo membro sobre as atitudes que fortalecem a igreja: unidade, presença, generosidade e serviço no dia a dia.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_igreja_viva",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_6",
+    organizationId: organization.id,
+    title: "Liderar é Servir: Fundamentos para Líderes de Ministério",
+    description: "Fundamentos de liderança cristã para líderes de ministério: influência, inteligência emocional, comunicação de visão e decisão sob pressão.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_lider_servo",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_7",
+    organizationId: organization.id,
+    title: "Igreja em Movimento: Fundamentos para Plantação e Expansão",
+    description: "Para líderes com chamado de plantação: teologia da cidade, formação de time fundador e os primeiros 90 dias de uma nova igreja.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_igreja_em_movimento",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_8",
+    organizationId: organization.id,
+    title: "Raio-X da Igreja: Diagnóstico e Saúde Congregacional",
+    description: "Um diagnóstico prático dos pontos fortes e pontos de atenção que fazem uma igreja crescer com saúde: liderança, dons, espiritualidade, estrutura e evangelismo.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_raiox_igreja",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_9",
+    organizationId: organization.id,
+    title: "Pontes de Fé: Evangelismo no Dia a Dia",
+    description: "Como criar espaços de conversa genuína, hospitalidade e um ciclo de encontros introdutórios para quem está distante da fé.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_pontes_de_fe",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_10",
+    organizationId: organization.id,
+    title: "Anfitrião de Célula: do Convite à Liderança",
+    description: "Do primeiro convite à liderança: como preparar encontros de impacto, receber coaching contínuo e cuidar da própria saúde emocional como líder.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_anfitriao_celula",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_11",
+    organizationId: organization.id,
+    title: "Casas que Multiplicam: Células como Base da Igreja",
+    description: "Por que células multiplicam mais que cultos: oração e cuidado em pequenos grupos, e como planejar uma multiplicação saudável sem perder gente.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_casas_que_multiplicam",
+    isActive: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "course_12",
+    organizationId: organization.id,
+    title: "Rede que Cuida: Mentoria e Conexão entre Igrejas",
+    description: "Como estruturar trilhas de mentoria (incluindo discipulado de homens) e eventos anuais que conectam e retêm líderes de toda a rede de igrejas.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1504052434569-70ad58565b90?q=80&w=400&auto=format&fit=crop",
+    badgeUnlockedId: "badge_rede_que_cuida",
+    isActive: true,
+    createdAt: new Date().toISOString()
   }
 ];
 
 export const MOCK_COURSE_MODULES = [
   { id: "mod_1", organizationId: organization.id, courseId: "course_1", title: "Módulo 1: O Coração do Líder", sortOrder: 1 },
   { id: "mod_2", organizationId: organization.id, courseId: "course_1", title: "Módulo 2: Estratégias de Multiplicação", sortOrder: 2 },
-  { id: "mod_3", organizationId: organization.id, courseId: "course_2", title: "Módulo 1: Primeiros Passos com Jesus", sortOrder: 1 }
+  { id: "mod_3", organizationId: organization.id, courseId: "course_2", title: "Módulo 1: Primeiros Passos com Jesus", sortOrder: 1 },
+  // Curso 3 - Sistema de Assimilação
+  { id: "mod_4", organizationId: organization.id, courseId: "course_3", title: "Módulo 1: Do Primeiro Contato ao Vínculo", sortOrder: 1 },
+  { id: "mod_5", organizationId: organization.id, courseId: "course_3", title: "Módulo 2: Do Vínculo ao Compromisso", sortOrder: 2 },
+  // Curso 4 - Visão dos Doze
+  { id: "mod_6", organizationId: organization.id, courseId: "course_4", title: "Módulo 1: Acolher e Consolidar", sortOrder: 1 },
+  { id: "mod_7", organizationId: organization.id, courseId: "course_4", title: "Módulo 2: Formar e Enviar", sortOrder: 2 },
+  // Curso 5 - Sou um Membro Saudável
+  { id: "mod_8", organizationId: organization.id, courseId: "course_5", title: "Módulo 1: Atitudes de um Membro Comprometido", sortOrder: 1 },
+  { id: "mod_9", organizationId: organization.id, courseId: "course_5", title: "Módulo 2: Presença que Faz Diferença", sortOrder: 2 },
+  // Curso 6 - Liderança com Propósito
+  { id: "mod_10", organizationId: organization.id, courseId: "course_6", title: "Módulo 1: Fundamentos da Liderança Cristã", sortOrder: 1 },
+  { id: "mod_11", organizationId: organization.id, courseId: "course_6", title: "Módulo 2: Liderando Equipes e Visão", sortOrder: 2 },
+  // Curso 7 - Plantando Igrejas em Contextos Urbanos
+  { id: "mod_12", organizationId: organization.id, courseId: "course_7", title: "Módulo 1: Entendendo a Cidade", sortOrder: 1 },
+  { id: "mod_13", organizationId: organization.id, courseId: "course_7", title: "Módulo 2: Do Núcleo ao Lançamento", sortOrder: 2 },
+  // Curso 8 - As 8 Características de uma Igreja Saudável
+  { id: "mod_14", organizationId: organization.id, courseId: "course_8", title: "Módulo 1: Diagnóstico e Liderança", sortOrder: 1 },
+  { id: "mod_15", organizationId: organization.id, courseId: "course_8", title: "Módulo 2: Estrutura e Espiritualidade", sortOrder: 2 },
+  // Curso 9 - Convidando para a Fé
+  { id: "mod_16", organizationId: organization.id, courseId: "course_9", title: "Módulo 1: Criando Espaços de Conversa", sortOrder: 1 },
+  { id: "mod_17", organizationId: organization.id, courseId: "course_9", title: "Módulo 2: Conduzindo um Ciclo de Encontros", sortOrder: 2 },
+  // Curso 10 - Formação de Líderes de Célula
+  { id: "mod_18", organizationId: organization.id, courseId: "course_10", title: "Módulo 1: O Chamado do Líder de Célula", sortOrder: 1 },
+  { id: "mod_19", organizationId: organization.id, courseId: "course_10", title: "Módulo 2: Coaching Contínuo", sortOrder: 2 },
+  // Curso 11 - Multiplicação Celular
+  { id: "mod_20", organizationId: organization.id, courseId: "course_11", title: "Módulo 1: Células como Base da Igreja", sortOrder: 1 },
+  { id: "mod_21", organizationId: organization.id, courseId: "course_11", title: "Módulo 2: Multiplicando com Saúde", sortOrder: 2 },
+  // Curso 12 - Mentoria e Cuidado Pastoral em Rede
+  { id: "mod_22", organizationId: organization.id, courseId: "course_12", title: "Módulo 1: Mentoria que Retém", sortOrder: 1 },
+  { id: "mod_23", organizationId: organization.id, courseId: "course_12", title: "Módulo 2: Eventos que Conectam a Rede", sortOrder: 2 }
 ];
 
 export const MOCK_LESSONS = [
@@ -1244,7 +1374,77 @@ export const MOCK_LESSONS = [
   { id: "les_4", organizationId: organization.id, courseId: "course_1", moduleId: "mod_2", title: "Aula 2: Resolução de Conflitos na Célula", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 25, sortOrder: 2 },
   // Curso 2 - Modulo 1
   { id: "les_5", organizationId: organization.id, courseId: "course_2", moduleId: "mod_3", title: "Aula 1: O que é a Salvação e o Batismo?", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 12, sortOrder: 1 },
-  { id: "les_6", organizationId: organization.id, courseId: "course_2", moduleId: "mod_3", title: "Aula 2: A Importância Devocional Diária", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 2 }
+  { id: "les_6", organizationId: organization.id, courseId: "course_2", moduleId: "mod_3", title: "Aula 2: A Importância Devocional Diária", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 2 },
+
+  // Curso 3 - Sistema de Assimilação - Modulo 1
+  { id: "les_7", organizationId: organization.id, courseId: "course_3", moduleId: "mod_4", title: "Aula 1: Fazendo a Pessoa Voltar na Segunda Vez", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 1 },
+  { id: "les_8", organizationId: organization.id, courseId: "course_3", moduleId: "mod_4", title: "Aula 2: Construindo Pontes de Pertencimento", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 19, sortOrder: 2 },
+  // Curso 3 - Modulo 2
+  { id: "les_9", organizationId: organization.id, courseId: "course_3", moduleId: "mod_5", title: "Aula 1: O Caminho até o Compromisso de Membro", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 17, sortOrder: 1 },
+  { id: "les_10", organizationId: organization.id, courseId: "course_3", moduleId: "mod_5", title: "Aula 2: Alertas de Cuidado — Agindo Antes que a Pessoa Se Afaste", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 2 },
+
+  // Curso 4 - Visão dos Doze - Modulo 1
+  { id: "les_11", organizationId: organization.id, courseId: "course_4", moduleId: "mod_6", title: "Aula 1: Os Quatro Passos da Multiplicação de Discípulos", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 20, sortOrder: 1 },
+  { id: "les_12", organizationId: organization.id, courseId: "course_4", moduleId: "mod_6", title: "Aula 2: Consolidando o Novo Convertido nos Primeiros 40 Dias", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 2 },
+  // Curso 4 - Modulo 2
+  { id: "les_13", organizationId: organization.id, courseId: "course_4", moduleId: "mod_7", title: "Aula 1: Formando seu Primeiro Grupo de Multiplicadores", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 21, sortOrder: 1 },
+  { id: "les_14", organizationId: organization.id, courseId: "course_4", moduleId: "mod_7", title: "Aula 2: O Dia da Multiplicação", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 2 },
+
+  // Curso 5 - Sou um Membro Saudável - Modulo 1
+  { id: "les_15", organizationId: organization.id, courseId: "course_5", moduleId: "mod_8", title: "Aula 1: Sou Membro para Servir, não para Ser Servido", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 13, sortOrder: 1 },
+  { id: "les_16", organizationId: organization.id, courseId: "course_5", moduleId: "mod_8", title: "Aula 2: Unidade — Protegendo a Igreja da Divisão", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 15, sortOrder: 2 },
+  // Curso 5 - Modulo 2
+  { id: "les_17", organizationId: organization.id, courseId: "course_5", moduleId: "mod_9", title: "Aula 1: A Importância da Presença Regular", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 12, sortOrder: 1 },
+  { id: "les_18", organizationId: organization.id, courseId: "course_5", moduleId: "mod_9", title: "Aula 2: Generosidade e Evangelismo no Dia a Dia", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 17, sortOrder: 2 },
+
+  // Curso 6 - Liderança com Propósito - Modulo 1
+  { id: "les_19", organizationId: organization.id, courseId: "course_6", moduleId: "mod_10", title: "Aula 1: Liderança é Influência, Não Posição", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 19, sortOrder: 1 },
+  { id: "les_20", organizationId: organization.id, courseId: "course_6", moduleId: "mod_10", title: "Aula 2: Autoconhecimento e Inteligência Emocional do Líder", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 22, sortOrder: 2 },
+  // Curso 6 - Modulo 2
+  { id: "les_21", organizationId: organization.id, courseId: "course_6", moduleId: "mod_11", title: "Aula 1: Comunicando Visão de Forma Inspiradora", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 1 },
+  { id: "les_22", organizationId: organization.id, courseId: "course_6", moduleId: "mod_11", title: "Aula 2: Tomada de Decisão sob Pressão", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 20, sortOrder: 2 },
+
+  // Curso 7 - Plantando Igrejas em Contextos Urbanos - Modulo 1
+  { id: "les_23", organizationId: organization.id, courseId: "course_7", moduleId: "mod_12", title: "Aula 1: Teologia da Cidade e Contextualização do Evangelho", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 24, sortOrder: 1 },
+  { id: "les_24", organizationId: organization.id, courseId: "course_7", moduleId: "mod_12", title: "Aula 2: Mapeando Necessidades e Oportunidades Locais", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 20, sortOrder: 2 },
+  // Curso 7 - Modulo 2
+  { id: "les_25", organizationId: organization.id, courseId: "course_7", moduleId: "mod_13", title: "Aula 1: Formando o Time Fundador", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 19, sortOrder: 1 },
+  { id: "les_26", organizationId: organization.id, courseId: "course_7", moduleId: "mod_13", title: "Aula 2: Primeiros 90 Dias de uma Igreja Plantada", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 17, sortOrder: 2 },
+
+  // Curso 8 - As 8 Características de uma Igreja Saudável - Modulo 1
+  { id: "les_27", organizationId: organization.id, courseId: "course_8", moduleId: "mod_14", title: "Aula 1: Como Aplicar o Diagnóstico de Saúde da Igreja", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 21, sortOrder: 1 },
+  { id: "les_28", organizationId: organization.id, courseId: "course_8", moduleId: "mod_14", title: "Aula 2: Liderança que Capacita e Descoberta de Dons Espirituais", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 2 },
+  // Curso 8 - Modulo 2
+  { id: "les_29", organizationId: organization.id, courseId: "course_8", moduleId: "mod_15", title: "Aula 1: Pequenos Grupos que Cuidam da Pessoa Inteira", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 1 },
+  { id: "les_30", organizationId: organization.id, courseId: "course_8", moduleId: "mod_15", title: "Aula 2: Evangelismo que Parte da Necessidade do Outro", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 15, sortOrder: 2 },
+
+  // Curso 9 - Convidando para a Fé - Modulo 1
+  { id: "les_31", organizationId: organization.id, courseId: "course_9", moduleId: "mod_16", title: "Aula 1: Perguntas que Abrem Portas para o Evangelho", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 1 },
+  { id: "les_32", organizationId: organization.id, courseId: "course_9", moduleId: "mod_16", title: "Aula 2: Hospitalidade como Ferramenta de Evangelismo", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 13, sortOrder: 2 },
+  // Curso 9 - Modulo 2
+  { id: "les_33", organizationId: organization.id, courseId: "course_9", moduleId: "mod_17", title: "Aula 1: Estrutura de um Curso Introdutório à Fé", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 19, sortOrder: 1 },
+  { id: "les_34", organizationId: organization.id, courseId: "course_9", moduleId: "mod_17", title: "Aula 2: Acompanhando Quem Decide Seguir Jesus", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 17, sortOrder: 2 },
+
+  // Curso 10 - Formação de Líderes de Célula - Modulo 1
+  { id: "les_35", organizationId: organization.id, courseId: "course_10", moduleId: "mod_18", title: "Aula 1: Do Membro ao Anfitrião: Primeiros Passos", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 15, sortOrder: 1 },
+  { id: "les_36", organizationId: organization.id, courseId: "course_10", moduleId: "mod_18", title: "Aula 2: Preparando um Encontro de Célula de Impacto", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 2 },
+  // Curso 10 - Modulo 2
+  { id: "les_37", organizationId: organization.id, courseId: "course_10", moduleId: "mod_19", title: "Aula 1: Recebendo e Dando Feedback como Líder", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 1 },
+  { id: "les_38", organizationId: organization.id, courseId: "course_10", moduleId: "mod_19", title: "Aula 2: Cuidando de Quem Cuida — Saúde Emocional do Líder", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 20, sortOrder: 2 },
+
+  // Curso 11 - Multiplicação Celular - Modulo 1
+  { id: "les_39", organizationId: organization.id, courseId: "course_11", moduleId: "mod_20", title: "Aula 1: Por que Células Multiplicam Mais que Cultos", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 17, sortOrder: 1 },
+  { id: "les_40", organizationId: organization.id, courseId: "course_11", moduleId: "mod_20", title: "Aula 2: Oração e Cuidado Pastoral em Pequenos Grupos", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 19, sortOrder: 2 },
+  // Curso 11 - Modulo 2
+  { id: "les_41", organizationId: organization.id, courseId: "course_11", moduleId: "mod_21", title: "Aula 1: Identificando o Próximo Líder Dentro da Célula", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 1 },
+  { id: "les_42", organizationId: organization.id, courseId: "course_11", moduleId: "mod_21", title: "Aula 2: Planejando a Multiplicação sem Perder Gente", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 2 },
+
+  // Curso 12 - Mentoria e Cuidado Pastoral em Rede - Modulo 1
+  { id: "les_43", organizationId: organization.id, courseId: "course_12", moduleId: "mod_22", title: "Aula 1: A Diferença entre Discipulado e Mentoria", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 15, sortOrder: 1 },
+  { id: "les_44", organizationId: organization.id, courseId: "course_12", moduleId: "mod_22", title: "Aula 2: Construindo uma Trilha de Mentoria para Homens", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 2 },
+  // Curso 12 - Modulo 2
+  { id: "les_45", organizationId: organization.id, courseId: "course_12", moduleId: "mod_23", title: "Aula 1: Planejando um Encontro Anual de Líderes", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 14, sortOrder: 1 },
+  { id: "les_46", organizationId: organization.id, courseId: "course_12", moduleId: "mod_23", title: "Aula 2: Sustentando o Vínculo entre Igrejas Parceiras", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 2 }
 ];
 
 export const MOCK_MEMBER_COURSE_PROGRESS = [
