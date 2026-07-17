@@ -284,6 +284,12 @@ export function getMemberContributionsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/contributions`;
 }
 
+// Comprovantes de contribuição: imagem base64 em doc separado (não bloata a
+// query de contributions). Membro cria o próprio; admin lê ao conferir.
+export function getContributionReceiptsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/contributionReceipts`;
+}
+
 export function getChurchAttendanceCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/churchAttendance`;
 }

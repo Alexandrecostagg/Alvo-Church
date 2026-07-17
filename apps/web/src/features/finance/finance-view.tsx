@@ -32,6 +32,7 @@ import type { MemberContribution, FinancialTransaction } from "@alvo/types";
 import {
   fetchAllContributions,
   confirmMemberContribution,
+  fetchContributionReceipt,
   fetchFinancialTransactions,
   addFinancialTransaction,
   deleteFinancialTransaction
@@ -85,6 +86,22 @@ export function FinanceView() {
   const [contributions, setContributions] = useState<MemberContribution[]>([]);
   const [contribLoading, setContribLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // Comprovante: modal com a imagem (base64) carregada sob demanda
+  const [receiptModal, setReceiptModal] = useState<string | null>(null);
+  const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
+
+  async function openReceipt(receiptId: string) {
+    if (!organizationId) return;
+    setLoadingReceiptId(receiptId);
+    try {
+      const r = await fetchContributionReceipt(firebaseConfig, { organizationId }, receiptId);
+      if (r) setReceiptModal(r.dataUri);
+    } catch (e) {
+      console.error("Falha ao carregar comprovante:", e);
+    } finally {
+      setLoadingReceiptId(null);
+    }
+  }
 
   useEffect(() => {
     if (!configured || !organizationId) { setContribLoading(false); return; }
@@ -614,8 +631,12 @@ export function FinanceView() {
                     </div>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
                       {c.type} · {new Date(c.date).toLocaleDateString("pt-BR")}
-                      {c.receiptUrl && (
-                        <> · <a href={c.receiptUrl} target="_blank" rel="noreferrer" style={{ color: "#60a5fa", fontWeight: 600 }}>Ver comprovante</a></>
+                      {c.receiptId && (
+                        <> · <button
+                          onClick={() => openReceipt(c.receiptId!)}
+                          disabled={loadingReceiptId === c.receiptId}
+                          style={{ background: "none", border: "none", padding: 0, color: "#60a5fa", fontWeight: 600, fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+                        >{loadingReceiptId === c.receiptId ? "Carregando…" : "Ver comprovante"}</button></>
                       )}
                     </span>
                   </div>
@@ -979,6 +1000,26 @@ export function FinanceView() {
         </aside>
 
       </section>
+
+      {/* Modal do comprovante (imagem carregada sob demanda) */}
+      {receiptModal && (
+        <div
+          onClick={() => setReceiptModal(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.8)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "90vh", display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={receiptModal} alt="Comprovante" style={{ maxWidth: "90vw", maxHeight: "80vh", borderRadius: 10, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }} />
+            <button
+              onClick={() => setReceiptModal(null)}
+              style={{ background: "white", color: "#111", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >Fechar</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

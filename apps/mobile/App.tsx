@@ -1126,12 +1126,20 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   async function pickReceipt() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.5,
+      quality: 0.4,
+      allowsEditing: true,
       base64: true
     });
     if (!result.canceled && result.assets[0]) {
+      const b64 = result.assets[0].base64 ?? null;
+      // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
+      // Recorte a imagem se for grande demais.
+      if (b64 && b64.length > 1_300_000) {
+        Alert.alert("Imagem muito grande", "Recorte só o comprovante ou tire uma foto mais fechada e tente de novo.");
+        return;
+      }
       setReceiptUri(result.assets[0].uri);
-      setReceiptBase64(result.assets[0].base64 ?? null);
+      setReceiptBase64(b64);
     }
   }
 
@@ -1177,20 +1185,19 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     if (method === "pix" && !pix) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
     setSubmitting(true);
     try {
-      const { addMemberContribution, uploadContributionReceipt } = await import("@alvo/firebase");
-      // Sobe o comprovante primeiro (regra do Storage só deixa criar, não atualizar);
-      // se falhar, registra a contribuição mesmo assim (não travar o registro do valor).
-      let receiptUrl: string | undefined;
+      const { addMemberContribution, saveContributionReceipt } = await import("@alvo/firebase");
+      // Salva o comprovante primeiro (doc separado); se falhar, registra a
+      // contribuição mesmo assim — não travar o registro do valor.
+      let receiptId: string | undefined;
       if (receiptBase64) {
         try {
-          receiptUrl = await uploadContributionReceipt(
-            firebaseConfig,
-            { organizationId: orgId },
-            `${user.uid}_${Date.now()}.jpg`,
-            receiptBase64
-          );
+          receiptId = await saveContributionReceipt(firebaseConfig, { organizationId: orgId }, {
+            organizationId: orgId,
+            imageBase64: receiptBase64,
+            createdByUserId: user.uid,
+          });
         } catch (e: any) {
-          if (__DEV__) console.warn("upload do comprovante falhou:", e?.code || e?.message || e);
+          if (__DEV__) console.warn("salvar comprovante falhou:", e?.code || e?.message || e);
         }
       }
       await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
@@ -1200,12 +1207,12 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         amount: finalAmountNumber,
         type,
         date: new Date().toISOString().slice(0, 10),
-        description: `Contribuição via app${receiptUrl ? " (com comprovante)" : ""}`,
+        description: `Contribuição via app${receiptId ? " (com comprovante)" : ""}`,
         registeredBy: user.uid,
         registeredAt: new Date().toISOString(),
         status: "pending",
         method: "pix",
-        receiptUrl
+        receiptId
       });
       setSubmitted(true);
     } catch (e: any) {

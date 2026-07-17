@@ -234,6 +234,17 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Comprovantes de contribuição (imagem base64). O membro cria o próprio ao
+    // autodeclarar o PIX; só admin lê (dado financeiro) — por isso também está
+    // excluído dos catch-alls de leitura abaixo.
+    match /organizations/{orgId}/contributionReceipts/{receiptId} {
+      allow read: if isTenantAdmin(orgId);
+      allow create: if isTenantMember(orgId)
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.createdByUserId == request.auth.uid;
+      allow update, delete: if isTenantAdmin(orgId);
+    }
+
     // Public visitor form: unauthenticated create with strict shape and
     // size validation. Reads/updates stay restricted to the tenant team.
     match /organizations/{orgId}/visitorIntakes/{intakeId} {
@@ -366,6 +377,7 @@ service cloud.firestore {
     match /organizations/{orgId}/{collection}/{documentId} {
       allow read: if isTenantMember(orgId)
         && collection != "contributions"
+        && collection != "contributionReceipts"
         && collection != "financialTransactions"
         && collection != "users"
         && collection != "prayerRequests";
@@ -389,6 +401,7 @@ service cloud.firestore {
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
       allow read: if isTenantMember(orgId)
         && collection != "contributions"
+        && collection != "contributionReceipts"
         && collection != "financialTransactions"
         && collection != "users"
         && collection != "prayerRequests";

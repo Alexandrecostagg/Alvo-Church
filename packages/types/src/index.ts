@@ -1351,7 +1351,8 @@ export interface MemberContribution {
   // confirmados, mesmo comportamento de antes).
   status?: ContributionStatus;
   method?: ContributionMethod;
-  receiptUrl?: string;      // comprovante enviado pelo membro, quando method === "pix"
+  receiptId?: string;       // id do doc de comprovante (imagem base64 em contributionReceipts)
+  receiptUrl?: string;      // (futuro) URL do comprovante quando migrar p/ Storage
   confirmedBy?: string;     // userId do admin que confirmou o pending
   confirmedAt?: string;     // ISO datetime da confirmação
 }

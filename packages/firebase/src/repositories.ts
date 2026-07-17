@@ -17,7 +17,6 @@ import {
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
-import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import type { PlanId } from "./plans";
 import { PLAN_LIMITS, currentAiMonth, planTierToPlanId, resolveBillingStatus } from "./plans";
 import type {
@@ -142,6 +141,7 @@ import {
   getMemberBadgesCollectionPath,
   getWeeklyThemesCollectionPath,
   getMemberContributionsCollectionPath,
+  getContributionReceiptsCollectionPath,
   getChurchAttendanceCollectionPath,
   getPrayerRequestsCollectionPath
 } from "./paths";
@@ -3602,20 +3602,39 @@ export async function addMemberContribution(
   return ref.id;
 }
 
-// Sobe o comprovante (imagem em base64) pro Storage e devolve a URL tokenizada.
-// Path: organizations/{orgId}/contributionReceipts/{fileName} — membro cria, admin lê
-// (ver storage.rules). Falha de upload não deve bloquear o registro da contribuição.
-export async function uploadContributionReceipt(
+// Salva o comprovante como imagem base64 num doc separado (não usa Storage, que
+// não está provisionado no projeto). Retorna o id do doc pra referenciar na
+// contribuição. Doc separado evita bloatar a query de contributions.
+// Falha aqui não deve bloquear o registro do valor (chamador ignora o erro).
+export async function saveContributionReceipt(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  fileName: string,
-  base64: string,
-  contentType = "image/jpeg"
+  receipt: { organizationId: string; imageBase64: string; contentType?: string; createdByUserId: string }
 ): Promise<string> {
-  const storage = getStorage(getFirebaseWebApp(config));
-  const r = storageRef(storage, `organizations/${context.organizationId}/contributionReceipts/${fileName}`);
-  await uploadString(r, base64, "base64", { contentType });
-  return getDownloadURL(r);
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getContributionReceiptsCollectionPath(context)));
+  await setDoc(ref, cleanFirestoreData({
+    organizationId: receipt.organizationId,
+    imageBase64: receipt.imageBase64,
+    contentType: receipt.contentType ?? "image/jpeg",
+    createdByUserId: receipt.createdByUserId,
+    createdAt: new Date().toISOString(),
+  }));
+  return ref.id;
+}
+
+// Lê o comprovante (admin, ao conferir). Retorna data URI pronto p/ <img src>.
+export async function fetchContributionReceipt(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  receiptId: string
+): Promise<{ dataUri: string } | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDoc(doc(firestore, getContributionReceiptsCollectionPath(context), receiptId));
+  if (!snap.exists()) return null;
+  const data = snap.data() as { imageBase64?: string; contentType?: string };
+  if (!data.imageBase64) return null;
+  return { dataUri: `data:${data.contentType ?? "image/jpeg"};base64,${data.imageBase64}` };
 }
 
 // Visão de admin: todas as contribuições da organização (não só as de um
