@@ -32,7 +32,8 @@
         "foregroundImage": "./assets/generated/adaptive-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.plataformaesdras.app"
+      "package": "com.plataformaesdras.app",
+      "versionCode": 1
     },
     "plugins": [
       "expo-status-bar",

@@ -1,0 +1,37 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "base": {
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "alvo-church.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "alvo-church",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "alvo-church.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "616327426236",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:616327426236:web:8b3e265426a5d00ce120b9",
+        "EXPO_PUBLIC_WEB_API_URL": "https://alvo-church-web.alexandrecostagg.workers.dev"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
