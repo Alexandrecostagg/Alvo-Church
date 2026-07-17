@@ -17,11 +17,20 @@ import {
   Share2,
   Heart,
   Star,
-  AlertCircle
+  AlertCircle,
+  Navigation
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStoreById, fetchCommunityOffers, saveMarketplacePromotion } from "@alvo/firebase";
-import type { CommunityStore, CommunityOffer, TenantContext } from "@alvo/types";
+import type { CommunityStore, CommunityOffer, TenantContext, PostalAddress } from "@alvo/types";
+
+// Monta a URL do Google Maps a partir do endereço da loja — abre o app de mapas
+// no celular / o site no desktop, mostrando o estabelecimento.
+function buildMapsUrl(address: PostalAddress): string {
+  const parts = [address.street, address.number, address.district, address.city, address.state, address.postalCode]
+    .filter(Boolean);
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
+}
 
 const mockStore: CommunityStore = {
   id: "store_1",
@@ -236,7 +245,13 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             )}
 
             {store.contact?.address && (
-              <div className="contact-item">
+              <a
+                className="contact-item"
+                href={buildMapsUrl(store.contact.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir no Google Maps"
+              >
                 <MapPin size={18} />
                 <div>
                   <div className="contact-label">Localização</div>
@@ -245,8 +260,11 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                     {store.contact.address.city && <br />}
                     {store.contact.address.city && `${store.contact.address.city}, ${store.contact.address.state}`}
                   </div>
+                  <div style={{ marginTop: 6, color: "#2563eb", fontWeight: 700, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    Como chegar <Navigation size={13} />
+                  </div>
                 </div>
-              </div>
+              </a>
             )}
 
             <div className="contact-socials">

@@ -19,11 +19,19 @@ import {
   Utensils,
   GraduationCap,
   Wrench,
-  Users
+  Users,
+  Navigation
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
-import type { CommunityStore, TenantContext } from "@alvo/types";
+import type { CommunityStore, TenantContext, PostalAddress } from "@alvo/types";
+
+// URL do Google Maps a partir do endereço da loja (abre o app no celular).
+function buildMapsUrl(address: PostalAddress): string {
+  const parts = [address.street, address.number, address.district, address.city, address.state, address.postalCode]
+    .filter(Boolean);
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
+}
 
 const mockStores: CommunityStore[] = [
   {
@@ -259,14 +267,32 @@ export function MarketplaceCommunityView() {
               
               <div className="store-meta">
                 {store.contact?.address?.city && (
-                  <div className="meta-item">
+                  <a
+                    className="meta-item meta-map-link"
+                    href={buildMapsUrl(store.contact.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Como chegar (Google Maps)"
+                  >
                     <MapPin size={14} />
                     <span>{store.contact.address.city}, {store.contact.address.state}</span>
-                  </div>
+                    <Navigation size={13} style={{ marginLeft: 4 }} />
+                  </a>
                 )}
               </div>
 
               <div className="store-contact">
+                {store.contact?.address && (store.contact.address.street || store.contact.address.city) && (
+                  <a
+                    href={buildMapsUrl(store.contact.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="contact-link"
+                    title="Como chegar"
+                  >
+                    <Navigation size={16} />
+                  </a>
+                )}
                 {store.socialLinks?.whatsapp && (
                   <a href={`https://wa.me/${store.socialLinks.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="contact-link">
                     <Smartphone size={16} />
@@ -978,6 +1004,16 @@ export function MarketplaceCommunityView() {
 
         .meta-item {
           color: #475569;
+        }
+
+        .meta-map-link {
+          text-decoration: none;
+          cursor: pointer;
+          transition: color 0.15s;
+        }
+
+        .meta-map-link:hover {
+          color: #2563eb;
         }
 
         .contact-link {
