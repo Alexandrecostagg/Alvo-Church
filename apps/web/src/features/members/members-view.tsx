@@ -50,7 +50,7 @@ export function MembersView() {
     let cancelled = false;
 
     async function loadMembers() {
-      setStatus("Carregando membros e familias do Firestore...");
+      setStatus("Carregando membros e famílias do Firestore...");
 
       try {
         const [nextPeople, nextFamilies] = await Promise.all([
@@ -70,7 +70,7 @@ export function MembersView() {
         );
       } catch (error) {
         if (!cancelled) {
-          setStatus(friendlyError(error, "Nao foi possivel carregar membros."));
+          setStatus(friendlyError(error, "Não foi possível carregar membros."));
         }
       }
     }
@@ -118,20 +118,20 @@ export function MembersView() {
     },
     {
       label: "02",
-      title: "Vincular familia",
-      detail: "Organize casa, responsaveis, renda declarada e endereco protegido.",
+      title: "Vincular família",
+      detail: "Organize casa, responsáveis, renda declarada e endereço protegido.",
       href: "/members/new"
     },
     {
       label: "03",
       title: "Ativar cuidado",
-      detail: "Use status pastoral para alimentar jornadas, grupos e comunicacao.",
+      detail: "Use status pastoral para alimentar jornadas, grupos e comunicação.",
       href: "/#journeys"
     },
     {
       label: "04",
       title: "Liberar Esdras Passe",
-      detail: "Habilite beneficios externos sem expor CPF, renda ou historico pastoral.",
+      detail: "Habilite benefícios externos sem expor CPF, renda ou histórico pastoral.",
       href: "/members/new"
     }
   ];
@@ -143,10 +143,10 @@ export function MembersView() {
           Voltar ao painel
         </Link>
         <p className="eyebrow">Base pastoral</p>
-        <h1>Membros, familias e aspirantes</h1>
+        <h1>Membros, famílias e aspirantes</h1>
         <p>
-          Visao operacional para lideres acompanharem pessoas, casas, visitantes em
-          transicao e elegibilidade para Esdras Passe.
+          Visão operacional para líderes acompanharem pessoas, casas, visitantes em
+          transição e elegibilidade para Esdras Passe.
         </p>
         <div className="directory-actions">
           <Link className="primary-button" href="/members/new">
@@ -171,8 +171,10 @@ export function MembersView() {
           <div className="member-flow-lane">
             {directoryFlowSteps.map((step) => (
               <Link className="member-flow-step" href={step.href} key={step.label}>
-                <span>{step.label}</span>
-                <strong>{step.title}</strong>
+                <div className="member-flow-step-head">
+                  <span>{step.label}</span>
+                  <strong>{step.title}</strong>
+                </div>
                 <p>{step.detail}</p>
               </Link>
             ))}
@@ -184,7 +186,7 @@ export function MembersView() {
           <h2>Segmentos que pedem cuidado</h2>
           <div className="segment-list">
             <div>
-              <span>Sem familia</span>
+              <span>Sem família</span>
               <strong>{ungroupedPeople.length}</strong>
               <p>pessoas sem grupo familiar vinculado</p>
             </div>
@@ -209,14 +211,14 @@ export function MembersView() {
           <p>{members.length} membro(s) ativo(s)</p>
         </article>
         <article>
-          <span>Familias</span>
+          <span>Famílias</span>
           <strong>{families.length}</strong>
           <p>casas mapeadas no tenant</p>
         </article>
         <article>
           <span>Aspirantes</span>
           <strong>{visitors.length}</strong>
-          <p>visitantes em transicao</p>
+          <p>visitantes em transição</p>
         </article>
         <article>
           <span>Esdras Passe</span>
@@ -230,7 +232,7 @@ export function MembersView() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">Pessoas</p>
-              <h2>Cadastro sensivel</h2>
+              <h2>Cadastro sensível</h2>
             </div>
             <span className="soft-pill">
               {filteredPeople.length} de {people.length}
@@ -258,8 +260,8 @@ export function MembersView() {
                 <option value="congregant">Congregados</option>
                 <option value="new_believer">Novos convertidos</option>
                 <option value="member">Membros</option>
-                <option value="leader">Lideres</option>
-                <option value="volunteer">Voluntarios</option>
+                <option value="leader">Líderes</option>
+                <option value="volunteer">Voluntários</option>
               </select>
             </label>
             <label>
@@ -271,7 +273,7 @@ export function MembersView() {
               >
                 <option value="all">Todos</option>
                 <option value="enabled">Habilitados</option>
-                <option value="disabled">Nao habilitados</option>
+                <option value="disabled">Não habilitados</option>
               </select>
             </label>
           </div>
@@ -283,7 +285,7 @@ export function MembersView() {
                   <div>
                     <strong>{getFullName(person)}</strong>
                     <p>
-                      {getMemberStatusLabel(person.memberStatus)} - {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade nao informada"}
+                      {getMemberStatusLabel(person.memberStatus)} - {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade não informada"}
                     </p>
                     <small>
                       {person.cpf ? `CPF ${maskCpf(person.cpf)} - ` : ""}
@@ -336,10 +338,10 @@ export function MembersView() {
               ))
             ) : (
               <div className="empty-state">
-                <strong>Nenhuma familia</strong>
-                <p>Crie uma familia no cadastro de membro para popular esta visao.</p>
+                <strong>Nenhuma família</strong>
+                <p>Crie uma família no cadastro de membro para popular esta visão.</p>
                 <Link className="ghost-button" href="/members/new">
-                  Vincular familia
+                  Vincular família
                 </Link>
               </div>
             )}
@@ -394,7 +396,7 @@ function calculateAge(birthDate: string) {
 
 function formatAddress(address: Person["address"] | Family["address"]) {
   if (!address) {
-    return "endereco nao informado";
+    return "endereço não informado";
   }
 
   return [address.street, address.number, address.district, address.city, address.state]
@@ -433,26 +435,26 @@ function getMemberStatusLabel(status: Person["memberStatus"]) {
     case "member":
       return "Membro";
     case "leader":
-      return "Lider";
+      return "Líder";
     case "volunteer":
-      return "Voluntario";
+      return "Voluntário";
   }
 }
 
 function getIncomeRangeLabel(range: Family["incomeRange"]) {
   switch (range) {
     case "up_to_1_minimum_wage":
-      return "ate 1 salario minimo";
+      return "até 1 salário mínimo";
     case "one_to_3_minimum_wages":
-      return "1 a 3 salarios minimos";
+      return "1 a 3 salários mínimos";
     case "three_to_5_minimum_wages":
-      return "3 a 5 salarios minimos";
+      return "3 a 5 salários mínimos";
     case "five_to_10_minimum_wages":
-      return "5 a 10 salarios minimos";
+      return "5 a 10 salários mínimos";
     case "above_10_minimum_wages":
-      return "acima de 10 salarios minimos";
+      return "acima de 10 salários mínimos";
     case "not_informed":
     case undefined:
-      return "renda nao informada";
+      return "renda não informada";
   }
 }

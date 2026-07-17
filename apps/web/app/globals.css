@@ -2140,6 +2140,18 @@ code {
 .directory-page .member-flow-step p {
   color: #475569;
   font-size: 15px;
+  text-align: justify;
+}
+
+/* Número + título na mesma linha (não empilhados) */
+.member-flow-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-flow-step-head strong {
+  margin-top: 0;
 }
 
 .directory-page .member-segment-card {
