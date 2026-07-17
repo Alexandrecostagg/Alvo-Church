@@ -33,7 +33,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.plataformaesdras.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-status-bar",
@@ -49,6 +53,12 @@
           "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d18300c4-7863-48e4-8772-9af9039099a2"
+      }
+    },
+    "owner": "alexandrecostagg"
   }
 }
