@@ -35,9 +35,10 @@ import {
   signInWithFirebaseMobileEmailPassword,
   signOutFromFirebaseMobile,
   subscribeToFirebaseMobileAuthState,
+  fetchMarketplacePromotions,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole } from "@alvo/types";
+import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,8 @@ type ModalScreen =
   | "inscricao"
   | "song-detail"
   | "lider-celula"
-  | "meu-perfil";
+  | "meu-perfil"
+  | "promocoes";
 
 type EscalaStatus = "pendente" | "confirmado" | "recusado";
 type EscalaSlot = {
@@ -428,6 +430,41 @@ function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boo
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
+function PromocoesScreen({ primary, promotions, onBack }: {
+  primary: string; promotions: MarketplacePromotion[]; onBack: () => void;
+}) {
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Promoções da Comunidade" onBack={onBack} />
+      {promotions.length === 0 ? (
+        <View style={[s.fill, s.center, { padding: 32 }]}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🏷️</Text>
+          <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma promoção agora</Text>
+          <Text style={[s.screenSub, { textAlign: "center" }]}>
+            Quando um comerciante da comunidade publicar uma promoção, ela aparece aqui — prestigie quem é da casa!
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+          {promotions.map((p) => (
+            <View key={p.id} style={s.promoCard}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <Text style={{ fontSize: 14 }}>🏷️</Text>
+                <Text style={[s.promoStore, { color: primary }]}>{p.storeName}</Text>
+              </View>
+              <Text style={s.promoTitle}>{p.title}</Text>
+              {!!p.description && <Text style={s.promoDesc}>{p.description}</Text>}
+              {!!p.validUntil && (
+                <Text style={s.promoValid}>Válido até {new Date(p.validUntil).toLocaleDateString("pt-BR")}</Text>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pushToken, onSignOut }: {
   user: FirebaseAuthUser; tenantRuntime: TenantRuntimeSnapshot | null; events: Event[];
   groups: Group[]; dataReady: boolean; linkedOrg: Organization | null;
@@ -437,14 +474,38 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const [modalStack, setModalStack] = useState<ModalScreen[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  // Promoções do marketplace (notificação in-app): busca ao abrir; "vistas"
+  // ficam em memória da sessão (badge some depois de abrir o sino).
+  const [promotions, setPromotions] = useState<MarketplacePromotion[]>([]);
+  const [seenPromoIds, setSeenPromoIds] = useState<Set<string>>(new Set());
 
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
   const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_alvo_demo";
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const promos = await fetchMarketplacePromotions(firebaseConfig, { organizationId: orgId }, 30);
+        if (!cancelled) setPromotions(promos);
+      } catch (e) {
+        if (__DEV__) console.warn("fetchMarketplacePromotions falhou:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [orgId]);
+
+  const unseenPromoCount = promotions.filter((p) => !seenPromoIds.has(p.id)).length;
+
   function push(screen: ModalScreen) { setModalStack(p => [...p, screen]); }
   function pop() { setModalStack(p => p.slice(0, -1)); }
+
+  function openPromocoes() {
+    setSeenPromoIds(new Set(promotions.map((p) => p.id)));
+    push("promocoes");
+  }
 
   const modal = modalStack[modalStack.length - 1] ?? null;
 
@@ -461,8 +522,18 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
             <Text style={s.mainGreeting}>Olá, {firstName} 👋</Text>
             <Text style={s.mainOrg}>{orgName}</Text>
           </View>
-          <View style={[s.avatarCircle, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
-            <Text style={s.avatarText}>{(user.displayName ?? user.email ?? "M")[0].toUpperCase()}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <TouchableOpacity onPress={openPromocoes} hitSlop={10} accessibilityLabel="Promoções do marketplace">
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+              {unseenPromoCount > 0 && (
+                <View style={s.notifBadge}>
+                  <Text style={s.notifBadgeText}>{unseenPromoCount > 9 ? "9+" : unseenPromoCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={[s.avatarCircle, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+              <Text style={s.avatarText}>{(user.displayName ?? user.email ?? "M")[0].toUpperCase()}</Text>
+            </View>
           </View>
         </View>
 
@@ -482,6 +553,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "promocoes" && <PromocoesScreen primary={primary} promotions={promotions} onBack={pop} />}
         </View>
 
         {/* Tab Bar — hidden when modal is open */}
@@ -2228,6 +2300,13 @@ const s = StyleSheet.create({
   formContent: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 48 },
   screenTitle: { fontSize: 26, fontWeight: "800", color: BRAND_DARK, marginBottom: 6 },
   screenSub: { fontSize: 15, color: "#6b7280", marginBottom: 20, lineHeight: 22 },
+  notifBadge: { position: "absolute", top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "#dc2626", alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  notifBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  promoCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#eef0f3" },
+  promoStore: { fontSize: 13, fontWeight: "800" },
+  promoTitle: { fontSize: 16, fontWeight: "800", color: BRAND_DARK, marginBottom: 4 },
+  promoDesc: { fontSize: 14, color: "#4b5563", lineHeight: 20 },
+  promoValid: { fontSize: 12, color: "#9ca3af", marginTop: 8 },
   formGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "600", color: BRAND_DARK, marginBottom: 6 },
   input: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: BRAND_DARK, backgroundColor: "#fff" },

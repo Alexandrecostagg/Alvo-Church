@@ -45,6 +45,7 @@ import type {
   CommunityStore,
   CommunityOffer,
   CommunityStoreModerationLog,
+  MarketplacePromotion,
   Person,
   ServiceAssignment,
   ServiceTeam,
@@ -120,6 +121,7 @@ import {
   getCommunityStoresCollectionPath,
   getCommunityOffersCollectionPath,
   getCommunityStoreModerationLogsCollectionPath,
+  getMarketplacePromotionsCollectionPath,
   getWorshipSongsCollectionPath,
   getWorshipSetlistsCollectionPath,
   getGroupBannersCollectionPath,
@@ -2293,6 +2295,48 @@ export async function saveCommunityOffer(
   );
 
   return offer;
+}
+
+// Publica uma promoção do marketplace (nível flat da org) — o app lê daqui pro
+// feed/badge de notificação in-app.
+export async function saveMarketplacePromotion(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  promotion: Omit<MarketplacePromotion, "id" | "createdAt" | "organizationId"> & { id?: string; createdAt?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = promotion.id
+    ? doc(firestore, getMarketplacePromotionsCollectionPath(context), promotion.id)
+    : doc(collection(firestore, getMarketplacePromotionsCollectionPath(context)));
+  await setDoc(ref, cleanFirestoreData({
+    organizationId: context.organizationId,
+    storeId: promotion.storeId,
+    storeName: promotion.storeName,
+    title: promotion.title,
+    description: promotion.description,
+    validUntil: promotion.validUntil,
+    status: promotion.status ?? "active",
+    createdBy: promotion.createdBy,
+    createdAt: promotion.createdAt ?? new Date().toISOString(),
+  }), { merge: true });
+  return ref.id;
+}
+
+// Lê as promoções ativas da org, mais recentes primeiro (feed do app / web).
+export async function fetchMarketplacePromotions(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  take = 50
+): Promise<MarketplacePromotion[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(
+    collection(firestore, getMarketplacePromotionsCollectionPath(context)),
+    orderBy("createdAt", "desc"),
+    limit(take)
+  ));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as MarketplacePromotion))
+    .filter((p) => p.status === "active");
 }
 
 export async function fetchCommunityStoreModerationLogs(

@@ -480,6 +480,22 @@ export interface CommunityOffer {
   createdBy: string; // PersonId do criador
 }
 
+// Promoção do marketplace num nível flat da org (fácil de listar no feed do
+// app e notificar). Separada de CommunityOffer (que é por-loja) de propósito,
+// pra alimentar a notificação in-app sem collectionGroup.
+export interface MarketplacePromotion {
+  id: string;
+  organizationId: string;
+  storeId: string;
+  storeName: string;
+  title: string;
+  description: string;
+  validUntil?: string; // ISO date
+  status: "active" | "expired";
+  createdBy: string; // userId de quem publicou
+  createdAt: string; // ISO datetime
+}
+
 export interface CommunityStoreModerationLog {
   id: string;
   organizationId: string;

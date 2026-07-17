@@ -89,6 +89,11 @@ export function getCommunityStoreModerationLogsCollectionPath(context: TenantCon
   return `organizations/${context.organizationId}/communityStoreModerationLogs`;
 }
 
+// Promoções do marketplace (nível flat da org) — alimenta a notificação in-app.
+export function getMarketplacePromotionsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/marketplacePromotions`;
+}
+
 export function getVisitorJourneysCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/visitorJourneys`;
 }

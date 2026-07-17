@@ -234,6 +234,13 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Promoções do marketplace (nível flat da org): membro lê (feed/notificação
+    // in-app no app), só admin publica/edita.
+    match /organizations/{orgId}/marketplacePromotions/{promotionId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+
     // Comprovantes de contribuição (imagem base64). O membro cria o próprio ao
     // autodeclarar o PIX; só admin lê (dado financeiro) — por isso também está
     // excluído dos catch-alls de leitura abaixo.

@@ -20,7 +20,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchCommunityStoreById, fetchCommunityOffers } from "@alvo/firebase";
+import { fetchCommunityStoreById, fetchCommunityOffers, saveMarketplacePromotion } from "@alvo/firebase";
 import type { CommunityStore, CommunityOffer, TenantContext } from "@alvo/types";
 
 const mockStore: CommunityStore = {
@@ -67,11 +67,41 @@ interface StoreDetailViewProps {
 }
 
 export function StoreDetailView({ storeId }: StoreDetailViewProps) {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user, hasAnyRole } = useAppAuth();
+  const isAdmin = hasAnyRole(["super_admin", "church_admin", "pastor", "secretary"]);
   const [store, setStore] = useState<CommunityStore | null>(null);
   const [offers, setOffers] = useState<CommunityOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Publicar promoção (admin) — dispara a notificação in-app dos membros
+  const [promoTitle, setPromoTitle] = useState("");
+  const [promoDesc, setPromoDesc] = useState("");
+  const [promoValidUntil, setPromoValidUntil] = useState("");
+  const [promoSaving, setPromoSaving] = useState(false);
+  const [promoSaved, setPromoSaved] = useState(false);
+
+  async function handlePublishPromotion() {
+    if (!store || !organizationId || !promoTitle.trim()) return;
+    setPromoSaving(true);
+    try {
+      await saveMarketplacePromotion(firebaseConfig, { organizationId }, {
+        storeId: store.id,
+        storeName: store.name,
+        title: promoTitle.trim(),
+        description: promoDesc.trim(),
+        validUntil: promoValidUntil || undefined,
+        status: "active",
+        createdBy: user?.uid ?? "",
+      });
+      setPromoTitle(""); setPromoDesc(""); setPromoValidUntil("");
+      setPromoSaved(true);
+      setTimeout(() => setPromoSaved(false), 3500);
+    } catch (e) {
+      console.error("Falha ao publicar promoção:", e);
+    } finally {
+      setPromoSaving(false);
+    }
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -263,6 +293,52 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             <h2>Sobre</h2>
             <p className="store-description">{store.description}</p>
           </section>
+
+          {/* Publicar promoção — admin only. Notifica os membros no app. */}
+          {isAdmin && store.status === "approved" && (
+            <section className="store-section">
+              <h2>📣 Publicar promoção</h2>
+              <p className="store-description" style={{ marginBottom: 14 }}>
+                Ao publicar, os membros recebem um aviso no app (feed de promoções).
+              </p>
+              <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+                <input
+                  type="text"
+                  placeholder="Título (ex: 20% em toda a padaria neste sábado)"
+                  value={promoTitle}
+                  onChange={(e) => setPromoTitle(e.target.value)}
+                  style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14 }}
+                />
+                <textarea
+                  placeholder="Detalhes da promoção (opcional)"
+                  value={promoDesc}
+                  onChange={(e) => setPromoDesc(e.target.value)}
+                  rows={3}
+                  style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14, resize: "vertical" }}
+                />
+                <label style={{ fontSize: 13, color: "#475569", display: "grid", gap: 6 }}>
+                  Válido até (opcional)
+                  <input
+                    type="date"
+                    value={promoValidUntil}
+                    onChange={(e) => setPromoValidUntil(e.target.value)}
+                    style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14, width: "fit-content" }}
+                  />
+                </label>
+                <button
+                  onClick={handlePublishPromotion}
+                  disabled={promoSaving || !promoTitle.trim()}
+                  style={{
+                    justifySelf: "start", minHeight: 44, padding: "0 20px", borderRadius: 10, border: "none",
+                    background: promoSaved ? "#16a34a" : "#ea580c", color: "#fff", fontWeight: 800, fontSize: 15,
+                    cursor: promoSaving || !promoTitle.trim() ? "default" : "pointer", opacity: !promoTitle.trim() ? 0.6 : 1
+                  }}
+                >
+                  {promoSaving ? "Publicando…" : promoSaved ? "✓ Publicada — membros avisados" : "Publicar promoção"}
+                </button>
+              </div>
+            </section>
+          )}
 
           {/* Offers */}
           {offers.length > 0 && (
