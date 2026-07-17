@@ -36,6 +36,15 @@ service firebase.storage {
       allow write: if isTenantAdmin(orgId);
     }
 
+    // Comprovantes de contribuição PIX autodeclarada: o membro sobe a imagem no
+    // ato (create), a liderança confere. Só imagem e até 5MB.
+    match /organizations/{orgId}/contributionReceipts/{fileName} {
+      allow read: if isTenantAdmin(orgId);
+      allow create: if isTenantMember(orgId)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /organizations/{orgId}/{allPaths=**} {
       allow read: if isTenantMember(orgId);
       allow write: if false;

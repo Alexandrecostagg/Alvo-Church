@@ -167,7 +167,7 @@ export function FinanceView() {
       ...confirmedContributions.map((c) => ({
         id: c.id,
         category: "Entrada" as const,
-        label: `Contribuição PIX (${c.type})`,
+        label: `${c.contributorName ?? "Membro"} — PIX (${c.type})`,
         amount: c.amount,
         note: "Confirmada pela liderança",
         createdAt: c.date,
@@ -607,10 +607,16 @@ export function FinanceView() {
                     borderRadius: 10
                   }}
                 >
-                  <div>
-                    <strong style={{ color: "white", fontSize: 14 }}>{formatCurrency(c.amount)}</strong>
-                    <span style={{ marginLeft: 8, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                    <div>
+                      <strong style={{ color: "white", fontSize: 14 }}>{c.contributorName ?? "Membro"}</strong>
+                      <span style={{ marginLeft: 8, fontSize: 14, color: "#22c55e", fontWeight: 700 }}>{formatCurrency(c.amount)}</span>
+                    </div>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
                       {c.type} · {new Date(c.date).toLocaleDateString("pt-BR")}
+                      {c.receiptUrl && (
+                        <> · <a href={c.receiptUrl} target="_blank" rel="noreferrer" style={{ color: "#60a5fa", fontWeight: 600 }}>Ver comprovante</a></>
+                      )}
                     </span>
                   </div>
                   <button

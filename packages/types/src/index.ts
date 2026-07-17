@@ -1336,6 +1336,7 @@ export interface MemberContribution {
   organizationId: string;
   userId: string;           // Firebase Auth UID do membro
   personId?: string;        // Link para Person record
+  contributorName?: string; // Nome do membro (denormalizado no ato) p/ a secretaria identificar quem pagou
   amount: number;           // valor em R$ (float)
   type: ContributionType;
   date: string;             // ISO date YYYY-MM-DD

@@ -1114,6 +1114,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<"pix" | "cartao">("pix");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pix, setPix] = useState<{ payload: string; qrDataUrl: string; pixKey: string; receiverName: string } | null>(null);
@@ -1125,9 +1126,13 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   async function pickReceipt() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.8
+      quality: 0.5,
+      base64: true
     });
-    if (!result.canceled && result.assets[0]) setReceiptUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setReceiptUri(result.assets[0].uri);
+      setReceiptBase64(result.assets[0].base64 ?? null);
+    }
   }
 
   async function sharePixKey() {
@@ -1172,18 +1177,35 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     if (method === "pix" && !pix) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
     setSubmitting(true);
     try {
-      const { addMemberContribution } = await import("@alvo/firebase");
+      const { addMemberContribution, uploadContributionReceipt } = await import("@alvo/firebase");
+      // Sobe o comprovante primeiro (regra do Storage só deixa criar, não atualizar);
+      // se falhar, registra a contribuição mesmo assim (não travar o registro do valor).
+      let receiptUrl: string | undefined;
+      if (receiptBase64) {
+        try {
+          receiptUrl = await uploadContributionReceipt(
+            firebaseConfig,
+            { organizationId: orgId },
+            `${user.uid}_${Date.now()}.jpg`,
+            receiptBase64
+          );
+        } catch (e: any) {
+          if (__DEV__) console.warn("upload do comprovante falhou:", e?.code || e?.message || e);
+        }
+      }
       await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
         organizationId: orgId,
         userId: user.uid,
+        contributorName: user.displayName ?? user.email ?? "Membro",
         amount: finalAmountNumber,
         type,
         date: new Date().toISOString().slice(0, 10),
-        description: `Contribuição via app${receiptUri ? " (com comprovante)" : ""}`,
+        description: `Contribuição via app${receiptUrl ? " (com comprovante)" : ""}`,
         registeredBy: user.uid,
         registeredAt: new Date().toISOString(),
         status: "pending",
-        method: "pix"
+        method: "pix",
+        receiptUrl
       });
       setSubmitted(true);
     } catch (e: any) {
@@ -1311,7 +1333,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
               {receiptUri
                 ? <>
                   <Image source={{ uri: receiptUri }} style={s.receiptPreview} resizeMode="cover" />
-                  <TouchableOpacity onPress={() => setReceiptUri(null)} style={{ marginTop: 8 }}>
+                  <TouchableOpacity onPress={() => { setReceiptUri(null); setReceiptBase64(null); }} style={{ marginTop: 8 }}>
                     <Text style={{ color: "#dc2626", fontSize: 13, textAlign: "center" }}>Remover comprovante</Text>
                   </TouchableOpacity>
                 </>

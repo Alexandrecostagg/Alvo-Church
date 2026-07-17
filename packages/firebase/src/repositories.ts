@@ -17,6 +17,7 @@ import {
   type DocumentData,
   type Firestore
 } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "firebase/storage";
 import type { PlanId } from "./plans";
 import { PLAN_LIMITS, currentAiMonth, planTierToPlanId, resolveBillingStatus } from "./plans";
 import type {
@@ -3599,6 +3600,22 @@ export async function addMemberContribution(
   const ref = doc(collection(firestore, getMemberContributionsCollectionPath(context)));
   await setDoc(ref, cleanFirestoreData(contribution));
   return ref.id;
+}
+
+// Sobe o comprovante (imagem em base64) pro Storage e devolve a URL tokenizada.
+// Path: organizations/{orgId}/contributionReceipts/{fileName} — membro cria, admin lê
+// (ver storage.rules). Falha de upload não deve bloquear o registro da contribuição.
+export async function uploadContributionReceipt(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  fileName: string,
+  base64: string,
+  contentType = "image/jpeg"
+): Promise<string> {
+  const storage = getStorage(getFirebaseWebApp(config));
+  const r = storageRef(storage, `organizations/${context.organizationId}/contributionReceipts/${fileName}`);
+  await uploadString(r, base64, "base64", { contentType });
+  return getDownloadURL(r);
 }
 
 // Visão de admin: todas as contribuições da organização (não só as de um
