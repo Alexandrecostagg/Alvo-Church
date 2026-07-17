@@ -808,7 +808,7 @@ export function FinanceView() {
                         return monthlySeries.map((m, i) => (
                           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
                             <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: "100%", width: "100%", justifyContent: "center" }}>
-                              <div title={"Entradas " + formatCurrency(m.income)} style={{ width: 14, height: (m.income / max) * 100 + "%", background: "#f97316", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
+                              <div title={"Entradas " + formatCurrency(m.income)} style={{ width: 14, height: (m.income / max) * 100 + "%", background: "#22c55e", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
                               <div title={"Saídas " + formatCurrency(m.expense)} style={{ width: 14, height: (m.expense / max) * 100 + "%", background: "#ef4444", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
                             </div>
                             <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>{m.label}</span>
@@ -818,7 +818,7 @@ export function FinanceView() {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: "#f97316" }} />Entradas</span>
+                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: "#22c55e" }} />Entradas</span>
                     <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: "#ef4444" }} />Saídas</span>
                   </div>
                 </div>
