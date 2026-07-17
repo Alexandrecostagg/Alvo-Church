@@ -736,12 +736,13 @@ export function MarketplaceCommunityView() {
         }
 
         .header-content h1 {
-          max-width: 980px;
+          max-width: none;
           margin: 10px 0 12px;
           color: #111827;
-          font-size: clamp(44px, 4.5vw, 64px);
-          line-height: 0.98;
-          letter-spacing: 0;
+          font-size: clamp(30px, 3.2vw, 46px);
+          line-height: 1;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
         }
 
         .header-content p {
@@ -855,8 +856,8 @@ export function MarketplaceCommunityView() {
         .marketplace-kpis {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
-          margin-bottom: 24px;
+          gap: 14px;
+          margin-bottom: 16px;
         }
 
         .marketplace-kpis article,
@@ -908,7 +909,7 @@ export function MarketplaceCommunityView() {
         }
 
         .stores-grid {
-          gap: 20px;
+          gap: 14px;
           margin-top: 0;
         }
 
@@ -1016,7 +1017,8 @@ export function MarketplaceCommunityView() {
           }
 
           .header-content h1 {
-            font-size: 42px;
+            font-size: clamp(28px, 8vw, 42px);
+            white-space: normal;
           }
 
           .marketplace-community-header,
