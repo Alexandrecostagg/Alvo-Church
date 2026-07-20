@@ -5533,9 +5533,25 @@ code {
 .tribe-score {
   padding: 18px;
   display: grid;
-  gap: 8px;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 4px;
   align-content: start;
+  align-items: start;
   background: rgba(249, 115, 22, 0.18);
+}
+
+/* Ícone de alvo à esquerda; eyebrow/título/descrição à direita (não em cima) */
+.tribe-score > svg {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: start;
+}
+
+.tribe-score > span,
+.tribe-score > strong,
+.tribe-score > p {
+  grid-column: 2;
 }
 
 .tribe-score span {
