@@ -94,6 +94,15 @@ export function getMarketplacePromotionsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/marketplacePromotions`;
 }
 
+// Comunicação: histórico de envios + templates reutilizáveis.
+export function getCommunicationLogCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/communicationLog`;
+}
+
+export function getCommunicationTemplatesCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/communicationTemplates`;
+}
+
 export function getVisitorJourneysCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/visitorJourneys`;
 }

@@ -496,6 +496,28 @@ export interface MarketplacePromotion {
   createdAt: string; // ISO datetime
 }
 
+// Comunicação: registro de cada envio (histórico persistido) e templates reutilizáveis.
+export interface CommunicationLogEntry {
+  id: string;
+  organizationId: string;
+  channel: "whatsapp";
+  message: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  sentByUserId: string;
+  createdAt: string; // ISO
+}
+
+export interface CommunicationTemplate {
+  id: string;
+  organizationId: string;
+  title: string;
+  message: string;
+  createdByUserId: string;
+  createdAt: string; // ISO
+}
+
 export interface CommunityStoreModerationLog {
   id: string;
   organizationId: string;

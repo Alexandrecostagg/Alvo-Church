@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle, Trash2, Save } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchPeople } from "@alvo/firebase";
+import {
+  addCommunicationLogEntry,
+  fetchCommunicationLog,
+  saveCommunicationTemplate,
+  fetchCommunicationTemplates,
+  deleteCommunicationTemplate
+} from "@alvo/firebase";
 import { cachedFetchPeople } from "../../lib/org-data-cache";
-import type { Person } from "@alvo/types";
+import type { Person, CommunicationLogEntry, CommunicationTemplate } from "@alvo/types";
 
 const CHANNELS = [
   { key: "push", label: "Push Notification", icon: Bell, desc: "Membros com app instalado · em breve" },
@@ -31,7 +37,51 @@ export function CommunicationView() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<Array<{ id: string; message: string; sentAt: string; sent: number; failedCount: number }>>([]);
+  const [history, setHistory] = useState<CommunicationLogEntry[]>([]);
+  const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Histórico e templates reais (persistidos): carrega ao abrir a tela.
+  useEffect(() => {
+    if (!configured || !organizationId) return;
+    void fetchCommunicationLog(firebaseConfig, { organizationId }, 30).then(setHistory).catch(() => {});
+    void fetchCommunicationTemplates(firebaseConfig, { organizationId }, 30).then(setTemplates).catch(() => {});
+  }, [configured, organizationId, firebaseConfig]);
+
+  async function handleSaveTemplate() {
+    if (!organizationId || !user || !message.trim()) return;
+    const title = window.prompt("Nome do template (ex: Boas-vindas, Lembrete de culto):")?.trim();
+    if (!title) return;
+    setSavingTemplate(true);
+    try {
+      const id = await saveCommunicationTemplate(firebaseConfig, { organizationId }, {
+        title, message: message.trim(), createdByUserId: user.uid
+      });
+      setTemplates((prev) => [
+        { id, organizationId, title, message: message.trim(), createdByUserId: user.uid, createdAt: new Date().toISOString() },
+        ...prev
+      ]);
+    } catch {
+      setError("Não foi possível salvar o template.");
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
+  async function handleDeleteTemplate(id: string) {
+    if (!organizationId) return;
+    try {
+      await deleteCommunicationTemplate(firebaseConfig, { organizationId }, id);
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      setError("Não foi possível excluir o template.");
+    }
+  }
+
+  function useTemplate(t: CommunicationTemplate) {
+    setMessage(t.message);
+    setComposing(true);
+  }
 
   useEffect(() => {
     if (!composing || !configured || !organizationId || people.length > 0) return;
@@ -87,10 +137,20 @@ export function CommunicationView() {
       if (!res.ok) throw new Error(data.error ?? "Falha ao enviar");
 
       setResult(data);
-      setHistory((prev) => [
-        { id: crypto.randomUUID(), message: message.trim(), sentAt: new Date().toISOString(), sent: data.sent, failedCount: data.failedCount },
-        ...prev
-      ]);
+      // Persiste o envio no histórico real (Firestore).
+      const entryBase = {
+        channel: "whatsapp" as const,
+        message: message.trim(),
+        recipientCount: recipients.length,
+        sentCount: data.sent,
+        failedCount: data.failedCount,
+        sentByUserId: user.uid,
+      };
+      let logId = crypto.randomUUID();
+      try {
+        logId = await addCommunicationLogEntry(firebaseConfig, { organizationId }, entryBase);
+      } catch { /* mesmo sem gravar o log, mostra o envio na sessão */ }
+      setHistory((prev) => [{ id: logId, organizationId, createdAt: new Date().toISOString(), ...entryBase }, ...prev]);
       setMessage("");
       setSelected(new Set());
     } catch (e) {
@@ -174,15 +234,25 @@ export function CommunicationView() {
           )}
         </section>
 
-        <button
-          className="btn-primary"
-          onClick={handleSend}
-          disabled={sending || selected.size === 0 || !message.trim()}
-          style={{ opacity: sending || selected.size === 0 || !message.trim() ? 0.5 : 1 }}
-        >
-          <Send size={16} />
-          {sending ? "Enviando..." : `Enviar para ${selected.size}`}
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            className="btn-primary"
+            onClick={handleSend}
+            disabled={sending || selected.size === 0 || !message.trim()}
+            style={{ opacity: sending || selected.size === 0 || !message.trim() ? 0.5 : 1 }}
+          >
+            <Send size={16} />
+            {sending ? "Enviando..." : `Enviar para ${selected.size}`}
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={handleSaveTemplate}
+            disabled={savingTemplate || !message.trim()}
+            style={{ opacity: savingTemplate || !message.trim() ? 0.5 : 1 }}
+          >
+            <Save size={16} /> {savingTemplate ? "Salvando..." : "Salvar como template"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -234,7 +304,7 @@ export function CommunicationView() {
               <div key={h.id} style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)" }}>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--alvo-ink)" }}>{h.message}</p>
                 <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>
-                  {new Date(h.sentAt).toLocaleString("pt-BR")} · {h.sent} enviada{h.sent !== 1 ? "s" : ""}
+                  {new Date(h.createdAt).toLocaleString("pt-BR")} · {h.sentCount} enviada{h.sentCount !== 1 ? "s" : ""}
                   {h.failedCount > 0 ? ` · ${h.failedCount} falharam` : ""}
                 </p>
               </div>
@@ -247,11 +317,35 @@ export function CommunicationView() {
         <div className="section-header">
           <h2 className="section-title">Templates salvos</h2>
         </div>
-        <div className="empty-state">
-          <MessageSquareText size={40} strokeWidth={1.4} />
-          <p>Nenhum template criado.</p>
-          <p className="empty-hint">Templates agilizam o envio de mensagens recorrentes como lembretes de evento e boas-vindas.</p>
-        </div>
+        {templates.length === 0 ? (
+          <div className="empty-state">
+            <MessageSquareText size={40} strokeWidth={1.4} />
+            <p>Nenhum template criado.</p>
+            <p className="empty-hint">Templates agilizam envios recorrentes (lembretes de culto, boas-vindas). Escreva uma mensagem em "Nova mensagem" e clique em "Salvar como template".</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {templates.map((t) => (
+              <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ fontSize: 14, color: "var(--alvo-ink)", display: "block" }}>{t.title}</strong>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--alvo-ink-soft)", whiteSpace: "pre-wrap" }}>{t.message}</p>
+                </div>
+                <button className="btn-secondary btn-sm" onClick={() => useTemplate(t)}>
+                  <Send size={14} /> Usar
+                </button>
+                <button
+                  className="btn-secondary btn-sm"
+                  onClick={() => handleDeleteTemplate(t.id)}
+                  aria-label="Excluir template"
+                  style={{ color: "#dc2626" }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

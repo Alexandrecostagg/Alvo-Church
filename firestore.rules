@@ -241,6 +241,15 @@ service cloud.firestore {
       allow write: if isTenantAdmin(orgId);
     }
 
+    // Comunicação (histórico de envios + templates): só liderança (admin) —
+    // conteúdo de comunicados é sensível. Excluído dos catch-alls de leitura.
+    match /organizations/{orgId}/communicationLog/{entryId} {
+      allow read, write: if isTenantAdmin(orgId);
+    }
+    match /organizations/{orgId}/communicationTemplates/{templateId} {
+      allow read, write: if isTenantAdmin(orgId);
+    }
+
     // Comprovantes de contribuição (imagem base64). O membro cria o próprio ao
     // autodeclarar o PIX; só admin lê (dado financeiro) — por isso também está
     // excluído dos catch-alls de leitura abaixo.
@@ -386,6 +395,8 @@ service cloud.firestore {
         && collection != "contributions"
         && collection != "contributionReceipts"
         && collection != "financialTransactions"
+        && collection != "communicationLog"
+        && collection != "communicationTemplates"
         && collection != "users"
         && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)
@@ -410,6 +421,8 @@ service cloud.firestore {
         && collection != "contributions"
         && collection != "contributionReceipts"
         && collection != "financialTransactions"
+        && collection != "communicationLog"
+        && collection != "communicationTemplates"
         && collection != "users"
         && collection != "prayerRequests";
       allow write: if isTenantAdmin(orgId)

@@ -46,6 +46,8 @@ import type {
   CommunityOffer,
   CommunityStoreModerationLog,
   MarketplacePromotion,
+  CommunicationLogEntry,
+  CommunicationTemplate,
   Person,
   ServiceAssignment,
   ServiceTeam,
@@ -122,6 +124,8 @@ import {
   getCommunityOffersCollectionPath,
   getCommunityStoreModerationLogsCollectionPath,
   getMarketplacePromotionsCollectionPath,
+  getCommunicationLogCollectionPath,
+  getCommunicationTemplatesCollectionPath,
   getWorshipSongsCollectionPath,
   getWorshipSetlistsCollectionPath,
   getGroupBannersCollectionPath,
@@ -2337,6 +2341,83 @@ export async function fetchMarketplacePromotions(
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() } as MarketplacePromotion))
     .filter((p) => p.status === "active");
+}
+
+// ── Comunicação: histórico de envios + templates ────────────────────────────
+export async function addCommunicationLogEntry(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  entry: Omit<CommunicationLogEntry, "id" | "createdAt" | "organizationId"> & { createdAt?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getCommunicationLogCollectionPath(context)));
+  await setDoc(ref, cleanFirestoreData({
+    organizationId: context.organizationId,
+    channel: entry.channel,
+    message: entry.message,
+    recipientCount: entry.recipientCount,
+    sentCount: entry.sentCount,
+    failedCount: entry.failedCount,
+    sentByUserId: entry.sentByUserId,
+    createdAt: entry.createdAt ?? new Date().toISOString(),
+  }));
+  return ref.id;
+}
+
+export async function fetchCommunicationLog(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  take = 30
+): Promise<CommunicationLogEntry[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(
+    collection(firestore, getCommunicationLogCollectionPath(context)),
+    orderBy("createdAt", "desc"),
+    limit(take)
+  ));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommunicationLogEntry));
+}
+
+export async function saveCommunicationTemplate(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  template: Omit<CommunicationTemplate, "id" | "createdAt" | "organizationId"> & { id?: string; createdAt?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = template.id
+    ? doc(firestore, getCommunicationTemplatesCollectionPath(context), template.id)
+    : doc(collection(firestore, getCommunicationTemplatesCollectionPath(context)));
+  await setDoc(ref, cleanFirestoreData({
+    organizationId: context.organizationId,
+    title: template.title,
+    message: template.message,
+    createdByUserId: template.createdByUserId,
+    createdAt: template.createdAt ?? new Date().toISOString(),
+  }), { merge: true });
+  return ref.id;
+}
+
+export async function fetchCommunicationTemplates(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  take = 30
+): Promise<CommunicationTemplate[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(
+    collection(firestore, getCommunicationTemplatesCollectionPath(context)),
+    orderBy("createdAt", "desc"),
+    limit(take)
+  ));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommunicationTemplate));
+}
+
+export async function deleteCommunicationTemplate(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  templateId: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getCommunicationTemplatesCollectionPath(context), templateId));
 }
 
 export async function fetchCommunityStoreModerationLogs(
