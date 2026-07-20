@@ -819,7 +819,7 @@ export function DashboardView() {
           <article className="momentum-card antigravity-float-delayed">
             <div className="section-heading compact">
               <div>
-                <p className="eyebrow">Momentum</p>
+                <p className="eyebrow">Ritmo</p>
                 <h2>Semana da igreja</h2>
               </div>
               <Activity size={20} />
