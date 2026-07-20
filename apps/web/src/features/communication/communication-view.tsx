@@ -181,9 +181,18 @@ export function CommunicationView() {
           </div>
         )}
         {result && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#EAF3DE", color: "#27500A", fontSize: 13, marginBottom: 16 }}>
-            <CheckCircle2 size={16} />
-            {result.sent} enviada{result.sent !== 1 ? "s" : ""} com sucesso{result.failedCount > 0 ? ` · ${result.failedCount} falharam` : ""}.
+          <div style={{ padding: "10px 14px", borderRadius: 10, background: result.failedCount > 0 && result.sent === 0 ? "#FCEBEB" : "#EAF3DE", color: result.failedCount > 0 && result.sent === 0 ? "#A32D2D" : "#27500A", fontSize: 13, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {result.failedCount > 0 && result.sent === 0 ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+              {result.sent} enviada{result.sent !== 1 ? "s" : ""} com sucesso{result.failedCount > 0 ? ` · ${result.failedCount} falharam` : ""}.
+            </div>
+            {result.failed && result.failed.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+                {result.failed.map((f, i) => (
+                  <div key={i}><strong>{f.phone}</strong>: {f.error ?? "erro desconhecido"}</div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
