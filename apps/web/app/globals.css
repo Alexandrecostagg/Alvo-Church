@@ -1063,8 +1063,15 @@ code {
 .lifecycle-card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+}
+
+/* Título nasce ao lado do número (não abaixo); ícone empurrado pra direita */
+.lifecycle-card-header strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.1;
 }
 
 .lifecycle-card-header span {
@@ -1081,6 +1088,7 @@ code {
 
 .lifecycle-card-header svg {
   color: var(--alvo-accent);
+  flex-shrink: 0;
 }
 
 .lifecycle-card > strong {

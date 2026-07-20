@@ -958,9 +958,9 @@ export function DashboardView() {
               <article className={`lifecycle-card tone-${stage.tone}`} key={stage.label}>
                 <div className="lifecycle-card-header">
                   <span>{stage.label}</span>
+                  <strong>{stage.title}</strong>
                   <stage.icon size={18} />
                 </div>
-                <strong>{stage.title}</strong>
                 <p>{stage.description}</p>
                 <div className="lifecycle-meta">
                   <small>{stage.owner}</small>
