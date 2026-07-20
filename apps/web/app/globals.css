@@ -7808,7 +7808,9 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
 }
 
 .reception-step-lane {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* responsivo: reflui pra 2 colunas quando o menu expande, sem espremer nem
+     quebrar o título ("Captura-r") */
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   margin-top: 18px;
 }
@@ -7825,6 +7827,8 @@ h1, h2, h3, h4, h5, h6, strong, p, span, label, input, textarea, select {
   color: #111827 !important;
   font-size: 18px;
   line-height: 1.15;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .reception-step-lane p {
