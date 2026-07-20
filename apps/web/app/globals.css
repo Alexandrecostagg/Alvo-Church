@@ -1006,7 +1006,6 @@ code {
   color: var(--alvo-ink-soft);
   font-size: 12px;
   line-height: 1.45;
-  text-align: justify;
 }
 
 .workflow-step b {
@@ -1102,7 +1101,6 @@ code {
   color: var(--alvo-ink-soft);
   font-size: 13px;
   line-height: 1.45;
-  text-align: justify;
 }
 
 .lifecycle-meta {
@@ -2171,7 +2169,6 @@ code {
 .directory-page .member-flow-step p {
   color: #475569;
   font-size: 15px;
-  text-align: justify;
 }
 
 /* Número + título na mesma linha (não empilhados) */
