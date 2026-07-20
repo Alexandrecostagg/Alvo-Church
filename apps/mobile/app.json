@@ -13,11 +13,6 @@
     "backgroundColor": "#eef2f6",
     "primaryColor": "#f97316",
     "icon": "./assets/generated/icon.png",
-    "splash": {
-      "image": "./assets/generated/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#eef2f6"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -33,7 +28,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.plataformaesdras.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
@@ -51,6 +46,14 @@
         "expo-image-picker",
         {
           "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/generated/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#eef2f6"
         }
       ]
     ],
