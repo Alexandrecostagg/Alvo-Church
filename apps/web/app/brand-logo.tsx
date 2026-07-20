@@ -61,10 +61,11 @@ export function BrandLogo({
       {!iconOnly && <div style={{ display: "grid", gap: 2 }}>
         <span
           style={{
-            fontSize: compact ? 11 : 12,
-            letterSpacing: "0.14em",
+            fontSize: compact ? 10 : 11,
+            letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "var(--alvo-accent-dark)"
+            color: "var(--alvo-accent-dark)",
+            whiteSpace: "nowrap"
           }}
         >
           {brandTheme.brand.appName}

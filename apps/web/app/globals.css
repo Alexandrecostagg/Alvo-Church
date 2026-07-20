@@ -917,8 +917,11 @@ code {
   position: relative;
   min-width: 0;
   display: grid;
-  gap: 12px;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 8px;
   align-content: start;
+  align-items: start;
   padding: 14px;
   border: 1px solid var(--alvo-line);
   border-radius: 8px;
@@ -929,6 +932,20 @@ code {
     border-color 160ms ease,
     transform 160ms ease,
     box-shadow 160ms ease;
+}
+
+/* Número ocupa a linha toda no topo; ícone preto à esquerda e texto à direita */
+.workflow-step > .workflow-index {
+  grid-column: 1 / -1;
+}
+
+.workflow-step > .workflow-icon {
+  grid-column: 1;
+}
+
+.workflow-step > div:last-child {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .workflow-step::after {
@@ -987,6 +1004,7 @@ code {
   color: var(--alvo-ink-soft);
   font-size: 12px;
   line-height: 1.45;
+  text-align: justify;
 }
 
 .workflow-step b {
@@ -1074,6 +1092,7 @@ code {
   color: var(--alvo-ink-soft);
   font-size: 13px;
   line-height: 1.45;
+  text-align: justify;
 }
 
 .lifecycle-meta {
