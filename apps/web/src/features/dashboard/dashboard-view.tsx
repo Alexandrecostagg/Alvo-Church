@@ -1004,11 +1004,15 @@ export function DashboardView() {
           <div className="shortcut-grid">
             {mobileContractCards.map((card) => (
               <Link className="shortcut-card" href={card.href} key={card.label}>
-                <div className="shortcut-icon">
-                  <Smartphone size={19} />
+                <div className="shortcut-card-head">
+                  <div className="shortcut-icon">
+                    <Smartphone size={19} />
+                  </div>
+                  <div className="shortcut-card-headtext">
+                    <span>{card.label}</span>
+                    <strong>{card.title}</strong>
+                  </div>
                 </div>
-                <span>{card.label}</span>
-                <strong>{card.title}</strong>
                 <p>{card.detail}</p>
                 <small>{card.status}</small>
               </Link>

@@ -5266,6 +5266,34 @@ code {
   line-height: 1.45;
 }
 
+/* Recepção: ícone ao lado do título (não em cima); descrição abaixo em largura toda */
+.automation-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+}
+
+.automation-card > svg {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.automation-card > strong {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.automation-card > p {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 0;
+}
+
 .visitor-list {
   margin-top: 14px;
 }
