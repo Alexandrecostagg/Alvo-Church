@@ -61,6 +61,7 @@ import { useAppAuth } from "../../../app/providers";
 import {
   createVisitorIntakeWorkflow,
   createFirebaseWebRuntimeConfigFromEnv,
+  fetchEventCheckIns,
   fetchEvents,
   fetchFamilies,
   fetchFinancialTransparencyReports,
@@ -83,7 +84,8 @@ import type {
   Person,
   VisitorIntake,
   VisitorJourney,
-  FinancialTransparencyReport
+  FinancialTransparencyReport,
+  EventCheckIn
 } from "@alvo/types";
 
 import { organization, tenantSettings, currentUser, recentPeople, families, activeJourneys, followUps, activeGroups, upcomingMeetings, latestAttendance, publishedEvents, latestRegistrations, latestEventCheckIns, journeyProfiles, activeMissions, earnedBadges, tribeDefinitions, latestTribeAssessments, currentTribeProfiles, reviewRequests, behaviorSignals, tribeAnswerPreview, dashboard, questionnaireResult, personNames, familyPanorama, neighborhoodDistribution, familyInsightMetrics, memberPassPreview, weeklyMomentum, navItems, kpis, moduleHighlights, operationalShortcuts, visitorIntakeRecords, transparencySummary, transparencyEntries, partnerOrganizations, partnerBenefits, memberBenefitValidations, partnerBenefitPreview, actionFeed } from "../../lib/mock-data";
@@ -118,6 +120,7 @@ export function DashboardView() {
   const [realJourneys, setRealJourneys] = useState<VisitorJourney[]>([]);
   const [realTasks, setRealTasks] = useState<FollowUpTask[]>([]);
   const [realIntakes, setRealIntakes] = useState<VisitorIntake[]>([]);
+  const [realCheckIns, setRealCheckIns] = useState<EventCheckIn[]>([]);
   const [realReports, setRealReports] = useState<FinancialTransparencyReport[]>([]);
   const [syncMessage, setSyncMessage] = useState("Iniciando conexao pastoral...");
 
@@ -155,6 +158,10 @@ export function DashboardView() {
         setRealReports(nextReports);
         setCapturedVisitors(nextIntakes);
         setSyncMessage(`Painel atualizado: ${nextPeople.length} pessoas e ${nextGroups.length} grupos.`);
+
+        // Check-ins de eventos/cultos (presença real) — busca depois dos eventos.
+        const nextCheckIns = await fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents, 50).catch(() => []);
+        if (!cancelled) setRealCheckIns(nextCheckIns);
       } catch (error) {
         if (!cancelled) {
           setSyncMessage(friendlyError(error, "Erro na sincronizacao."));
@@ -165,6 +172,29 @@ export function DashboardView() {
     void syncDashboard();
     return () => { cancelled = true; };
   }, [configured, firebaseConfig, organizationId, user]);
+
+  // "Semana da igreja" REAL: atividade por dia da semana (entradas de visitantes
+  // + check-ins de eventos/cultos), agregando os registros reais buscados.
+  const weeklyMomentumReal = useMemo(() => {
+    const labels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+    const full = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    const bump = (iso?: string) => {
+      if (!iso) return;
+      const d = new Date(iso);
+      if (!Number.isNaN(d.getTime())) counts[d.getDay()] += 1;
+    };
+    realIntakes.forEach((i) => bump(i.createdAt));
+    realCheckIns.forEach((c) => bump(c.checkedInAt));
+    const total = counts.reduce((a, b) => a + b, 0);
+    const max = Math.max(1, ...counts);
+    const peakIndex = counts.indexOf(Math.max(...counts));
+    return {
+      bars: labels.map((label, i) => ({ label, value: Math.round((counts[i] / max) * 100) })),
+      total,
+      peakLabel: full[peakIndex],
+    };
+  }, [realIntakes, realCheckIns]);
   const strongestSignal = getStrongestBehaviorSignal(
     dashboard.behaviorSignals,
     dashboard.reviewRequests[0]?.personId ?? ""
@@ -825,14 +855,18 @@ export function DashboardView() {
               <Activity size={20} />
             </div>
             <div className="bar-chart" aria-label="Atividade semanal">
-              {weeklyMomentum.map((day) => (
+              {weeklyMomentumReal.bars.map((day) => (
                 <div key={day.label} className="bar-slot">
                   <span style={{ height: `${day.value}%` }} />
                   <small>{day.label}</small>
                 </div>
               ))}
             </div>
-            <p className="microcopy">Pico de engajamento no sabado, com eventos e check-ins ativos.</p>
+            <p className="microcopy">
+              {weeklyMomentumReal.total > 0
+                ? `Pico de atividade na ${weeklyMomentumReal.peakLabel} — entradas de visitantes e check-ins de eventos.`
+                : "Ainda sem entradas de visitantes ou check-ins registrados para medir o ritmo da semana."}
+            </p>
           </article>
         </section>
 
