@@ -16,7 +16,7 @@ import type { Person, CommunicationLogEntry, CommunicationTemplate } from "@alvo
 const CHANNELS = [
   { key: "push", label: "Push Notification", icon: Bell, desc: "Membros com app instalado · em breve" },
   { key: "email", label: "Email", icon: Mail, desc: "Todos com email cadastrado · em breve" },
-  { key: "whatsapp", label: "WhatsApp", icon: Smartphone, desc: "Via Twilio · cobrado por envio" },
+  { key: "whatsapp", label: "WhatsApp", icon: Smartphone, desc: "Pelo seu WhatsApp · grátis" },
 ];
 
 interface SendResult {
@@ -33,6 +33,8 @@ export function CommunicationView() {
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [opened, setOpened] = useState<Set<string>>(new Set());
+  const [loggingCampaign, setLoggingCampaign] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendResult | null>(null);
@@ -117,46 +119,40 @@ export function CommunicationView() {
     );
   }
 
-  async function handleSend() {
-    if (!organizationId || !user || selected.size === 0 || !message.trim()) return;
-    setSending(true);
-    setError(null);
-    setResult(null);
+  // Abre a conversa no WhatsApp (wa.me) com a mensagem pronta — envio pelo
+  // próprio número da liderança, grátis. Marca a pessoa como "aberta".
+  function openWhatsapp(p: Person) {
+    const raw = (p.whatsappPhone || p.mobilePhone || "").replace(/\D/g, "");
+    if (!raw || !message.trim()) return;
+    const withCountry = raw.startsWith("55") ? raw : `55${raw}`;
+    window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message.trim())}`, "_blank", "noopener");
+    setOpened((prev) => new Set(prev).add(p.id));
+  }
+
+  // Registra a campanha no histórico (quantos você abriu pra enviar).
+  async function logCampaign() {
+    if (!organizationId || !user || opened.size === 0 || !message.trim()) return;
+    setLoggingCampaign(true);
     try {
-      const idToken = await user.getIdToken();
-      const recipients = people
-        .filter((p) => selected.has(p.id))
-        .map((p) => ({ phone: (p.whatsappPhone || p.mobilePhone)!, name: `${p.firstName} ${p.lastName}` }));
-
-      const res = await fetch("/api/communication/send-whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ organizationId, message: message.trim(), recipients })
-      });
-      const data = await res.json() as SendResult & { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Falha ao enviar");
-
-      setResult(data);
-      // Persiste o envio no histórico real (Firestore).
       const entryBase = {
         channel: "whatsapp" as const,
         message: message.trim(),
-        recipientCount: recipients.length,
-        sentCount: data.sent,
-        failedCount: data.failedCount,
+        recipientCount: opened.size,
+        sentCount: opened.size,
+        failedCount: 0,
         sentByUserId: user.uid,
       };
       let logId = crypto.randomUUID();
       try {
         logId = await addCommunicationLogEntry(firebaseConfig, { organizationId }, entryBase);
-      } catch { /* mesmo sem gravar o log, mostra o envio na sessão */ }
+      } catch { /* mesmo sem gravar, mantém na sessão */ }
       setHistory((prev) => [{ id: logId, organizationId, createdAt: new Date().toISOString(), ...entryBase }, ...prev]);
       setMessage("");
+      setOpened(new Set());
       setSelected(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro desconhecido ao enviar");
+      setComposing(false);
     } finally {
-      setSending(false);
+      setLoggingCampaign(false);
     }
   }
 
@@ -166,10 +162,10 @@ export function CommunicationView() {
         <header className="page-header">
           <div className="page-header-left">
             <h1 className="page-title">Nova mensagem</h1>
-            <p className="page-subtitle">Envio real por WhatsApp via Twilio — cada envio tem custo por mensagem.</p>
+            <p className="page-subtitle">Abra a conversa no WhatsApp com a mensagem pronta e envie pelo seu número — grátis.</p>
           </div>
           <div className="page-header-actions">
-            <button className="btn-secondary" onClick={() => { setComposing(false); setResult(null); setError(null); }}>
+            <button className="btn-secondary" onClick={() => { setComposing(false); setError(null); }}>
               <X size={16} /> Cancelar
             </button>
           </div>
@@ -178,21 +174,6 @@ export function CommunicationView() {
         {error && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#FCEBEB", color: "#A32D2D", fontSize: 13, marginBottom: 16 }}>
             <AlertTriangle size={16} /> {error}
-          </div>
-        )}
-        {result && (
-          <div style={{ padding: "10px 14px", borderRadius: 10, background: result.failedCount > 0 && result.sent === 0 ? "#FCEBEB" : "#EAF3DE", color: result.failedCount > 0 && result.sent === 0 ? "#A32D2D" : "#27500A", fontSize: 13, marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {result.failedCount > 0 && result.sent === 0 ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
-              {result.sent} enviada{result.sent !== 1 ? "s" : ""} com sucesso{result.failedCount > 0 ? ` · ${result.failedCount} falharam` : ""}.
-            </div>
-            {result.failed && result.failed.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, display: "flex", flexDirection: "column", gap: 4 }}>
-                {result.failed.map((f, i) => (
-                  <div key={i}><strong>{f.phone}</strong>: {f.error ?? "erro desconhecido"}</div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
@@ -208,11 +189,11 @@ export function CommunicationView() {
 
         <section className="content-section">
           <div className="section-header">
-            <h2 className="section-title">Destinatários ({selected.size} selecionado{selected.size !== 1 ? "s" : ""} de {filteredPeople.length})</h2>
-            <button className="section-action" onClick={toggleSelectAll}>
-              {selected.size === filteredPeople.length && filteredPeople.length > 0 ? "Desmarcar todos" : "Selecionar todos"}
-            </button>
+            <h2 className="section-title">Pessoas com WhatsApp ({filteredPeople.length})</h2>
           </div>
+          <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "0 0 12px" }}>
+            Escreva a mensagem acima, depois clique em <strong>Abrir no WhatsApp</strong> de cada pessoa — a conversa abre com o texto pronto pra você enviar do seu número.
+          </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <Search size={16} style={{ color: "var(--alvo-ink-soft)" }} />
@@ -231,13 +212,20 @@ export function CommunicationView() {
               Nenhuma pessoa com WhatsApp cadastrado{search ? " para essa busca" : ""}.
             </p>
           ) : (
-            <div style={{ maxHeight: 320, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {filteredPeople.map((p) => (
-                <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, cursor: "pointer" }}>
-                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelected(p.id)} />
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8 }}>
                   <span style={{ fontSize: 13, color: "var(--alvo-ink)" }}>{p.firstName} {p.lastName}</span>
                   <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", marginLeft: "auto" }}>{p.whatsappPhone || p.mobilePhone}</span>
-                </label>
+                  <button
+                    className="btn-secondary btn-sm"
+                    onClick={() => openWhatsapp(p)}
+                    disabled={!message.trim()}
+                    style={{ opacity: !message.trim() ? 0.5 : 1, color: opened.has(p.id) ? "#16a34a" : undefined, whiteSpace: "nowrap" }}
+                  >
+                    <Smartphone size={14} /> {opened.has(p.id) ? "Aberto ✓" : "Abrir no WhatsApp"}
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -246,12 +234,12 @@ export function CommunicationView() {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             className="btn-primary"
-            onClick={handleSend}
-            disabled={sending || selected.size === 0 || !message.trim()}
-            style={{ opacity: sending || selected.size === 0 || !message.trim() ? 0.5 : 1 }}
+            onClick={logCampaign}
+            disabled={loggingCampaign || opened.size === 0}
+            style={{ opacity: loggingCampaign || opened.size === 0 ? 0.5 : 1 }}
           >
-            <Send size={16} />
-            {sending ? "Enviando..." : `Enviar para ${selected.size}`}
+            <CheckCircle2 size={16} />
+            {loggingCampaign ? "Registrando..." : `Registrar no histórico (${opened.size})`}
           </button>
           <button
             className="btn-secondary"
