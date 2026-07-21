@@ -1320,6 +1320,7 @@ export interface Lesson {
   videoUrl: string; // Vimeo, YouTube ou Cloudflare Stream
   durationMinutes: number;
   sortOrder: number;
+  materialUrl?: string; // link opcional de material de apoio (PDF/slide) anexado à aula
 }
 
 export interface MemberCourseProgress {

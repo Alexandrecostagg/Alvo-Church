@@ -37,7 +37,9 @@ import {
 import type { Course, CourseModule, Lesson, MemberCourseProgress, MemberBadge } from "@alvo/types";
 
 export function AcademyView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? "nossa igreja";
+  const studentName = user?.displayName?.trim() || user?.email?.split("@")[0] || "Aluno(a)";
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -62,11 +64,10 @@ export function AcademyView() {
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setCourses(MOCK_COURSES as Course[]);
-      setModules(MOCK_COURSE_MODULES as CourseModule[]);
-      setLessons(MOCK_LESSONS as Lesson[]);
-      setProgress(MOCK_MEMBER_COURSE_PROGRESS[0] as MemberCourseProgress);
-      setStatus("Exibindo cursos em modo offline.");
+      setCourses([]);
+      setModules([]);
+      setLessons([]);
+      setStatus("Entre na sua conta para acessar os cursos.");
       return;
     }
 
@@ -138,11 +139,7 @@ export function AcademyView() {
       } catch (err) {
         console.error(err);
         if (!cancelled) {
-          setCourses(MOCK_COURSES as Course[]);
-          setModules(MOCK_COURSE_MODULES as CourseModule[]);
-          setLessons(MOCK_LESSONS as Lesson[]);
-          setProgress(MOCK_MEMBER_COURSE_PROGRESS[0] as MemberCourseProgress);
-          setStatus("Erro ao sincronizar. Usando modo de demonstração.");
+          setStatus("Não foi possível carregar os cursos.");
         }
       }
     }
@@ -159,11 +156,11 @@ export function AcademyView() {
   }, [courses, selectedCourseId]);
 
   const activeModules = useMemo(() => {
-    return modules.filter(m => m.courseId === selectedCourse.id).sort((a,b) => a.sortOrder - b.sortOrder);
+    return modules.filter(m => m.courseId === selectedCourse?.id).sort((a,b) => a.sortOrder - b.sortOrder);
   }, [modules, selectedCourse]);
 
   const activeLessons = useMemo(() => {
-    return lessons.filter(l => l.courseId === selectedCourse.id).sort((a,b) => a.sortOrder - b.sortOrder);
+    return lessons.filter(l => l.courseId === selectedCourse?.id).sort((a,b) => a.sortOrder - b.sortOrder);
   }, [lessons, selectedCourse]);
 
   const selectedLesson = useMemo(() => {
@@ -172,7 +169,7 @@ export function AcademyView() {
 
   // Calcula progresso atual do curso selecionado em porcentagem
   const coursePercent = useMemo(() => {
-    const courseLessons = lessons.filter(l => l.courseId === selectedCourse.id);
+    const courseLessons = lessons.filter(l => l.courseId === selectedCourse?.id);
     if (!courseLessons.length) return 0;
     const completedInCourse = courseLessons.filter(l => progress.completedLessons.includes(l.id)).length;
     return Math.round((completedInCourse / courseLessons.length) * 100);
@@ -278,6 +275,32 @@ export function AcademyView() {
   const handlePrintCertificate = () => {
     window.print();
   };
+
+  // Estado vazio honesto: sem cursos (sem mock que engana). Evita também o crash
+  // de acessar selectedCourse.* quando não há nenhum curso carregado.
+  if (courses.length === 0 || !selectedCourse) {
+    return (
+      <main className="page-root academy-page animate-entrance">
+        <Link className="back-link" href="/" style={{ display: "inline-flex", marginBottom: 12 }}>
+          Voltar ao painel
+        </Link>
+        <header className="page-header">
+          <div className="page-header-left">
+            <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>Escola de Discipulado</p>
+            <h1 className="page-title">Escola de Líderes Esdras</h1>
+            <p className="page-subtitle">
+              Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
+            </p>
+          </div>
+        </header>
+        <div className="empty-state" style={{ padding: "40px 0" }}>
+          <GraduationCap size={40} strokeWidth={1.4} style={{ margin: "0 auto 10px", color: "var(--alvo-line)" }} />
+          <p>{status}</p>
+          <p className="empty-hint">Os cursos aparecem aqui assim que estiverem disponíveis.</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="form-page serving-page academy-page animate-entrance" style={{ position: "relative" }}>
@@ -430,7 +453,7 @@ export function AcademyView() {
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <GraduationCap size={32} style={{ color: "var(--alvo-blue)" }} />
-                  <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase", color: "#1e293b" }}>ALVO CHURCH ACADEMY</span>
+                  <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase", color: "#1e293b" }}>{orgName} · Escola</span>
                 </div>
               </div>
 
@@ -442,7 +465,7 @@ export function AcademyView() {
               </p>
 
               <h2 style={{ fontSize: "2.25rem", color: "var(--alvo-blue)", fontWeight: 800, margin: "1.5rem 0", fontFamily: "Helvetica, Arial, sans-serif", borderBottom: "2px solid #e2e8f0", display: "inline-block", paddingBottom: "0.5rem", minWidth: "300px" }}>
-                Lucas Costa
+                {studentName}
               </h2>
 
               <p style={{ fontSize: "1.05rem", lineHeight: "1.8", color: "#334155", maxWidth: "680px", margin: "0 auto" }}>
@@ -459,13 +482,12 @@ export function AcademyView() {
 
               <div style={{ display: "flex", justifyContent: "space-around", marginTop: "3rem", borderTop: "1px dashed #cbd5e1", paddingTop: "1.5rem" }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ height: "40px", fontStyle: "italic", color: "var(--alvo-blue)", fontSize: "1.2rem", fontWeight: 600 }}>Davi Costa</div>
-                  <div style={{ width: "200px", height: "1px", backgroundColor: "#94a3b8", margin: "0.25rem 0" }} />
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b" }}>Pr. Davi Costa · Diretor Geral</span>
+                  <div style={{ width: "200px", height: "1px", backgroundColor: "#94a3b8", margin: "40px 0 0.25rem" }} />
+                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b" }}>Direção Pastoral · {orgName}</span>
                 </div>
                 <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <Award size={36} style={{ color: "var(--alvo-blue)" }} />
-                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", marginTop: 8 }}>Selo de Excelência Esdras</span>
+                  <span style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", marginTop: 8 }}>Selo de Conclusão</span>
                 </div>
               </div>
             </div>
@@ -492,25 +514,19 @@ export function AcademyView() {
         </div>
       )}
 
-      {/* Hero Header */}
-      <section className="serving-hero" style={{ paddingBottom: "1.5rem" }}>
-        <div>
-          <Link className="back-link" href="/">
-            Voltar ao painel
-          </Link>
-          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>LMS / Escola de Discipulado</p>
-          <h1>Escola de Líderes Esdras</h1>
-          <p>
+      {/* Cabeçalho padrão */}
+      <Link className="back-link" href="/" style={{ display: "inline-flex", marginBottom: 12 }}>
+        Voltar ao painel
+      </Link>
+      <header className="page-header">
+        <div className="page-header-left">
+          <p className="eyebrow" style={{ color: "var(--alvo-blue)" }}>Escola de Discipulado</p>
+          <h1 className="page-title">Escola de Líderes Esdras</h1>
+          <p className="page-subtitle">
             Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
-            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: configured && firebaseReady ? 'var(--alvo-blue)' : '#f59e0b', letterSpacing: "0.03em" }}>
-              {status.toUpperCase()}
-            </span>
-          </div>
         </div>
-      </section>
+      </header>
 
       {/* Seletor de Cursos Netflix-Style */}
       <section style={{ marginBottom: "2.5rem" }}>
@@ -800,39 +816,25 @@ export function AcademyView() {
 
                   {activeTab === "materials" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem" }}>Faça download dos materiais e guias oficiais para acompanhar o seu aprendizado nas células:</p>
-                      
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                        <a 
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); alert("Este material estará disponível para download em breve."); }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white", transition: "all 0.2s" }}
-                          className="hover-card"
+                      {selectedLesson?.materialUrl ? (
+                        <a
+                          href={selectedLesson.materialUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white" }}
                         >
                           <div style={{ padding: "0.5rem", background: "var(--alvo-blue-soft)", borderRadius: 10 }}>
                             <FileText size={20} style={{ color: "var(--alvo-blue)" }} />
                           </div>
-                          <div>
-                            <span style={{ fontSize: "0.85rem", fontWeight: 700, display: "block" }}>Guia de Leitura DNA.pdf</span>
-                            <span style={{ fontSize: "0.75rem", opacity: 0.5 }}>PDF (4.8 MB)</span>
-                          </div>
+                          <span style={{ fontSize: "0.9rem", fontWeight: 700 }}>Material de apoio desta aula</span>
                         </a>
-
-                        <a 
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); alert("Este material estará disponível para download em breve."); }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, textDecoration: "none", color: "white", transition: "all 0.2s" }}
-                          className="hover-card"
-                        >
-                          <div style={{ padding: "0.5rem", background: "rgba(16, 185, 129, 0.15)", borderRadius: 10 }}>
-                            <BookOpen size={20} style={{ color: "#10b981" }} />
-                          </div>
-                          <div>
-                            <span style={{ fontSize: "0.85rem", fontWeight: 700, display: "block" }}>Slides e Exercícios.pdf</span>
-                            <span style={{ fontSize: "0.75rem", opacity: 0.5 }}>PDF (12.4 MB)</span>
-                          </div>
-                        </a>
-                      </div>
+                      ) : (
+                        <div style={{ textAlign: "center", padding: "2.5rem 1rem", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 16 }}>
+                          <BookOpen size={32} style={{ color: "rgba(255,255,255,0.35)", margin: "0 auto 10px" }} />
+                          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.9rem", margin: 0 }}>Nenhum material anexado a esta aula ainda.</p>
+                          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem", marginTop: 4 }}>Os materiais aparecem aqui quando o instrutor os anexa ao curso.</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
