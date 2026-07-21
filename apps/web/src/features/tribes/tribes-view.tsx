@@ -334,14 +334,16 @@ export function TribesView() {
                   opacity: !isSelected && tribe.memberCount === 0 ? 0.62 : 1,
                 }}
               >
-                <div className="tribe-card-icon" style={{ background: tribe.accent.soft, color: tribe.accent.dark }}>
-                  <Tent size={20} />
-                </div>
-                <div className="tribe-card-body">
-                  <h3 style={{ color: tribe.accent.dark, fontSize: 14, fontWeight: 800, margin: 0 }}>
+                <div className="tribe-card-head">
+                  <div className="tribe-card-icon" style={{ background: tribe.accent.soft, color: tribe.accent.dark }}>
+                    <Tent size={20} />
+                  </div>
+                  <h3 style={{ color: tribe.accent.dark, fontSize: 15, fontWeight: 800, margin: 0 }}>
                     {tribe.name}
                   </h3>
-                  <p style={{ fontSize: 12, color: "var(--alvo-ink-soft)", margin: "4px 0 0", lineHeight: 1.4 }}>
+                </div>
+                <div className="tribe-card-body">
+                  <p style={{ fontSize: 12, color: "var(--alvo-ink-soft)", margin: 0, lineHeight: 1.4 }}>
                     {tribe.description}
                   </p>
                   <p style={{ fontSize: 11, color: "var(--alvo-ink-soft)", margin: "6px 0 0", opacity: 0.75, lineHeight: 1.4 }}>
@@ -678,6 +680,11 @@ export function TribesView() {
         .tribe-card:hover {
           box-shadow: 0 4px 16px rgba(0,0,0,0.08);
           transform: translateY(-1px);
+        }
+        .tribe-card-head {
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
         .tribe-card-icon {
           width: 40px;
