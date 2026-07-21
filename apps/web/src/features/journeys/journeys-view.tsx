@@ -721,14 +721,13 @@ export function JourneysView() {
         }
         .journeys-page .journey-lane-description {
           display: block !important;
-          /* Largura fixa em ch: o bloco não depende da coluna, então o texto
-             quebra igual com o menu lateral aberto ou fechado — o espaçamento
-             entre as palavras não muda. Justificado com a última linha à esquerda. */
-          width: 22ch !important;
+          /* Alinhado à esquerda: o espaço entre palavras é sempre único e nunca
+             estica (justify criava buracos feios). Largura fixa em ch: o bloco não
+             depende da coluna, então a quebra é a mesma com o menu aberto ou fechado. */
+          width: 24ch !important;
           max-width: 100% !important;
           min-width: 0 !important;
-          text-align: justify !important;
-          text-align-last: left !important;
+          text-align: left !important;
           color: var(--alvo-ink-soft) !important;
           background: transparent !important;
           border: 0 !important;
