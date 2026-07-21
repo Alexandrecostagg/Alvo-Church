@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Award,
   Bell,
+  BookOpenCheck,
   Bot,
   ChevronLeft,
   ChevronRight,
@@ -80,7 +81,8 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Tribos", icon: Tent, href: "/tribes", moduleKey: "tribes", match: (pathname) => pathname.startsWith("/tribes") },
         { label: groupsLabel, icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") || pathname.startsWith("/weekly-theme") },
         { label: "Jornadas", icon: MapIcon, href: "/journeys", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/journeys") },
-        { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") },
+        { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") && !pathname.startsWith("/learning/manage") },
+        { label: "Gerenciar Cursos", icon: BookOpenCheck, href: "/learning/manage", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning/manage") },
         { label: "Capacitação", icon: Award, href: "/capacitacao", match: (pathname) => pathname.startsWith("/capacitacao") },
         { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
         { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving") },
