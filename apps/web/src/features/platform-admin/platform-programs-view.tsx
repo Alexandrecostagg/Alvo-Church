@@ -12,6 +12,7 @@ import {
   deleteTrainingLesson
 } from "@alvo/firebase";
 import type { TrainingProgram, TrainingLesson } from "@alvo/types";
+import { MOCK_TRAINING_PROGRAMS, MOCK_TRAINING_LESSONS } from "../../lib/mock-data";
 
 // Prefixo `tp_` nos ids de trilha para não colidir com cursos internos do EAD
 // na subcoleção compartilhada de progresso (people/{id}/courseProgress).
@@ -42,12 +43,22 @@ export function PlatformProgramsView() {
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    fetchTrainingPrograms(firebaseConfig, false)
-      .then((list) => setPrograms(list.sort((a, b) => a.title.localeCompare(b.title))))
-      .catch((e) => setError(friendlyError(e, "Erro ao carregar trilhas")))
-      .finally(() => setLoading(false));
+    try {
+      let list = await fetchTrainingPrograms(firebaseConfig, false);
+      if (list.length === 0) {
+        // Primeira vez: semeia o catálogo inicial da Esdras (12 trilhas + aulas).
+        await Promise.all(MOCK_TRAINING_PROGRAMS.map((p) => saveTrainingProgram(firebaseConfig, p)));
+        await Promise.all(MOCK_TRAINING_LESSONS.map((l) => saveTrainingLesson(firebaseConfig, l)));
+        list = await fetchTrainingPrograms(firebaseConfig, false);
+      }
+      setPrograms(list.sort((a, b) => a.title.localeCompare(b.title)));
+    } catch (e) {
+      setError(friendlyError(e, "Erro ao carregar trilhas"));
+    } finally {
+      setLoading(false);
+    }
   }, [firebaseConfig]);
 
   useEffect(() => { load(); }, [load]);
@@ -105,6 +116,14 @@ export function PlatformProgramsView() {
             <Field label="Descrição">
               <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="O que a igreja recebe nesta trilha" />
             </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
+              <Field label="Professor / Ministrante (certificado)">
+                <input value={form.instructorName ?? ""} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} style={inputStyle} placeholder="Nome de quem assina o certificado" />
+              </Field>
+              <Field label="Cargo (opcional)">
+                <input value={form.instructorTitle ?? ""} onChange={(e) => setForm({ ...form, instructorTitle: e.target.value })} style={inputStyle} placeholder="Ex.: Pastor" />
+              </Field>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
               <Field label="URL da capa (opcional)">
                 <input value={form.thumbnailUrl ?? ""} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} style={inputStyle} placeholder="https://..." />

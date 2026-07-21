@@ -1348,6 +1348,8 @@ export interface TrainingProgram {
   thumbnailUrl?: string;
   priceBRL: number;             // preço em REAIS (não centavos) — convenção do Asaas/repo
   isPublished: boolean;         // rascunho x visível no catálogo
+  instructorName?: string;      // Nome do ministrador/professor — impresso no certificado
+  instructorTitle?: string;     // Cargo opcional (ex.: "Pastor", "Professora")
   badgeUnlockedId?: string;     // destrava badge/certificado ao concluir (reusa mecanismo do EAD)
   createdAt: string;
   updatedAt: string;

@@ -2983,6 +2983,8 @@ function toTrainingProgram(documentId: string, data: DocumentData): TrainingProg
     thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : undefined,
     priceBRL: Number(data.priceBRL ?? 0),
     isPublished: Boolean(data.isPublished),
+    instructorName: data.instructorName ? String(data.instructorName) : undefined,
+    instructorTitle: data.instructorTitle ? String(data.instructorTitle) : undefined,
     badgeUnlockedId: data.badgeUnlockedId ? String(data.badgeUnlockedId) : undefined,
     createdAt: String(data.createdAt ?? ""),
     updatedAt: String(data.updatedAt ?? "")

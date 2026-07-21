@@ -1205,8 +1205,12 @@ export const MOCK_GROUP_BANNERS = [
   }
 ];
 
-// --- MOCK DATA FOR LMS / EAD ---
-export const MOCK_COURSES = [
+// --- ESCOPO DE CAPACITAÇÃO (fonte) ---
+// Estes 12 "cursos" são o catálogo que a PLATAFORMA ESDRAS vende às igrejas na
+// Loja de Capacitação (TrainingProgram). São a FONTE de MOCK_TRAINING_PROGRAMS/
+// MOCK_TRAINING_LESSONS logo abaixo. NÃO são semeados na Escola EAD da igreja —
+// a EAD interna começa vazia para cada igreja criar os próprios cursos.
+const SOURCE_COURSES = [
   {
     id: "course_1",
     organizationId: organization.id,
@@ -1329,7 +1333,7 @@ export const MOCK_COURSES = [
   }
 ];
 
-export const MOCK_COURSE_MODULES = [
+const SOURCE_MODULES = [
   { id: "mod_1", organizationId: organization.id, courseId: "course_1", title: "Módulo 1: O Coração do Líder", sortOrder: 1 },
   { id: "mod_2", organizationId: organization.id, courseId: "course_1", title: "Módulo 2: Estratégias de Multiplicação", sortOrder: 2 },
   { id: "mod_3", organizationId: organization.id, courseId: "course_2", title: "Módulo 1: Primeiros Passos com Jesus", sortOrder: 1 },
@@ -1365,7 +1369,7 @@ export const MOCK_COURSE_MODULES = [
   { id: "mod_23", organizationId: organization.id, courseId: "course_12", title: "Módulo 2: Eventos que Conectam a Rede", sortOrder: 2 }
 ];
 
-export const MOCK_LESSONS = [
+const SOURCE_LESSONS = [
   // Curso 1 - Modulo 1
   { id: "les_1", organizationId: organization.id, courseId: "course_1", moduleId: "mod_1", title: "Aula 1: A Vocação Pastoral de Todo Crente", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 18, sortOrder: 1 },
   { id: "les_2", organizationId: organization.id, courseId: "course_1", moduleId: "mod_1", title: "Aula 2: Caráter e Espiritualidade do Líder", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 22, sortOrder: 2 },
@@ -1447,15 +1451,44 @@ export const MOCK_LESSONS = [
   { id: "les_46", organizationId: organization.id, courseId: "course_12", moduleId: "mod_23", title: "Aula 2: Sustentando o Vínculo entre Igrejas Parceiras", videoUrl: "https://player.vimeo.com/video/769798718", durationMinutes: 16, sortOrder: 2 }
 ];
 
-export const MOCK_MEMBER_COURSE_PROGRESS = [
-  {
-    id: "progress_1",
-    organizationId: organization.id,
-    memberId: "person_1", // Ana Silva
-    courseId: "course_1",
-    completedLessons: ["les_1"],
-    isCompleted: false,
-    updatedAt: new Date().toISOString()
-  }
-];
+// ─── LOJA DE CAPACITAÇÃO (catálogo global da Plataforma Esdras) ──────────────
+// Os 12 cursos-fonte viram TrainingProgram vendáveis (R$ 147, publicados). ids
+// com prefixo `tp_` para não colidir com cursos internos da EAD na subcoleção
+// de progresso. As aulas viram TrainingLesson planas, com o TÍTULO do módulo
+// preservado em moduleId (a loja lista aulas em sequência).
+const PROGRAM_PRICE_BRL = 147;
+
+export const MOCK_TRAINING_PROGRAMS = SOURCE_COURSES.map((c) => ({
+  id: c.id.replace("course_", "tp_seed_"),
+  title: c.title,
+  description: c.description,
+  thumbnailUrl: c.thumbnailUrl,
+  priceBRL: PROGRAM_PRICE_BRL,
+  isPublished: true,
+  badgeUnlockedId: c.badgeUnlockedId,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+}));
+
+export const MOCK_TRAINING_LESSONS = SOURCE_LESSONS.map((l) => ({
+  id: l.id.replace("les_", "tl_seed_"),
+  programId: l.courseId.replace("course_", "tp_seed_"),
+  moduleId: SOURCE_MODULES.find((m) => m.id === l.moduleId)?.title ?? l.moduleId,
+  title: l.title,
+  videoUrl: l.videoUrl,
+  durationMinutes: l.durationMinutes,
+  sortOrder: l.sortOrder
+}));
+
+// --- ESCOLA EAD (interna, org-scoped) ---
+// Seed VAZIO de propósito: cada igreja cria os próprios cursos para seus
+// servidores em "Gerenciar Cursos". (Antes semeávamos os 12 acima aqui, mas eles
+// pertencem à Loja de Capacitação da plataforma, não à EAD da igreja.)
+export const MOCK_COURSES: typeof SOURCE_COURSES = [];
+export const MOCK_COURSE_MODULES: typeof SOURCE_MODULES = [];
+export const MOCK_LESSONS: typeof SOURCE_LESSONS = [];
+export const MOCK_MEMBER_COURSE_PROGRESS: {
+  id: string; organizationId: string; memberId: string; courseId: string;
+  completedLessons: string[]; isCompleted: boolean; updatedAt: string;
+}[] = [];
 
