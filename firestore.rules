@@ -389,6 +389,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Progresso do aluno na Escola EAD (people/{uid}/courseProgress). O membro
+    // grava o PRÓPRIO progresso (personId == uid); admin também pode. Como as
+    // regras são OR, este match libera a escrita mesmo com o catch-all negando
+    // subcoleções de "people".
+    match /organizations/{orgId}/people/{personId}/courseProgress/{progressId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantMember(orgId) && (personId == request.auth.uid || isTenantAdmin(orgId));
+    }
+
     // Igrejas filiais (plano Rede): até 50 filiais, só quem está no plano
     // Rede ou Enterprise pode ter alguma. O contador affiliateCount em
     // organizations/{orgId} é mantido por saveNetworkAffiliate.

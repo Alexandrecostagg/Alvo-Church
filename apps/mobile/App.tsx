@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   SafeAreaView,
@@ -38,7 +39,7 @@ import {
   fetchMarketplacePromotions,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion } from "@alvo/types";
+import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +72,8 @@ type ModalScreen =
   | "song-detail"
   | "lider-celula"
   | "meu-perfil"
-  | "promocoes";
+  | "promocoes"
+  | "cursos";
 
 type EscalaStatus = "pendente" | "confirmado" | "recusado";
 type EscalaSlot = {
@@ -465,6 +467,182 @@ function PromocoesScreen({ primary, promotions, onBack }: {
   );
 }
 
+// Escola de discipulado no app: o membro navega pelos cursos, assiste a aula
+// (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
+// que a Escola EAD do web usa.
+function CursosScreen({ primary, orgId, user, onBack }: {
+  primary: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
+}) {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [progress, setProgress] = useState<MemberCourseProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingCourse, setLoadingCourse] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { fetchCourses } = await import("@alvo/firebase");
+        const list = await fetchCourses(firebaseConfig, { organizationId: orgId });
+        if (!cancelled) setCourses(list.filter((c) => c.isActive !== false));
+      } catch (e) { if (__DEV__) console.warn("fetchCourses falhou:", e); }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [orgId]);
+
+  async function openCourse(course: Course) {
+    setSelectedCourse(course);
+    setLoadingCourse(true);
+    try {
+      const sdk = await import("@alvo/firebase");
+      const [mods, less, prog] = await Promise.all([
+        sdk.fetchCourseModules(firebaseConfig, { organizationId: orgId }, course.id),
+        sdk.fetchCourseLessons(firebaseConfig, { organizationId: orgId }, course.id),
+        sdk.fetchMemberCourseProgress(firebaseConfig, { organizationId: orgId }, user.uid, course.id)
+      ]);
+      setModules(mods);
+      setLessons(less);
+      setProgress(prog ?? {
+        id: `progress_${user.uid}_${course.id}`,
+        organizationId: orgId, memberId: user.uid, courseId: course.id,
+        completedLessons: [], isCompleted: false, updatedAt: new Date().toISOString()
+      });
+    } catch (e) { if (__DEV__) console.warn("openCourse falhou:", e); }
+    finally { setLoadingCourse(false); }
+  }
+
+  async function toggleLesson(lesson: Lesson) {
+    if (!progress || !selectedCourse) return;
+    const done = progress.completedLessons.includes(lesson.id);
+    const nextCompleted = done
+      ? progress.completedLessons.filter((id) => id !== lesson.id)
+      : [...progress.completedLessons, lesson.id];
+    const courseLessons = lessons.filter((l) => l.courseId === selectedCourse.id);
+    const next: MemberCourseProgress = {
+      ...progress,
+      completedLessons: nextCompleted,
+      isCompleted: courseLessons.length > 0 && nextCompleted.length >= courseLessons.length,
+      updatedAt: new Date().toISOString()
+    };
+    setProgress(next);
+    try {
+      const { saveMemberCourseProgress } = await import("@alvo/firebase");
+      await saveMemberCourseProgress(firebaseConfig, { organizationId: orgId }, next);
+    } catch (e) { if (__DEV__) console.warn("saveMemberCourseProgress falhou:", e); }
+  }
+
+  async function watchLesson(lesson: Lesson) {
+    try {
+      await Linking.openURL(lesson.videoUrl);
+    } catch {
+      Alert.alert("Não foi possível abrir", "O link do vídeo desta aula parece inválido.");
+    }
+  }
+
+  // Detalhe do curso (módulos + aulas)
+  if (selectedCourse) {
+    const courseLessons = lessons.filter((l) => l.courseId === selectedCourse.id);
+    const doneCount = progress ? courseLessons.filter((l) => progress.completedLessons.includes(l.id)).length : 0;
+    const pct = courseLessons.length ? Math.round((doneCount / courseLessons.length) * 100) : 0;
+    const sortedModules = modules.filter((m) => m.courseId === selectedCourse.id).sort((a, b) => a.sortOrder - b.sortOrder);
+    return (
+      <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+        <ModalHeader title={selectedCourse.title} onBack={() => setSelectedCourse(null)} />
+        {loadingCourse ? (
+          <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando aulas..." /></View>
+        ) : (
+          <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+            <View style={s.card}>
+              <Text style={s.eyebrow}>SEU PROGRESSO</Text>
+              <Text style={s.cardTitle}>{pct}% concluído</Text>
+              <View style={{ height: 8, borderRadius: 999, backgroundColor: "#e2e8f0", overflow: "hidden", marginTop: 8 }}>
+                <View style={{ width: `${pct}%`, height: "100%", backgroundColor: primary }} />
+              </View>
+              <Text style={[s.cardMeta, { marginTop: 6 }]}>{doneCount} de {courseLessons.length} aula(s)</Text>
+              {pct === 100 && courseLessons.length > 0 && (
+                <Text style={{ marginTop: 8, color: "#16a34a", fontWeight: "700" }}>🎉 Curso concluído! Fale com a liderança sobre o certificado.</Text>
+              )}
+            </View>
+
+            {sortedModules.length === 0 ? (
+              <View style={[s.center, { padding: 24 }]}>
+                <Text style={s.cardMeta}>Este curso ainda não tem aulas publicadas.</Text>
+              </View>
+            ) : sortedModules.map((mod) => {
+              const modLessons = lessons.filter((l) => l.moduleId === mod.id).sort((a, b) => a.sortOrder - b.sortOrder);
+              return (
+                <View key={mod.id} style={s.card}>
+                  <Text style={[s.sectionTitle, { marginTop: 0 }]}>{mod.title}</Text>
+                  {modLessons.length === 0 ? (
+                    <Text style={s.cardMeta}>Sem aulas neste módulo ainda.</Text>
+                  ) : modLessons.map((les) => {
+                    const done = progress?.completedLessons.includes(les.id);
+                    return (
+                      <View key={les.id} style={{ borderTopWidth: 1, borderTopColor: "#eef0f2", paddingTop: 12, marginTop: 12 }}>
+                        <Text style={{ fontWeight: "700", color: BRAND_DARK }}>{les.title}</Text>
+                        <Text style={s.cardMeta}>{les.durationMinutes} min</Text>
+                        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                          <TouchableOpacity onPress={() => watchLesson(les)} style={[s.cta, { backgroundColor: primary, flex: 1 }]}>
+                            <Text style={s.ctaText}>Assistir</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => toggleLesson(les)} style={[s.cta, { flex: 1, backgroundColor: done ? "#16a34a" : "#e6eaf0" }]}>
+                            <Text style={[s.ctaText, { color: done ? "#fff" : BRAND_DARK }]}>{done ? "✓ Concluída" : "Marcar concluída"}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        {les.materialUrl ? (
+                          <TouchableOpacity onPress={() => { void Linking.openURL(les.materialUrl!); }} style={{ marginTop: 10 }}>
+                            <Text style={{ color: primary, fontWeight: "600" }}>📎 Material de apoio</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    );
+  }
+
+  // Lista de cursos
+  return (
+    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
+      <ModalHeader title="Cursos" onBack={onBack} />
+      {loading ? (
+        <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando cursos..." /></View>
+      ) : courses.length === 0 ? (
+        <View style={[s.fill, s.center, { padding: 32 }]}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🎓</Text>
+          <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhum curso ainda</Text>
+          <Text style={[s.screenSub, { textAlign: "center" }]}>
+            Quando a liderança publicar cursos de capacitação, eles aparecem aqui.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+          {courses.map((c) => (
+            <TouchableOpacity key={c.id} style={s.card} onPress={() => void openCourse(c)}>
+              <Text style={s.eyebrow}>CURSO</Text>
+              <Text style={s.cardTitle}>{c.title}</Text>
+              {!!c.description && <Text style={s.cardMeta}>{c.description}</Text>}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
+                <Ionicons name="play-circle" size={18} color={primary} />
+                <Text style={{ color: primary, fontWeight: "700" }}>Começar</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pushToken, onSignOut }: {
   user: FirebaseAuthUser; tenantRuntime: TenantRuntimeSnapshot | null; events: Event[];
   groups: Group[]; dataReady: boolean; linkedOrg: Organization | null;
@@ -539,7 +717,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} />}
+          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
           {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
           {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
@@ -554,6 +732,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
           {modal === "promocoes" && <PromocoesScreen primary={primary} promotions={promotions} onBack={pop} />}
+          {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} onBack={pop} />}
         </View>
 
         {/* Tab Bar — hidden when modal is open */}
@@ -583,9 +762,9 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
 // ─── Home Tab ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica }: {
+function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos }: {
   primary: string; events: Event[]; groups: Group[]; dataReady: boolean;
-  onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void;
+  onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void; onOpenCursos: () => void;
 }) {
   const nextEvent = events[0];
   const myGroup = groups[0];
@@ -618,6 +797,7 @@ function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids
         <QuickAction icon="happy-outline" tint="#3b6d11" bg="#eaf3de" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />
         <QuickAction icon="checkbox-outline" tint="#185fa5" bg="#e6f1fb" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />
         <QuickAction icon="musical-notes" tint="#534ab7" bg="#eeedfe" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />
+        <QuickAction icon="school-outline" tint="#0f766e" bg="#e3f5f1" label="Cursos" sub="Escola de discipulado" onPress={onOpenCursos} />
       </View>
 
       {/* My cell */}
