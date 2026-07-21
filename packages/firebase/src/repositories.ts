@@ -1669,6 +1669,40 @@ export async function createGroup(
   return group;
 }
 
+export async function updateGroup(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groupId: string,
+  patch: Partial<Pick<Group, "name" | "type" | "meetingDayOfWeek" | "meetingTime" | "city" | "state" | "capacity" | "status">>
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getGroupsCollectionPath(context), groupId),
+    cleanFirestoreData({ ...patch, updatedAt: new Date().toISOString() }),
+    { merge: true }
+  );
+}
+
+export async function deleteGroup(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groupId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getGroupsCollectionPath(context), groupId));
+}
+
+export async function removeGroupMember(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  groupId: string,
+  personId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  const memberId = `${groupId}_${personId}`;
+  await deleteDoc(doc(firestore, getGroupMembersCollectionPath(context, groupId), memberId));
+}
+
 export async function fetchGroupMembers(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
