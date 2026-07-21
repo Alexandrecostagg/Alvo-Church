@@ -40,7 +40,6 @@ import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { loadLocalMemberStore } from "../../lib/local-member-store";
-import { recentPeople, activeJourneys, followUps, activeGroups, latestAttendance } from "../../lib/mock-data";
 
 const journeyLanes = [
   {
@@ -215,7 +214,8 @@ type CarePlanStep =
 type CareSignalLevel = "urgent" | "attention" | "stable";
 
 export function JourneysView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? "nossa igreja";
   const [people, setPeople] = useState<Person[]>([]);
   const [journeys, setJourneys] = useState<VisitorJourney[]>([]);
   const [tasks, setTasks] = useState<FollowUpTask[]>([]);
@@ -233,22 +233,15 @@ export function JourneysView() {
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      // Sem sessão: mostra só o que houver em cadastro local (sem mock que engana).
       const localStore = loadLocalMemberStore();
-      setStatus("Exibindo jornadas simuladas de acolhimento.");
-      // Se não houver firebase, carrega mock data
-      setPeople(mergeById(recentPeople as unknown as Person[], localStore.people));
-      setJourneys(activeJourneys as unknown as VisitorJourney[]);
-      setTasks(followUps as unknown as FollowUpTask[]);
-      setGroups(activeGroups as unknown as Group[]);
-      setGroupMembers(latestAttendance.map(a => ({
-        id: `member_${a.id}`,
-        organizationId: "org_default",
-        groupId: a.groupId,
-        personId: a.personId,
-        roleInGroup: "member",
-        joinedAt: new Date().toISOString()
-      })) as unknown as GroupMember[]);
-      setSelectedPersonId(localStore.people[0]?.id ?? recentPeople[0]?.id ?? null);
+      setStatus("Entre na sua conta para carregar as jornadas.");
+      setPeople(localStore.people as unknown as Person[]);
+      setJourneys([]);
+      setTasks([]);
+      setGroups([]);
+      setGroupMembers([]);
+      setSelectedPersonId(localStore.people[0]?.id ?? null);
       return;
     }
 
@@ -270,35 +263,20 @@ export function JourneysView() {
 
         if (cancelled) return;
 
+        // Só dados reais (+ cadastros locais legítimos) — nada de mock.
         const localStore = loadLocalMemberStore();
-        const finalPeople = mergeById(
-          nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]),
-          localStore.people
-        );
-        const finalJourneys = nextJourneys.length > 0 ? nextJourneys : (activeJourneys as unknown as VisitorJourney[]);
-        const finalTasks = nextTasks.length > 0 ? nextTasks : (followUps as unknown as FollowUpTask[]);
-        const finalGroups = nextGroups.length > 0 ? nextGroups : (activeGroups as unknown as Group[]);
-        const finalGroupMembers = nextGroupMembers.length > 0 ? nextGroupMembers : (latestAttendance.map(a => ({
-          id: `member_${a.id}`,
-          organizationId,
-          groupId: a.groupId,
-          personId: a.personId,
-          roleInGroup: "member",
-          joinedAt: new Date().toISOString()
-        })) as unknown as GroupMember[]);
+        const finalPeople = mergeById(nextPeople, localStore.people);
 
         setPeople(finalPeople);
-        setJourneys(finalJourneys);
-        setTasks(finalTasks);
-        setGroups(finalGroups);
-        setGroupMembers(finalGroupMembers);
+        setJourneys(nextJourneys);
+        setTasks(nextTasks);
+        setGroups(nextGroups);
+        setGroupMembers(nextGroupMembers);
         setSelectedPersonId((currentId) => currentId ?? finalPeople[0]?.id ?? null);
-        setStatus(
-          `${nextPeople.length} pessoa(s) sincronizada(s) no Firestore. ${localStore.people.length} cadastro(s) local(is) disponível(is).`
-        );
+        setStatus(`${finalPeople.length} pessoa(s) na jornada de integração.`);
       } catch (error) {
         if (!cancelled) {
-          setStatus("Exibindo jornadas simuladas para segurança operacional.");
+          setStatus("Não foi possível carregar as jornadas.");
         }
       }
     }
@@ -441,7 +419,7 @@ export function JourneysView() {
     return [
       {
         title: "Acolhimento Inicial",
-        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração do Plataforma Esdras! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`
+        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração da ${orgName}! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`
       },
       {
         title: "Convite para Célula",
@@ -452,7 +430,7 @@ export function JourneysView() {
         body: `Olá, ${firstName}! Tudo bem? Passando para saber como foi sua semana. Estamos preparando nossos próximos passos e reuniões da equipe, e sua presença é fundamental para o fortalecimento da nossa igreja. Deus te abençoe!`
       }
     ];
-  }, [selectedPerson, selectedGroup, suggestedGroup]);
+  }, [selectedPerson, selectedGroup, suggestedGroup, orgName]);
 
   // Atualiza o rascunho de WhatsApp quando o membro ou o template é selecionado
   useEffect(() => {
@@ -669,14 +647,9 @@ export function JourneysView() {
   }
 
   return (
-    <main 
-      className="form-page journeys-page animate-entrance" 
-      style={{ 
-        maxWidth: 1440, 
-        padding: "2rem",
-        ["--alvo-accent" as string]: "#2f6f8f",
-        ["--alvo-accent-soft" as string]: "rgba(47, 111, 143, 0.10)",
-        ["--alvo-accent-dark" as string]: "#255a75",
+    <main
+      className="page-root journeys-page animate-entrance"
+      style={{
         ["--alvo-blue" as string]: "#2f6f8f",
         ["--alvo-blue-soft" as string]: "rgba(47, 111, 143, 0.10)",
         ["--alvo-green" as string]: "#10b981",
@@ -684,40 +657,6 @@ export function JourneysView() {
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: `
-        body:has(.journeys-page) {
-          background: linear-gradient(135deg, #f8fafc 0%, #eef6fb 46%, #f7fbf8 100%) !important;
-        }
-        body:has(.journeys-page) canvas {
-          opacity: 0.08 !important;
-          filter: saturate(0.35) brightness(1.45) !important;
-        }
-        body:has(.journeys-page) .app-container,
-        body:has(.journeys-page) .main-content,
-        body:has(.journeys-page) .content-area {
-          background: transparent !important;
-        }
-        .journeys-page {
-          max-width: 1480px !important;
-          padding: 32px !important;
-          color: var(--alvo-ink) !important;
-          background: transparent !important;
-        }
-        .journeys-page .journeys-hero {
-          background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.88)) !important;
-          border: 1px solid var(--alvo-line) !important;
-          border-radius: 28px !important;
-          padding: 28px !important;
-          box-shadow: var(--alvo-shadow-soft) !important;
-        }
-        .journeys-page .journeys-hero h1 {
-          color: var(--alvo-ink) !important;
-          font-size: clamp(42px, 5vw, 74px) !important;
-          line-height: 0.96 !important;
-          max-width: 920px !important;
-        }
-        .journeys-page .journeys-hero p {
-          color: var(--alvo-ink-soft) !important;
-        }
         .journeys-page .back-link {
           background: #ffffff !important;
           border: 1px solid var(--alvo-line) !important;
@@ -929,61 +868,54 @@ export function JourneysView() {
         }
       `}} />
       
-      {/* Hero Central de Acolhimento */}
-      <section className="journeys-hero page-header" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
+      {/* Cabeçalho padrão */}
+      <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Jornadas de Integração</h1>
           <p className="page-subtitle">
             Gerencie gargalos ativos, acompanhe a evolução de visitantes para a aliança de membresia e monitore a inserção em células.
           </p>
         </div>
-        <aside className="journey-health-card active-bottleneck-card" style={{ backgroundColor: "rgba(30, 41, 59, 0.15)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: 24, padding: "1.5rem", minWidth: 260, boxShadow: "0 0 15px rgba(245, 158, 11, 0.08)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <AlertTriangle size={24} style={{ color: "#f59e0b", filter: "drop-shadow(0 0 5px rgba(245, 158, 11, 0.5))" }} />
-            <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 800 }}>ALERTAS CRÍTICOS</span>
-          </div>
-          <strong style={{ fontSize: "1.15rem", display: "block", color: "white", marginTop: 8, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            {visitorsWithoutContact.length + aspirantsWithoutCell.length + membersWithoutCell.length}
-          </strong>
-          <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 700 }}>Gargalos de cuidado ativos</span>
-          
-          {/* Firestore Pulsing Sync Radar */}
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)" }}>
-            <span className={`sync-pulse ${configured && firebaseReady ? 'active' : 'simulated'}`}></span>
-            <span style={{ fontSize: "0.7rem", fontWeight: 800, color: configured && firebaseReady ? '#10b981' : '#f59e0b', letterSpacing: "0.03em" }}>
-              {configured && firebaseReady ? 'ONLINE / FIRESTORE ACTIVE' : 'MODO SIMULADO / OFFLINE'}
-            </span>
-          </div>
-        </aside>
-      </section>
+      </header>
 
-      {/* Cartões de Alerta de Triagem (Gargalos) */}
-      <section className="journey-bottleneck-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1rem", marginTop: "2rem" }}>
-        <BottleneckCard
-          label="Sem Primeiro Contato"
-          value={visitorsWithoutContact.length}
-          detail="Novos visitantes sem boas-vindas"
-          color="#3b82f6"
-        />
-        <BottleneckCard
-          label="Aspirantes sem Célula"
-          value={aspirantsWithoutCell.length}
-          detail="Frequentadores fora de células"
-          color="#f59e0b"
-        />
-        <BottleneckCard
-          label="Membros sem Célula"
-          value={membersWithoutCell.length}
-          detail="Aliançados sem grupo comunitário"
-          color="#8b5cf6"
-        />
-        <BottleneckCard
-          label="Decisões de Membresia"
-          value={readyForMembership.length}
-          detail="Jornadas completas para efetivar"
-          color="#10b981"
-        />
-      </section>
+      {/* KPIs — gargalos de cuidado (design system padrão) */}
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}><AlertTriangle size={20} /></div>
+          <div className="stat-body">
+            <span className="stat-label">Alertas críticos</span>
+            <span className="stat-value">{visitorsWithoutContact.length + aspirantsWithoutCell.length + membersWithoutCell.length}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(59,130,246,0.12)", color: "#2563eb" }}><ClipboardList size={20} /></div>
+          <div className="stat-body">
+            <span className="stat-label">Sem primeiro contato</span>
+            <span className="stat-value">{visitorsWithoutContact.length}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}><MessageSquareText size={20} /></div>
+          <div className="stat-body">
+            <span className="stat-label">Aspirantes sem célula</span>
+            <span className="stat-value">{aspirantsWithoutCell.length}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(139,92,246,0.12)", color: "#7c3aed" }}><UsersRound size={20} /></div>
+          <div className="stat-body">
+            <span className="stat-label">Membros sem célula</span>
+            <span className="stat-value">{membersWithoutCell.length}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(16,185,129,0.12)", color: "#059669" }}><Award size={20} /></div>
+          <div className="stat-body">
+            <span className="stat-label">Decisões de membresia</span>
+            <span className="stat-value">{readyForMembership.length}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Triagem Pastoral Kanban Swimlanes */}
       <section className="journey-command-panel" style={{ marginTop: "3rem" }}>
