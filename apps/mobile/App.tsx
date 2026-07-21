@@ -470,8 +470,8 @@ function PromocoesScreen({ primary, promotions, onBack }: {
 // Escola de discipulado no app: o membro navega pelos cursos, assiste a aula
 // (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
 // que a Escola EAD do web usa.
-function CursosScreen({ primary, orgId, user, onBack }: {
-  primary: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
+function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
+  primary: string; orgId: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
 }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -480,6 +480,7 @@ function CursosScreen({ primary, orgId, user, onBack }: {
   const [progress, setProgress] = useState<MemberCourseProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCourse, setLoadingCourse] = useState(false);
+  const [showCertificate, setShowCertificate] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -549,6 +550,61 @@ function CursosScreen({ primary, orgId, user, onBack }: {
     const doneCount = progress ? courseLessons.filter((l) => progress.completedLessons.includes(l.id)).length : 0;
     const pct = courseLessons.length ? Math.round((doneCount / courseLessons.length) * 100) : 0;
     const sortedModules = modules.filter((m) => m.courseId === selectedCourse.id).sort((a, b) => a.sortOrder - b.sortOrder);
+    const memberName = user.displayName ?? user.email ?? "Membro";
+    const completedDate = progress?.completedAt ?? progress?.updatedAt ?? new Date().toISOString();
+
+    // Certificado de conclusão — logo da igreja, nome do membro e do professor
+    if (showCertificate) {
+      const instructorLine = selectedCourse.instructorName
+        ? `${selectedCourse.instructorTitle ? selectedCourse.instructorTitle + " " : ""}${selectedCourse.instructorName}`
+        : null;
+      const dateLabel = new Date(completedDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+      const shareCertificate = async () => {
+        try {
+          await Share.share({
+            message: `🎓 Certificado de Conclusão\n\n${memberName} concluiu o curso "${selectedCourse.title}" por ${orgName}.${instructorLine ? `\nMinistrado por ${instructorLine}.` : ""}\nConcluído em ${dateLabel}.`
+          });
+        } catch {}
+      };
+      return (
+        <View style={[s.fill, { backgroundColor: "#0f1b2d" }]}>
+          <ModalHeader title="Certificado" onBack={() => setShowCertificate(false)} />
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+            <View style={cert.frame}>
+              <View style={cert.inner}>
+                {logoUrl ? (
+                  <Image source={{ uri: logoUrl }} style={cert.logo} resizeMode="contain" />
+                ) : (
+                  <Text style={cert.church}>{orgName}</Text>
+                )}
+                {logoUrl ? <Text style={cert.church}>{orgName}</Text> : null}
+                <View style={cert.divider} />
+                <Text style={cert.eyebrow}>CERTIFICADO DE CONCLUSÃO</Text>
+                <Text style={cert.certifies}>Certificamos que</Text>
+                <Text style={cert.name}>{memberName}</Text>
+                <Text style={cert.body}>concluiu com êxito o curso</Text>
+                <Text style={cert.course}>{selectedCourse.title}</Text>
+                {instructorLine ? (
+                  <>
+                    <Text style={[cert.body, { marginTop: 14 }]}>Ministrado por</Text>
+                    <Text style={cert.instructor}>{instructorLine}</Text>
+                  </>
+                ) : null}
+                <Text style={cert.date}>Concluído em {dateLabel}</Text>
+                <Text style={cert.seal}>🎓</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => void shareCertificate()} style={[s.cta, { backgroundColor: primary }]}>
+              <Text style={s.ctaText}>Compartilhar certificado</Text>
+            </TouchableOpacity>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" }}>
+              Dica: tire um print desta tela para guardar ou imprimir seu certificado.
+            </Text>
+          </ScrollView>
+        </View>
+      );
+    }
+
     return (
       <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
         <ModalHeader title={selectedCourse.title} onBack={() => setSelectedCourse(null)} />
@@ -564,7 +620,12 @@ function CursosScreen({ primary, orgId, user, onBack }: {
               </View>
               <Text style={[s.cardMeta, { marginTop: 6 }]}>{doneCount} de {courseLessons.length} aula(s)</Text>
               {pct === 100 && courseLessons.length > 0 && (
-                <Text style={{ marginTop: 8, color: "#16a34a", fontWeight: "700" }}>🎉 Curso concluído! Fale com a liderança sobre o certificado.</Text>
+                <>
+                  <Text style={{ marginTop: 8, color: "#16a34a", fontWeight: "700" }}>🎉 Curso concluído! Seu certificado está pronto.</Text>
+                  <TouchableOpacity onPress={() => setShowCertificate(true)} style={[s.cta, { backgroundColor: primary, marginTop: 10 }]}>
+                    <Text style={s.ctaText}>🎓 Ver certificado</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
 
@@ -661,6 +722,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
   const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_alvo_demo";
+  const brandLogo = tenantRuntime?.settings?.branding?.logoLightUrl ?? tenantRuntime?.settings?.branding?.logoDarkUrl ?? tenantRuntime?.settings?.branding?.iconUrl ?? undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -732,7 +794,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
           {modal === "promocoes" && <PromocoesScreen primary={primary} promotions={promotions} onBack={pop} />}
-          {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} onBack={pop} />}
+          {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} orgName={orgName} logoUrl={brandLogo} onBack={pop} />}
         </View>
 
         {/* Tab Bar — hidden when modal is open */}
@@ -2454,6 +2516,23 @@ function nextDow(dow: number, hour: number): string {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
+// Certificado de conclusão (moldura dourada sobre fundo escuro)
+const cert = StyleSheet.create({
+  frame: { backgroundColor: "#c9a24b", borderRadius: 16, padding: 6 },
+  inner: { backgroundColor: "#fffdf7", borderRadius: 12, borderWidth: 1, borderColor: "#e6d9b3", paddingVertical: 28, paddingHorizontal: 20, alignItems: "center" },
+  logo: { width: 120, height: 60, marginBottom: 8 },
+  church: { fontSize: 15, fontWeight: "800", color: "#0f1b2d", letterSpacing: 0.5, textAlign: "center" },
+  divider: { width: 48, height: 3, borderRadius: 2, backgroundColor: "#c9a24b", marginVertical: 14 },
+  eyebrow: { fontSize: 12, fontWeight: "800", letterSpacing: 2, color: "#c9a24b" },
+  certifies: { fontSize: 13, color: "#5b6472", marginTop: 16 },
+  name: { fontSize: 26, fontWeight: "800", color: "#0f1b2d", textAlign: "center", marginTop: 4, marginBottom: 4 },
+  body: { fontSize: 13, color: "#5b6472", textAlign: "center" },
+  course: { fontSize: 18, fontWeight: "700", color: "#0f1b2d", textAlign: "center", marginTop: 4 },
+  instructor: { fontSize: 15, fontWeight: "700", color: "#0f1b2d", textAlign: "center", marginTop: 2 },
+  date: { fontSize: 12, color: "#8a93a1", marginTop: 18 },
+  seal: { fontSize: 34, marginTop: 10 },
+});
 
 const s = StyleSheet.create({
   fill: { flex: 1 },

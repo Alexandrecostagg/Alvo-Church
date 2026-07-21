@@ -1298,6 +1298,8 @@ export interface Course {
   title: string;
   description: string;
   thumbnailUrl?: string;
+  instructorName?: string;  // Nome do ministrador/professor — impresso no certificado
+  instructorTitle?: string; // Cargo opcional (ex.: "Pastor", "Professora") exibido antes do nome
   badgeUnlockedId?: string; // Destrava Badge do Esdras Journeys ao concluir
   isActive: boolean;
   createdAt: string;

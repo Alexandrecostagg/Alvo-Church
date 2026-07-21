@@ -40,7 +40,7 @@ export function CourseManagerView() {
   const [saving, setSaving] = useState(false);
 
   // Formulário do curso selecionado (edição do cabeçalho).
-  const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnailUrl: "" });
+  const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnailUrl: "", instructorName: "", instructorTitle: "" });
   // Novo módulo.
   const [moduleTitle, setModuleTitle] = useState("");
   // Nova aula por módulo (map moduleId -> rascunho).
@@ -66,7 +66,9 @@ export function CourseManagerView() {
     setCourseForm({
       title: selectedCourse?.title ?? "",
       description: selectedCourse?.description ?? "",
-      thumbnailUrl: selectedCourse?.thumbnailUrl ?? ""
+      thumbnailUrl: selectedCourse?.thumbnailUrl ?? "",
+      instructorName: selectedCourse?.instructorName ?? "",
+      instructorTitle: selectedCourse?.instructorTitle ?? ""
     });
     Promise.all([
       fetchCourseModules(firebaseConfig, { organizationId }, selectedCourseId),
@@ -112,7 +114,9 @@ export function CourseManagerView() {
       ...selectedCourse,
       title: courseForm.title.trim(),
       description: courseForm.description.trim(),
-      thumbnailUrl: courseForm.thumbnailUrl.trim() || undefined
+      thumbnailUrl: courseForm.thumbnailUrl.trim() || undefined,
+      instructorName: courseForm.instructorName.trim() || undefined,
+      instructorTitle: courseForm.instructorTitle.trim() || undefined
     };
     try {
       await saveCourse(firebaseConfig, { organizationId }, updated);
@@ -306,6 +310,14 @@ export function CourseManagerView() {
                 <label style={labelStyle}>Descrição
                   <textarea rows={2} value={courseForm.description} onChange={(e) => setCourseForm((f) => ({ ...f, description: e.target.value }))} style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
                 </label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <label style={{ ...labelStyle, flex: 2, minWidth: 200 }}>Professor / Ministrante
+                    <input type="text" placeholder="Nome de quem assina o certificado" value={courseForm.instructorName} onChange={(e) => setCourseForm((f) => ({ ...f, instructorName: e.target.value }))} style={inputStyle} />
+                  </label>
+                  <label style={{ ...labelStyle, flex: 1, minWidth: 130 }}>Cargo (opcional)
+                    <input type="text" placeholder="Ex.: Pastor" value={courseForm.instructorTitle} onChange={(e) => setCourseForm((f) => ({ ...f, instructorTitle: e.target.value }))} style={inputStyle} />
+                  </label>
+                </div>
                 <label style={labelStyle}>Imagem de capa (link, opcional)
                   <input type="url" placeholder="https://..." value={courseForm.thumbnailUrl} onChange={(e) => setCourseForm((f) => ({ ...f, thumbnailUrl: e.target.value }))} style={inputStyle} />
                 </label>

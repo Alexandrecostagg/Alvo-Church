@@ -2726,6 +2726,8 @@ function toCourse(documentId: string, data: DocumentData): Course {
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
     thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : undefined,
+    instructorName: data.instructorName ? String(data.instructorName) : undefined,
+    instructorTitle: data.instructorTitle ? String(data.instructorTitle) : undefined,
     badgeUnlockedId: data.badgeUnlockedId ? String(data.badgeUnlockedId) : undefined,
     isActive: Boolean(data.isActive),
     createdAt: String(data.createdAt ?? "")
