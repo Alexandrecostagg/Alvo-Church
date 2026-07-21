@@ -2942,6 +2942,35 @@ export async function saveLesson(
   );
 }
 
+export async function deleteCourse(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  courseId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getCoursesCollectionPath(context), courseId));
+}
+
+export async function deleteCourseModule(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  courseId: string,
+  moduleId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getCourseModulesCollectionPath(context, courseId), moduleId));
+}
+
+export async function deleteLesson(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  courseId: string,
+  lessonId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getLessonsCollectionPath(context, courseId), lessonId));
+}
+
 // ─── Loja de Capacitação (catálogo global + entitlements por org) ──────────────
 
 function toTrainingProgram(documentId: string, data: DocumentData): TrainingProgram {

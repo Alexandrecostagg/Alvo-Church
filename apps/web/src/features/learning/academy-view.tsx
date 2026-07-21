@@ -15,9 +15,10 @@ import {
   Download, 
   FileText, 
   Lock, 
-  User, 
-  Check, 
-  Printer 
+  User,
+  Check,
+  Printer,
+  Settings
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { MOCK_COURSES, MOCK_COURSE_MODULES, MOCK_LESSONS, MOCK_MEMBER_COURSE_PROGRESS } from "../../lib/mock-data";
@@ -292,6 +293,11 @@ export function AcademyView() {
               Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
             </p>
           </div>
+          <div className="page-header-actions">
+            <Link href="/learning/manage" className="btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+              <Settings size={16} /> Gerenciar cursos
+            </Link>
+          </div>
         </header>
         <div className="empty-state" style={{ padding: "40px 0" }}>
           <GraduationCap size={40} strokeWidth={1.4} style={{ margin: "0 auto 10px", color: "var(--alvo-line)" }} />
@@ -525,6 +531,11 @@ export function AcademyView() {
           <p className="page-subtitle">
             Capacitação contínua para liderança de células, pastoreio de tribos e alta maturidade teológica.
           </p>
+        </div>
+        <div className="page-header-actions">
+          <Link href="/learning/manage" className="btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+            <Settings size={16} /> Gerenciar cursos
+          </Link>
         </div>
       </header>
 
