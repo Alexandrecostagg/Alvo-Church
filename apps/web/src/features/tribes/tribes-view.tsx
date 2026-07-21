@@ -895,12 +895,13 @@ function buildTribeNotifyHref(
   const phone = normalizeBrPhone(person.whatsappPhone || person.mobilePhone);
   if (!phone) return "";
   const first = person.preferredName || person.firstName || "";
+  const church = orgName.replace(/\s*\(\s*demo\s*\)/gi, "").trim() || "nossa igreja";
   const msg =
-    `Olá ${first}! 🎪\n\n` +
-    `Na ${orgName}, identificamos que a sua tribo ministerial é a *Tribo de ${tribeName}*.\n\n` +
-    `✨ O que significa: ${tribeDescription}\n` +
-    `🙌 Onde você mais floresce servindo: ${tribeMinistry}\n\n` +
-    `Que alegria caminhar com você! 🙏`;
+    `Olá ${first}!\n\n` +
+    `Na ${church}, identificamos que a sua tribo ministerial é a *Tribo de ${tribeName}*.\n\n` +
+    `O que significa: ${tribeDescription}\n` +
+    `Onde você mais floresce servindo: ${tribeMinistry}\n\n` +
+    `Que alegria caminhar com você!`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 
