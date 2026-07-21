@@ -864,7 +864,7 @@ export function GroupsView() {
                   <strong>{selectedGroup.city ?? "Não informado"}</strong>
                 </div>
                 <div>
-                  <span>Participantes</span>
+                  <span>Membros</span>
                   <strong>{selectedMembers.length}</strong>
                 </div>
                 <div>

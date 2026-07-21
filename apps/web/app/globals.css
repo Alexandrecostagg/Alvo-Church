@@ -4172,6 +4172,23 @@ code {
   margin-top: 6px;
 }
 
+/* A regra global (h1..span { word-break: break-word }) cortava rótulos no meio
+   da palavra ("CÉLULA SELECIONA/DA", "PARTICIPANTE/S"). Estes seletores têm
+   especificidade maior e restauram a quebra só entre palavras. */
+.eyebrow,
+.group-detail-grid span,
+.group-detail-panel .section-heading h2 {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Garante largura mínima pra área de título não ser espremida pelos botões de
+   ação (Gerar Banner, Abrir encontro, Editar, Excluir...). */
+.group-detail-panel .section-heading > div:first-child {
+  min-width: 170px;
+  flex: 1 1 auto;
+}
+
 .group-columns {
   display: grid;
   gap: 12px;
