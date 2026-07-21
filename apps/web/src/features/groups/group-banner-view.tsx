@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Download, RefreshCw, Sparkles, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Download, Sparkles, Image as ImageIcon, Upload, X, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { Group, GroupBannerConfig, Person } from "@alvo/types";
-import { recentPeople, activeGroups } from "../../lib/mock-data";
+import { fetchGroups, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import { useAppAuth } from "../../../app/providers";
 
 interface GroupBannerViewProps {
   groupId: string;
@@ -15,58 +15,98 @@ const COLOR_THEMES = [
   { name: "Sleek Emerald (Verde)", primary: "#10b981", secondary: "#064e3b", text: "#ffffff", accent: "#ecfdf5" },
   { name: "Deep Ruby (Vermelho)", primary: "#dc2626", secondary: "#450a0a", text: "#ffffff", accent: "#fef2f2" },
   { name: "Royal Purple (Roxo)", primary: "#8b5cf6", secondary: "#2e1065", text: "#ffffff", accent: "#faf5ff" },
-  { name: "Midnight Teal (Turquesa)", primary: "#0d9488", secondary: "#115e59", text: "#ffffff", accent: "#f0fdfa" }
+  { name: "Midnight Teal (Turquesa)", primary: "#0d9488", secondary: "#115e59", text: "#ffffff", accent: "#f0fdfa" },
+  { name: "Gospel Azul", primary: "#2563eb", secondary: "#1e3a8a", text: "#ffffff", accent: "#eff6ff" },
+  { name: "Junino (Festa)", primary: "#f59e0b", secondary: "#7c2d12", text: "#ffffff", accent: "#fffbeb" },
+  { name: "Natal", primary: "#dc2626", secondary: "#064e3b", text: "#ffffff", accent: "#fef2f2" }
 ];
 
+const WEEKDAY_LABELS = [
+  "Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"
+];
+
+// Desenha uma imagem preenchendo (cover) um círculo de raio r centrado em (cx, cy).
+function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, r: number) {
+  const size = r * 2;
+  const scale = Math.max(size / img.width, size / img.height);
+  const drawW = img.width * scale;
+  const drawH = img.height * scale;
+  ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+}
+
 export function GroupBannerView({ groupId }: GroupBannerViewProps) {
-  const group = activeGroups.find((g) => g.id === groupId) ?? {
-    id: groupId,
-    name: "Minha Célula",
-    type: "cell",
-    meetingDayOfWeek: 3,
-    meetingTime: "19:30",
-    city: "Belém",
-    state: "PA"
-  };
+  const { organizationId, firebaseConfig, user, configured, firebaseReady } = useAppAuth();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [themeIndex, setThemeIndex] = useState(0);
   const [format, setFormat] = useState<"feed" | "story">("feed");
-  const [title, setTitle] = useState<string>(group.name);
+  const [title, setTitle] = useState("Minha Célula");
   const [subtitle, setSubtitle] = useState("Viver em Família e Comunhão");
   const [customText, setCustomText] = useState("Você é nosso convidado especial!");
   const [customAddress, setCustomAddress] = useState("Endereço da Célula");
   const [meetingDay, setMeetingDay] = useState("Quarta-feira");
-  const [meetingTime, setMeetingTime] = useState<string>(group.meetingTime ?? "19:30");
+  const [meetingTime, setMeetingTime] = useState("19:30");
+  const [highlight, setHighlight] = useState("");
+  const [mainImage, setMainImage] = useState<HTMLImageElement | null>(null);
+  const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const theme = COLOR_THEMES[themeIndex];
 
-  // Função para desenhar no Canvas
+  // Carrega a célula REAL do Firestore e pré-preenche os campos (uma vez).
+  useEffect(() => {
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const groups = await fetchGroups(firebaseConfig, { organizationId }, 100);
+        const group = groups.find((g) => g.id === groupId);
+        if (cancelled || !group) return;
+        setTitle(group.name);
+        if (typeof group.meetingDayOfWeek === "number" && WEEKDAY_LABELS[group.meetingDayOfWeek]) {
+          setMeetingDay(WEEKDAY_LABELS[group.meetingDayOfWeek]);
+        }
+        if (group.meetingTime) setMeetingTime(group.meetingTime);
+        const addr = [group.city, group.state].filter(Boolean).join(" - ");
+        if (addr) setCustomAddress(addr);
+      } catch (e) {
+        console.error("Falha ao carregar a célula para o banner:", e);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [configured, firebaseReady, user, firebaseConfig, organizationId, groupId]);
+
+  function onImageFile(file: File, setter: (img: HTMLImageElement | null) => void) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => setter(img);
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
   const drawBanner = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Resoluções solicitadas para compartilhamento mobile excelente
-    // Feed Instagram: 1080x1350 (4:5)
-    // Story: 1080x1920 (9:16)
     const width = 1080;
     const height = format === "feed" ? 1350 : 1920;
-
     canvas.width = width;
     canvas.height = height;
 
-    // 1. Fundo Gradiente Sombrio Premium
+    // 1. Fundo gradiente premium
     const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
     bgGradient.addColorStop(0, theme.secondary);
-    bgGradient.addColorStop(0.7, "#0f172a"); // Cor profunda escura
+    bgGradient.addColorStop(0.7, "#0f172a");
     bgGradient.addColorStop(1, theme.secondary);
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Detalhes de Background Abstrato / Círculos de Brilho
+    // 2. Brilho radial
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = theme.primary;
     ctx.beginPath();
@@ -74,56 +114,89 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
-    // 3. Moldura Geométrica Fina
+    // 3. Moldura fina
     ctx.strokeStyle = theme.primary;
     ctx.lineWidth = 4;
     ctx.strokeRect(30, 30, width - 60, height - 60);
 
-    // 4. Marca D'Água / Logo da Igreja Estilizada Esdras
+    // 4. Logo da célula (se enviada) — círculo pequeno no topo; senão, texto marca.
     ctx.textAlign = "center";
-    ctx.fillStyle = theme.primary;
-    ctx.font = "bold 28px Outfit, sans-serif";
-    ctx.fillText("ALVO CHURCH • COMUNIDADE", width / 2, 80);
+    if (logoImage) {
+      const ly = 120;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(width / 2, ly, 52, 0, Math.PI * 2);
+      ctx.clip();
+      drawImageCover(ctx, logoImage, width / 2, ly, 52);
+      ctx.restore();
+      ctx.strokeStyle = theme.primary;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(width / 2, ly, 52, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = theme.primary;
+      ctx.font = "bold 28px Outfit, sans-serif";
+      ctx.fillText("ALVO CHURCH • COMUNIDADE", width / 2, 80);
+      ctx.beginPath();
+      ctx.moveTo(width / 2 - 80, 110);
+      ctx.lineTo(width / 2 + 80, 110);
+      ctx.strokeStyle = theme.primary;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
 
-    // 5. Linha divisória de topo
-    ctx.beginPath();
-    ctx.moveTo(width / 2 - 80, 110);
-    ctx.lineTo(width / 2 + 80, 110);
-    ctx.strokeStyle = theme.primary;
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    // 5. Faixa de DESTAQUE (convidado / ocasião), se preenchida
+    if (highlight.trim()) {
+      const badgeY = height * 0.19;
+      const label = highlight.trim().toUpperCase();
+      ctx.font = "bold 30px Outfit, sans-serif";
+      const textW = ctx.measureText(label).width;
+      const padX = 32;
+      const badgeW = textW + padX * 2;
+      const badgeH = 60;
+      const badgeX = width / 2 - badgeW / 2;
+      ctx.fillStyle = theme.primary;
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY - badgeH / 2, badgeW, badgeH, 30);
+      ctx.fill();
+      ctx.fillStyle = theme.secondary;
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, width / 2, badgeY + 2);
+      ctx.textBaseline = "alphabetic";
+    }
 
-    // 6. Título do Flyer (Nome da Célula)
-    ctx.textAlign = "center";
+    // 6. Título (nome da célula)
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 72px Outfit, sans-serif";
     ctx.fillText(title.toUpperCase(), width / 2, height * 0.28);
 
-    // 7. Subtítulo (Slogan)
+    // 7. Subtítulo
     ctx.fillStyle = theme.primary;
     ctx.font = "italic 36px Outfit, sans-serif";
     ctx.fillText(subtitle, width / 2, height * 0.33);
 
-    // 8. Desenhar Círculo Central da Célula (Ícone ou Imagem de Comunhão)
+    // 8. Círculo central — imagem principal (convidado/tema) ou ícone padrão
     const centerY = height * 0.5;
     ctx.save();
     ctx.beginPath();
     ctx.arc(width / 2, centerY, 160, 0, Math.PI * 2);
     ctx.clip();
-    
-    // Gradiente de preenchimento para placeholder de foto
-    const circleGrad = ctx.createRadialGradient(width / 2, centerY, 20, width / 2, centerY, 160);
-    circleGrad.addColorStop(0, theme.primary);
-    circleGrad.addColorStop(1, "#1e293b");
-    ctx.fillStyle = circleGrad;
-    ctx.fillRect(width / 2 - 160, centerY - 160, 320, 320);
-
-    // Desenha ícone de comunidade dentro do círculo
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "bold 120px sans-serif";
-    ctx.fillText("👥", width / 2, centerY);
+    if (mainImage) {
+      drawImageCover(ctx, mainImage, width / 2, centerY, 160);
+    } else {
+      const circleGrad = ctx.createRadialGradient(width / 2, centerY, 20, width / 2, centerY, 160);
+      circleGrad.addColorStop(0, theme.primary);
+      circleGrad.addColorStop(1, "#1e293b");
+      ctx.fillStyle = circleGrad;
+      ctx.fillRect(width / 2 - 160, centerY - 160, 320, 320);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 120px sans-serif";
+      ctx.fillText("👥", width / 2, centerY);
+      ctx.textBaseline = "alphabetic";
+    }
     ctx.restore();
 
     // Borda do círculo central
@@ -133,13 +206,11 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.arc(width / 2, centerY, 160, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 9. Caixa de Informações (Local, Dia, Horário)
+    // 9. Caixa de informações (dia, hora, endereço)
     const boxWidth = width - 180;
     const boxHeight = 240;
     const boxX = 90;
     const boxY = height * 0.65;
-
-    // Fundo translúcido (Glassmorphism)
     ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctx.lineWidth = 2;
@@ -148,16 +219,12 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.fill();
     ctx.stroke();
 
-    // Textos de Informações
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    
-    // Dia e Hora
     ctx.font = "bold 42px Outfit, sans-serif";
     ctx.fillText(`${meetingDay.toUpperCase()} às ${meetingTime}h`, width / 2, boxY + 70);
 
-    // Divisória sutil na caixa
     ctx.beginPath();
     ctx.moveTo(boxX + 80, boxY + 110);
     ctx.lineTo(boxX + boxWidth - 80, boxY + 110);
@@ -165,7 +232,6 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Endereço
     ctx.fillStyle = theme.accent;
     ctx.font = "30px Outfit, sans-serif";
     ctx.fillText(customAddress, width / 2, boxY + 160);
@@ -173,22 +239,22 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.fillStyle = theme.primary;
     ctx.fillText("LOCAL E ACOLHIMENTO INTEGRADO", width / 2, boxY + 200);
 
-    // 10. Frase de Fechamento / Chamada de Ação
+    // 10. Chamada de ação
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 38px Outfit, sans-serif";
     ctx.fillText(customText, width / 2, height - 120);
 
-    // 11. Rodapé Técnico
+    // 11. Rodapé
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     ctx.font = "20px Outfit, sans-serif";
     ctx.fillText("GERADO AUTOMATICAMENTE VIA ALVO CANVAS", width / 2, height - 70);
   };
 
-  // Re-renderizar o canvas quando mudar parâmetros
   useEffect(() => {
     drawBanner();
-  }, [themeIndex, format, title, subtitle, customText, customAddress, meetingDay, meetingTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeIndex, format, title, subtitle, customText, customAddress, meetingDay, meetingTime, highlight, mainImage, logoImage]);
 
   const handleDownload = () => {
     setIsGenerating(true);
@@ -197,11 +263,10 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
       setIsGenerating(false);
       return;
     }
-
     try {
       const dataUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      link.download = `banner-celula-${group.id}.png`;
+      link.download = `banner-${slugify(title)}.png`;
       link.href = dataUrl;
       link.click();
     } catch (e) {
@@ -220,7 +285,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
             Voltar para Células
           </Link>
           <p className="eyebrow" style={{ color: theme.primary }}>Esdras Canvas Engine</p>
-          <h1>Gerador de Banners de Células</h1>
+          <h1 style={{ whiteSpace: "nowrap", fontSize: "clamp(1.9rem, 4vw, 2.8rem)" }}>Gerador de Banners</h1>
           <p>
             Crie panfletos dinâmicos profissionais para WhatsApp e Instagram em 1 clique.
           </p>
@@ -228,7 +293,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
       </section>
 
       <section className="groups-workbench" style={{ gridTemplateColumns: "1fr 1fr", gap: "2.5rem" }}>
-        {/* Painel de Controles */}
+        {/* Painel de controles */}
         <aside className="quick-group-form" style={{ padding: "2rem", width: "100%" }}>
           <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: 8 }}>
             <Sparkles size={18} style={{ color: theme.primary }} />
@@ -275,6 +340,36 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           </label>
 
           <label>
+            Destaque (convidado ou ocasião) — opcional
+            <input
+              type="text"
+              value={highlight}
+              onChange={(e) => setHighlight(e.target.value)}
+              placeholder="Ex: Pr. João convidado · Especial Junino"
+            />
+          </label>
+
+          {/* Uploads de imagem */}
+          <div className="quick-group-grid" style={{ gap: "1rem", marginBottom: "1rem" }}>
+            <ImageSlot
+              label="Imagem principal"
+              hint="Foto do convidado ou tema"
+              image={mainImage}
+              onPick={(f) => onImageFile(f, setMainImage)}
+              onClear={() => setMainImage(null)}
+              accent={theme.primary}
+            />
+            <ImageSlot
+              label="Logo da célula"
+              hint="Aparece no topo (opcional)"
+              image={logoImage}
+              onPick={(f) => onImageFile(f, setLogoImage)}
+              onClear={() => setLogoImage(null)}
+              accent={theme.primary}
+            />
+          </div>
+
+          <label>
             Endereço Completo
             <input
               type="text"
@@ -318,7 +413,9 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           </label>
 
           <div style={{ marginBottom: "1.5rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "0.5rem" }}>Tema de Cores Premium</span>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, marginBottom: "0.5rem" }}>
+              <Star size={13} style={{ color: theme.primary }} /> Tema de Cores
+            </span>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {COLOR_THEMES.map((themeOption, idx) => (
                 <button
@@ -328,7 +425,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
                   style={{
                     padding: "0.5rem 0.75rem",
                     fontSize: "0.8rem",
-                    border: themeIndex === idx ? `2px solid ${themeOption.primary}` : "1px solid rgba(255,255,255,0.1)",
+                    border: themeIndex === idx ? `2px solid ${themeOption.primary}` : "1px solid rgba(255,255,255,0.15)",
                     display: "flex",
                     alignItems: "center",
                     gap: 6
@@ -354,7 +451,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           </button>
         </aside>
 
-        {/* Live Preview Panel */}
+        {/* Preview */}
         <article style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
           <p className="eyebrow" style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: 6 }}>
             <ImageIcon size={14} style={{ color: theme.primary }} />
@@ -390,4 +487,56 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
       </section>
     </main>
   );
+}
+
+function ImageSlot({
+  label, hint, image, onPick, onClear, accent
+}: {
+  label: string;
+  hint: string;
+  image: HTMLImageElement | null;
+  onPick: (file: File) => void;
+  onClear: () => void;
+  accent: string;
+}) {
+  return (
+    <div>
+      <span style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: 6 }}>{label}</span>
+      {image ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image.src} alt={label} style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: `2px solid ${accent}` }} />
+          <button type="button" className="ghost-button" onClick={onClear} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem" }}>
+            <X size={13} /> Remover
+          </button>
+        </div>
+      ) : (
+        <label
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+            padding: "12px", borderRadius: 10, border: "1.5px dashed rgba(255,255,255,0.25)", cursor: "pointer",
+            fontSize: "0.75rem", textAlign: "center", color: "rgba(255,255,255,0.7)"
+          }}
+        >
+          <Upload size={16} style={{ color: accent }} />
+          {hint}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); }}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "celula";
 }

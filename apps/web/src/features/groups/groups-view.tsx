@@ -83,6 +83,7 @@ export function GroupsView() {
   const [groupFormOpen, setGroupFormOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [meetingDate, setMeetingDate] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -341,8 +342,10 @@ export function GroupsView() {
     }
   }
 
-  async function handleDeleteGroup(group: Group) {
-    if (!window.confirm(`Excluir a célula "${group.name}"? Os vínculos e encontros dela deixam de aparecer.`)) return;
+  async function confirmDeleteGroup() {
+    const group = deleteTarget;
+    if (!group) return;
+    setDeleteTarget(null);
     setGroups((current) => current.filter((g) => g.id !== group.id));
     setGroupMembers((current) => current.filter((m) => m.groupId !== group.id));
     setSelectedGroupId((id) => (id === group.id ? null : id));
@@ -788,7 +791,7 @@ export function GroupsView() {
                   <button className="ghost-button" onClick={() => openEditGroup(selectedGroup)} type="button" title="Editar célula" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <Pencil size={14} /> Editar
                   </button>
-                  <button className="ghost-button" onClick={() => void handleDeleteGroup(selectedGroup)} type="button" title="Excluir célula" style={{ display: "flex", alignItems: "center", gap: 4, color: "#dc2626" }}>
+                  <button className="ghost-button" onClick={() => setDeleteTarget(selectedGroup)} type="button" title="Excluir célula" style={{ display: "flex", alignItems: "center", gap: 4, color: "#dc2626" }}>
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -1046,6 +1049,41 @@ export function GroupsView() {
           </div>
         </aside>
       </section>
+
+      {deleteTarget && (
+        <div
+          onClick={() => setDeleteTarget(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: 420, width: "100%", background: "var(--alvo-surface, #fff)", borderRadius: 16, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(220,38,38,0.12)", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertTriangle size={20} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--alvo-ink, #0f172a)" }}>Excluir esta célula?</h3>
+            </div>
+            <p style={{ margin: "0 0 6px", fontSize: 14, color: "var(--alvo-ink, #0f172a)" }}>
+              Você está prestes a excluir <strong>“{deleteTarget.name}”</strong>.
+            </p>
+            <p style={{ margin: "0 0 18px", fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
+              Esta ação é irreversível. Os vínculos, encontros e presenças da célula deixarão de aparecer e não poderão ser recuperados.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button className="ghost-button" onClick={() => setDeleteTarget(null)} type="button">Cancelar</button>
+              <button
+                onClick={() => void confirmDeleteGroup()}
+                type="button"
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, background: "#dc2626", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              >
+                <Trash2 size={15} /> Sim, excluir definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
