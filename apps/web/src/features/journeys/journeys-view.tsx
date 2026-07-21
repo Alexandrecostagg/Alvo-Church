@@ -2447,7 +2447,13 @@ function getCarePlan({
 }
 
 function getFullName(person: Person) {
-  return `${person.preferredName || person.firstName} ${person.lastName}`.trim();
+  const first = (person.preferredName || person.firstName || "").trim();
+  const last = (person.lastName || "").trim();
+  if (!last) return first;
+  // Evita nome duplicado quando o sobrenome já está contido no primeiro nome
+  // (ex.: firstName "Elaine Fernandes do Nascimento" + lastName "FERNANDES DO NASCIMENTO").
+  if (first.toLowerCase().includes(last.toLowerCase())) return first;
+  return `${first} ${last}`;
 }
 
 function normalizeSearch(value: string) {
