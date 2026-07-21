@@ -721,13 +721,17 @@ export function JourneysView() {
         }
         .journeys-page .journey-lane-description {
           display: block !important;
-          /* Alinhado à esquerda: o espaço entre palavras é sempre único e nunca
-             estica (justify criava buracos feios). Largura fixa em ch: o bloco não
-             depende da coluna, então a quebra é a mesma com o menu aberto ou fechado. */
+          /* Justificado com hifenização: a hifenização preenche as linhas e
+             reduz os buracos que o justify criava. text-align-last: left evita
+             esticar a última linha. Largura fixa em ch mantém a quebra estável
+             ao alternar o menu lateral. */
           width: 24ch !important;
           max-width: 100% !important;
           min-width: 0 !important;
-          text-align: left !important;
+          text-align: justify !important;
+          text-align-last: left !important;
+          hyphens: auto !important;
+          -webkit-hyphens: auto !important;
           color: var(--alvo-ink-soft) !important;
           background: transparent !important;
           border: 0 !important;
@@ -1018,7 +1022,7 @@ export function JourneysView() {
                 <div style={{ color: lane.color }}><lane.icon size={20} /></div>
                 <div style={{ flex: 1 }}>
                   <strong className="journey-lane-title" style={{ color: "var(--alvo-ink)", display: "block", fontSize: "1rem", fontWeight: 800 }}>{lane.title}</strong>
-                  <span className="journey-lane-description" style={{ color: "var(--alvo-ink-soft)", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
+                  <span lang="pt-BR" className="journey-lane-description" style={{ color: "var(--alvo-ink-soft)", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
                 </div>
                 <span className="journey-lane-count" style={{ background: "#f8fafc", color: "var(--alvo-ink)", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
                   {lane.people.length}
