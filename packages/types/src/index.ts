@@ -119,6 +119,23 @@ export interface GivingIntent {
   createdAt: string;
 }
 
+// Campanha de oferta: arrecadação com meta pra um projeto/causa (ex: reforma,
+// missões). raisedAmount é atualizado pela liderança conforme o PIX entra
+// (a plataforma nunca custodia dinheiro).
+export interface GivingCampaign {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string;
+  category?: string;
+  goalAmount: number;
+  raisedAmount: number;
+  status: "active" | "closed";
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OrganizationSubscriptionSettings {
   organizationId: string;
   planCode: string;

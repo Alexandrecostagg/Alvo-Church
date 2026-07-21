@@ -112,6 +112,11 @@ export function getVisitorIntakesCollectionPath(context: TenantContext) {
 }
 
 // Doação pública sem-app: leads/intenções captadas no /p/{slug}/give.
+// Campanhas de oferta (metas de arrecadação).
+export function getGivingCampaignsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/givingCampaigns`;
+}
+
 export function getGivingIntentsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/givingIntents`;
 }

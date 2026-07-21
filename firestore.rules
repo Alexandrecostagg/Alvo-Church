@@ -288,6 +288,13 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Campanhas de oferta (metas de arrecadação): gestão só do time (admin);
+    // membro lê.
+    match /organizations/{orgId}/givingCampaigns/{campaignId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+
     // Doação pública sem-app (/p/{slug}/give): create não autenticado com shape
     // estrito. NÃO envolve dinheiro (só o lead/intenção) — o PIX é da própria
     // igreja. Leitura/gestão só do time do tenant.

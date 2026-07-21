@@ -82,6 +82,7 @@ import type {
   KidsCheckIn,
   OrganizationKidsSettings,
   GivingIntent,
+  GivingCampaign,
   MemberContribution,
   ChurchAttendance,
   PrayerRequest,
@@ -140,6 +141,7 @@ import {
   getKidsCheckInsCollectionPath,
   getOrganizationKidsSettingsDocumentPath,
   getGivingIntentsCollectionPath,
+  getGivingCampaignsCollectionPath,
   getScheduleSwapRequestsCollectionPath,
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
@@ -3114,6 +3116,53 @@ export async function fetchGivingIntents(
   return snap.docs
     .map((d) => toGivingIntent(d.id, d.data()))
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+// ─── Campanhas de oferta ─────────────────────────────────────────────────────
+export async function saveGivingCampaign(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  campaign: Omit<GivingCampaign, "id" | "createdAt" | "updatedAt" | "organizationId"> & { id?: string; createdAt?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = campaign.id
+    ? doc(firestore, getGivingCampaignsCollectionPath(context), campaign.id)
+    : doc(collection(firestore, getGivingCampaignsCollectionPath(context)));
+  const now = new Date().toISOString();
+  await setDoc(ref, cleanFirestoreData({
+    organizationId: context.organizationId,
+    title: campaign.title,
+    description: campaign.description,
+    category: campaign.category,
+    goalAmount: campaign.goalAmount,
+    raisedAmount: campaign.raisedAmount,
+    status: campaign.status,
+    createdByUserId: campaign.createdByUserId,
+    createdAt: campaign.createdAt ?? now,
+    updatedAt: now,
+  }), { merge: true });
+  return ref.id;
+}
+
+export async function fetchGivingCampaigns(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 100
+): Promise<GivingCampaign[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(collection(firestore, getGivingCampaignsCollectionPath(context)), limit(maxItems)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as GivingCampaign))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function deleteGivingCampaign(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  campaignId: string
+): Promise<void> {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getGivingCampaignsCollectionPath(context), campaignId));
 }
 
 // ─── Segurança Kids (check-in/out + settings) ─────────────────────────────────
