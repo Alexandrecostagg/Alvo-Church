@@ -57,6 +57,7 @@ import type {
   VisitorJourney,
   TribeAssessment,
   TribeAssessmentScore,
+  MemberTribeHistoryEntry,
   LeaderEmotionalPulse,
   WellBeingResource,
   MentoringSession,
@@ -83,6 +84,7 @@ import type {
   OrganizationKidsSettings,
   GivingIntent,
   GivingCampaign,
+  GivingReceipt,
   MemberContribution,
   ChurchAttendance,
   PrayerRequest,
@@ -142,6 +144,7 @@ import {
   getOrganizationKidsSettingsDocumentPath,
   getGivingIntentsCollectionPath,
   getGivingCampaignsCollectionPath,
+  getGivingReceiptsCollectionPath,
   getScheduleSwapRequestsCollectionPath,
   getJourneyProfilesCollectionPath,
   getJourneyMissionsCollectionPath,
@@ -150,6 +153,7 @@ import {
   getWeeklyThemesCollectionPath,
   getMemberContributionsCollectionPath,
   getContributionReceiptsCollectionPath,
+  getMemberTribeHistoryCollectionPath,
   getChurchAttendanceCollectionPath,
   getPrayerRequestsCollectionPath
 } from "./paths";
@@ -1128,6 +1132,42 @@ export async function deletePersonProfile(
   await updateDoc(doc(firestore, "organizations", context.organizationId), {
     memberCount: increment(-1)
   }).catch(() => {});
+}
+
+// ─── Histórico de tribo do membro ───────────────────────────────────────────
+// Cada mudança de tribo (classificação inicial da IA ou ajuste manual do admin)
+// vira um registro imutável em people/{personId}/tribeHistory — auditoria.
+export async function addMemberTribeHistory(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string,
+  entry: Omit<MemberTribeHistoryEntry, "id" | "organizationId" | "personId" | "effectiveFrom"> & { effectiveFrom?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getMemberTribeHistoryCollectionPath(context, personId)));
+  await setDoc(ref, cleanFirestoreData({
+    id: ref.id,
+    organizationId: context.organizationId,
+    personId,
+    ...entry,
+    effectiveFrom: entry.effectiveFrom ?? new Date().toISOString(),
+  }));
+  return ref.id;
+}
+
+export async function fetchMemberTribeHistory(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  personId: string,
+  maxItems = 50
+): Promise<MemberTribeHistoryEntry[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(collection(firestore, getMemberTribeHistoryCollectionPath(context, personId)), limit(maxItems))
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as MemberTribeHistoryEntry))
+    .sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1));
 }
 
 export async function updatePersonMemberStatus(
@@ -3089,7 +3129,7 @@ function toGivingIntent(documentId: string, data: DocumentData): GivingIntent {
 export async function saveGivingIntent(
   config: FirebaseWebRuntimeConfig,
   intent: Omit<GivingIntent, "id">
-): Promise<void> {
+): Promise<string> {
   const firestore = getFirebaseFirestore(config);
   const ref = doc(collection(firestore, getGivingIntentsCollectionPath({ organizationId: intent.organizationId })));
   const data: Record<string, string | number | boolean> = {
@@ -3105,6 +3145,35 @@ export async function saveGivingIntent(
   if (intent.orgSlug) data.orgSlug = intent.orgSlug;
   if (intent.campaignId) data.campaignId = intent.campaignId;
   await setDoc(ref, data);
+  return ref.id;
+}
+
+// "Já paguei" no link público: cria o comprovante (create público, shape estrito
+// pela rule). Só os campos permitidos, sem undefined.
+export async function saveGivingReceipt(
+  config: FirebaseWebRuntimeConfig,
+  receipt: { organizationId: string; intentId: string; imageBase64?: string; createdAt?: string }
+): Promise<string> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = doc(collection(firestore, getGivingReceiptsCollectionPath({ organizationId: receipt.organizationId })));
+  const data: Record<string, string> = {
+    organizationId: receipt.organizationId,
+    intentId: receipt.intentId,
+    createdAt: receipt.createdAt ?? new Date().toISOString(),
+  };
+  if (receipt.imageBase64) data.imageBase64 = receipt.imageBase64;
+  await setDoc(ref, data);
+  return ref.id;
+}
+
+export async function fetchGivingReceipts(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  maxItems = 200
+): Promise<GivingReceipt[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(query(collection(firestore, getGivingReceiptsCollectionPath(context)), limit(maxItems)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as GivingReceipt));
 }
 
 export async function fetchGivingIntents(

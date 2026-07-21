@@ -7,11 +7,12 @@ import { useAppAuth } from "../../../app/providers";
 import {
   fetchGivingIntents,
   fetchGivingCampaigns,
+  fetchGivingReceipts,
   saveGivingCampaign,
   deleteGivingCampaign,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
-import type { GivingIntent, GivingCampaign } from "@alvo/types";
+import type { GivingIntent, GivingCampaign, GivingReceipt } from "@alvo/types";
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -32,10 +33,19 @@ export function GivingView() {
   const orgSlug = tenantRuntime?.organization?.slug ?? "";
   const [intents, setIntents] = useState<GivingIntent[]>([]);
   const [campaigns, setCampaigns] = useState<GivingCampaign[]>([]);
+  const [receipts, setReceipts] = useState<GivingReceipt[]>([]);
+  const [viewingReceipt, setViewingReceipt] = useState<GivingReceipt | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", category: "", goal: "" });
+
+  // Comprovantes indexados por intentId — mostra "Pago ✓" na doação captada.
+  const receiptByIntent = useMemo(() => {
+    const map = new Map<string, GivingReceipt>();
+    for (const r of receipts) if (r.intentId) map.set(r.intentId, r);
+    return map;
+  }, [receipts]);
 
   // Link público da campanha + soma automática das doações captadas por ela.
   function campaignLink(id: string) {
@@ -63,6 +73,7 @@ export function GivingView() {
     if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
     fetchGivingIntents(firebaseConfig, { organizationId }).then(setIntents).catch(() => {});
     fetchGivingCampaigns(firebaseConfig, { organizationId }).then(setCampaigns).catch(() => {});
+    fetchGivingReceipts(firebaseConfig, { organizationId }).then(setReceipts).catch(() => {});
   }, [organizationId, firebaseConfig]);
 
   const totalCaptured = useMemo(() => intents.reduce((s, i) => s + i.amount, 0), [intents]);
@@ -323,23 +334,60 @@ export function GivingView() {
           </div>
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
-            {intents.map((i) => (
+            {intents.map((i) => {
+              const receipt = receiptByIntent.get(i.id);
+              return (
               <div key={i.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 16px", borderRadius: 12, background: "var(--alvo-surface, #fff)", border: "1px solid var(--alvo-line, #e2e8f0)" }}>
                 <div style={{ minWidth: 0 }}>
-                  <strong style={{ color: "var(--alvo-ink, #0f172a)", display: "block", overflowWrap: "anywhere" }}>{i.name}</strong>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <strong style={{ color: "var(--alvo-ink, #0f172a)", overflowWrap: "anywhere" }}>{i.name}</strong>
+                    {receipt && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#dcfce7", color: "#15803d" }}>
+                        <CheckCircle2 size={12} /> Pago
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontSize: 12, color: "var(--alvo-ink-soft, #64748b)" }}>{formatDate(i.createdAt)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                  {receipt?.imageBase64 && (
+                    <button onClick={() => setViewingReceipt(receipt)} className="btn-secondary btn-sm">
+                      Ver comprovante
+                    </button>
+                  )}
                   <a href={`https://wa.me/${i.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>
                     <MessageCircle size={15} /> {i.whatsapp}
                   </a>
                   <strong style={{ color: "#16a34a" }}>{formatBRL(i.amount)}</strong>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
+
+      {viewingReceipt?.imageBase64 && (
+        <div
+          onClick={() => setViewingReceipt(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480, width: "100%", background: "#fff", borderRadius: 16, padding: 16, position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <strong style={{ fontSize: 15, color: "#0f172a" }}>Comprovante</strong>
+              <button onClick={() => setViewingReceipt(null)} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                <X size={18} />
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`data:image/jpeg;base64,${viewingReceipt.imageBase64}`}
+              alt="Comprovante de pagamento"
+              style={{ width: "100%", borderRadius: 10, display: "block" }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

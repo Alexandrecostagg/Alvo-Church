@@ -117,6 +117,11 @@ export function getGivingCampaignsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/givingCampaigns`;
 }
 
+// Comprovantes de doação pública ("Já paguei" no link público).
+export function getGivingReceiptsCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/givingReceipts`;
+}
+
 export function getGivingIntentsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/givingIntents`;
 }

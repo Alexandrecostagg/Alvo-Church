@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Heart, QrCode, Copy, Check, ChevronLeft, Loader2, CheckCircle } from "lucide-react";
+import { Heart, QrCode, Copy, Check, ChevronLeft, Loader2, CheckCircle, Paperclip } from "lucide-react";
 import {
   getFirebaseFirestore,
   getOrganizationBrandingDocumentPath,
@@ -10,6 +10,7 @@ import {
   getDoc,
   isFirebaseWebRuntimeConfigured,
   saveGivingIntent,
+  saveGivingReceipt,
 } from "@alvo/firebase";
 import { buildPixPayload } from "@alvo/domain";
 
@@ -42,6 +43,10 @@ export default function PublicGivePage() {
   const [churchWhatsapp, setChurchWhatsapp] = useState("");
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [intentId, setIntentId] = useState("");
+  const [receiptBase64, setReceiptBase64] = useState("");
+  const [declaredPaid, setDeclaredPaid] = useState(false);
+  const [declaring, setDeclaring] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Load org PIX config from Firestore
@@ -122,7 +127,7 @@ export default function PublicGivePage() {
     // O dinheiro NÃO passa pela plataforma: o PIX é da própria igreja.
     if (orgId) {
       try {
-        await saveGivingIntent(buildFirebaseConfig(), {
+        const id = await saveGivingIntent(buildFirebaseConfig(), {
           organizationId: orgId,
           name: donorName.trim(),
           whatsapp: donorWhatsapp.replace(/\D/g, ""),
@@ -134,9 +139,48 @@ export default function PublicGivePage() {
           consentContact: consent,
           createdAt: new Date().toISOString(),
         });
+        setIntentId(id);
       } catch (e) {
         console.error("Falha ao registrar intenção de doação:", e);
       }
+    }
+  }
+
+  // Comprovante: comprime a imagem (canvas) pra base64 leve (< ~1MB).
+  async function onReceiptFile(file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = dataUrl; });
+    const maxW = 1000;
+    const scale = Math.min(1, maxW / img.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const jpeg = canvas.toDataURL("image/jpeg", 0.6);
+    setReceiptBase64(jpeg.split(",")[1] ?? "");
+  }
+
+  async function declarePaid() {
+    if (!orgId || !intentId) { setDeclaredPaid(true); return; }
+    setDeclaring(true);
+    try {
+      await saveGivingReceipt(buildFirebaseConfig(), {
+        organizationId: orgId,
+        intentId,
+        imageBase64: receiptBase64 || undefined,
+      });
+      setDeclaredPaid(true);
+    } catch (e) {
+      console.error("Falha ao registrar comprovante:", e);
+      setDeclaredPaid(true);
+    } finally {
+      setDeclaring(false);
     }
   }
 
@@ -206,9 +250,28 @@ export default function PublicGivePage() {
                 Falar no WhatsApp com a igreja
               </a>
             )}
-            <p style={{ margin: 0, fontSize: 11, color: "#16a34a", textAlign: "center" }}>
-              ✓ Sua contribuição foi registrada. Deus abençoe!
-            </p>
+            {declaredPaid ? (
+              <div style={{ width: "100%", textAlign: "center", padding: "12px", borderRadius: 12, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                <CheckCircle size={20} style={{ color: "#16a34a", display: "block", margin: "0 auto 4px" }} />
+                <p style={{ margin: 0, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Pagamento confirmado! Obrigado. 🙏</p>
+              </div>
+            ) : (
+              <div style={{ width: "100%", display: "grid", gap: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", borderRadius: 10, border: "1.5px dashed rgba(29,41,64,0.2)", fontSize: 13, color: "#374151", cursor: "pointer" }}>
+                  <Paperclip size={15} /> {receiptBase64 ? "Comprovante anexado ✓" : "Anexar comprovante (opcional)"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onReceiptFile(f); }} />
+                </label>
+                <button
+                  type="button"
+                  onClick={declarePaid}
+                  disabled={declaring}
+                  style={{ width: "100%", padding: "13px", borderRadius: 12, background: "#16a34a", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: declaring ? "default" : "pointer", opacity: declaring ? 0.6 : 1 }}
+                >
+                  {declaring ? "Registrando..." : `Já paguei — R$ ${numericAmount.toFixed(2).replace(".", ",")}`}
+                </button>
+                <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", textAlign: "center" }}>Sua contribuição já foi registrada. Confirme o pagamento pra igreja acompanhar.</p>
+              </div>
+            )}
           </div>
         </div>
       </main>

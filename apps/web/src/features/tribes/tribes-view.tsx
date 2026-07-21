@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
-  fetchPeople,
   savePersonProfile,
+  addMemberTribeHistory,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { recentPeople, tribeDefinitions } from "../../lib/mock-data";
+import { tribeDefinitions } from "../../lib/mock-data";
 import {
   UsersRound,
   Tent,
@@ -20,7 +20,8 @@ import {
   CheckCircle,
   ChevronRight,
   Bot,
-  RotateCcw,
+  Pencil,
+  MessageCircle,
   User
 } from "lucide-react";
 import Link from "next/link";
@@ -28,12 +29,19 @@ import Link from "next/link";
 type TribeAccent = { main: string; soft: string; dark: string };
 
 export function TribesView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
+  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? "nossa igreja";
   const [realPeople, setRealPeople] = useState<Person[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [selectedTribe, setSelectedTribe] = useState<TribeCode | null>(null);
   const [search, setSearch] = useState("");
   const [classifyingIds, setClassifyingIds] = useState<string[]>([]);
   const [classifyStatus, setClassifyStatus] = useState<string | null>(null);
+  // Modal de reclassificação manual (override do admin).
+  const [reclassifyTarget, setReclassifyTarget] = useState<Person | null>(null);
+  const [reclassifyPick, setReclassifyPick] = useState<TribeCode | null>(null);
+  const [reclassifyReason, setReclassifyReason] = useState("");
+  const [reclassifySaving, setReclassifySaving] = useState(false);
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
@@ -43,18 +51,20 @@ export function TribesView() {
         setRealPeople(people);
       } catch (e) {
         console.error("Failed to load people:", e);
+      } finally {
+        setLoaded(true);
       }
     }
     void load();
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
-  const peopleSource = (realPeople.length > 0 ? realPeople : recentPeople) as Person[];
+  // Sem dados reais: nada de mock — a página mostra estado vazio honesto.
+  const peopleSource = realPeople;
 
   const VALID_TRIBES = new Set(["LEVI","JUDAH","ASHER","ISSACHAR","JOSEPH","NAPHTALI","ZEBULUN","GAD","MANASSEH","EPHRAIM","BENJAMIN","REUBEN"]);
 
   async function classifyPerson(person: Person): Promise<boolean> {
-    // Sem dados reais carregados, a lista é demonstração — não grava nada.
-    if (!user || realPeople.length === 0) return false;
+    if (!user) return false;
     setClassifyingIds((ids) => [...ids, person.id]);
     try {
       const idToken = await user.getIdToken();
@@ -79,12 +89,30 @@ export function TribesView() {
       const raw = data.content ?? "";
       const jsonMatch = String(raw).match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("Resposta da IA fora do formato esperado");
-      const parsed = JSON.parse(jsonMatch[0]) as { primary?: string; secondary?: string | null };
+      const parsed = JSON.parse(jsonMatch[0]) as { primary?: string; secondary?: string | null; reason?: string };
       const primary = parsed.primary && VALID_TRIBES.has(parsed.primary) ? parsed.primary as TribeCode : undefined;
       if (!primary) throw new Error("Tribo sugerida inválida");
       const secondary = parsed.secondary && VALID_TRIBES.has(parsed.secondary) ? parsed.secondary as TribeCode : undefined;
-      const updated: Person = { ...person, tribePrimaryCode: primary, tribeSecondaryCode: secondary };
+      const reason = typeof parsed.reason === "string" ? parsed.reason.trim().slice(0, 400) : undefined;
+      const updated: Person = {
+        ...person,
+        tribePrimaryCode: primary,
+        tribeSecondaryCode: secondary,
+        tribeClassificationReason: reason,
+        tribeClassificationSource: "ai",
+        tribeClassifiedAt: new Date().toISOString(),
+      };
       await savePersonProfile(firebaseConfig, { organizationId }, updated);
+      // Auditoria: registra a classificação da IA no histórico do membro.
+      await addMemberTribeHistory(firebaseConfig, { organizationId }, person.id, {
+        oldPrimaryTribeCode: person.tribePrimaryCode,
+        newPrimaryTribeCode: primary,
+        oldSecondaryTribeCode: person.tribeSecondaryCode,
+        newSecondaryTribeCode: secondary,
+        changeType: person.tribePrimaryCode ? "full_reclassification" : "initial_assignment",
+        source: "ai",
+        reason,
+      }).catch((e) => console.error("Falha ao registrar histórico de tribo:", e));
       setRealPeople((people) => people.map((x) => (x.id === person.id ? updated : x)));
       return true;
     } catch (e) {
@@ -92,6 +120,49 @@ export function TribesView() {
       return false;
     } finally {
       setClassifyingIds((ids) => ids.filter((id) => id !== person.id));
+    }
+  }
+
+  // Override manual do admin: define a tribo à mão + motivo → grava histórico.
+  function openReclassify(person: Person) {
+    setReclassifyTarget(person);
+    setReclassifyPick(person.tribePrimaryCode ?? null);
+    setReclassifyReason("");
+  }
+  function closeReclassify() {
+    setReclassifyTarget(null);
+    setReclassifyPick(null);
+    setReclassifyReason("");
+  }
+  async function saveReclassify() {
+    const person = reclassifyTarget;
+    if (!person || !reclassifyPick || !user) return;
+    setReclassifySaving(true);
+    try {
+      const updated: Person = {
+        ...person,
+        tribePrimaryCode: reclassifyPick,
+        tribeClassificationReason: reclassifyReason.trim() || undefined,
+        tribeClassificationSource: "manual",
+        tribeClassifiedAt: new Date().toISOString(),
+      };
+      await savePersonProfile(firebaseConfig, { organizationId }, updated);
+      await addMemberTribeHistory(firebaseConfig, { organizationId }, person.id, {
+        oldPrimaryTribeCode: person.tribePrimaryCode,
+        newPrimaryTribeCode: reclassifyPick,
+        oldSecondaryTribeCode: person.tribeSecondaryCode,
+        newSecondaryTribeCode: person.tribeSecondaryCode,
+        changeType: "manual_adjustment",
+        source: "manual",
+        reason: reclassifyReason.trim() || undefined,
+        changedByUserId: user.uid,
+      }).catch((e) => console.error("Falha ao registrar histórico de tribo:", e));
+      setRealPeople((people) => people.map((x) => (x.id === person.id ? updated : x)));
+      closeReclassify();
+    } catch (e) {
+      console.error("Falha ao reclassificar:", e);
+    } finally {
+      setReclassifySaving(false);
     }
   }
 
@@ -129,7 +200,9 @@ export function TribesView() {
       t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.description.toLowerCase().includes(search.toLowerCase()) ||
       t.ministrySummary.toLowerCase().includes(search.toLowerCase())
-    );
+    )
+    // Tribos com membros primeiro (mais populadas no topo); vazias vão pro fim.
+    .sort((a, b) => b.memberCount - a.memberCount);
 
   const selectedTribeData = selectedTribe
     ? tribesWithStats.find(t => t.code === selectedTribe)
@@ -223,6 +296,20 @@ export function TribesView() {
         </div>
       </div>
 
+      {/* Estado vazio honesto: nenhuma pessoa cadastrada ainda. */}
+      {loaded && peopleSource.length === 0 && (
+        <div className="empty-state" style={{ padding: "28px 0", border: "1px dashed var(--alvo-line)", borderRadius: 14, marginBottom: 4 }}>
+          <UsersRound size={36} strokeWidth={1.4} style={{ color: "var(--alvo-line)", margin: "0 auto 10px" }} />
+          <p style={{ textAlign: "center", margin: 0, color: "var(--alvo-ink)" }}>Nenhuma pessoa cadastrada ainda.</p>
+          <p className="empty-hint" style={{ textAlign: "center" }}>
+            As tribos são atribuídas automaticamente pela IA a partir do perfil ministerial da ficha.
+          </p>
+          <Link href="/people" className="btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+            <User size={14} /> Cadastrar pessoas
+          </Link>
+        </div>
+      )}
+
       {/* Grade das 12 tribos */}
       <section className="content-section">
         <div className="section-header">
@@ -244,6 +331,7 @@ export function TribesView() {
                     ? `linear-gradient(135deg, ${tribe.accent.soft}, white)`
                     : "var(--alvo-surface)",
                   cursor: "pointer",
+                  opacity: !isSelected && tribe.memberCount === 0 ? 0.62 : 1,
                 }}
               >
                 <div className="tribe-card-icon" style={{ background: tribe.accent.soft, color: tribe.accent.dark }}>
@@ -256,10 +344,15 @@ export function TribesView() {
                   <p style={{ fontSize: 12, color: "var(--alvo-ink-soft)", margin: "4px 0 0", lineHeight: 1.4 }}>
                     {tribe.description}
                   </p>
+                  <p style={{ fontSize: 11, color: "var(--alvo-ink-soft)", margin: "6px 0 0", opacity: 0.75, lineHeight: 1.4 }}>
+                    {tribe.ministrySummary}
+                  </p>
                 </div>
                 <div className="tribe-card-footer" style={{ color: tribe.accent.main }}>
                   <UsersRound size={12} />
-                  <span style={{ fontSize: 12, fontWeight: 700 }}>{tribe.memberCount} membros</span>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>
+                    {tribe.memberCount === 0 ? "Sem membros" : `${tribe.memberCount} ${tribe.memberCount === 1 ? "membro" : "membros"}`}
+                  </span>
                   <ChevronRight
                     size={14}
                     style={{
@@ -317,31 +410,77 @@ export function TribesView() {
             </div>
           ) : (
             <div className="tribe-members-list">
-              {selectedTribeData.members.map(person => (
-                <Link
-                  key={person.id}
-                  href={`/members/${person.id}`}
-                  className="tribe-member-row"
-                >
+              {selectedTribeData.members.map(person => {
+                const notifyHref = buildTribeNotifyHref(
+                  person,
+                  selectedTribeData.name,
+                  selectedTribeData.description,
+                  selectedTribeData.ministrySummary,
+                  orgName
+                );
+                return (
+                <div key={person.id} className="tribe-member-row">
                   <div className="tribe-member-avatar" style={{ background: selectedTribeData.accent.soft, color: selectedTribeData.accent.dark }}>
                     {getInitials(person)}
                   </div>
-                  <div className="tribe-member-info">
-                    <strong style={{ fontSize: 13, color: "var(--alvo-ink)" }}>
-                      {person.preferredName || person.firstName} {person.lastName}
-                    </strong>
+                  <div className="tribe-member-info" style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: 13, color: "var(--alvo-ink)" }}>
+                        {person.preferredName || person.firstName} {person.lastName}
+                      </strong>
+                      {person.tribeClassificationSource && (
+                        <span className={`tribe-source-badge ${person.tribeClassificationSource}`}>
+                          {person.tribeClassificationSource === "ai" ? <><Bot size={10} /> IA</> : <><Pencil size={10} /> Manual</>}
+                        </span>
+                      )}
+                      {person.tribeSecondaryCode && (
+                        <span className="tribe-secondary-badge">+ {person.tribeSecondaryCode}</span>
+                      )}
+                    </div>
                     <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
                       {getMemberStatusLabel(person.memberStatus)}
                     </span>
+                    {person.tribeClassificationReason && (
+                      <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", fontStyle: "italic", marginTop: 2 }}>
+                        “{person.tribeClassificationReason}”
+                      </span>
+                    )}
                   </div>
-                  {person.tribeSecondaryCode && (
-                    <span className="tribe-secondary-badge">
-                      + {person.tribeSecondaryCode}
-                    </span>
-                  )}
-                  <ChevronRight size={14} style={{ color: "var(--alvo-line)", marginLeft: "auto" }} />
-                </Link>
-              ))}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexShrink: 0 }}>
+                    {notifyHref ? (
+                      <a
+                        href={notifyHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary btn-sm"
+                        style={{ display: "flex", alignItems: "center", gap: 4, color: "#25D366", textDecoration: "none" }}
+                        title="Avisar o membro pelo WhatsApp qual é a tribo dele"
+                      >
+                        <MessageCircle size={12} /> Avisar
+                      </a>
+                    ) : (
+                      <span
+                        className="btn-secondary btn-sm"
+                        style={{ display: "flex", alignItems: "center", gap: 4, opacity: 0.45, cursor: "not-allowed" }}
+                        title="Sem WhatsApp/celular na ficha deste membro"
+                      >
+                        <MessageCircle size={12} /> Avisar
+                      </span>
+                    )}
+                    <button
+                      className="btn-secondary btn-sm"
+                      onClick={() => openReclassify(person)}
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Pencil size={12} /> Reclassificar
+                    </button>
+                    <Link href={`/members/${person.id}`} className="tribe-member-ficha-link" aria-label="Abrir ficha">
+                      <ChevronRight size={16} style={{ color: "var(--alvo-ink-soft)" }} />
+                    </Link>
+                  </div>
+                </div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -389,15 +528,22 @@ export function TribesView() {
                     {(person as any).ministerialInterests?.length > 0 && " · perfil ministerial preenchido"}
                   </span>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+                <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexWrap: "wrap", justifyContent: "flex-end" }}>
                   <button
-                    className="btn-secondary btn-sm"
+                    className="btn-primary btn-sm"
                     style={{ display: "flex", alignItems: "center", gap: 4, opacity: classifyingIds.includes(person.id) ? 0.6 : 1 }}
                     disabled={classifyingIds.includes(person.id)}
                     onClick={() => void classifyOne(person)}
                   >
                     <Sparkles size={12} />
-                    {classifyingIds.includes(person.id) ? "..." : "Classificar"}
+                    {classifyingIds.includes(person.id) ? "..." : "Classificar (IA)"}
+                  </button>
+                  <button
+                    className="btn-secondary btn-sm"
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    onClick={() => openReclassify(person)}
+                  >
+                    <Pencil size={12} /> Definir manual
                   </button>
                   <Link href={`/members/${person.id}`} className="btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <User size={12} />
@@ -413,6 +559,72 @@ export function TribesView() {
             )}
           </div>
         </section>
+      )}
+
+      {/* Modal de reclassificação manual (override do admin) */}
+      {reclassifyTarget && (
+        <div className="reclassify-overlay" onClick={closeReclassify}>
+          <div className="reclassify-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="reclassify-head">
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--alvo-ink)" }}>Definir tribo manualmente</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--alvo-ink-soft)" }}>
+                  {reclassifyTarget.preferredName || reclassifyTarget.firstName} {reclassifyTarget.lastName}
+                </p>
+              </div>
+              <button onClick={closeReclassify} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--alvo-ink-soft)", display: "flex" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="reclassify-tribe-grid">
+              {tribeDefinitions.map((t) => {
+                const accent = getTribeAccent(t.code as TribeCode);
+                const picked = reclassifyPick === t.code;
+                return (
+                  <button
+                    key={t.code}
+                    type="button"
+                    className="reclassify-tribe-chip"
+                    onClick={() => setReclassifyPick(t.code as TribeCode)}
+                    style={{
+                      borderColor: picked ? accent.main : "var(--alvo-line)",
+                      background: picked ? accent.soft : "var(--alvo-surface)",
+                      color: picked ? accent.dark : "var(--alvo-ink)",
+                    }}
+                  >
+                    <Tent size={14} style={{ color: accent.main }} />
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{t.name}</span>
+                    {picked && <CheckCircle size={13} style={{ marginLeft: "auto", color: accent.main }} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--alvo-ink)", margin: "4px 0 6px" }}>
+              Motivo do ajuste (registrado no histórico)
+            </label>
+            <textarea
+              value={reclassifyReason}
+              onChange={(e) => setReclassifyReason(e.target.value)}
+              rows={2}
+              placeholder="Ex: conversei com o membro e a vocação dele é mais de acolhimento."
+              className="reclassify-reason"
+            />
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+              <button className="btn-secondary btn-sm" onClick={closeReclassify}>Cancelar</button>
+              <button
+                className="btn-primary btn-sm"
+                onClick={() => void saveReclassify()}
+                disabled={!reclassifyPick || reclassifySaving}
+                style={{ opacity: !reclassifyPick || reclassifySaving ? 0.5 : 1 }}
+              >
+                {reclassifySaving ? "Salvando..." : "Salvar tribo"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx>{`
@@ -564,10 +776,125 @@ export function TribesView() {
           border-radius: 10px;
           border: 1px solid var(--alvo-line);
           background: var(--alvo-surface);
+          flex-wrap: wrap;
+        }
+        .tribe-source-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 2px 7px;
+          border-radius: 999px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+        .tribe-source-badge.ai {
+          background: #ede9fe;
+          color: #6d28d9;
+        }
+        .tribe-source-badge.manual {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+        .tribe-member-ficha-link {
+          display: flex;
+          align-items: center;
+          padding: 6px;
+          border-radius: 8px;
+          text-decoration: none;
+        }
+        .tribe-member-ficha-link:hover {
+          background: var(--alvo-surface-muted);
+        }
+        .reclassify-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 1000;
+        }
+        .reclassify-modal {
+          background: var(--alvo-surface);
+          border-radius: 16px;
+          padding: 20px;
+          width: 100%;
+          max-width: 540px;
+          max-height: 88vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+        .reclassify-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .reclassify-tribe-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .reclassify-tribe-chip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border: 1.5px solid;
+          border-radius: 10px;
+          cursor: pointer;
+          text-align: left;
+          transition: border-color 0.12s, background 0.12s;
+        }
+        .reclassify-reason {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--alvo-line);
+          font-size: 14px;
+          font-family: inherit;
+          resize: vertical;
+          background: var(--alvo-surface);
+          color: var(--alvo-ink);
+          outline: none;
         }
       `}</style>
     </div>
   );
+}
+
+// wa.me exige dígitos com DDI. Números BR sem código do país (10-11 díg.) → +55.
+function normalizeBrPhone(raw?: string): string {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length <= 11 ? `55${digits}` : digits;
+}
+
+// Passo 5 da lógica de tribos: avisar o membro (WhatsApp grátis, via wa.me a
+// partir do WhatsApp da liderança) qual é a tribo dele e o que ela significa.
+function buildTribeNotifyHref(
+  person: Person,
+  tribeName: string,
+  tribeDescription: string,
+  tribeMinistry: string,
+  orgName: string
+): string {
+  const phone = normalizeBrPhone(person.whatsappPhone || person.mobilePhone);
+  if (!phone) return "";
+  const first = person.preferredName || person.firstName || "";
+  const msg =
+    `Olá ${first}! 🎪\n\n` +
+    `Na ${orgName}, identificamos que a sua tribo ministerial é a *Tribo de ${tribeName}*.\n\n` +
+    `✨ O que significa: ${tribeDescription}\n` +
+    `🙌 Onde você mais floresce servindo: ${tribeMinistry}\n\n` +
+    `Que alegria caminhar com você! 🙏`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 
 function getInitials(person: Person) {

@@ -120,6 +120,16 @@ export interface GivingIntent {
   createdAt: string;
 }
 
+// Comprovante de doação pública: o doador clica "Já paguei" no link público e
+// (opcionalmente) anexa a foto. Doc separado (imagem base64) linkado à intenção.
+export interface GivingReceipt {
+  id: string;
+  organizationId: string;
+  intentId: string;
+  imageBase64?: string;
+  createdAt: string;
+}
+
 // Campanha de oferta: arrecadação com meta pra um projeto/causa (ex: reforma,
 // missões). raisedAmount é atualizado pela liderança conforme o PIX entra
 // (a plataforma nunca custodia dinheiro).
@@ -367,6 +377,9 @@ export interface Person {
   status: PersonStatus;
   tribePrimaryCode?: TribeCode;
   tribeSecondaryCode?: TribeCode;
+  tribeClassificationReason?: string;          // "porquê" da classificação (IA ou motivo do admin)
+  tribeClassificationSource?: "ai" | "manual"; // quem definiu a tribo atual
+  tribeClassifiedAt?: string;                  // ISO — quando a tribo foi definida/ajustada
   ministerialInterests?: string[];
   servingProfile?: "leading" | "teaching" | "creating" | "caring" | "organizing" | "interceding";
   availability?: string[];
@@ -1046,6 +1059,9 @@ export interface MemberTribeHistoryEntry {
     | "scheduled_revalidation"
     | "partial_reclassification"
     | "full_reclassification";
+  source?: "ai" | "manual";     // origem da mudança (IA classificou ou admin ajustou)
+  reason?: string;              // motivo registrado (frase da IA ou justificativa do admin)
+  changedByUserId?: string;     // admin que fez o ajuste manual
   effectiveFrom: string;
 }
 

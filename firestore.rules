@@ -297,6 +297,16 @@ service cloud.firestore {
       allow write: if isTenantAdmin(orgId);
     }
 
+    // Comprovante de doação pública ("Já paguei" no link): create não autenticado
+    // com shape estrito (imagem base64 até ~1MB). Só admin lê.
+    match /organizations/{orgId}/givingReceipts/{receiptId} {
+      allow read: if isTenantAdmin(orgId);
+      allow create: if request.resource.data.organizationId == orgId
+        && request.resource.data.keys().hasOnly(["organizationId", "intentId", "imageBase64", "createdAt"])
+        && request.resource.data.intentId is string
+        && (!("imageBase64" in request.resource.data) || request.resource.data.imageBase64.size() < 1500000);
+    }
+
     // Doação pública sem-app (/p/{slug}/give): create não autenticado com shape
     // estrito. NÃO envolve dinheiro (só o lead/intenção) — o PIX é da própria
     // igreja. Leitura/gestão só do time do tenant.
@@ -368,6 +378,15 @@ service cloud.firestore {
       allow read: if isTenantMember(orgId);
       allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId);
       allow update, delete: if isTenantAdmin(orgId);
+    }
+
+    // Histórico de tribo do membro: auditoria de classificações (IA) e ajustes
+    // manuais. Membro do tenant lê; só admin grava (registro é imutável — sem
+    // update/delete pelo cliente).
+    match /organizations/{orgId}/people/{personId}/tribeHistory/{entryId} {
+      allow read: if isTenantMember(orgId);
+      allow create: if isTenantAdmin(orgId);
+      allow update, delete: if false;
     }
 
     // Igrejas filiais (plano Rede): até 50 filiais, só quem está no plano
