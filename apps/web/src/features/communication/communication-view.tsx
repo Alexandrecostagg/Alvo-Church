@@ -50,6 +50,16 @@ export function CommunicationView() {
     void fetchCommunicationTemplates(firebaseConfig, { organizationId }, 30).then(setTemplates).catch(() => {});
   }, [configured, organizationId, firebaseConfig]);
 
+  // Abre o compositor com a mensagem pré-preenchida (ex: disparo de campanha
+  // vindo da tela de Doações via ?compose=).
+  useEffect(() => {
+    const compose = new URLSearchParams(window.location.search).get("compose");
+    if (compose) {
+      setMessage(compose);
+      setComposing(true);
+    }
+  }, []);
+
   async function handleSaveTemplate() {
     if (!organizationId || !user || !message.trim()) return;
     const title = window.prompt("Nome do template (ex: Boas-vindas, Lembrete de culto):")?.trim();

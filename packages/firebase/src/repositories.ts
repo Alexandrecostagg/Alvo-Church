@@ -3103,6 +3103,7 @@ export async function saveGivingIntent(
     createdAt: intent.createdAt
   };
   if (intent.orgSlug) data.orgSlug = intent.orgSlug;
+  if (intent.campaignId) data.campaignId = intent.campaignId;
   await setDoc(ref, data);
 }
 

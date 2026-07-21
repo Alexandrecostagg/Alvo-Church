@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { HeartHandshake, TrendingUp, Users, Target, Plus, MessageCircle, Trash2, X, CheckCircle2 } from "lucide-react";
+import { HeartHandshake, TrendingUp, Users, Target, Plus, MessageCircle, Trash2, X, CheckCircle2, Copy, Megaphone, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAppAuth } from "../../../app/providers";
 import {
   fetchGivingIntents,
@@ -26,12 +27,37 @@ function parseAmount(raw: string): number {
 }
 
 export function GivingView() {
-  const { organizationId, firebaseConfig, user } = useAppAuth();
+  const { organizationId, firebaseConfig, user, tenantRuntime } = useAppAuth();
+  const router = useRouter();
+  const orgSlug = tenantRuntime?.organization?.slug ?? "";
   const [intents, setIntents] = useState<GivingIntent[]>([]);
   const [campaigns, setCampaigns] = useState<GivingCampaign[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", category: "", goal: "" });
+
+  // Link público da campanha + soma automática das doações captadas por ela.
+  function campaignLink(id: string) {
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    return `${base}/p/${orgSlug}/give?campanha=${id}`;
+  }
+  function campaignAutoRaised(id: string) {
+    return intents.filter((i) => i.campaignId === id).reduce((s, i) => s + i.amount, 0);
+  }
+  function shareMessage(c: GivingCampaign) {
+    return `🙌 *${c.title}*\n${c.description ? c.description + "\n" : ""}Ajude nossa igreja a alcançar a meta de ${formatBRL(c.goalAmount)}. Contribua aqui (PIX): ${campaignLink(c.id)}`;
+  }
+  async function copyLink(c: GivingCampaign) {
+    try {
+      await navigator.clipboard.writeText(campaignLink(c.id));
+      setCopiedId(c.id);
+      setTimeout(() => setCopiedId((v) => (v === c.id ? null : v)), 2000);
+    } catch { /* ignore */ }
+  }
+  function broadcastToMembers(c: GivingCampaign) {
+    router.push(`/communication?compose=${encodeURIComponent(shareMessage(c))}`);
+  }
 
   useEffect(() => {
     if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
@@ -50,7 +76,10 @@ export function GivingView() {
       .reduce((s, i) => s + i.amount, 0);
   }, [intents]);
   const activeCampaigns = useMemo(() => campaigns.filter((c) => c.status === "active"), [campaigns]);
-  const totalRaised = useMemo(() => campaigns.reduce((s, c) => s + (c.raisedAmount || 0), 0), [campaigns]);
+  const totalRaised = useMemo(
+    () => campaigns.reduce((s, c) => s + (c.raisedAmount || 0) + intents.filter((i) => i.campaignId === c.id).reduce((a, i) => a + i.amount, 0), 0),
+    [campaigns, intents]
+  );
 
   async function handleCreateCampaign() {
     if (!organizationId || !user || !form.title.trim() || parseAmount(form.goal) <= 0) return;
@@ -209,7 +238,9 @@ export function GivingView() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {campaigns.map((c) => {
-              const pct = c.goalAmount > 0 ? Math.min(100, Math.round((c.raisedAmount / c.goalAmount) * 100)) : 0;
+              const auto = campaignAutoRaised(c.id);
+              const raised = c.raisedAmount + auto;
+              const pct = c.goalAmount > 0 ? Math.min(100, Math.round((raised / c.goalAmount) * 100)) : 0;
               return (
                 <div key={c.id} style={{ padding: 16, borderRadius: 14, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface, #fff)", opacity: c.status === "closed" ? 0.7 : 1 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -228,15 +259,34 @@ export function GivingView() {
 
                   <div style={{ marginTop: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                      <span style={{ color: "#16a34a", fontWeight: 700 }}>{formatBRL(c.raisedAmount)}</span>
+                      <span style={{ color: "#16a34a", fontWeight: 700 }}>{formatBRL(raised)}</span>
                       <span style={{ color: "var(--alvo-ink-soft)" }}>de {formatBRL(c.goalAmount)} · {pct}%</span>
                     </div>
                     <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: "#16a34a", borderRadius: 999 }} />
                     </div>
+                    {auto > 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>{formatBRL(auto)} pelo link público · {formatBRL(c.raisedAmount)} registrado manualmente</p>}
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {/* Disparo: compartilhar o link da campanha pros doadores */}
+                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <button className="btn-secondary btn-sm" onClick={() => copyLink(c)}>
+                      {copiedId === c.id ? <Check size={14} /> : <Copy size={14} />} {copiedId === c.id ? "Copiado!" : "Copiar link"}
+                    </button>
+                    <a
+                      className="btn-secondary btn-sm"
+                      href={`https://wa.me/?text=${encodeURIComponent(shareMessage(c))}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ textDecoration: "none", color: "#25D366" }}
+                    >
+                      <MessageCircle size={14} /> WhatsApp
+                    </a>
+                    <button className="btn-secondary btn-sm" onClick={() => broadcastToMembers(c)}>
+                      <Megaphone size={14} /> Disparar pros membros
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {c.status === "active" && (
                       <>
                         <button className="btn-secondary btn-sm" onClick={() => handleRegisterRaise(c)}>

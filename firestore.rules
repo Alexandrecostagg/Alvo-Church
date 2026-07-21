@@ -289,9 +289,11 @@ service cloud.firestore {
     }
 
     // Campanhas de oferta (metas de arrecadação): gestão só do time (admin);
-    // membro lê.
+    // membro lista; UMA campanha pode ser lida publicamente (get) pra o link
+    // público /p/{slug}/give?campanha={id} mostrar título/meta/progresso.
     match /organizations/{orgId}/givingCampaigns/{campaignId} {
-      allow read: if isTenantMember(orgId);
+      allow get: if true;
+      allow list: if isTenantMember(orgId);
       allow write: if isTenantAdmin(orgId);
     }
 
@@ -304,7 +306,7 @@ service cloud.firestore {
         && request.resource.data.organizationId == orgId
         && request.resource.data.keys().hasOnly([
           "organizationId", "name", "whatsapp", "amount",
-          "source", "status", "orgSlug", "consentContact", "createdAt"
+          "source", "status", "orgSlug", "campaignId", "consentContact", "createdAt"
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2

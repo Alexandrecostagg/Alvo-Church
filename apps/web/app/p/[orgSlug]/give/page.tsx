@@ -28,6 +28,8 @@ export default function PublicGivePage() {
   const params = useParams();
   const orgSlug = params?.orgSlug as string;
 
+  const [campaignId, setCampaignId] = useState("");
+  const [campaign, setCampaign] = useState<{ title: string; description?: string; goalAmount: number; raisedAmount: number } | null>(null);
   const [amount, setAmount] = useState("");
   const [donorName, setDonorName] = useState("");
   const [donorWhatsapp, setDonorWhatsapp] = useState("");
@@ -59,6 +61,19 @@ export default function PublicGivePage() {
           ? String(slugSnap.data()["organizationId"])
           : orgSlug;
         setOrgId(organizationId);
+
+        // Se veio ?campanha=, carrega a campanha pra mostrar a causa + meta.
+        const cid = new URLSearchParams(window.location.search).get("campanha") ?? "";
+        setCampaignId(cid);
+        if (cid) {
+          try {
+            const campSnap = await getDoc(doc(db, `organizations/${organizationId}/givingCampaigns/${cid}`));
+            if (campSnap.exists()) {
+              const c = campSnap.data() as { title?: string; description?: string; goalAmount?: number; raisedAmount?: number };
+              setCampaign({ title: c.title ?? "Campanha", description: c.description, goalAmount: c.goalAmount ?? 0, raisedAmount: c.raisedAmount ?? 0 });
+            }
+          } catch (e) { console.error("Falha ao carregar campanha:", e); }
+        }
 
         const brandingSnap = await getDoc(
           doc(db, getOrganizationBrandingDocumentPath({ organizationId }))
@@ -115,6 +130,7 @@ export default function PublicGivePage() {
           source: "public_give",
           status: "captured",
           orgSlug,
+          campaignId: campaignId || undefined,
           consentContact: consent,
           createdAt: new Date().toISOString(),
         });
@@ -204,9 +220,31 @@ export default function PublicGivePage() {
       <div style={cardStyle}>
         <div style={headerStyle}>
           <Heart size={28} strokeWidth={1.6} style={{ color: "var(--esdras-primary-dark)", display: "block", margin: "0 auto" }} />
-          <h1 style={titleStyle}>Contribuir</h1>
-          <p style={subtitleStyle}>Sua oferta faz diferença</p>
+          {campaign ? (
+            <>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#ea580c" }}>Campanha de oferta</span>
+              <h1 style={titleStyle}>{campaign.title}</h1>
+              {campaign.description && <p style={subtitleStyle}>{campaign.description}</p>}
+            </>
+          ) : (
+            <>
+              <h1 style={titleStyle}>Contribuir</h1>
+              <p style={subtitleStyle}>Sua oferta faz diferença</p>
+            </>
+          )}
         </div>
+
+        {campaign && campaign.goalAmount > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>R$ {campaign.raisedAmount.toLocaleString("pt-BR")}</span>
+              <span style={{ color: "#64748b" }}>de R$ {campaign.goalAmount.toLocaleString("pt-BR")}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
+              <div style={{ width: `${Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100))}%`, height: "100%", background: "#16a34a", borderRadius: 999 }} />
+            </div>
+          </div>
+        )}
 
         {loadingConfig ? (
           <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>

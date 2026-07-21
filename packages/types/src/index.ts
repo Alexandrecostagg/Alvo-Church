@@ -115,6 +115,7 @@ export interface GivingIntent {
   source: "public_give";
   status: "captured";
   orgSlug?: string;
+  campaignId?: string; // vincula a doação a uma campanha de oferta
   consentContact: boolean;
   createdAt: string;
 }
