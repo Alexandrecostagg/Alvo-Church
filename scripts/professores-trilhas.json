@@ -1,0 +1,17 @@
+{
+  "_nota": "Professores que o Alexandre preencheu manualmente no /platform-admin em 22/07. Preservar ao re-semear o catalogo (nao sobrescrever com vazio).",
+  "porId": {
+    "tp_seed_1":  { "title": "DNA da Liderança - Escola de Líderes",                    "instructorName": "ELAINE FERNANDES DO NASCIMENTO" },
+    "tp_seed_2":  { "title": "Passos da Integração: Nova Vida",                          "instructorName": "ALEXANDRE GOMES DA COSTA" },
+    "tp_seed_3":  { "title": "Da Porta ao Altar: Jornada de Integração do Novo Membro",  "instructorName": "ELAINE FERNANDES DO NASCIMENTO" },
+    "tp_seed_4":  { "title": "Multiplica: Formando Líderes que Formam Líderes",          "instructorName": "ELAINE FERNANDES DO NASCIMENTO" },
+    "tp_seed_5":  { "title": "Igreja Viva: O Papel do Membro no Corpo de Cristo",        "instructorName": "MANOEL PEREIRA GUIMARÃES NETO" },
+    "tp_seed_6":  { "title": "Liderar é Servir: Fundamentos para Líderes de Ministério", "instructorName": "MANOEL PEREIRA GUIMARÃES NETO" },
+    "tp_seed_7":  { "title": "Igreja em Movimento: Fundamentos para Plantação e Expansão","instructorName": "ALEXANDRE GOMES DA COSTA" },
+    "tp_seed_8":  { "title": "Raio-X da Igreja: Diagnóstico e Saúde Congregacional",     "instructorName": "ALEXANDRE GOMES DA COSTA" },
+    "tp_seed_9":  { "title": "Pontes de Fé: Evangelismo no Dia a Dia",                   "instructorName": "MANOEL PEREIRA GUIMARÃES NETO" },
+    "tp_seed_10": { "title": "Anfitrião de Célula: do Convite à Liderança",             "instructorName": "ALEXANDRE GOMES DA COSTA" },
+    "tp_seed_11": { "title": "Casas que Multiplicam: Células como Base da Igreja",       "instructorName": "ALEXANDRE GOMES DA COSTA" },
+    "tp_seed_12": { "title": "Rede que Cuida: Mentoria e Conexão entre Igrejas",         "instructorName": "ALEXANDRE GOMES DA COSTA" }
+  }
+}

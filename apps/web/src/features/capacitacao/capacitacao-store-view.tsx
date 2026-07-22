@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Award, Lock, PlayCircle, CheckCircle2, ArrowLeft, ShoppingCart, Printer } from "lucide-react";
+import { Loader2, Award, Lock, PlayCircle, CheckCircle2, ArrowLeft, ShoppingCart, Printer, Paperclip } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { friendlyError } from "../../lib/friendly-error";
 import {
@@ -13,6 +13,7 @@ import {
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { TrainingProgram, TrainingLesson, MemberCourseProgress } from "@alvo/types";
+import { MarkdownLite } from "../../components/markdown-lite";
 
 const ADMIN_ROLES = ["super_admin", "church_admin", "pastor", "secretary"] as const;
 
@@ -239,6 +240,22 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
                   <CheckCircle2 size={16} /> {progress?.completedLessons.includes(activeLesson.id) ? "Concluída" : "Marcar concluída"}
                 </button>
               </div>
+              {activeLesson.materialUrl ? (
+                <a
+                  href={activeLesson.materialUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 13, fontWeight: 600, color: "#534AB7", textDecoration: "none" }}
+                >
+                  <Paperclip size={15} /> Material de apoio (PDF)
+                </a>
+              ) : null}
+              {activeLesson.content ? (
+                <div style={{ marginTop: 18, padding: "18px 20px", borderRadius: 12, background: "var(--alvo-surface, #fff)", border: "0.5px solid var(--alvo-border, #e2e8f0)" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--alvo-ink-soft, #64748b)", margin: "0 0 10px" }}>Material da aula</p>
+                  <MarkdownLite text={activeLesson.content} />
+                </div>
+              ) : null}
             </>
           ) : (
             <p style={{ fontSize: 14, color: "var(--alvo-ink-soft, #64748b)" }}>Esta trilha ainda não tem aulas publicadas.</p>

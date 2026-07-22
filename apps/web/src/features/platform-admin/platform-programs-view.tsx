@@ -208,7 +208,7 @@ function LessonsEditor({ programId }: { programId: string }) {
   const { firebaseConfig } = useAppAuth();
   const [lessons, setLessons] = useState<TrainingLesson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState({ title: "", videoUrl: "", durationMinutes: 0, moduleId: "" });
+  const [draft, setDraft] = useState({ title: "", videoUrl: "", durationMinutes: 0, moduleId: "", materialUrl: "" });
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -228,11 +228,27 @@ function LessonsEditor({ programId }: { programId: string }) {
       title: draft.title.trim(),
       videoUrl: draft.videoUrl.trim(),
       durationMinutes: Number(draft.durationMinutes) || 0,
-      sortOrder: lessons.length
+      sortOrder: lessons.length,
+      materialUrl: draft.materialUrl.trim() || undefined
     };
     try {
       await saveTrainingLesson(firebaseConfig, lesson);
-      setDraft({ title: "", videoUrl: "", durationMinutes: 0, moduleId: "" });
+      setDraft({ title: "", videoUrl: "", durationMinutes: 0, moduleId: "", materialUrl: "" });
+      load();
+    } finally { setBusy(false); }
+  }
+
+  // Salva edições inline de uma aula existente (link de material e/ou conteúdo).
+  async function saveLessonPatch(lesson: TrainingLesson, patch: Partial<Pick<TrainingLesson, "materialUrl" | "content">>) {
+    const nextMaterial = "materialUrl" in patch ? (patch.materialUrl?.trim() || undefined) : lesson.materialUrl;
+    const nextContent = "content" in patch ? (patch.content?.trim() || undefined) : lesson.content;
+    const unchanged =
+      (lesson.materialUrl ?? "") === (nextMaterial ?? "") &&
+      (lesson.content ?? "") === (nextContent ?? "");
+    if (unchanged) return;
+    setBusy(true);
+    try {
+      await saveTrainingLesson(firebaseConfig, { ...lesson, materialUrl: nextMaterial, content: nextContent });
       load();
     } finally { setBusy(false); }
   }
@@ -250,22 +266,59 @@ function LessonsEditor({ programId }: { programId: string }) {
         <>
           <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
             {lessons.map((l, i) => (
-              <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "6px 10px", background: "var(--color-background-secondary, #f8f8f6)", borderRadius: 8 }}>
-                <span style={{ color: "var(--color-text-secondary)" }}>{i + 1}.</span>
-                <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{l.title} <span style={{ color: "var(--color-text-secondary)" }}>· {l.durationMinutes}min{l.moduleId ? ` · ${l.moduleId}` : ""}</span></span>
-                <button onClick={() => removeLesson(l.id)} disabled={busy} style={{ ...secondaryBtn, padding: "4px 8px" }}><Trash2 size={13} /></button>
-              </div>
+              <LessonRow key={l.id} lesson={l} index={i} busy={busy} onSavePatch={saveLessonPatch} onRemove={removeLesson} />
             ))}
             {lessons.length === 0 && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Sem aulas ainda.</span>}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 90px 1fr auto", gap: 6, alignItems: "center" }}>
-            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Título da aula" style={{ ...inputStyle, fontSize: 12 }} />
-            <input value={draft.videoUrl} onChange={(e) => setDraft({ ...draft, videoUrl: e.target.value })} placeholder="URL do vídeo" style={{ ...inputStyle, fontSize: 12 }} />
-            <input type="number" min={0} value={draft.durationMinutes} onChange={(e) => setDraft({ ...draft, durationMinutes: Number(e.target.value) })} placeholder="min" style={{ ...inputStyle, fontSize: 12 }} />
-            <input value={draft.moduleId} onChange={(e) => setDraft({ ...draft, moduleId: e.target.value })} placeholder="Módulo (opc.)" style={{ ...inputStyle, fontSize: 12 }} />
-            <button onClick={addLesson} disabled={busy} style={primaryBtn}><Plus size={14} /></button>
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 90px 1fr auto", gap: 6, alignItems: "center" }}>
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Título da aula" style={{ ...inputStyle, fontSize: 12 }} />
+              <input value={draft.videoUrl} onChange={(e) => setDraft({ ...draft, videoUrl: e.target.value })} placeholder="URL do vídeo" style={{ ...inputStyle, fontSize: 12 }} />
+              <input type="number" min={0} value={draft.durationMinutes} onChange={(e) => setDraft({ ...draft, durationMinutes: Number(e.target.value) })} placeholder="min" style={{ ...inputStyle, fontSize: 12 }} />
+              <input value={draft.moduleId} onChange={(e) => setDraft({ ...draft, moduleId: e.target.value })} placeholder="Módulo (opc.)" style={{ ...inputStyle, fontSize: 12 }} />
+              <button onClick={addLesson} disabled={busy} style={primaryBtn}><Plus size={14} /></button>
+            </div>
+            <input value={draft.materialUrl} onChange={(e) => setDraft({ ...draft, materialUrl: e.target.value })} placeholder="Material de apoio / PDF (link, opcional)" style={{ ...inputStyle, fontSize: 12 }} />
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function LessonRow({ lesson, index, busy, onSavePatch, onRemove }: {
+  lesson: TrainingLesson;
+  index: number;
+  busy: boolean;
+  onSavePatch: (lesson: TrainingLesson, patch: Partial<Pick<TrainingLesson, "materialUrl" | "content">>) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [material, setMaterial] = useState(lesson.materialUrl ?? "");
+  const [content, setContent] = useState(lesson.content ?? "");
+  const [showContent, setShowContent] = useState(false);
+  return (
+    <div style={{ display: "grid", gap: 6, fontSize: 12, padding: "8px 10px", background: "var(--color-background-secondary, #f8f8f6)", borderRadius: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ color: "var(--color-text-secondary)" }}>{index + 1}.</span>
+        <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{lesson.title} <span style={{ color: "var(--color-text-secondary)" }}>· {lesson.durationMinutes}min{lesson.moduleId ? ` · ${lesson.moduleId}` : ""}{lesson.content ? " · 📄 material" : ""}</span></span>
+        <button onClick={() => setShowContent((v) => !v)} style={{ ...secondaryBtn, padding: "4px 8px" }}>{showContent ? "Fechar" : "Conteúdo"}</button>
+        <button onClick={() => onRemove(lesson.id)} disabled={busy} style={{ ...secondaryBtn, padding: "4px 8px" }}><Trash2 size={13} /></button>
+      </div>
+      <input
+        value={material}
+        onChange={(e) => setMaterial(e.target.value)}
+        onBlur={() => onSavePatch(lesson, { materialUrl: material })}
+        placeholder="📎 Material de apoio / PDF (link, opcional)"
+        style={{ ...inputStyle, fontSize: 12, padding: "5px 8px" }}
+      />
+      {showContent && (
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onBlur={() => onSavePatch(lesson, { content })}
+          placeholder="Conteúdo / apostila da aula (markdown: ## título, **negrito**, - listas). Salva ao sair do campo."
+          style={{ ...inputStyle, fontSize: 12, padding: "8px 10px", minHeight: 160, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+        />
       )}
     </div>
   );

@@ -3008,7 +3008,9 @@ function toTrainingLesson(documentId: string, data: DocumentData): TrainingLesso
     title: String(data.title ?? ""),
     videoUrl: String(data.videoUrl ?? ""),
     durationMinutes: Number(data.durationMinutes ?? 0),
-    sortOrder: Number(data.sortOrder ?? 0)
+    sortOrder: Number(data.sortOrder ?? 0),
+    materialUrl: data.materialUrl ? String(data.materialUrl) : undefined,
+    content: data.content ? String(data.content) : undefined
   };
 }
 

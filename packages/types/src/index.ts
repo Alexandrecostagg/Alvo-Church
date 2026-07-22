@@ -1370,6 +1370,8 @@ export interface TrainingLesson {
   videoUrl: string;
   durationMinutes: number;
   sortOrder: number;
+  materialUrl?: string; // link opcional de material de apoio (PDF/slide/apostila) da aula
+  content?: string;     // apostila/conteúdo da aula em markdown — lido no app abaixo do vídeo
 }
 
 // Entitlement por org: gravado SOMENTE pelo webhook de pagamento (service
