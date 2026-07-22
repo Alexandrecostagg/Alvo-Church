@@ -10,6 +10,7 @@
     "typecheck": "corepack pnpm -r typecheck",
     "format": "corepack pnpm -r format",
     "seed:firebase": "tsx scripts/seed-firebase.ts",
+  "seed:capacitacao": "tsx scripts/seed-capacitacao.ts",
     "dev:emulator": "firebase emulators:start",
     "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts"
   },

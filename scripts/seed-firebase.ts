@@ -23,6 +23,9 @@ import {
   seedVisitorIntakes,
   seedVisitorJourneys
 } from "./seed-data";
+// Catálogo global da Loja de Capacitação (trilhas da Plataforma Esdras).
+// Reusa a MESMA fonte que a UI semeia, evitando duplicar os 12 cursos/46 aulas.
+import { MOCK_TRAINING_PROGRAMS, MOCK_TRAINING_LESSONS } from "../apps/web/src/lib/mock-data";
 
 interface ServiceAccount {
   project_id: string;
@@ -200,10 +203,28 @@ async function run() {
     batch.set(reportRef, report, { merge: true });
   }
 
+  // Loja de Capacitação (catálogo GLOBAL — coleção top-level, fora de organizations/).
+  for (const program of MOCK_TRAINING_PROGRAMS) {
+    const programRef = firestore.collection("platformPrograms").doc(program.id);
+    batch.set(programRef, program, { merge: true });
+  }
+
+  for (const lesson of MOCK_TRAINING_LESSONS) {
+    const lessonRef = firestore
+      .collection("platformPrograms")
+      .doc(lesson.programId)
+      .collection("lessons")
+      .doc(lesson.id);
+    batch.set(lessonRef, lesson, { merge: true });
+  }
+
   await batch.commit();
 
   console.log(
     `Seed concluido para ${seedOrganization.name}: ${seedPeople.length} pessoas, ${seedFamilies.length} familias, ${seedVisitorJourneys.length} jornadas, ${seedVisitorIntakes.length} entradas de portaria, ${seedGroups.length} grupos, ${seedEvents.length} eventos e ${seedFinancialTransparencyReports.length} demonstrativo(s).`
+  );
+  console.log(
+    `Loja de Capacitacao: ${MOCK_TRAINING_PROGRAMS.length} trilhas + ${MOCK_TRAINING_LESSONS.length} aulas em platformPrograms/ (catalogo global da Esdras).`
   );
 }
 
