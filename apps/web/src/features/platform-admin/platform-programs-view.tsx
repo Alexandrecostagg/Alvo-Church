@@ -12,7 +12,6 @@ import {
   deleteTrainingLesson
 } from "@alvo/firebase";
 import type { TrainingProgram, TrainingLesson } from "@alvo/types";
-import { MOCK_TRAINING_PROGRAMS, MOCK_TRAINING_LESSONS } from "../../lib/mock-data";
 
 // Prefixo `tp_` nos ids de trilha para não colidir com cursos internos do EAD
 // na subcoleção compartilhada de progresso (people/{id}/courseProgress).
@@ -46,23 +45,10 @@ export function PlatformProgramsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      let list = await fetchTrainingPrograms(firebaseConfig, false);
-      // Backfill idempotente: garante que TODAS as trilhas do catálogo inicial
-      // existam, comparando por id. Robusto ao bug de "semeou só as primeiras"
-      // — se faltarem trilhas (ex.: catálogo cresceu depois), completa as que
-      // faltam. Usa allSettled p/ uma falha isolada não abortar o resto.
-      const haveIds = new Set(list.map((p) => p.id));
-      const missing = MOCK_TRAINING_PROGRAMS.filter((p) => !haveIds.has(p.id));
-      if (missing.length) {
-        const missingIds = new Set(missing.map((p) => p.id));
-        await Promise.allSettled(missing.map((p) => saveTrainingProgram(firebaseConfig, p)));
-        await Promise.allSettled(
-          MOCK_TRAINING_LESSONS
-            .filter((l) => missingIds.has(l.programId))
-            .map((l) => saveTrainingLesson(firebaseConfig, l))
-        );
-        list = await fetchTrainingPrograms(firebaseConfig, false);
-      }
+      // Apenas LÊ o catálogo. Nada de auto-seed aqui: o catálogo é gerido pelo
+      // script de seed (scripts/seed-catalogo-final.ts). Um backfill a partir do
+      // mock antigo ressuscitava trilhas apagadas — por isso foi removido.
+      const list = await fetchTrainingPrograms(firebaseConfig, false);
       setPrograms(list.sort((a, b) => a.title.localeCompare(b.title)));
     } catch (e) {
       setError(friendlyError(e, "Erro ao carregar trilhas"));
