@@ -882,6 +882,8 @@ export interface Event {
   endsAt?: string;
   capacity?: number;
   isPaid: boolean;
+  locationName?: string; // nome do local exibido (ex.: "Auditório Principal") — Event não tinha rótulo de local
+  priceAmount?: number;  // preço do ingresso em R$ (modelo simples de 1 preço; distinto de EventTicket)
 }
 
 export interface EventTicket {

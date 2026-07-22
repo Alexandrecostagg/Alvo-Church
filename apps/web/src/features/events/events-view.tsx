@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { recentPeople } from "../../lib/mock-data";
+import { fetchEvents, saveEvent, deleteEvent } from "@alvo/firebase";
+import type { Event as DomainEvent } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
 export interface EventType {
@@ -155,12 +157,59 @@ const mockWorshipMap: Record<string, WorshipSong[]> = {
   ]
 };
 
+// Mapeadores entre o shape rico do view (EventType) e o Event persistido no Firestore.
+function slugifyEvent(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
+}
+const TYPE_TO_DOMAIN: Record<EventType["type"], DomainEvent["type"]> = {
+  conference: "conference", service: "service", camp: "retreat", training: "training", celebration: "kids_event"
+};
+const TYPE_FROM_DOMAIN: Record<DomainEvent["type"], EventType["type"]> = {
+  conference: "conference", service: "service", retreat: "camp", training: "training", integration_class: "training", kids_event: "celebration"
+};
+function viewToDomain(v: EventType, orgId: string): DomainEvent {
+  return {
+    id: v.id,
+    organizationId: orgId,
+    name: v.name,
+    slug: slugifyEvent(v.name) || v.id,
+    description: v.description || undefined,
+    type: TYPE_TO_DOMAIN[v.type] ?? "service",
+    status: v.status === "completed" ? "closed" : v.status === "draft" ? "draft" : "published",
+    locationType: v.locationType === "online" ? "online" : "onsite",
+    startsAt: v.startsAt,
+    endsAt: v.endsAt || undefined,
+    capacity: v.capacity || undefined,
+    isPaid: v.isPaid,
+    locationName: v.location || undefined,
+    priceAmount: v.isPaid ? (v.ticketPrice ?? 0) : undefined
+  };
+}
+function domainToView(e: DomainEvent): EventType {
+  return {
+    id: e.id,
+    name: e.name,
+    description: e.description ?? "",
+    type: TYPE_FROM_DOMAIN[e.type] ?? "service",
+    status: e.status === "closed" || e.status === "cancelled" ? "completed" : e.status === "draft" ? "draft" : "published",
+    locationType: e.locationType === "online" ? "online" : "onsite",
+    startsAt: e.startsAt,
+    endsAt: e.endsAt ?? "",
+    capacity: e.capacity ?? 0,
+    isPaid: e.isPaid,
+    ticketPrice: e.priceAmount,
+    location: e.locationName ?? ""
+  };
+}
+
 export function EventsView() {
-  const { configured } = useAppAuth();
+  const { configured, firebaseReady, firebaseConfig, organizationId } = useAppAuth();
   
-  // Estados reativos
-  const [events, setEvents] = useState<EventType[]>(initialEvents);
-  const [selectedEventId, setSelectedEventId] = useState<string>("event_women_2026");
+  // Estados reativos — eventos carregados do Firestore (não mais mock).
+  const [events, setEvents] = useState<EventType[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "conference" | "service" | "camp" | "training" | "celebration">("all");
   
@@ -170,6 +219,26 @@ export function EventsView() {
   const [notifiedAttendeeId, setNotifiedAttendeeId] = useState<string | null>(null);
   const [notificationBanner, setNotificationBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2026, 5, 1)); // Junho 2026
+
+  // Carga real dos eventos do Firestore (substitui o mock local).
+  useEffect(() => {
+    let cancelled = false;
+    if (!configured || !firebaseReady || !organizationId) return;
+    (async () => {
+      try {
+        const domain = await fetchEvents(firebaseConfig, { organizationId }, 100);
+        if (cancelled) return;
+        const mapped = domain.map(domainToView).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+        setEvents(mapped);
+        setSelectedEventId((cur) => cur || mapped[0]?.id || "");
+      } catch (err) {
+        console.error("fetchEvents falhou:", err);
+      } finally {
+        if (!cancelled) setLoadingEvents(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [configured, firebaseReady, firebaseConfig, organizationId]);
 
   // Sincroniza o mês do calendário com o evento selecionado
   useEffect(() => {
@@ -325,8 +394,8 @@ export function EventsView() {
     return { total, checkedIn, paid, checkinPercent, paymentPercent };
   }, [activeAttendees]);
 
-  // Criação de Novo Evento reativo
-  const handleCreateEvent = (e: React.FormEvent) => {
+  // Criação de Novo Evento — persiste no Firestore (aparece no app).
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.name) return;
 
@@ -345,8 +414,17 @@ export function EventsView() {
       location: newEvent.location || "Plataforma Esdras"
     };
 
-    setEvents(prev => [createdEvent, ...prev]);
+    try {
+      await saveEvent(firebaseConfig, { organizationId }, viewToDomain(createdEvent, organizationId));
+    } catch (err) {
+      console.error("saveEvent falhou:", err);
+      setNotificationBanner({ message: "Não foi possível salvar o evento. Tente de novo.", type: "info" });
+      return;
+    }
+
+    setEvents(prev => [createdEvent, ...prev].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
     setSelectedEventId(createdEvent.id);
+    setNotificationBanner({ message: `Evento "${createdEvent.name}" publicado — já aparece no app.`, type: "success" });
 
     // Inicializa a lista de inscritos vazia para o novo evento
     setAttendeesMap(prev => ({ ...prev, [createdEvent.id]: [] }));
@@ -1245,19 +1323,19 @@ export function EventsView() {
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Inscritos Totais</span>
-            <span className="stat-value">{Object.values(attendeesMap).reduce((acc, curr) => acc + curr.length, 0)}</span>
+            <span className="stat-value">—</span>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Padrão Financeiro</span>
-            <span className="stat-value">R$ 18.520</span>
+            <span className="stat-value">—</span>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Taxa de Presença</span>
-            <span className="stat-value">62%</span>
+            <span className="stat-value">—</span>
           </div>
         </div>
       </div>

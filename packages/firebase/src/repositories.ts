@@ -603,7 +603,9 @@ function toEvent(documentId: string, data: DocumentData): Event {
     startsAt: String(data.startsAt ?? ""),
     endsAt: data.endsAt ? String(data.endsAt) : undefined,
     capacity: typeof data.capacity === "number" ? data.capacity : undefined,
-    isPaid: Boolean(data.isPaid)
+    isPaid: Boolean(data.isPaid),
+    locationName: data.locationName ? String(data.locationName) : undefined,
+    priceAmount: typeof data.priceAmount === "number" ? data.priceAmount : undefined
   };
 }
 
@@ -1993,6 +1995,28 @@ export async function fetchEvents(
   const snapshot = await getDocs(eventsQuery);
 
   return snapshot.docs.map((item) => toEvent(item.id, item.data()));
+}
+
+export async function saveEvent(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  event: Event
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getEventsCollectionPath(context), event.id),
+    cleanFirestoreData(event),
+    { merge: true }
+  );
+}
+
+export async function deleteEvent(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  eventId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getEventsCollectionPath(context), eventId));
 }
 
 export async function fetchEventRegistrations(
