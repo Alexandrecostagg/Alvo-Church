@@ -101,6 +101,50 @@ export function PlatformProgramsView() {
     return <div style={{ padding: "3rem", display: "flex", justifyContent: "center", color: "var(--color-text-secondary)" }}><Loader2 size={22} className="spin" /></div>;
   }
 
+  // Form de criação/edição. Renderizado INLINE — no topo p/ "Nova trilha" e
+  // dentro do card da trilha sendo editada — pra o clique em "Editar" mostrar
+  // o form ali mesmo, e não lá no topo longe do botão.
+  const renderEditor = () => {
+    if (!form) return null;
+    return (
+      <div style={{ display: "grid", gap: 10 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>{form.id ? "Editar trilha" : "Nova trilha"}</p>
+        <Field label="Título">
+          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inputStyle} placeholder="Ex.: Formação de Líderes de Célula" />
+        </Field>
+        <Field label="Descrição">
+          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="O que a igreja recebe nesta trilha" />
+        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
+          <Field label="Professor / Ministrante (certificado)">
+            <input value={form.instructorName ?? ""} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} style={inputStyle} placeholder="Nome de quem assina o certificado" />
+          </Field>
+          <Field label="Cargo (opcional)">
+            <input value={form.instructorTitle ?? ""} onChange={(e) => setForm({ ...form, instructorTitle: e.target.value })} style={inputStyle} placeholder="Ex.: Pastor" />
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
+          <Field label="URL da capa (opcional)">
+            <input value={form.thumbnailUrl ?? ""} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} style={inputStyle} placeholder="https://..." />
+          </Field>
+          <Field label="Preço (R$)">
+            <input type="number" min={0} step="0.01" value={form.priceBRL} onChange={(e) => setForm({ ...form, priceBRL: Number(e.target.value) })} style={inputStyle} />
+          </Field>
+        </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+          <input type="checkbox" checked={form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} />
+          Publicada (visível na loja das igrejas)
+        </label>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button onClick={handleSaveProgram} disabled={saving} style={primaryBtn}>
+            {saving ? <Loader2 size={15} className="spin" /> : <Save size={15} />} Salvar
+          </button>
+          <button onClick={() => { setForm(null); setError(""); }} style={secondaryBtn}>Cancelar</button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       {error && <div style={{ padding: 12, borderRadius: 10, background: "#FCEBEB", color: "#A32D2D", marginBottom: 14, fontSize: 13 }}>{error}</div>}
@@ -116,72 +160,42 @@ export function PlatformProgramsView() {
         )}
       </div>
 
-      {form && (
-        <div style={cardStyle}>
-          <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px" }}>{form.id ? "Editar trilha" : "Nova trilha"}</p>
-          <div style={{ display: "grid", gap: 10 }}>
-            <Field label="Título">
-              <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inputStyle} placeholder="Ex.: Formação de Líderes de Célula" />
-            </Field>
-            <Field label="Descrição">
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="O que a igreja recebe nesta trilha" />
-            </Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
-              <Field label="Professor / Ministrante (certificado)">
-                <input value={form.instructorName ?? ""} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} style={inputStyle} placeholder="Nome de quem assina o certificado" />
-              </Field>
-              <Field label="Cargo (opcional)">
-                <input value={form.instructorTitle ?? ""} onChange={(e) => setForm({ ...form, instructorTitle: e.target.value })} style={inputStyle} placeholder="Ex.: Pastor" />
-              </Field>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 10 }}>
-              <Field label="URL da capa (opcional)">
-                <input value={form.thumbnailUrl ?? ""} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} style={inputStyle} placeholder="https://..." />
-              </Field>
-              <Field label="Preço (R$)">
-                <input type="number" min={0} step="0.01" value={form.priceBRL} onChange={(e) => setForm({ ...form, priceBRL: Number(e.target.value) })} style={inputStyle} />
-              </Field>
-            </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-              <input type="checkbox" checked={form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} />
-              Publicada (visível na loja das igrejas)
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={handleSaveProgram} disabled={saving} style={primaryBtn}>
-              {saving ? <Loader2 size={15} className="spin" /> : <Save size={15} />} Salvar
-            </button>
-            <button onClick={() => { setForm(null); setError(""); }} style={secondaryBtn}>Cancelar</button>
-          </div>
-        </div>
-      )}
+      {/* "Nova trilha" abre no topo; edição de trilha existente abre inline no card. */}
+      {form && !form.id && <div style={cardStyle}>{renderEditor()}</div>}
 
       <div style={{ display: "grid", gap: 10 }}>
-        {programs.map((p) => (
-          <div key={p.id} style={cardStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <strong style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{p.title}</strong>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: p.isPublished ? "#E1F5EE" : "#F1EFE8", color: p.isPublished ? "#085041" : "#7a756a" }}>
-                    {p.isPublished ? "Publicada" : "Rascunho"}
-                  </span>
-                </div>
-                <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0", overflowWrap: "anywhere" }}>{p.description}</p>
-                <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "6px 0 0" }}>
-                  R$ {p.priceBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setForm(p)} style={secondaryBtn}>Editar</button>
-                <button onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} style={secondaryBtn}>
-                  {expandedId === p.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Aulas
-                </button>
-              </div>
+        {programs.map((p) => {
+          const editingThis = !!form && form.id === p.id;
+          return (
+            <div key={p.id} style={cardStyle}>
+              {editingThis ? renderEditor() : (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <strong style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{p.title}</strong>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: p.isPublished ? "#E1F5EE" : "#F1EFE8", color: p.isPublished ? "#085041" : "#7a756a" }}>
+                          {p.isPublished ? "Publicada" : "Rascunho"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0", overflowWrap: "anywhere" }}>{p.description}</p>
+                      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "6px 0 0" }}>
+                        R$ {p.priceBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setError(""); setForm(p); setExpandedId(null); }} style={secondaryBtn} disabled={!!form}>Editar</button>
+                      <button onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} style={secondaryBtn} disabled={!!form}>
+                        {expandedId === p.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Aulas
+                      </button>
+                    </div>
+                  </div>
+                  {expandedId === p.id && <LessonsEditor programId={p.id} />}
+                </>
+              )}
             </div>
-            {expandedId === p.id && <LessonsEditor programId={p.id} />}
-          </div>
-        ))}
+          );
+        })}
         {programs.length === 0 && !form && (
           <p style={{ fontSize: 13, color: "var(--color-text-secondary)", textAlign: "center", padding: "2rem" }}>Nenhuma trilha cadastrada ainda.</p>
         )}
