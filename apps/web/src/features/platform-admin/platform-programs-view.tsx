@@ -47,10 +47,20 @@ export function PlatformProgramsView() {
     setLoading(true);
     try {
       let list = await fetchTrainingPrograms(firebaseConfig, false);
-      if (list.length === 0) {
-        // Primeira vez: semeia o catálogo inicial da Esdras (12 trilhas + aulas).
-        await Promise.all(MOCK_TRAINING_PROGRAMS.map((p) => saveTrainingProgram(firebaseConfig, p)));
-        await Promise.all(MOCK_TRAINING_LESSONS.map((l) => saveTrainingLesson(firebaseConfig, l)));
+      // Backfill idempotente: garante que TODAS as trilhas do catálogo inicial
+      // existam, comparando por id. Robusto ao bug de "semeou só as primeiras"
+      // — se faltarem trilhas (ex.: catálogo cresceu depois), completa as que
+      // faltam. Usa allSettled p/ uma falha isolada não abortar o resto.
+      const haveIds = new Set(list.map((p) => p.id));
+      const missing = MOCK_TRAINING_PROGRAMS.filter((p) => !haveIds.has(p.id));
+      if (missing.length) {
+        const missingIds = new Set(missing.map((p) => p.id));
+        await Promise.allSettled(missing.map((p) => saveTrainingProgram(firebaseConfig, p)));
+        await Promise.allSettled(
+          MOCK_TRAINING_LESSONS
+            .filter((l) => missingIds.has(l.programId))
+            .map((l) => saveTrainingLesson(firebaseConfig, l))
+        );
         list = await fetchTrainingPrograms(firebaseConfig, false);
       }
       setPrograms(list.sort((a, b) => a.title.localeCompare(b.title)));
