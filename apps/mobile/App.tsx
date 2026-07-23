@@ -2506,7 +2506,13 @@ function dowLabel(dow: number): string {
   return ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dow] ?? "Dia " + dow;
 }
 function eventLabel(type: string): string {
-  const m: Record<string, string> = { culto: "Culto", celula: "Célula", formacao: "Formação", retiro: "Retiro", worship: "Culto", cell: "Célula", training: "Formação" };
+  const m: Record<string, string> = {
+    // tipos reais do Event (@alvo/types)
+    service: "Culto", conference: "Conferência", retreat: "Retiro", training: "Formação",
+    integration_class: "Aula de Integração", kids_event: "Kids",
+    // legados/apelidos
+    culto: "Culto", celula: "Célula", formacao: "Formação", retiro: "Retiro", worship: "Culto", cell: "Célula",
+  };
   return m[type?.toLowerCase()] ?? type;
 }
 function nextDow(dow: number, hour: number): string {

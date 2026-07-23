@@ -300,8 +300,10 @@ export function EventsView() {
     }
   };
   
-  // Gaveta lateral de Novo Evento
+  // Gaveta lateral de Novo Evento (também usada para editar)
   const [showAddDrawer, setShowAddDrawer] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<EventType>>({
     name: "",
     description: "",
@@ -394,20 +396,42 @@ export function EventsView() {
     return { total, checkedIn, paid, checkinPercent, paymentPercent };
   }, [activeAttendees]);
 
-  // Criação de Novo Evento — persiste no Firestore (aparece no app).
+  const resetEventForm = () => {
+    setNewEvent({
+      name: "", description: "", type: "conference", locationType: "onsite",
+      startsAt: "", capacity: 100, isPaid: false, ticketPrice: 0, location: ""
+    });
+    setEditingId(null);
+    setShowAddDrawer(false);
+  };
+
+  // Abre a gaveta em modo EDIÇÃO, pré-preenchida com o evento.
+  const openEditDrawer = (evt: EventType) => {
+    setNewEvent({
+      name: evt.name, description: evt.description, type: evt.type,
+      locationType: evt.locationType, startsAt: evt.startsAt, capacity: evt.capacity,
+      isPaid: evt.isPaid, ticketPrice: evt.ticketPrice ?? 0, location: evt.location
+    });
+    setEditingId(evt.id);
+    setShowAddDrawer(true);
+  };
+
+  // Cria OU edita — persiste no Firestore (aparece/atualiza no app).
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.name) return;
 
-    const createdEvent: EventType = {
-      id: `event_${Date.now()}`,
+    const isEdit = !!editingId;
+    const existing = isEdit ? events.find(ev => ev.id === editingId) : undefined;
+    const savedEvent: EventType = {
+      id: editingId ?? `event_${Date.now()}`,
       name: newEvent.name,
       description: newEvent.description || "",
       type: newEvent.type as EventType["type"],
-      status: "published",
+      status: existing?.status ?? "published",
       locationType: newEvent.locationType as EventType["locationType"],
       startsAt: newEvent.startsAt || new Date().toISOString(),
-      endsAt: new Date(Date.now() + 7200000).toISOString(),
+      endsAt: existing?.endsAt || new Date(Date.now() + 7200000).toISOString(),
       capacity: Number(newEvent.capacity) || 100,
       isPaid: newEvent.isPaid || false,
       ticketPrice: newEvent.isPaid ? Number(newEvent.ticketPrice) : undefined,
@@ -415,33 +439,43 @@ export function EventsView() {
     };
 
     try {
-      await saveEvent(firebaseConfig, { organizationId }, viewToDomain(createdEvent, organizationId));
+      await saveEvent(firebaseConfig, { organizationId }, viewToDomain(savedEvent, organizationId));
     } catch (err) {
       console.error("saveEvent falhou:", err);
       setNotificationBanner({ message: "Não foi possível salvar o evento. Tente de novo.", type: "info" });
       return;
     }
 
-    setEvents(prev => [createdEvent, ...prev].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
-    setSelectedEventId(createdEvent.id);
-    setNotificationBanner({ message: `Evento "${createdEvent.name}" publicado — já aparece no app.`, type: "success" });
-
-    // Inicializa a lista de inscritos vazia para o novo evento
-    setAttendeesMap(prev => ({ ...prev, [createdEvent.id]: [] }));
-
-    // Reseta form e fecha drawer
-    setNewEvent({
-      name: "",
-      description: "",
-      type: "conference",
-      locationType: "onsite",
-      startsAt: "",
-      capacity: 100,
-      isPaid: false,
-      ticketPrice: 0,
-      location: ""
+    setEvents(prev => {
+      const next = isEdit ? prev.map(ev => ev.id === savedEvent.id ? savedEvent : ev) : [savedEvent, ...prev];
+      return next.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     });
-    setShowAddDrawer(false);
+    setSelectedEventId(savedEvent.id);
+    setNotificationBanner({
+      message: isEdit ? `Evento "${savedEvent.name}" atualizado.` : `Evento "${savedEvent.name}" publicado — já aparece no app.`,
+      type: "success"
+    });
+    if (!isEdit) setAttendeesMap(prev => ({ ...prev, [savedEvent.id]: [] }));
+    resetEventForm();
+  };
+
+  // Exclui o evento (some do web e do app).
+  const handleDeleteEvent = async (evt: EventType) => {
+    setDeletingId(evt.id);
+    try {
+      await deleteEvent(firebaseConfig, { organizationId }, evt.id);
+      setEvents(prev => {
+        const next = prev.filter(ev => ev.id !== evt.id);
+        setSelectedEventId(cur => cur === evt.id ? (next[0]?.id ?? "") : cur);
+        return next;
+      });
+      setNotificationBanner({ message: `Evento "${evt.name}" excluído.`, type: "info" });
+    } catch (err) {
+      console.error("deleteEvent falhou:", err);
+      setNotificationBanner({ message: "Não foi possível excluir o evento.", type: "info" });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // Inscrição rápida de um convidado
@@ -1008,11 +1042,11 @@ export function EventsView() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <span style={{ color: "var(--alvo-accent)", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>NOVO COMPROMISSO</span>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "2px 0 0 0" }}>Cadastrar Evento</h3>
+                <span style={{ color: "var(--alvo-accent)", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>{editingId ? "EDIÇÃO" : "NOVO COMPROMISSO"}</span>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "2px 0 0 0" }}>{editingId ? "Editar Evento" : "Cadastrar Evento"}</h3>
               </div>
-              <button 
-                onClick={() => setShowAddDrawer(false)}
+              <button
+                onClick={resetEventForm}
                 style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer", transition: "var(--alvo-transition-creamy)" }}
                 className="hover-scale"
               >
@@ -1276,7 +1310,7 @@ export function EventsView() {
               <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
                 <button
                   type="button"
-                  onClick={() => setShowAddDrawer(false)}
+                  onClick={resetEventForm}
                   className="ghost-button"
                   style={{ width: "50%", padding: "0.85rem", borderRadius: 12, border: "1px solid var(--alvo-line)", background: "transparent" }}
                 >
@@ -1287,7 +1321,7 @@ export function EventsView() {
                   className="primary-button"
                   style={{ width: "50%", padding: "0.85rem", backgroundColor: "var(--alvo-accent)", color: "white", borderRadius: 12, border: "none" }}
                 >
-                  Salvar Evento
+                  {editingId ? "Salvar alterações" : "Salvar Evento"}
                 </button>
               </div>
             </form>
@@ -1303,7 +1337,7 @@ export function EventsView() {
         </div>
         <div className="page-header-actions">
            <button
-             onClick={() => setShowAddDrawer(true)}
+             onClick={() => { resetEventForm(); setShowAddDrawer(true); }}
              className="primary-button compact"
              style={{ backgroundColor: "var(--alvo-accent)", color: "white", padding: "0.75rem 1.25rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, border: "none" }}
            >
@@ -1570,15 +1604,30 @@ export function EventsView() {
                   </div>
                 </div>
 
-                <div className="checkin-quick-btn" style={{ marginLeft: "1.5rem" }}>
-                   <button 
-                     onClick={() => setShowScanner(true)} 
-                     className="scan-mode-btn hover-scale" 
-                     style={{ 
-                       backgroundColor: "var(--alvo-accent)", 
-                       color: "white", 
-                       borderRadius: 14, 
-                       border: "none", 
+                <div className="checkin-quick-btn" style={{ marginLeft: "1.5rem", display: "flex", alignItems: "center", gap: 8 }}>
+                   <button
+                     onClick={() => openEditDrawer(activeEvent)}
+                     className="hover-scale"
+                     style={{ display: "inline-flex", alignItems: "center", gap: 6, backgroundColor: "var(--alvo-surface)", color: "var(--alvo-ink)", borderRadius: 12, border: "1px solid var(--alvo-line)", padding: "10px 14px", fontWeight: 700, cursor: "pointer" }}
+                   >
+                     <FileText size={16} /> Editar
+                   </button>
+                   <button
+                     onClick={() => { if (window.confirm(`Excluir o evento "${activeEvent.name}"? Some do web e do app.`)) void handleDeleteEvent(activeEvent); }}
+                     disabled={deletingId === activeEvent.id}
+                     className="hover-scale"
+                     style={{ display: "inline-flex", alignItems: "center", gap: 6, backgroundColor: "var(--alvo-surface)", color: "#c0392b", borderRadius: 12, border: "1px solid var(--alvo-line)", padding: "10px 14px", fontWeight: 700, cursor: "pointer", opacity: deletingId === activeEvent.id ? 0.6 : 1 }}
+                   >
+                     <X size={16} /> Excluir
+                   </button>
+                   <button
+                     onClick={() => setShowScanner(true)}
+                     className="scan-mode-btn hover-scale"
+                     style={{
+                       backgroundColor: "var(--alvo-accent)",
+                       color: "white",
+                       borderRadius: 14,
+                       border: "none",
                        boxShadow: "0 4px 15px rgba(37, 99, 235, 0.2)",
                        transition: "var(--alvo-transition-creamy)"
                      }}
