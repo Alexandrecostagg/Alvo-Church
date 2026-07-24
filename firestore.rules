@@ -425,6 +425,17 @@ service cloud.firestore {
       allow write: if canOperateKids(orgId);
     }
 
+    // Inscrição em evento: o membro cria a PRÓPRIA inscrição (responsiblePersonId
+    // = seu uid). Leitura por membro (ver o próprio ingresso / admin ver todos);
+    // alterar/excluir/marcar presença só admin. Regra específica é OR com o
+    // catch-all abaixo (que só deixa admin escrever) — libera o self-register.
+    match /organizations/{orgId}/events/{eventId}/registrations/{regId} {
+      allow read: if isTenantMember(orgId);
+      allow create: if isTenantMember(orgId)
+        && request.resource.data.responsiblePersonId == request.auth.uid;
+      allow update, delete: if isTenantAdmin(orgId);
+    }
+
     // Generic tenant collections (one level deep), excluding the
     // privacy-sensitive collections handled above.
     match /organizations/{orgId}/{collection}/{documentId} {

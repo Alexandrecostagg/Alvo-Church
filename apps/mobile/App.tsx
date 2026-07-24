@@ -28,6 +28,7 @@ import {
   fetchPublicPrayerWall,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
+  saveEventRegistration,
   fetchGroups,
   incrementPrayerCount,
   isFirebaseWebRuntimeConfigured,
@@ -39,7 +40,7 @@ import {
   fetchMarketplacePromotions,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { Event, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
+import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -789,7 +790,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} onBack={pop} />}
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
-          {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} onBack={pop} />}
+          {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
@@ -2106,34 +2107,71 @@ function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: stri
 
 // ─── Inscrição Screen ─────────────────────────────────────────────────────────
 
-function InscricaoScreen({ primary, event, user, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; onBack: () => void }) {
-  const [method, setMethod] = useState<"pix" | "cartao" | "free">("free");
+function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+  const [method, setMethod] = useState<"pix" | "cartao" | "free">(event.isPaid ? "pix" : "free");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [code] = useState(() => "ALVO-" + String(Math.floor(10000 + Math.random() * 90000)));
+  const [saving, setSaving] = useState(false);
+  const [reg, setReg] = useState<{ code: string; token: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const isFree = true; // Substituir por lógica de evento pago
+  const isFree = !event.isPaid;
 
   async function pickReceipt() {
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (!r.canceled && r.assets[0]) setReceiptUri(r.assets[0].uri);
   }
 
-  if (confirmed) {
+  // Cria a inscrição REAL no Firestore e gera o ingresso (código + payload do QR).
+  async function confirmInscricao() {
+    setSaving(true);
+    setError(null);
+    const regId = `reg_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    const code = "ESD-" + regId.slice(-5).toUpperCase();
+    const token = `${event.id}|${regId}`; // o scanner de check-in lê isto
+    const registration: EventRegistration = {
+      id: regId,
+      organizationId: orgId,
+      eventId: event.id,
+      responsiblePersonId: user.uid,
+      registrationCode: code,
+      status: "confirmed",
+      paymentStatus: event.isPaid ? "pending" : "not_required",
+      registeredAt: new Date().toISOString(),
+    };
+    try {
+      await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);
+      setReg({ code, token });
+      setConfirmed(true);
+    } catch (e) {
+      if (__DEV__) console.warn("saveEventRegistration falhou:", e);
+      setError("Não foi possível confirmar a inscrição. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (confirmed && reg) {
     return (
       <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
         <ModalHeader title="Inscrição" onBack={onBack} />
-        <View style={[s.fill, s.center, { padding: 32 }]}>
-          <Text style={{ fontSize: 56, marginBottom: 16 }}>🎫</Text>
+        <ScrollView contentContainerStyle={[s.center, { padding: 28 }]}>
+          <Text style={{ fontSize: 52, marginBottom: 12 }}>🎫</Text>
           <Text style={[s.screenTitle, { textAlign: "center" }]}>Inscrição confirmada!</Text>
           <Text style={[s.screenSub, { textAlign: "center" }]}>{event.name}</Text>
-          <View style={[s.card, { width: "100%", marginTop: 24, alignItems: "center" }]}>
+          <View style={[s.card, { width: "100%", marginTop: 20, alignItems: "center" }]}>
             <Text style={s.eyebrow}>SEU INGRESSO DIGITAL</Text>
-            <Text style={[s.codeValue, { color: primary, fontSize: 28, letterSpacing: 3, marginTop: 8 }]}>{code}</Text>
-            <Text style={[s.cardMeta, { marginTop: 6 }]}>{formatDate(event.startsAt)} · {formatHour(event.startsAt)}</Text>
+            <Image
+              source={{ uri: `${WEB_API_URL}/api/qr?data=${encodeURIComponent(reg.token)}` }}
+              style={{ width: 200, height: 200, marginTop: 12, borderRadius: 6 }}
+              resizeMode="contain"
+            />
+            <Text style={[s.codeValue, { color: primary, fontSize: 22, letterSpacing: 2, marginTop: 10 }]}>{reg.code}</Text>
+            <Text style={[s.cardMeta, { marginTop: 6, textAlign: "center" }]}>{formatDate(event.startsAt)} · {formatHour(event.startsAt)}</Text>
+            <Text style={[s.cardMeta, { marginTop: 10, textAlign: "center", color: "#64748b" }]}>Apresente este QR na entrada para o check-in.</Text>
           </View>
           <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 24, width: "100%" }} />
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -2180,7 +2218,13 @@ function InscricaoScreen({ primary, event, user, onBack }: { primary: string; ev
           </>
         )}
 
-        <Btn label={isFree ? "Confirmar inscrição gratuita" : "Confirmar inscrição"} onPress={() => setConfirmed(true)} color={primary} style={{ marginTop: 20 }} />
+        {error && <Text style={{ color: "#dc2626", marginTop: 12, textAlign: "center" }}>{error}</Text>}
+        <Btn
+          label={saving ? "Confirmando..." : isFree ? "Confirmar inscrição gratuita" : "Confirmar inscrição"}
+          onPress={() => { if (!saving) void confirmInscricao(); }}
+          color={primary}
+          style={{ marginTop: 20, opacity: saving ? 0.6 : 1 }}
+        />
       </ScrollView>
     </View>
   );

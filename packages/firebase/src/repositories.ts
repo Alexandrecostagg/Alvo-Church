@@ -2019,6 +2019,19 @@ export async function deleteEvent(
   await deleteDoc(doc(firestore, getEventsCollectionPath(context), eventId));
 }
 
+export async function saveEventRegistration(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  registration: EventRegistration
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getEventRegistrationsCollectionPath(context, registration.eventId), registration.id),
+    cleanFirestoreData(registration),
+    { merge: true }
+  );
+}
+
 export async function fetchEventRegistrations(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
