@@ -846,7 +846,7 @@ export function EventsView() {
 
               {/* Header do Ticket */}
               <div style={{ borderBottom: "1px dashed rgba(15, 23, 42, 0.12)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
-                <span style={{ fontSize: "0.75rem", letterSpacing: 2, fontWeight: 900, color: "var(--alvo-accent)", textTransform: "uppercase" }}>ALVO EVENTOS</span>
+                <span style={{ fontSize: "0.75rem", letterSpacing: 2, fontWeight: 900, color: "var(--alvo-accent)", textTransform: "uppercase" }}>ESDRAS EVENTOS</span>
                 <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "6px 0 0 0", lineHeight: 1.3 }}>{activeEvent.name}</h4>
               </div>
 
