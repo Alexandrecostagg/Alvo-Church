@@ -624,7 +624,8 @@ function toEventRegistration(
       (data.paymentStatus as EventRegistration["paymentStatus"]) ?? "pending",
     registeredAt: String(data.registeredAt ?? ""),
     personName: data.personName ? String(data.personName) : undefined,
-    personEmail: data.personEmail ? String(data.personEmail) : undefined
+    personEmail: data.personEmail ? String(data.personEmail) : undefined,
+    checkedInAt: data.checkedInAt ? String(data.checkedInAt) : undefined
   };
 }
 

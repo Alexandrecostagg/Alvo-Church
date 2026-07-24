@@ -907,6 +907,7 @@ export interface EventRegistration {
   registeredAt: string;
   personName?: string;  // nome do inscrito denormalizado no ato (p/ a plataforma exibir sem lookup)
   personEmail?: string; // email denormalizado no ato
+  checkedInAt?: string; // ISO do check-in (presença confirmada na entrada); ausente = ainda não entrou
 }
 
 export interface EventRegistrationPerson {

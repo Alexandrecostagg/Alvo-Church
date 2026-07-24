@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { recentPeople } from "../../lib/mock-data";
-import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations } from "@alvo/firebase";
+import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, saveEventRegistration } from "@alvo/firebase";
 import type { Event as DomainEvent, EventRegistration as DomainEventRegistration } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
@@ -216,7 +216,8 @@ function regToAttendee(reg: DomainEventRegistration): Attendee {
     registrationDate: reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString("pt-BR") : "",
     status: reg.status === "confirmed" ? "confirmed" : "pending",
     paymentStatus: reg.paymentStatus === "paid" ? "paid" : reg.paymentStatus === "not_required" ? "free" : "pending",
-    checkedIn: false,
+    checkedIn: !!reg.checkedInAt,
+    checkedInAt: reg.checkedInAt ? new Date(reg.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : undefined,
     ticketCode: reg.registrationCode,
   };
 }
@@ -254,10 +255,13 @@ export function EventsView() {
           const regs = await fetchEventRegistrations(firebaseConfig, { organizationId }, domain, 500);
           if (cancelled) return;
           const map: Record<string, Attendee[]> = {};
+          const byId: Record<string, DomainEventRegistration> = {};
           for (const reg of regs) {
             (map[reg.eventId] ??= []).push(regToAttendee(reg));
+            byId[reg.id] = reg;
           }
           setAttendeesMap(map);
+          setRegsById(byId);
         } catch (regErr) {
           console.error("fetchEventRegistrations falhou:", regErr);
         }
@@ -348,6 +352,8 @@ export function EventsView() {
 
   // Inscritos por evento — preenchido com dados REAIS do Firestore no efeito de carga.
   const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>({});
+  // Inscrições cruas por id (para atualizar no check-in real).
+  const [regsById, setRegsById] = useState<Record<string, DomainEventRegistration>>({});
 
   // Form de Inscrição rápida
   const [showAddGuestForm, setShowAddGuestForm] = useState(false);
@@ -526,60 +532,55 @@ export function EventsView() {
     setShowAddGuestForm(false);
   };
 
-  // Check-in Manual Rápido na lista
-  const handleQuickCheckin = (attendeeId: string) => {
-    if (!activeEvent) return;
-
+  // Check-in REAL: marca presença na inscrição (persiste no Firestore) e atualiza a UI.
+  // Retorna um resultado para o scanner/inspetor exibir.
+  const persistCheckIn = async (attendeeId: string): Promise<{ success: boolean; message: string }> => {
+    const reg = regsById[attendeeId];
+    if (!reg) return { success: false, message: "Ingresso não encontrado ou de outro evento." };
+    if (reg.checkedInAt) {
+      const at = new Date(reg.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      return { success: false, message: `Ingresso ${reg.registrationCode} já utilizado às ${at}.` };
+    }
+    const nowIso = new Date().toISOString();
+    const updated: DomainEventRegistration = { ...reg, checkedInAt: nowIso };
+    try {
+      await saveEventRegistration(firebaseConfig, { organizationId }, updated);
+    } catch (err) {
+      console.error("check-in falhou:", err);
+      return { success: false, message: "Não foi possível registrar o check-in. Tente de novo." };
+    }
+    setRegsById(prev => ({ ...prev, [attendeeId]: updated }));
     setAttendeesMap(prev => {
-      const currentList = prev[activeEvent.id] ?? [];
-      const updatedList = currentList.map(att => {
-        if (att.id === attendeeId) {
-          return {
-            ...att,
-            checkedIn: true,
-            checkedInAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-          };
-        }
-        return att;
-      });
-      return { ...prev, [activeEvent.id]: updatedList };
+      const list = prev[reg.eventId] ?? [];
+      return {
+        ...prev,
+        [reg.eventId]: list.map(a => a.id === attendeeId
+          ? { ...a, checkedIn: true, checkedInAt: new Date(nowIso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }
+          : a)
+      };
     });
+    const nome = (reg.personName && reg.personName.trim()) || reg.registrationCode;
+    return { success: true, message: `Check-in confirmado para ${nome}! Seja bem-vindo!` };
   };
 
-  // Escaneamento Simulador de Check-In por QRCode
-  const handleSimulateScan = () => {
-    if (!selectedScanAttendeeId) return;
+  // Check-in manual rápido na lista.
+  const handleQuickCheckin = (attendeeId: string) => { void persistCheckIn(attendeeId); };
+
+  // Check-in por código/QR (do scanner ou entrada manual). Aceita "eventId|regId"
+  // (payload do QR do ingresso) ou o próprio id da inscrição.
+  const handleScanCode = async (raw: string) => {
+    const code = raw.includes("|") ? raw.split("|").pop()! : raw.trim();
     setScanning(true);
     setScanResult(null);
+    const result = await persistCheckIn(code);
+    setScanning(false);
+    setScanResult(result);
+  };
 
-    setTimeout(() => {
-      setScanning(false);
-      const guest = activeAttendees.find(a => a.id === selectedScanAttendeeId);
-      if (!guest) {
-        setScanResult({ success: false, message: "Ingresso não encontrado ou inválido." });
-        return;
-      }
-
-      if (guest.checkedIn) {
-        setScanResult({ success: false, message: `Aviso: Ingresso de ${guest.firstName} já foi utilizado às ${guest.checkedInAt}!` });
-        return;
-      }
-
-      // Sucesso! Atualiza status no banco simulado
-      setAttendeesMap(prev => {
-        const currentList = prev[activeEvent.id] ?? [];
-        return {
-          ...prev,
-          [activeEvent.id]: currentList.map(a => a.id === selectedScanAttendeeId ? {
-            ...a,
-            checkedIn: true,
-            checkedInAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-          } : a)
-        };
-      });
-
-      setScanResult({ success: true, message: `Check-in confirmado para ${guest.firstName} ${guest.lastName}! Seja bem-vindo!` });
-    }, 1800);
+  // Escaneamento a partir do seletor (fallback manual do scanner).
+  const handleSimulateScan = () => {
+    if (!selectedScanAttendeeId) return;
+    void handleScanCode(selectedScanAttendeeId);
   };
 
   return (
@@ -1379,7 +1380,10 @@ export function EventsView() {
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Taxa de Presença</span>
-            <span className="stat-value">—</span>
+            <span className="stat-value">{(() => {
+              const all = Object.values(attendeesMap).flat();
+              return all.length ? Math.round((all.filter(a => a.checkedIn).length / all.length) * 100) + "%" : "—";
+            })()}</span>
           </div>
         </div>
       </div>
