@@ -368,7 +368,7 @@ export const latestRegistrations = [
     organizationId: organization.id,
     eventId: "event_1",
     responsiblePersonId: "person_2",
-    registrationCode: "ALVO-001",
+    registrationCode: "ESD-001",
     status: "confirmed",
     paymentStatus: "not_required",
     registeredAt: "2026-03-18T11:00:00.000Z"
@@ -378,7 +378,7 @@ export const latestRegistrations = [
     organizationId: organization.id,
     eventId: "event_2",
     responsiblePersonId: "person_3",
-    registrationCode: "ALVO-002",
+    registrationCode: "ESD-002",
     status: "pending",
     paymentStatus: "pending",
     registeredAt: "2026-03-18T12:00:00.000Z"
@@ -1189,7 +1189,7 @@ export const MOCK_WORSHIP_SETLISTS = [
   }
 ];
 
-// --- MOCK DATA FOR ALVO CANVAS ---
+// --- MOCK DATA FOR ESDRAS CANVAS ---
 export const MOCK_GROUP_BANNERS = [
   {
     id: "banner_group_1",

@@ -332,7 +332,7 @@ export function MemberProfileView() {
             {person ? getMemberStatusLabel(person.memberStatus) : "Aguardando"}
           </span>
           <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--alvo-ink)", marginTop: 4, fontFamily: "monospace" }}>
-            {person?.memberCardCode ?? "ALVO-992-041"}
+            {person?.memberCardCode ?? "ESD-992-041"}
           </strong>
           <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: 8 }}>{status}</p>
         </aside>

@@ -512,7 +512,7 @@ export function MemberNewView() {
             <div className="digital-card" style={{ '--card-glow': getStatusColor(memberStatus) } as any}>
               <div className="card-mesh"></div>
               <div className="card-header">
-                <span className="card-logo">⚡ ALVO GETRO</span>
+                <span className="card-logo">⚡ ESDRAS</span>
                 <span className="chip-badge">PASS</span>
               </div>
               

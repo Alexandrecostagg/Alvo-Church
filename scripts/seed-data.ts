@@ -46,7 +46,7 @@ export const seedOrganizationBranding: OrganizationBrandingSettings = {
   surfaceColor: "#f7f3ea",
   textColor: "#1c2433",
   showPoweredByAlvo: true,
-  poweredByLabel: "by Alvo"
+  poweredByLabel: "by Esdras"
 };
 
 export const seedOrganizationSubscription: OrganizationSubscriptionSettings = {
@@ -516,7 +516,7 @@ export const seedEventRegistrations: EventRegistration[] = [
     organizationId: seedOrganization.id,
     eventId: "event_1",
     responsiblePersonId: "person_2",
-    registrationCode: "ALVO-CHK-001",
+    registrationCode: "ESD-CHK-001",
     status: "confirmed",
     paymentStatus: "not_required",
     registeredAt: "2026-03-17T15:00:00.000Z"
@@ -526,7 +526,7 @@ export const seedEventRegistrations: EventRegistration[] = [
     organizationId: seedOrganization.id,
     eventId: "event_2",
     responsiblePersonId: "person_3",
-    registrationCode: "ALVO-LID-002",
+    registrationCode: "ESD-LID-002",
     status: "pending",
     paymentStatus: "not_required",
     registeredAt: "2026-03-18T13:00:00.000Z"

@@ -201,7 +201,7 @@ export function AcademyView() {
     if (!selectedLesson) return;
     const element = document.createElement("a");
     const file = new Blob([
-      `ANOTAÇÕES DE AULA - ALVO CHURCH EAD\n`,
+      `ANOTAÇÕES DE AULA - ESDRAS EAD\n`,
       `Curso: ${selectedCourse.title}\n`,
       `Aula: ${selectedLesson.title}\n`,
       `Data de Exportação: ${new Date().toLocaleDateString('pt-BR')}\n`,

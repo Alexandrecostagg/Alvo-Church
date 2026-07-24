@@ -137,7 +137,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     } else {
       ctx.fillStyle = theme.primary;
       ctx.font = "bold 28px Outfit, sans-serif";
-      ctx.fillText("ALVO CHURCH • COMUNIDADE", width / 2, 80);
+      ctx.fillText("ESDRAS • COMUNIDADE", width / 2, 80);
       ctx.beginPath();
       ctx.moveTo(width / 2 - 80, 110);
       ctx.lineTo(width / 2 + 80, 110);
@@ -248,7 +248,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     // 11. Rodapé
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     ctx.font = "20px Outfit, sans-serif";
-    ctx.fillText("GERADO AUTOMATICAMENTE VIA ALVO CANVAS", width / 2, height - 70);
+    ctx.fillText("GERADO AUTOMATICAMENTE VIA ESDRAS", width / 2, height - 70);
   };
 
   useEffect(() => {

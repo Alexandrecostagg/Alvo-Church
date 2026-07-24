@@ -484,7 +484,7 @@ export function FinanceView() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0f172a", paddingBottom: "1.5rem" }}>
                 <div>
-                  <strong style={{ fontSize: "1.4rem", color: "#0f172a", display: "block" }}>ALVO CHURCH CONTABILIDADE</strong>
+                  <strong style={{ fontSize: "1.4rem", color: "#0f172a", display: "block" }}>ESDRAS CONTABILIDADE</strong>
                   <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Relatório Geral de Transparência Financeira</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
