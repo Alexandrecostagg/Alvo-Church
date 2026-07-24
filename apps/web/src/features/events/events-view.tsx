@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { recentPeople } from "../../lib/mock-data";
-import { fetchEvents, saveEvent, deleteEvent } from "@alvo/firebase";
-import type { Event as DomainEvent } from "@alvo/types";
+import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations } from "@alvo/firebase";
+import type { Event as DomainEvent, EventRegistration as DomainEventRegistration } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
 export interface EventType {
@@ -203,6 +203,24 @@ function domainToView(e: DomainEvent): EventType {
   };
 }
 
+// Inscrição real (Firestore) -> Attendee do view. checkedIn fica false até o
+// scanner de check-in (fatia 3b) gravar EventCheckIn.
+function regToAttendee(reg: DomainEventRegistration): Attendee {
+  const name = (reg.personName && reg.personName.trim()) || reg.registrationCode;
+  const parts = name.split(" ");
+  return {
+    id: reg.id,
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" "),
+    email: reg.personEmail ?? "",
+    registrationDate: reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString("pt-BR") : "",
+    status: reg.status === "confirmed" ? "confirmed" : "pending",
+    paymentStatus: reg.paymentStatus === "paid" ? "paid" : reg.paymentStatus === "not_required" ? "free" : "pending",
+    checkedIn: false,
+    ticketCode: reg.registrationCode,
+  };
+}
+
 export function EventsView() {
   const { configured, firebaseReady, firebaseConfig, organizationId } = useAppAuth();
   
@@ -231,6 +249,18 @@ export function EventsView() {
         const mapped = domain.map(domainToView).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
         setEvents(mapped);
         setSelectedEventId((cur) => cur || mapped[0]?.id || "");
+        // Inscrições REAIS: monta o attendeesMap a partir do Firestore.
+        try {
+          const regs = await fetchEventRegistrations(firebaseConfig, { organizationId }, domain, 500);
+          if (cancelled) return;
+          const map: Record<string, Attendee[]> = {};
+          for (const reg of regs) {
+            (map[reg.eventId] ??= []).push(regToAttendee(reg));
+          }
+          setAttendeesMap(map);
+        } catch (regErr) {
+          console.error("fetchEventRegistrations falhou:", regErr);
+        }
       } catch (err) {
         console.error("fetchEvents falhou:", err);
       } finally {
@@ -316,28 +346,8 @@ export function EventsView() {
     location: ""
   });
 
-  // Lista dinâmica de inscritos associada ao evento selecionado
-  const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>(() => {
-    // Popula inscritos iniciais baseados nas pessoas do mock-data
-    const defaultAttendees: Attendee[] = recentPeople.map((person, index) => ({
-      id: person.id,
-      firstName: person.firstName,
-      lastName: person.lastName,
-      email: `${person.firstName.toLowerCase()}@plataformaesdras.com.br`,
-      registrationDate: new Date(Date.now() - 86400000 * index).toLocaleDateString("pt-BR"),
-      status: "confirmed",
-      paymentStatus: index % 3 === 0 ? "paid" : index % 3 === 1 ? "free" : "pending",
-      checkedIn: index % 4 === 0,
-      checkedInAt: index % 4 === 0 ? new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : undefined,
-      ticketCode: `TKT-${1000 + index}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
-    }));
-
-    return {
-      event_women_2026: defaultAttendees,
-      event_baptism_may: defaultAttendees.slice(2, 6).map(att => ({ ...att, checkedIn: false, checkedInAt: undefined })),
-      event_leadership_camp: defaultAttendees.slice(1, 7).map(att => ({ ...att, checkedIn: false, checkedInAt: undefined }))
-    };
-  });
+  // Inscritos por evento — preenchido com dados REAIS do Firestore no efeito de carga.
+  const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>({});
 
   // Form de Inscrição rápida
   const [showAddGuestForm, setShowAddGuestForm] = useState(false);
@@ -1357,7 +1367,7 @@ export function EventsView() {
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Inscritos Totais</span>
-            <span className="stat-value">—</span>
+            <span className="stat-value">{Object.values(attendeesMap).reduce((acc, curr) => acc + curr.length, 0)}</span>
           </div>
         </div>
         <div className="stat-card">

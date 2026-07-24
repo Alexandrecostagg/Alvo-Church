@@ -2138,6 +2138,8 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
       status: "confirmed",
       paymentStatus: event.isPaid ? "pending" : "not_required",
       registeredAt: new Date().toISOString(),
+      personName: user.displayName ?? undefined,
+      personEmail: user.email ?? undefined,
     };
     try {
       await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);

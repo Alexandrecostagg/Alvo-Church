@@ -905,6 +905,8 @@ export interface EventRegistration {
   status: RegistrationStatus;
   paymentStatus: "not_required" | "pending" | "paid";
   registeredAt: string;
+  personName?: string;  // nome do inscrito denormalizado no ato (p/ a plataforma exibir sem lookup)
+  personEmail?: string; // email denormalizado no ato
 }
 
 export interface EventRegistrationPerson {
