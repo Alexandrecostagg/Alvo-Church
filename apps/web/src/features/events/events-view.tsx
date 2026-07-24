@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import jsQR from "jsqr";
 import { 
   CalendarDays, 
   Users, 
@@ -220,6 +221,69 @@ function regToAttendee(reg: DomainEventRegistration): Attendee {
     checkedInAt: reg.checkedInAt ? new Date(reg.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : undefined,
     ticketCode: reg.registrationCode,
   };
+}
+
+// Scanner de câmera real: abre a câmera (getUserMedia) e decodifica QR com jsQR.
+// Ao detectar um QR, chama onDetect(text) uma vez (o pai pausa via `active`).
+function QrCameraScanner({ active, onDetect }: { active: boolean; onDetect: (text: string) => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cbRef = useRef(onDetect);
+  cbRef.current = onDetect;
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    let stream: MediaStream | null = null;
+    let raf = 0;
+    let stopped = false;
+    setErr(null);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (stopped) { stream.getTracks().forEach(t => t.stop()); return; }
+        const v = videoRef.current;
+        if (!v) return;
+        v.srcObject = stream;
+        v.setAttribute("playsinline", "true");
+        await v.play();
+        const tick = () => {
+          if (stopped) return;
+          const vid = videoRef.current;
+          if (vid && vid.readyState >= 2 && ctx && vid.videoWidth) {
+            canvas.width = vid.videoWidth;
+            canvas.height = vid.videoHeight;
+            ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+            if (code && code.data) { cbRef.current(code.data); return; }
+          }
+          raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      } catch {
+        setErr("Não foi possível acessar a câmera. Permita o acesso no navegador ou use a marcação manual abaixo.");
+      }
+    })();
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, [active]);
+
+  if (err) {
+    return <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", padding: "0 1.5rem", lineHeight: 1.45, textAlign: "center" }}>{err}</p>;
+  }
+  return (
+    <video
+      ref={videoRef}
+      muted
+      playsInline
+      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 14 }}
+    />
+  );
 }
 
 export function EventsView() {
@@ -629,7 +693,7 @@ export function EventsView() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--alvo-ink)", display: "flex", alignItems: "center", gap: 8 }}>
                 <QrCode size={20} style={{ color: "var(--alvo-accent)" }} />
-                Simulador de Check-In QR Code
+                Check-in por QR
               </h3>
               <button 
                 onClick={() => {
@@ -662,9 +726,9 @@ export function EventsView() {
                 boxShadow: "inset 0 2px 8px rgba(15, 23, 42, 0.04)"
               }}
             >
-              {/* Linha laser de scanner ativa */}
-              {scanning && (
-                <div 
+              {/* Linha laser enquanto a câmera está ativa */}
+              {!scanResult && (
+                <div
                   style={{
                     position: "absolute",
                     left: 0,
@@ -679,12 +743,7 @@ export function EventsView() {
                 />
               )}
 
-              {scanning ? (
-                <>
-                  <Camera size={44} style={{ color: "var(--alvo-accent)", opacity: 0.8 }} />
-                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 8, fontWeight: 600 }}>Escaneando código de barras...</p>
-                </>
-              ) : scanResult ? (
+              {scanResult ? (
                 <div style={{ padding: "2rem" }}>
                   <div style={{ display: "inline-block", padding: "1rem", borderRadius: "50%", backgroundColor: scanResult.success ? "var(--alvo-green-soft)" : "var(--alvo-red-soft)", marginBottom: "1rem", border: scanResult.success ? "1px solid rgba(22, 163, 74, 0.15)" : "1px solid rgba(220, 38, 38, 0.15)" }}>
                     {scanResult.success ? (
@@ -694,23 +753,25 @@ export function EventsView() {
                     )}
                   </div>
                   <strong style={{ display: "block", color: "var(--alvo-ink)", fontSize: "1.1rem", marginBottom: 6, fontWeight: 800 }}>
-                    {scanResult.success ? "Ingresso Lido!" : "Falha na Leitura"}
+                    {scanResult.success ? "Check-in confirmado!" : "Não deu certo"}
                   </strong>
-                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", lineHeight: 1.4 }}>{scanResult.message}</p>
+                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", lineHeight: 1.4, marginBottom: 14 }}>{scanResult.message}</p>
+                  <button
+                    onClick={() => { setScanResult(null); setScanning(false); }}
+                    className="primary-button"
+                    style={{ backgroundColor: "var(--alvo-accent)", color: "white", padding: "0.6rem 1.2rem", borderRadius: 10, fontWeight: 700, border: "none" }}
+                  >
+                    Escanear próximo
+                  </button>
                 </div>
               ) : (
-                <>
-                  <QrCode size={70} style={{ color: "rgba(15, 23, 42, 0.12)" }} />
-                  <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 12, padding: "0 2rem", lineHeight: 1.45 }}>
-                    Selecione um inscrito abaixo para simular o escaneamento físico com o leitor da portaria.
-                  </p>
-                </>
+                <QrCameraScanner active={showScanner && !scanResult} onDetect={(txt) => void handleScanCode(txt)} />
               )}
             </div>
 
             {/* Seletor de credencial de teste */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", textAlign: "left" }}>
-              <label style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", fontWeight: 700 }}>Selecione o Inscrito para Testar:</label>
+              <label style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", fontWeight: 700 }}>Ou marque a presença manualmente:</label>
               <select
                 value={selectedScanAttendeeId}
                 onChange={(e) => setSelectedScanAttendeeId(e.target.value)}
@@ -726,7 +787,7 @@ export function EventsView() {
                   transition: "var(--alvo-transition-creamy)"
                 }}
               >
-                <option value="" style={{ color: "var(--alvo-ink)" }}>-- Escolha um inscrito para o teste --</option>
+                <option value="" style={{ color: "var(--alvo-ink)" }}>-- Escolha um inscrito --</option>
                 {activeAttendees.map(att => (
                   <option key={att.id} value={att.id} style={{ color: "var(--alvo-ink)" }}>
                     {att.firstName} {att.lastName} ({att.checkedIn ? "✓ Já Fez" : "⏳ Pendente"})
@@ -753,7 +814,7 @@ export function EventsView() {
                   gap: 8
                 }}
               >
-                <QrCode size={16} /> Disparar Escaneamento (QR Code)
+                <CheckCircle2 size={16} /> Marcar presença
               </button>
             </div>
           </div>
