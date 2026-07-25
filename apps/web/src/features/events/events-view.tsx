@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { recentPeople } from "../../lib/mock-data";
-import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, saveEventRegistration } from "@alvo/firebase";
+import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, saveEventRegistration, fetchWorshipSongs, fetchWorshipSetlistByEventId, fetchServiceTeams, fetchServiceAssignments, fetchPeople } from "@alvo/firebase";
 import type { Event as DomainEvent, EventRegistration as DomainEventRegistration } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
@@ -303,6 +303,15 @@ export function EventsView() {
   const [notificationBanner, setNotificationBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2026, 5, 1)); // Junho 2026
 
+  // Inscritos/inscrições e referências (Escala/Worship) — dados REAIS do Firestore.
+  const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>({});
+  const [regsById, setRegsById] = useState<Record<string, DomainEventRegistration>>({});
+  const [worshipLib, setWorshipLib] = useState<Record<string, { title: string; artist: string; originalKey: string; youtubeUrl?: string; spotifyUrl?: string }>>({});
+  const [teamsById, setTeamsById] = useState<Record<string, string>>({});
+  const [peopleById, setPeopleById] = useState<Record<string, string>>({});
+  const [serviceAssignments, setServiceAssignments] = useState<Array<{ id: string; personId: string; role: string; serviceDate: string; status: string; serviceTeamId: string }>>([]);
+  const [worshipForActive, setWorshipForActive] = useState<WorshipSong[]>([]);
+
   // Carga real dos eventos do Firestore (substitui o mock local).
   useEffect(() => {
     let cancelled = false;
@@ -329,6 +338,22 @@ export function EventsView() {
         } catch (regErr) {
           console.error("fetchEventRegistrations falhou:", regErr);
         }
+        // Referências reais para as abas Escala e Worship (uma vez).
+        try {
+          const [songs, teams, people, assignments] = await Promise.all([
+            fetchWorshipSongs(firebaseConfig, { organizationId }),
+            fetchServiceTeams(firebaseConfig, { organizationId }),
+            fetchPeople(firebaseConfig, { organizationId }, 500),
+            fetchServiceAssignments(firebaseConfig, { organizationId }),
+          ]);
+          if (cancelled) return;
+          setWorshipLib(Object.fromEntries(songs.map((s) => [s.id, { title: s.title, artist: s.artist, originalKey: s.originalKey, youtubeUrl: s.youtubeUrl, spotifyUrl: s.spotifyUrl }])));
+          setTeamsById(Object.fromEntries(teams.map((t) => [t.id, t.name])));
+          setPeopleById(Object.fromEntries(people.map((p) => [p.id, (p.preferredName || `${p.firstName} ${p.lastName}`).trim()])));
+          setServiceAssignments(assignments.map((a) => ({ id: a.id, personId: a.personId, role: a.role, serviceDate: a.serviceDate, status: a.status, serviceTeamId: a.serviceTeamId })));
+        } catch (refErr) {
+          console.error("refs Escala/Worship falharam:", refErr);
+        }
       } catch (err) {
         console.error("fetchEvents falhou:", err);
       } finally {
@@ -337,6 +362,34 @@ export function EventsView() {
     })();
     return () => { cancelled = true; };
   }, [configured, firebaseReady, firebaseConfig, organizationId]);
+
+  // Setlist REAL (Worship) do evento selecionado.
+  useEffect(() => {
+    let cancelled = false;
+    if (!configured || !firebaseReady || !organizationId || !selectedEventId) { setWorshipForActive([]); return; }
+    (async () => {
+      try {
+        const setlist = await fetchWorshipSetlistByEventId(firebaseConfig, { organizationId }, selectedEventId);
+        if (cancelled) return;
+        if (!setlist) { setWorshipForActive([]); return; }
+        const songs: WorshipSong[] = [...setlist.songs].sort((a, b) => a.sortOrder - b.sortOrder).map((s) => {
+          const lib = worshipLib[s.songId];
+          return {
+            id: s.songId,
+            title: lib?.title ?? "(música removida)",
+            artist: lib?.artist ?? "",
+            key: s.selectedKey || lib?.originalKey || "",
+            links: { chords: undefined, youtube: lib?.youtubeUrl, spotify: lib?.spotifyUrl },
+          };
+        });
+        setWorshipForActive(songs);
+      } catch (e) {
+        console.error("fetchWorshipSetlist falhou:", e);
+        setWorshipForActive([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [configured, firebaseReady, firebaseConfig, organizationId, selectedEventId, worshipLib]);
 
   // Sincroniza o mês do calendário com o evento selecionado
   useEffect(() => {
@@ -414,10 +467,6 @@ export function EventsView() {
     location: ""
   });
 
-  // Inscritos por evento — preenchido com dados REAIS do Firestore no efeito de carga.
-  const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>({});
-  // Inscrições cruas por id (para atualizar no check-in real).
-  const [regsById, setRegsById] = useState<Record<string, DomainEventRegistration>>({});
 
   // Form de Inscrição rápida
   const [showAddGuestForm, setShowAddGuestForm] = useState(false);
@@ -475,6 +524,21 @@ export function EventsView() {
 
     return { total, checkedIn, paid, checkinPercent, paymentPercent };
   }, [activeAttendees]);
+
+  // Escala REAL do evento: ServiceAssignments cujo serviceDate cai no dia do evento.
+  const scheduleForActive: VolunteerAssignment[] = useMemo(() => {
+    if (!activeEvent) return [];
+    const eventDay = (activeEvent.startsAt || "").slice(0, 10);
+    return serviceAssignments
+      .filter((a) => (a.serviceDate || "").slice(0, 10) === eventDay)
+      .map((a) => ({
+        id: a.id,
+        role: a.role,
+        volunteerName: peopleById[a.personId] || "Voluntário",
+        status: (a.status === "confirmed" || a.status === "present") ? "confirmed" : (a.status === "declined" || a.status === "absent") ? "declined" : "pending",
+        teamName: teamsById[a.serviceTeamId] || a.serviceTeamId || "Equipe",
+      }));
+  }, [activeEvent, serviceAssignments, peopleById, teamsById]);
 
   const resetEventForm = () => {
     setNewEvent({
@@ -1435,7 +1499,13 @@ export function EventsView() {
         <div className="stat-card">
           <div className="stat-body">
             <span className="stat-label">Padrão Financeiro</span>
-            <span className="stat-value">—</span>
+            <span className="stat-value">{(() => {
+              const total = Object.entries(attendeesMap).reduce((sum, [eid, atts]) => {
+                const price = events.find(e => e.id === eid)?.ticketPrice ?? 0;
+                return sum + atts.filter(a => a.paymentStatus === "paid").length * price;
+              }, 0);
+              return "R$ " + total.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+            })()}</span>
           </div>
         </div>
         <div className="stat-card">
@@ -2044,13 +2114,14 @@ export function EventsView() {
                   </div>
                   
                   <div style={{ display: "grid", gap: "0.75rem" }}>
-                    {(!mockScheduleMap[activeEvent.id] || mockScheduleMap[activeEvent.id].length === 0) ? (
+                    {scheduleForActive.length === 0 ? (
                       <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
                         <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
-                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum voluntário escalado para este evento.</p>
+                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhum voluntário escalado para a data deste evento.</p>
+                        <p style={{ fontSize: "0.75rem", marginTop: 4 }}>As escalas são geridas no módulo Escalas (por data de serviço).</p>
                       </div>
                     ) : (
-                      mockScheduleMap[activeEvent.id].map(assignment => (
+                      scheduleForActive.map(assignment => (
                         <div
                           key={assignment.id}
                           style={{
@@ -2115,13 +2186,14 @@ export function EventsView() {
                   </div>
                   
                   <div style={{ display: "grid", gap: "0.75rem" }}>
-                    {(!mockWorshipMap[activeEvent.id] || mockWorshipMap[activeEvent.id].length === 0) ? (
+                    {worshipForActive.length === 0 ? (
                       <div style={{ padding: "3.5rem 0", textAlign: "center", color: "var(--alvo-ink-soft)" }}>
                         <Users size={36} style={{ opacity: 0.25, marginBottom: 10, color: "var(--alvo-accent)" }} />
-                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhuma música cadastrada no setlist deste evento.</p>
+                        <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>Nenhuma música no setlist deste evento.</p>
+                        <p style={{ fontSize: "0.75rem", marginTop: 4 }}>Monte o repertório no módulo Louvor/Worship.</p>
                       </div>
                     ) : (
-                      mockWorshipMap[activeEvent.id].map(song => (
+                      worshipForActive.map(song => (
                         <div
                           key={song.id}
                           style={{
