@@ -908,6 +908,8 @@ export interface EventRegistration {
   personName?: string;  // nome do inscrito denormalizado no ato (p/ a plataforma exibir sem lookup)
   personEmail?: string; // email denormalizado no ato
   checkedInAt?: string; // ISO do check-in (presença confirmada na entrada); ausente = ainda não entrou
+  receiptImage?: string; // comprovante PIX (base64) do evento pago, quando anexado; a liderança confere e confirma
+  paymentConfirmedAt?: string; // ISO em que a liderança confirmou o pagamento
 }
 
 export interface EventRegistrationPerson {

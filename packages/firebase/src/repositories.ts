@@ -625,7 +625,9 @@ function toEventRegistration(
     registeredAt: String(data.registeredAt ?? ""),
     personName: data.personName ? String(data.personName) : undefined,
     personEmail: data.personEmail ? String(data.personEmail) : undefined,
-    checkedInAt: data.checkedInAt ? String(data.checkedInAt) : undefined
+    checkedInAt: data.checkedInAt ? String(data.checkedInAt) : undefined,
+    receiptImage: data.receiptImage ? String(data.receiptImage) : undefined,
+    paymentConfirmedAt: data.paymentConfirmedAt ? String(data.paymentConfirmedAt) : undefined
   };
 }
 

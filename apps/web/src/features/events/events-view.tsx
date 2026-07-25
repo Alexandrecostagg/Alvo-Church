@@ -694,6 +694,26 @@ export function EventsView() {
   // Check-in manual rápido na lista.
   const handleQuickCheckin = (attendeeId: string) => { void persistCheckIn(attendeeId); };
 
+  // Admin confirma o pagamento (PIX) de uma inscrição pendente → paga.
+  const confirmPayment = async (attendeeId: string) => {
+    const reg = regsById[attendeeId];
+    if (!reg || reg.paymentStatus === "paid") return;
+    const updated: DomainEventRegistration = { ...reg, paymentStatus: "paid", paymentConfirmedAt: new Date().toISOString() };
+    try {
+      await saveEventRegistration(firebaseConfig, { organizationId }, updated);
+    } catch (err) {
+      console.error("confirmar pagamento falhou:", err);
+      setNotificationBanner({ message: "Não foi possível confirmar o pagamento.", type: "info" });
+      return;
+    }
+    setRegsById(prev => ({ ...prev, [attendeeId]: updated }));
+    setAttendeesMap(prev => {
+      const list = prev[reg.eventId] ?? [];
+      return { ...prev, [reg.eventId]: list.map(a => a.id === attendeeId ? { ...a, paymentStatus: "paid" as const } : a) };
+    });
+    setNotificationBanner({ message: `Pagamento de ${(reg.personName && reg.personName.trim()) || reg.registrationCode} confirmado.`, type: "success" });
+  };
+
   // Check-in por código/QR (do scanner ou entrada manual). Aceita "eventId|regId"
   // (payload do QR do ingresso) ou o próprio id da inscrição.
   const handleScanCode = async (raw: string) => {
@@ -1039,43 +1059,26 @@ export function EventsView() {
                     {inspectedAttendee.paymentStatus !== "paid" && (
                       <div style={{ background: "rgba(15, 23, 42, 0.03)", padding: "0.85rem", borderRadius: 12, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                         
-                        {/* QR Code de Pagamento PIX */}
-                        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                          <div style={{ background: "white", padding: "4px", borderRadius: 8, border: "1px solid var(--alvo-line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <QrCode size={50} style={{ color: "#0f172a" }} />
-                          </div>
-                          <div>
-                            <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>PIX COPIA E COLA / QR CODE</span>
-                            <span style={{ fontSize: "0.72rem", color: "var(--alvo-ink)", fontWeight: 500 }}>R$ {(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')}</span>
-                          </div>
-                        </div>
-
-                        {/* Chave PIX */}
-                        <div>
-                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>CHAVE PIX</span>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                            <code style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", fontWeight: 700 }}>financeiro@plataformaesdras.com.br</code>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText("financeiro@plataformaesdras.com.br");
-                                alert("Chave PIX copiada!");
-                              }}
-                              style={{ padding: "2px 6px", fontSize: "0.65rem", background: "white", border: "1px solid var(--alvo-line)", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}
-                            >
-                              Copiar
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Dados Bancários */}
-                        <div>
-                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", fontWeight: 800 }}>DADOS BANCÁRIOS</span>
-                          <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", color: "var(--alvo-ink)", lineHeight: 1.3 }}>
-                            Banco Cora (403) • Ag. 0001<br />
-                            C/C: 128456-9 • Plataforma Esdras
-                          </p>
-                        </div>
+                        {/* Comprovante real enviado pelo membro + confirmação */}
+                        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>
+                          Valor: <strong>R$ {(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')}</strong>. O membro paga o <strong>PIX real da igreja</strong> pelo app. Confira o comprovante e confirme quando o valor cair na conta.
+                        </p>
+                        {regsById[inspectedAttendee.id]?.receiptImage ? (
+                          <img
+                            src={regsById[inspectedAttendee.id]!.receiptImage!.startsWith("data:") ? regsById[inspectedAttendee.id]!.receiptImage! : `data:image/jpeg;base64,${regsById[inspectedAttendee.id]!.receiptImage}`}
+                            alt="Comprovante PIX"
+                            style={{ width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 8, border: "1px solid var(--alvo-line)" }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: "0.72rem", color: "var(--alvo-ink-soft)" }}>Nenhum comprovante anexado ainda.</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => { void confirmPayment(inspectedAttendee.id); setInspectedAttendee(null); }}
+                          style={{ padding: "0.6rem", background: "var(--alvo-green)", color: "white", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}
+                        >
+                          ✓ Confirmar pagamento recebido
+                        </button>
                       </div>
                     )}
 
@@ -2063,6 +2066,27 @@ export function EventsView() {
                                 {att.paymentStatus === "free" && "Gratuito"}
                                 {att.paymentStatus === "pending" && "Pendente"}
                               </span>
+
+                              {att.paymentStatus === "pending" && (
+                                <button
+                                  onClick={() => void confirmPayment(att.id)}
+                                  style={{
+                                    backgroundColor: "var(--alvo-green-soft)",
+                                    border: "1px solid rgba(22, 163, 74, 0.2)",
+                                    borderRadius: 8,
+                                    padding: "0.4rem 0.75rem",
+                                    color: "var(--alvo-green)",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                  }}
+                                  className="hover-card"
+                                  title="Marcar o pagamento PIX como recebido"
+                                >
+                                  ✓ Confirmar pagamento
+                                </button>
+                              )}
 
                               {/* Status de Check-in + Ações rápidas */}
                               {att.checkedIn ? (

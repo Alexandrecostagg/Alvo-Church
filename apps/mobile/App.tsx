@@ -2114,13 +2114,51 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
   const [saving, setSaving] = useState(false);
   const [reg, setReg] = useState<{ code: string; token: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
+  const [pix, setPix] = useState<{ payload: string; qrDataUrl: string; pixKey: string; receiverName: string } | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
 
   const isFree = !event.isPaid;
+  const price = event.priceAmount ?? 0;
 
   async function pickReceipt() {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
-    if (!r.canceled && r.assets[0]) setReceiptUri(r.assets[0].uri);
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6, base64: true });
+    if (r.canceled || !r.assets[0]) return;
+    const b64 = r.assets[0].base64 ?? null;
+    // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
+    if (b64 && b64.length > 900_000) {
+      Alert.alert("Imagem muito grande", "Tire uma foto mais fechada só do comprovante e tente de novo.");
+      return;
+    }
+    setReceiptUri(r.assets[0].uri);
+    setReceiptBase64(b64);
   }
+
+  // Gera o PIX REAL da igreja (mesma API da doação) para o valor do evento.
+  useEffect(() => {
+    if (isFree || method !== "pix" || price <= 0) { setPix(null); return; }
+    let cancelled = false;
+    (async () => {
+      setPixLoading(true); setPixError(null);
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ organizationId: orgId, amount: price, description: `Inscrição: ${event.name}` }),
+        });
+        const data = await res.json() as { ok?: boolean; payload?: string; qrDataUrl?: string; pixKey?: string; receiverName?: string; error?: string };
+        if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível gerar o PIX");
+        if (!cancelled) setPix({ payload: data.payload!, qrDataUrl: data.qrDataUrl!, pixKey: data.pixKey!, receiverName: data.receiverName! });
+      } catch (e) {
+        if (!cancelled) setPixError(e instanceof Error ? e.message : "Erro ao gerar o PIX");
+      } finally {
+        if (!cancelled) setPixLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isFree, method, price, orgId, event.id, event.name, user]);
 
   // Cria a inscrição REAL no Firestore e gera o ingresso (código + payload do QR).
   async function confirmInscricao() {
@@ -2140,6 +2178,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
       registeredAt: new Date().toISOString(),
       personName: user.displayName ?? undefined,
       personEmail: user.email ?? undefined,
+      ...(receiptBase64 ? { receiptImage: receiptBase64 } : {}),
     };
     try {
       await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);
@@ -2206,10 +2245,23 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
             </View>
             {method === "pix" && (
               <View style={[s.card, { marginTop: 12 }]}>
-                <Text style={s.pixLabel}>Chave PIX</Text>
-                <Text style={s.pixKey} selectable>00.000.000/0001-00</Text>
-                <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" style={{ marginTop: 12 }} />
-                {receiptUri && <Image source={{ uri: receiptUri }} style={[s.receiptPreview, { marginTop: 10 }]} resizeMode="cover" />}
+                <Text style={[s.cardMeta, { fontWeight: "700", marginBottom: 8 }]}>Valor: R$ {price.toFixed(2).replace(".", ",")}</Text>
+                {pixLoading ? (
+                  <Text style={s.cardMeta}>Gerando PIX...</Text>
+                ) : pixError ? (
+                  <Text style={{ color: "#dc2626" }}>{pixError}</Text>
+                ) : pix ? (
+                  <>
+                    <Image source={{ uri: pix.qrDataUrl }} style={{ width: 180, height: 180, alignSelf: "center", borderRadius: 4 }} resizeMode="contain" />
+                    <Text style={[s.pixLabel, { marginTop: 8 }]}>PIX copia e cola</Text>
+                    <Text style={s.pixKey} selectable numberOfLines={3}>{pix.payload}</Text>
+                    <Btn label="Copiar código PIX" onPress={() => { void Share.share({ message: pix.payload }); }} variant="outline" style={{ marginTop: 8 }} />
+                    <Text style={[s.cardMeta, { marginTop: 8 }]}>Beneficiário: {pix.receiverName}</Text>
+                    <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" style={{ marginTop: 12 }} />
+                    {receiptUri && <Image source={{ uri: receiptUri }} style={[s.receiptPreview, { marginTop: 10 }]} resizeMode="cover" />}
+                    <Text style={[s.cardMeta, { marginTop: 10, color: "#64748b" }]}>Após pagar, confirme abaixo. A inscrição fica pendente até a liderança conferir o pagamento.</Text>
+                  </>
+                ) : null}
               </View>
             )}
             {method === "cartao" && (
