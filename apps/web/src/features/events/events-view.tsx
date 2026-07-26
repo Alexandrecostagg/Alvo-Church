@@ -623,39 +623,43 @@ export function EventsView() {
   };
 
   // Inscrição rápida de um convidado
-  const handleAddGuest = (e: React.FormEvent) => {
+  // Registrar Convidado: o staff/admin inscreve alguém sem app (walk-in/telefone).
+  // Persiste uma inscrição REAL (via regra de admin write).
+  const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGuest.firstName || !newGuest.email) return;
+    if (!activeEvent || !newGuest.firstName) return;
 
-    const guest: Attendee = {
-      id: `person_${Date.now()}`,
-      firstName: newGuest.firstName,
-      lastName: newGuest.lastName,
-      email: newGuest.email,
-      registrationDate: new Date().toLocaleDateString("pt-BR"),
+    const regId = `reg_guest_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    const code = "ESD-" + regId.slice(-5).toUpperCase();
+    const registration: DomainEventRegistration = {
+      id: regId,
+      organizationId,
+      eventId: activeEvent.id,
+      responsiblePersonId: `guest_${Date.now().toString(36)}`,
+      registrationCode: code,
       status: "confirmed",
-      paymentStatus: activeEvent.isPaid ? "pending" : "free",
-      checkedIn: false,
-      ticketCode: `TKT-${Math.floor(1000 + Math.random() * 9000)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
+      paymentStatus: activeEvent.isPaid ? "pending" : "not_required",
+      registeredAt: new Date().toISOString(),
+      personName: `${newGuest.firstName} ${newGuest.lastName}`.trim(),
+      personEmail: newGuest.email || undefined,
     };
 
-    setAttendeesMap(prev => ({
-      ...prev,
-      [activeEvent.id]: [guest, ...(prev[activeEvent.id] ?? [])]
-    }));
-
-    if (activeEvent.isPaid) {
-      setNotificationBanner({
-        message: `Inscrição para ${newGuest.firstName} realizada! Uma notificação de cobrança (PIX) no valor de R$ ${(activeEvent.ticketPrice ?? 0).toFixed(2).replace('.', ',')} foi enviada ao app pessoal dele.`,
-        type: "success"
-      });
-    } else {
-      setNotificationBanner({
-        message: `Inscrição gratuita para ${newGuest.firstName} realizada! A credencial foi enviada ao app pessoal dele.`,
-        type: "info"
-      });
+    try {
+      await saveEventRegistration(firebaseConfig, { organizationId }, registration);
+    } catch (err) {
+      console.error("registrar convidado falhou:", err);
+      setNotificationBanner({ message: "Não foi possível registrar o convidado. Tente de novo.", type: "info" });
+      return;
     }
 
+    setRegsById(prev => ({ ...prev, [registration.id]: registration }));
+    setAttendeesMap(prev => ({ ...prev, [activeEvent.id]: [regToAttendee(registration), ...(prev[activeEvent.id] ?? [])] }));
+    setNotificationBanner({
+      message: activeEvent.isPaid
+        ? `Convidado ${newGuest.firstName} inscrito (código ${code}). Pagamento pendente — confirme ao receber o PIX.`
+        : `Convidado ${newGuest.firstName} inscrito (código ${code}).`,
+      type: "success"
+    });
     setNewGuest({ firstName: "", lastName: "", email: "" });
     setShowAddGuestForm(false);
   };
@@ -1950,8 +1954,7 @@ export function EventsView() {
                        </div>
                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                          <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>SOBRENOME</label>
-                         <input 
-                           required 
+                         <input
                            placeholder="Ex: Santos"
                            value={newGuest.lastName}
                            onChange={(e) => setNewGuest(prev => ({ ...prev, lastName: e.target.value }))}
@@ -1969,9 +1972,8 @@ export function EventsView() {
                          />
                        </div>
                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                         <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>E-MAIL</label>
-                         <input 
-                           required 
+                         <label style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 700 }}>E-MAIL (opcional)</label>
+                         <input
                            type="email"
                            placeholder="carlos@gmail.com"
                            value={newGuest.email}
