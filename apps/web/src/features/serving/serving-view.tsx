@@ -687,15 +687,15 @@ export function ServingView() {
       )}
 
       {/* MATRIX DE DATAS E CULTOS INTERATIVA */}
-      <section style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
+      <section style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "24px", padding: "1.25rem", marginBottom: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Calendar size={20} style={{ color: "var(--alvo-accent)" }} />
             <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Matriz de Escalas por Culto</h3>
           </div>
           <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Clique em um domingo para ver e gerenciar a escala respectiva</span>
         </div>
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           {nextSundays.map((sunday, index) => {
             const isSelected = selectedDateFilter === sunday.dateString;
             return (
@@ -773,8 +773,8 @@ export function ServingView() {
         
         {/* COLUNA ESQUERDA: LISTA DE MINISTÉRIOS */}
         <aside className="panel" style={{ padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Ministérios</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <h2 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "0.75rem" }}>Ministérios</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {teams.map((team) => {
               const teamAssignments = assignments.filter((assignment) => assignment.ministryCode === team.code && assignment.serviceDate.startsWith(selectedDateFilter));
               const teamConfirmed = teamAssignments.filter((assignment) =>
