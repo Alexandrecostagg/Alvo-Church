@@ -115,7 +115,7 @@ export function WorshipView() {
       tempoBpm: Number(newSong.tempoBpm) || undefined,
       spotifyUrl: newSong.spotifyUrl || undefined,
       youtubeUrl: newSong.youtubeUrl || undefined,
-      chordsLyrics: newSong.chordsLyrics || "[A] Exemplo de cifra",
+      chordsLyrics: newSong.chordsLyrics || undefined,
       createdAt: new Date().toISOString()
     };
 

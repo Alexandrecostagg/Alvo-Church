@@ -27,6 +27,8 @@ import {
   saveServiceAssignment,
   savePersonProfile,
   fetchServiceAssignments,
+  fetchServiceTeams,
+  saveServiceTeam,
   fetchPeople,
   isFirebaseWebRuntimeConfigured,
   fetchScheduleSwapRequests,
@@ -35,8 +37,7 @@ import {
 } from "@alvo/firebase";
 import { cachedFetchPeople } from "../../lib/org-data-cache";
 import { getTribeDisplayLabel, checkScheduleConflict, processScheduleSwap } from "@alvo/domain";
-import { recentPeople } from "../../lib/mock-data";
-import type { Person, ServiceAssignment, ServiceAssignmentStatus, ScheduleSwapRequest } from "@alvo/types";
+import type { Person, ServiceAssignment, ServiceAssignmentStatus, ScheduleSwapRequest, ServiceTeam } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
 const ministryTeams = [
@@ -72,60 +73,17 @@ const ministryTeams = [
   }
 ] as const;
 
-const initialAssignments: ServiceAssignment[] = [
-  {
-    id: "scale_reception_1",
-    organizationId: "demo_org",
-    serviceTeamId: "reception",
-    ministryCode: "reception",
-    personId: "person_1",
-    role: "Recepção Principal",
-    serviceDate: "2026-05-24T08:30:00.000Z",
-    status: "confirmed",
-    createdAt: "2026-04-29T08:30:00.000Z",
-    updatedAt: "2026-04-29T08:30:00.000Z"
-  },
-  {
-    id: "scale_media_1",
-    organizationId: "demo_org",
-    serviceTeamId: "media",
-    ministryCode: "media",
-    personId: "person_2",
-    role: "Mesa de Som",
-    serviceDate: "2026-05-24T08:00:00.000Z",
-    status: "pending",
-    createdAt: "2026-04-29T08:30:00.000Z",
-    updatedAt: "2026-04-29T08:30:00.000Z"
-  },
-  {
-    id: "scale_worship_1",
-    organizationId: "demo_org",
-    serviceTeamId: "worship",
-    ministryCode: "worship",
-    personId: "person_3",
-    role: "Vocal Principal",
-    serviceDate: "2026-05-24T07:45:00.000Z",
-    status: "confirmed",
-    createdAt: "2026-04-29T08:30:00.000Z",
-    updatedAt: "2026-04-29T08:30:00.000Z"
-  },
-  {
-    id: "scale_kids_1",
-    organizationId: "demo_org",
-    serviceTeamId: "kids",
-    ministryCode: "kids",
-    personId: "person_4",
-    role: "Sala 4-7 Anos",
-    serviceDate: "2026-05-24T08:45:00.000Z",
-    status: "pending",
-    createdAt: "2026-04-29T08:30:00.000Z",
-    updatedAt: "2026-04-29T08:30:00.000Z"
-  }
-];
+// Template padrão de ministérios — usado só para SEMEAR os ServiceTeams reais da
+// igreja na primeira vez. Depois disso, a fonte de verdade é o Firestore.
+type MinistryTeam = { code: string; name: string; summary: string; target: number };
+const DEFAULT_TEAMS: MinistryTeam[] = ministryTeams.map((t) => ({ code: t.code, name: t.name, summary: t.summary, target: t.target }));
 
 export function ServingView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
+  // Ministérios REAIS (ServiceTeams do Firestore). Começa com o template e é
+  // substituído pelos times reais no carregamento (semeados na 1ª vez).
+  const [teams, setTeams] = useState<MinistryTeam[]>(DEFAULT_TEAMS);
   
   // Dynamic calculation of the next 4 Sundays
   const nextSundays = useMemo(() => {
@@ -151,24 +109,16 @@ export function ServingView() {
     return list;
   }, []);
 
-  const [assignments, setAssignments] = useState<ServiceAssignment[]>(() => {
-    const nextSundayString = nextSundays[0]?.dateString ?? "2026-06-14";
-    return initialAssignments.map(ass => ({
-      ...ass,
-      serviceDate: `${nextSundayString}T08:30:00.000Z`
-    }));
-  });
+  const [assignments, setAssignments] = useState<ServiceAssignment[]>([]);
   
   const [swapRequests, setSwapRequests] = useState<ScheduleSwapRequest[]>([]);
   
-  // Custom tracking for audit trail log
-  const [auditLogs, setAuditLogs] = useState<Array<{ time: string; text: string; type: "success" | "info" | "warning" }>>([
-    { time: "18:42", text: `Escala para o primeiro culto dinâmica inicializada.`, type: "info" },
-    { time: "18:43", text: "Ana Silva confirmou recepção via link automático.", type: "success" }
-  ]);
+  // Trilha de atividade — começa vazia e recebe as AÇÕES REAIS (confirmações,
+  // escalações, lembretes, trocas) conforme acontecem nesta sessão.
+  const [auditLogs, setAuditLogs] = useState<Array<{ time: string; text: string; type: "success" | "info" | "warning" }>>([]);
 
   const [assignMode, setAssignMode] = useState<"members" | "new">("members");
-  const [selectedMinistryCode, setSelectedMinistryCode] = useState<(typeof ministryTeams)[number]["code"]>("reception");
+  const [selectedMinistryCode, setSelectedMinistryCode] = useState<string>("reception");
   const [status, setStatus] = useState("Carregando escalas...");
   
   // Interactive Reminders
@@ -200,8 +150,8 @@ export function ServingView() {
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setPeople(recentPeople as unknown as Person[]);
-      setStatus("Modo demonstração — alterações não serão salvas.");
+      setPeople([]);
+      setStatus("Conecte-se para carregar as pessoas e montar as escalas.");
       return;
     }
 
@@ -211,25 +161,35 @@ export function ServingView() {
       setStatus("Sincronizando pessoas para montar escalas...");
 
       try {
-        const [nextPeople, nextAssignments, nextSwaps] = await Promise.all([
+        const [nextPeople, nextAssignments, nextSwaps, nextTeams] = await Promise.all([
           cachedFetchPeople(firebaseConfig, { organizationId }, 160),
           fetchServiceAssignments(firebaseConfig, { organizationId }, 160),
-          fetchScheduleSwapRequests(firebaseConfig, { organizationId }).catch(() => [] as ScheduleSwapRequest[])
+          fetchScheduleSwapRequests(firebaseConfig, { organizationId }).catch(() => [] as ScheduleSwapRequest[]),
+          fetchServiceTeams(firebaseConfig, { organizationId }).catch(() => [] as ServiceTeam[])
         ]);
 
         if (cancelled) return;
 
-        const finalPeople = nextPeople.length > 0 ? nextPeople : (recentPeople as unknown as Person[]);
-        const finalAssignments = nextAssignments.length > 0 ? nextAssignments : (assignments as unknown as ServiceAssignment[]);
+        // Ministérios reais: usa os do Firestore; se vazio, semeia o template.
+        let finalTeams: MinistryTeam[];
+        if (nextTeams.length > 0) {
+          finalTeams = nextTeams.map((t) => ({ code: t.code, name: t.name, summary: t.summary ?? "", target: t.targetVolunteers ?? 0 }));
+        } else {
+          finalTeams = DEFAULT_TEAMS;
+          await Promise.allSettled(DEFAULT_TEAMS.map((t) => saveServiceTeam(firebaseConfig, { organizationId }, {
+            id: `team_${t.code}`, organizationId, code: t.code, name: t.name, summary: t.summary, targetVolunteers: t.target, status: "active"
+          })));
+        }
+        if (!cancelled) setTeams(finalTeams);
 
-        setPeople(finalPeople);
-        setAssignments(finalAssignments);
+        setPeople(nextPeople);
+        setAssignments(nextAssignments);
         setSwapRequests(nextSwaps);
-        
+
         setStatus(
           nextAssignments.length
             ? `${nextAssignments.length} escala(s) sincronizada(s) com ${nextPeople.length} pessoa(s).`
-            : `${finalPeople.length} pessoa(s) disponíveis (modo hibrido/mock).`
+            : `${nextPeople.length} pessoa(s) disponíveis — monte a primeira escala.`
         );
       } catch (error) {
         if (!cancelled) {
@@ -245,7 +205,7 @@ export function ServingView() {
     };
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
-  const selectedMinistry = ministryTeams.find((team) => team.code === selectedMinistryCode) ?? ministryTeams[0];
+  const selectedMinistry = teams.find((team) => team.code === selectedMinistryCode) ?? teams[0];
   
   // Filter assignments by selected ministry AND selected date filter
   const selectedAssignments = useMemo(() => {
@@ -353,7 +313,7 @@ export function ServingView() {
 
     const conflict = checkScheduleConflict(assignments, newAssignment);
     if (conflict) {
-      const conflictingTeam = ministryTeams.find(t => t.code === conflict.ministryCode)?.name || conflict.ministryCode;
+      const conflictingTeam = teams.find(t => t.code === conflict.ministryCode)?.name || conflict.ministryCode;
       const confirmAssign = window.confirm(
         `ALERTA DE CONFLITO: ${getFullName(person)} já está escalado(a) no ministério "${conflictingTeam}" nesta mesma data (${selectedDateFilter}). Deseja escalar mesmo assim?`
       );
@@ -688,7 +648,7 @@ export function ServingView() {
               
               const requestorName = requestor ? getFullName(requestor) : swap.requestorPersonId;
               const replacementName = replacement ? getFullName(replacement) : "Substituto";
-              const teamName = assignment ? (ministryTeams.find(t => t.code === assignment.ministryCode)?.name || assignment.ministryCode) : "Ministério";
+              const teamName = assignment ? (teams.find(t => t.code === assignment.ministryCode)?.name || assignment.ministryCode) : "Ministério";
 
               return (
                 <div key={swap.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", padding: "1rem", borderRadius: "16px", border: "1px solid var(--alvo-line)" }}>
@@ -815,7 +775,7 @@ export function ServingView() {
         <aside className="panel" style={{ padding: "1.5rem" }}>
           <h2 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Ministérios</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {ministryTeams.map((team) => {
+            {teams.map((team) => {
               const teamAssignments = assignments.filter((assignment) => assignment.ministryCode === team.code && assignment.serviceDate.startsWith(selectedDateFilter));
               const teamConfirmed = teamAssignments.filter((assignment) =>
                 ["confirmed", "present"].includes(assignment.status)
