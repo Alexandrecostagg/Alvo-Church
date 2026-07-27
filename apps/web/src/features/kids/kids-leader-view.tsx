@@ -25,53 +25,54 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAppAuth } from "../../../app/providers";
+import {
+  fetchActiveKidsCheckIns,
+  fetchKidsCheckInByToken,
+  checkoutKidsCheckIn,
+  saveKidsCheckIn,
+  isFirebaseWebRuntimeConfigured
+} from "@alvo/firebase";
+import type { KidsCheckIn } from "@alvo/types";
 
 interface KidRecord {
-  id: string;
+  id: string;                 // = id do KidsCheckIn (usado no checkout)
   name: string;
-  age: number;
+  age?: number;               // não persiste no check-in; presente só no walk-in local
   photo: string;
   status: "checked_in" | "checked_out";
   checkInTime: string;
   parentName: string;
   allergies?: string;
   securityRestrictions?: string;
+  parentId?: string;          // responsável que fez o check-in (p/ registrar quem retirou)
+  securityToken?: string;     // payload do QR
+}
+
+// KidsCheckIn (Firestore) -> KidRecord (view).
+function toKidRecord(c: KidsCheckIn): KidRecord {
+  return {
+    id: c.id,
+    name: c.childName ?? "Criança",
+    photo: c.photoUrl ?? "",
+    status: c.status === "checked_out" ? "checked_out" : "checked_in",
+    checkInTime: c.checkedInAt ? new Date(c.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "",
+    parentName: c.guardianName ?? "Responsável",
+    allergies: c.allergies,
+    securityRestrictions: c.securityRestrictions,
+    parentId: c.parentId,
+    securityToken: c.securityToken,
+  };
 }
 
 export function KidsLeaderView() {
-  const { user } = useAppAuth();
-  
-  // Interactive Kids presence states
-  const [kidsList, setKidsList] = useState<KidRecord[]>([
-    { 
-      id: "child_1", 
-      name: "Ana Beatriz Oliveira", 
-      age: 3, 
-      photo: "", 
-      status: "checked_in", 
-      checkInTime: "18:30", 
-      parentName: "Michelle Oliveira",
-      allergies: "Alergia severa a lactose",
-      securityRestrictions: "Apenas pais biológicos podem retirar"
-    },
-    { 
-      id: "child_2", 
-      name: "Gabriel Souza Costa", 
-      age: 6, 
-      photo: "", 
-      status: "checked_in", 
-      checkInTime: "18:45", 
-      parentName: "Carlos Souza",
-      allergies: "Nenhuma",
-      securityRestrictions: "Nenhuma"
-    },
-  ]);
+  const { user, configured, firebaseReady, firebaseConfig, organizationId } = useAppAuth();
 
-  // Kids Security Incident & Movement logs
-  const [securityLogs, setSecurityLogs] = useState([
-    { time: "18:30", text: "Check-in: Ana Beatriz Oliveira autorizada por Michelle Oliveira.", type: "success" },
-    { time: "18:45", text: "Check-in: Gabriel Souza Costa autorizado por Carlos Souza.", type: "success" }
-  ]);
+  // Crianças com check-in ativo — carregadas do Firestore.
+  const [kidsList, setKidsList] = useState<KidRecord[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Trilha de movimentação — começa vazia; recebe as ações reais da sessão.
+  const [securityLogs, setSecurityLogs] = useState<Array<{ time: string; text: string; type: string }>>([]);
 
   const [view, setView] = useState<"list" | "scan" | "checkout" | "checkin">("list");
   const [search, setSearch] = useState("");
@@ -97,7 +98,21 @@ export function KidsLeaderView() {
 
   const [scanSoundVisual, setScanSoundVisual] = useState(false);
 
-  const filteredKids = kidsList.filter(k => 
+  // Carrega os check-ins ativos reais do Firestore.
+  const reloadKids = useCallback(async () => {
+    if (!configured || !firebaseReady || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
+    try {
+      const list = await fetchActiveKidsCheckIns(firebaseConfig, { organizationId });
+      setKidsList(list.map(toKidRecord));
+      setLoadError(null);
+    } catch {
+      setLoadError("Não foi possível carregar os check-ins ativos. Verifique a conexão.");
+    }
+  }, [configured, firebaseReady, firebaseConfig, organizationId]);
+
+  useEffect(() => { void reloadKids(); }, [reloadKids]);
+
+  const filteredKids = kidsList.filter(k =>
     k.name.toLowerCase().includes(search.toLowerCase()) || 
     k.parentName.toLowerCase().includes(search.toLowerCase())
   );
@@ -155,21 +170,24 @@ export function KidsLeaderView() {
       const code = jsQR(imageData.data, imageData.width, imageData.height);
 
       if (code && active) {
-        // QR data expected to be a kidId or JSON with id field
-        let kidId = code.data.trim();
-        try { kidId = (JSON.parse(code.data) as { id: string }).id; } catch { /* raw id */ }
-        const found = kidsList.find((k) => k.id === kidId);
+        const token = code.data.trim();
         setIsScanning(false);
         stopCamera();
-        if (found) {
-          setScanSoundVisual(true);
-          setScannedChild(found);
-          setTimeout(() => setScanSoundVisual(false), 1000);
-        } else {
-          // QR não corresponde a nenhuma criança registrada — mostrar primeira (demo fallback)
-          setScanSoundVisual(true);
-          setScannedChild(kidsList[0] ?? null);
-          setTimeout(() => setScanSoundVisual(false), 1000);
+        try {
+          const checkIn = (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig))
+            ? await fetchKidsCheckInByToken(firebaseConfig, { organizationId }, token)
+            : null;
+          if (checkIn && checkIn.status === "checked_in") {
+            setScanSoundVisual(true);
+            setScannedChild(toKidRecord(checkIn));
+            setTimeout(() => setScanSoundVisual(false), 1000);
+          } else if (checkIn && checkIn.status === "checked_out") {
+            setCameraError(`Ingresso já utilizado — ${checkIn.childName ?? "a criança"} já foi retirado(a).`);
+          } else {
+            setCameraError("QR não corresponde a nenhum check-in ativo.");
+          }
+        } catch {
+          setCameraError("Não foi possível validar o QR. Tente novamente.");
         }
         return;
       }
@@ -178,63 +196,73 @@ export function KidsLeaderView() {
 
     startCamera();
     return () => { active = false; stopCamera(); };
-  }, [view, isScanning, kidsList, stopCamera]);
+  }, [view, isScanning, stopCamera, configured, firebaseReady, organizationId, firebaseConfig]);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!scannedChild) return;
     setCheckoutStatus("pending");
-    setTimeout(() => {
-      setCheckoutStatus("success");
-      
-      // Update local list status
-      setKidsList(prev => prev.map(k => k.id === scannedChild.id ? { ...k, status: "checked_out" } : k));
-      
-      // Log audit action
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      setSecurityLogs(prev => [
-        { time: timeString, text: `Retirada: ${scannedChild.name} foi retirado(a) por ${scannedChild.parentName}.`, type: "success" },
-        ...prev
-      ]);
-
-      setTimeout(() => {
-        setView("list");
-        setScannedChild(null);
-        setCheckoutStatus(null);
-      }, 1500);
-    }, 1000);
-  };
-
-  const handleCheckinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newKidDraft.name || !newKidDraft.parentName || !newKidDraft.age) return;
-
+    try {
+      if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+        await checkoutKidsCheckIn(firebaseConfig, { organizationId }, scannedChild.id, scannedChild.parentId ?? user?.uid ?? "");
+      }
+    } catch {
+      setCheckoutStatus("error");
+      return;
+    }
+    setCheckoutStatus("success");
+    // Retirado — sai da lista de ativos.
+    setKidsList(prev => prev.filter(k => k.id !== scannedChild.id));
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const newKid: KidRecord = {
-      id: `child_${Date.now()}`,
-      name: newKidDraft.name,
-      age: parseInt(newKidDraft.age),
-      photo: "",
-      status: "checked_in",
-      checkInTime: timeString,
-      parentName: newKidDraft.parentName,
-      allergies: newKidDraft.allergies || "Nenhuma",
-      securityRestrictions: newKidDraft.securityRestrictions || "Nenhuma"
-    };
-
-    setKidsList(prev => [newKid, ...prev]);
     setSecurityLogs(prev => [
-      { time: timeString, text: `Check-in: ${newKid.name} cadastrado e autorizado por ${newKid.parentName}.`, type: "success" },
+      { time: timeString, text: `Retirada: ${scannedChild.name} foi retirado(a) por ${scannedChild.parentName}.`, type: "success" },
       ...prev
     ]);
+    setTimeout(() => {
+      setView("list");
+      setScannedChild(null);
+      setCheckoutStatus(null);
+    }, 1500);
+  };
 
-    setNewKidDraft({
-      name: "",
-      age: "",
-      parentName: "",
-      allergies: "",
-      securityRestrictions: ""
-    });
-    
+  const handleCheckinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKidDraft.name || !newKidDraft.parentName) return;
+
+    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const token = `kids_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const checkIn: KidsCheckIn = {
+      id: `kc_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+      organizationId,
+      childId: `quick_${token}`,
+      parentId: user?.uid ?? "",
+      authorizedPickUpIds: [],
+      checkedInAt: new Date().toISOString(),
+      status: "checked_in",
+      securityToken: token,
+      childName: newKidDraft.name,
+      guardianName: newKidDraft.parentName,
+      allergies: newKidDraft.allergies || undefined,
+      securityRestrictions: newKidDraft.securityRestrictions || undefined,
+      checkedInByUserId: user?.uid,
+    };
+
+    try {
+      if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+        await saveKidsCheckIn(firebaseConfig, { organizationId }, checkIn);
+      }
+    } catch {
+      setLoadError("Não foi possível salvar o check-in. Tente novamente.");
+      return;
+    }
+
+    const newKid = toKidRecord(checkIn);
+    newKid.age = newKidDraft.age ? parseInt(newKidDraft.age) : undefined;
+    setKidsList(prev => [newKid, ...prev]);
+    setSecurityLogs(prev => [
+      { time: timeString, text: `Check-in: ${newKid.name} autorizado por ${newKid.parentName}.`, type: "success" },
+      ...prev
+    ]);
+    setNewKidDraft({ name: "", age: "", parentName: "", allergies: "", securityRestrictions: "" });
     setView("list");
   };
 
@@ -349,7 +377,7 @@ export function KidsLeaderView() {
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <strong style={{ color: kid.status === "checked_out" ? "var(--alvo-ink-soft)" : "var(--alvo-ink)", fontSize: "1rem" }}>{kid.name}</strong>
-                          <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>({kid.age} anos)</span>
+                          {kid.age ? <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>({kid.age} anos)</span> : null}
                           
                           {/* Alert marker for lactose/peanut allergies */}
                           {kid.allergies && kid.allergies !== "Nenhuma" && kid.status === "checked_in" && (
@@ -598,7 +626,7 @@ export function KidsLeaderView() {
                 <Baby size={28} style={{ color: "var(--alvo-accent)" }} />
                 <div>
                   <strong style={{ color: "var(--alvo-ink)", display: "block" }}>{scannedChild.name}</strong>
-                  <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem" }}>{scannedChild.age} anos • Sala de Escolinha 02</span>
+                  <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem" }}>{scannedChild.age ? `${scannedChild.age} anos • ` : ""}Sala Kids</span>
                 </div>
               </div>
             </div>
