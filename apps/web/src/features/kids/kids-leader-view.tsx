@@ -28,6 +28,7 @@ import { useAppAuth } from "../../../app/providers";
 import {
   fetchActiveKidsCheckIns,
   fetchKidsCheckInByToken,
+  fetchKidsCheckInByCode,
   checkoutKidsCheckIn,
   saveKidsCheckIn,
   isFirebaseWebRuntimeConfigured
@@ -46,6 +47,9 @@ interface KidRecord {
   securityRestrictions?: string;
   parentId?: string;          // responsável que fez o check-in (p/ registrar quem retirou)
   securityToken?: string;     // payload do QR
+  pickupCode?: string;        // código curto de retirada
+  guardianPhone?: string;     // WhatsApp de quem deixou
+  authorizedPickupNames?: string[]; // nomes autorizados a retirar
 }
 
 // KidsCheckIn (Firestore) -> KidRecord (view).
@@ -61,7 +65,18 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
     securityRestrictions: c.securityRestrictions,
     parentId: c.parentId,
     securityToken: c.securityToken,
+    pickupCode: c.pickupCode,
+    guardianPhone: c.guardianPhone,
+    authorizedPickupNames: c.authorizedPickupNames,
   };
+}
+
+// Gera um código curto de retirada legível (sem 0/O/1/I).
+function genPickupCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return `KD-${s}`;
 }
 
 export function KidsLeaderView() {
@@ -92,11 +107,20 @@ export function KidsLeaderView() {
     name: "",
     age: "",
     parentName: "",
+    parentPhone: "",
+    authorizedNames: "",
     allergies: "",
     securityRestrictions: ""
   });
 
   const [scanSoundVisual, setScanSoundVisual] = useState(false);
+  // Crachá recém-gerado (mostra QR + código pro operador entregar ao responsável).
+  const [justCheckedIn, setJustCheckedIn] = useState<{ token: string; code: string; name: string } | null>(null);
+  // Retirada: quem está retirando + observação (auditoria) + código digitado (fallback).
+  const [releasedTo, setReleasedTo] = useState("");
+  const [releaseNote, setReleaseNote] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   // Carrega os check-ins ativos reais do Firestore.
   const reloadKids = useCallback(async () => {
@@ -198,30 +222,59 @@ export function KidsLeaderView() {
     return () => { active = false; stopCamera(); };
   }, [view, isScanning, stopCamera, configured, firebaseReady, organizationId, firebaseConfig]);
 
-  const handleCheckout = async () => {
+  // Retirada. `overrideNote` é preenchido quando quem retira NÃO está na lista
+  // (autorização por WhatsApp ou override do operador) — vira registro auditável.
+  const handleCheckout = async (overrideNote?: string) => {
     if (!scannedChild) return;
+    const who = releasedTo.trim() || scannedChild.parentName;
     setCheckoutStatus("pending");
     try {
       if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        await checkoutKidsCheckIn(firebaseConfig, { organizationId }, scannedChild.id, scannedChild.parentId ?? user?.uid ?? "");
+        await checkoutKidsCheckIn(
+          firebaseConfig,
+          { organizationId },
+          scannedChild.id,
+          scannedChild.parentId ?? user?.uid ?? "",
+          { releasedTo: who, releaseNote: overrideNote || releaseNote.trim() || undefined }
+        );
       }
     } catch {
       setCheckoutStatus("error");
       return;
     }
     setCheckoutStatus("success");
-    // Retirado — sai da lista de ativos.
     setKidsList(prev => prev.filter(k => k.id !== scannedChild.id));
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const note = overrideNote || releaseNote.trim();
     setSecurityLogs(prev => [
-      { time: timeString, text: `Retirada: ${scannedChild.name} foi retirado(a) por ${scannedChild.parentName}.`, type: "success" },
+      { time: timeString, text: `Retirada: ${scannedChild.name} entregue a ${who}${note ? ` — ${note}` : ""}.`, type: "success" },
       ...prev
     ]);
     setTimeout(() => {
       setView("list");
       setScannedChild(null);
       setCheckoutStatus(null);
+      setReleasedTo("");
+      setReleaseNote("");
     }, 1500);
+  };
+
+  // Retirada pelo CÓDIGO curto (fallback: sem app/bateria/visitante).
+  const handleCodeLookup = async () => {
+    const code = codeInput.trim().toUpperCase();
+    if (!code) return;
+    setCodeError(null);
+    const local = kidsList.find(k => (k.pickupCode ?? "").toUpperCase() === code);
+    if (local) { setScannedChild(local); setCodeInput(""); setView("checkout"); return; }
+    try {
+      if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+        const found = await fetchKidsCheckInByCode(firebaseConfig, { organizationId }, code);
+        if (found) { setScannedChild(toKidRecord(found)); setCodeInput(""); setView("checkout"); return; }
+      }
+      setCodeError("Código não encontrado entre os check-ins ativos.");
+    } catch {
+      setCodeError("Não foi possível buscar o código. Tente de novo.");
+    }
   };
 
   const handleCheckinSubmit = async (e: React.FormEvent) => {
@@ -230,6 +283,9 @@ export function KidsLeaderView() {
 
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const token = `kids_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const pickupCode = genPickupCode();
+    const authorizedPickupNames = newKidDraft.authorizedNames
+      .split(",").map(n => n.trim()).filter(Boolean);
     const checkIn: KidsCheckIn = {
       id: `kc_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
       organizationId,
@@ -239,8 +295,11 @@ export function KidsLeaderView() {
       checkedInAt: new Date().toISOString(),
       status: "checked_in",
       securityToken: token,
+      pickupCode,
       childName: newKidDraft.name,
       guardianName: newKidDraft.parentName,
+      guardianPhone: newKidDraft.parentPhone.replace(/\D/g, "") || undefined,
+      authorizedPickupNames: authorizedPickupNames.length ? authorizedPickupNames : undefined,
       allergies: newKidDraft.allergies || undefined,
       securityRestrictions: newKidDraft.securityRestrictions || undefined,
       checkedInByUserId: user?.uid,
@@ -249,9 +308,11 @@ export function KidsLeaderView() {
     try {
       if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
         await saveKidsCheckIn(firebaseConfig, { organizationId }, checkIn);
+      } else {
+        throw new Error("offline");
       }
     } catch {
-      setLoadError("Não foi possível salvar o check-in. Tente novamente.");
+      setLoadError("Não foi possível salvar o check-in. Verifique a conexão e tente novamente.");
       return;
     }
 
@@ -259,10 +320,11 @@ export function KidsLeaderView() {
     newKid.age = newKidDraft.age ? parseInt(newKidDraft.age) : undefined;
     setKidsList(prev => [newKid, ...prev]);
     setSecurityLogs(prev => [
-      { time: timeString, text: `Check-in: ${newKid.name} autorizado por ${newKid.parentName}.`, type: "success" },
+      { time: timeString, text: `Check-in: ${newKid.name} (código ${pickupCode}) autorizado por ${newKid.parentName}.`, type: "success" },
       ...prev
     ]);
-    setNewKidDraft({ name: "", age: "", parentName: "", allergies: "", securityRestrictions: "" });
+    setNewKidDraft({ name: "", age: "", parentName: "", parentPhone: "", authorizedNames: "", allergies: "", securityRestrictions: "" });
+    setJustCheckedIn({ token, code: pickupCode, name: newKid.name });
     setView("list");
   };
 
@@ -295,6 +357,46 @@ export function KidsLeaderView() {
           </div>
         </div>
       </header>
+
+      {/* CRACHÁ RECÉM-GERADO — QR + código pro operador entregar ao responsável */}
+      {justCheckedIn && (
+        <div
+          onClick={() => setJustCheckedIn(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(10, 8, 24, 0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1.5rem" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="panel"
+            style={{ padding: "2rem", maxWidth: 420, width: "100%", textAlign: "center", background: "white", borderRadius: 24 }}
+          >
+            <CheckCircle2 size={48} style={{ color: "#10b981", margin: "0 auto 8px" }} />
+            <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.35rem", fontWeight: 900, margin: "0 0 4px" }}>Check-in Confirmado</h2>
+            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", margin: "0 0 1.25rem" }}>
+              <strong style={{ color: "var(--alvo-ink)" }}>{justCheckedIn.name}</strong> está sob cuidado. Mostre o QR ao responsável para escanear no app.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <img
+                src={`/api/kids/qr?data=${encodeURIComponent(justCheckedIn.token)}`}
+                alt={`QR de retirada de ${justCheckedIn.name}`}
+                style={{ width: 200, height: 200, borderRadius: 12, border: "1px solid var(--alvo-line)" }}
+              />
+            </div>
+            <div style={{ marginTop: "1.25rem", padding: "0.85rem", background: "rgba(249, 115, 22, 0.08)", border: "1px dashed rgba(249, 115, 22, 0.35)", borderRadius: 16 }}>
+              <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", textTransform: "uppercase", fontWeight: 700, display: "block" }}>Código de retirada (sem app)</span>
+              <strong style={{ fontFamily: "monospace", fontSize: "1.5rem", letterSpacing: "0.1em", color: "var(--alvo-accent)" }}>{justCheckedIn.code}</strong>
+              <p style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", margin: "6px 0 0" }}>
+                Anote no crachá impresso. Serve para retirar mesmo sem celular/bateria/internet.
+              </p>
+            </div>
+            <button
+              onClick={() => setJustCheckedIn(null)}
+              style={{ marginTop: "1.5rem", width: "100%", padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}
+            >
+              Concluir
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DASHBOARD PRINCIPAL LIST */}
       {view === "list" && (
@@ -339,6 +441,28 @@ export function KidsLeaderView() {
               <strong style={{ fontSize: "1.1rem", marginTop: 4 }}>Escanear Token QR</strong>
               <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.8)" }}>Validar saída/retirada segura</span>
             </button>
+          </div>
+
+          {/* RETIRADA POR CÓDIGO — fallback quando o responsável não tem app/bateria */}
+          <div className="panel" style={{ padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--alvo-ink)", fontWeight: 700, fontSize: "0.85rem" }}>
+              <QrCode size={16} style={{ color: "var(--alvo-accent)" }} />
+              Retirada sem app
+            </div>
+            <input
+              placeholder="Digite o código (ex: KD-4F7A)"
+              value={codeInput}
+              onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError(null); }}
+              onKeyDown={e => { if (e.key === "Enter") void handleCodeLookup(); }}
+              style={{ flex: 1, minWidth: 180, padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", fontFamily: "monospace", letterSpacing: "0.08em", outline: "none", textTransform: "uppercase" }}
+            />
+            <button
+              onClick={() => void handleCodeLookup()}
+              style={{ padding: "8px 18px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
+            >
+              Buscar
+            </button>
+            {codeError && <span style={{ color: "#ef4444", fontSize: "0.75rem", width: "100%" }}>{codeError}</span>}
           </div>
 
           <div className="kids-main-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
@@ -480,7 +604,7 @@ export function KidsLeaderView() {
 
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Responsável pela Entrada
-                  <input 
+                  <input
                     required
                     placeholder="Nome do Pai/Mãe"
                     value={newKidDraft.parentName}
@@ -489,6 +613,27 @@ export function KidsLeaderView() {
                   />
                 </label>
               </div>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                WhatsApp do Responsável <span style={{ fontWeight: 400 }}>(para autorizar retirada à distância)</span>
+                <input
+                  type="tel"
+                  placeholder="Ex: (11) 99999-8888"
+                  value={newKidDraft.parentPhone}
+                  onChange={e => setNewKidDraft(prev => ({ ...prev, parentPhone: e.target.value }))}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
+                />
+              </label>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                Quem mais pode retirar? <span style={{ fontWeight: 400 }}>(nomes separados por vírgula)</span>
+                <input
+                  placeholder="Ex: Vovó Marta, Tio João"
+                  value={newKidDraft.authorizedNames}
+                  onChange={e => setNewKidDraft(prev => ({ ...prev, authorizedNames: e.target.value }))}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
+                />
+              </label>
 
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Alergias / Necessidades Médicas
@@ -616,7 +761,11 @@ export function KidsLeaderView() {
             <div style={{ textAlign: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
               <ShieldCheck size={40} style={{ color: "var(--alvo-accent)", margin: "0 auto 8px" }} />
               <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.5rem", fontWeight: 900, margin: 0 }}>Protocolo de Retirada Rígido</h2>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Código do Token de Segurança: SEC-MATCH-092-29</span>
+              {scannedChild.pickupCode && (
+                <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>
+                  Código de retirada: <strong style={{ fontFamily: "monospace", color: "var(--alvo-accent)" }}>{scannedChild.pickupCode}</strong>
+                </span>
+              )}
             </div>
 
             {/* Entity Child summary */}
@@ -631,19 +780,72 @@ export function KidsLeaderView() {
               </div>
             </div>
 
-            {/* Authorized Guardians with simulated match confirmation */}
+            {/* Responsáveis autorizados — do cadastro do check-in */}
             <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Pais / Responsáveis Autorizados</span>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: 6 }}>
-                <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1.5px dashed var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Autorizados a retirar</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: 6 }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
                   <UserCheck size={16} style={{ color: "#10b981" }} />
                   <div>
                     <strong>{scannedChild.parentName}</strong>
-                    <span style={{ display: "block", fontSize: "0.7rem", color: "#10b981" }}>✓ Responsável Principal Autenticado por Token QR</span>
+                    <span style={{ display: "block", fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>Responsável que fez o check-in</span>
                   </div>
                 </div>
+                {(scannedChild.authorizedPickupNames ?? []).map((n, i) => (
+                  <div key={i} style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
+                    <UserCheck size={16} style={{ color: "#10b981" }} />
+                    <strong>{n}</strong>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Quem está retirando agora? */}
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                Quem está retirando?
+                <input
+                  placeholder="Nome de quem está na porta"
+                  value={releasedTo}
+                  onChange={e => setReleasedTo(e.target.value)}
+                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
+                />
+              </label>
+              <p style={{ fontSize: "0.72rem", color: "var(--alvo-ink-soft)", margin: "6px 0 0" }}>
+                Deixe em branco se for o responsável principal. Se for outra pessoa, confirme a identidade antes de liberar.
+              </p>
+            </div>
+
+            {/* Autorização à distância por WhatsApp — quando quem retira não está na lista */}
+            {scannedChild.guardianPhone && (
+              <div style={{ background: "rgba(37, 211, 102, 0.06)", border: "1px solid rgba(37, 211, 102, 0.25)", padding: "1rem", borderRadius: "16px", marginBottom: "1.25rem" }}>
+                <span style={{ color: "#128C7E", fontSize: "0.75rem", fontWeight: 800, display: "block", marginBottom: 6 }}>
+                  Pessoa não listada? Confirme com o responsável
+                </span>
+                <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.78rem", margin: "0 0 10px" }}>
+                  Peça pelo WhatsApp que o responsável confirme quem pode retirar. Registre a confirmação abaixo antes de liberar.
+                </p>
+                <a
+                  href={`https://wa.me/55${scannedChild.guardianPhone}?text=${encodeURIComponent(`Olá! Aqui é da sala Kids. Podemos liberar ${scannedChild.name} para ${releasedTo.trim() || "a pessoa que está aqui"}? Por favor, confirme respondendo SIM.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366", color: "white", padding: "8px 16px", borderRadius: "10px", fontWeight: 700, fontSize: "0.8rem", textDecoration: "none" }}
+                >
+                  Chamar responsável no WhatsApp
+                </a>
+              </div>
+            )}
+
+            {/* Observação / override auditado */}
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)", marginBottom: "1.5rem" }}>
+              Observação da retirada <span style={{ fontWeight: 400 }}>(obrigatória se não estiver na lista)</span>
+              <input
+                placeholder="Ex: Mãe confirmou por WhatsApp às 10h32"
+                value={releaseNote}
+                onChange={e => setReleaseNote(e.target.value)}
+                style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
+              />
+            </label>
 
             {/* Medical details or warnings */}
             {scannedChild.allergies && scannedChild.allergies !== "Nenhuma" && (
@@ -669,25 +871,45 @@ export function KidsLeaderView() {
                   Criança entregue ao responsável com sucesso!
                 </div>
               ) : (
-                <div style={{ display: "flex", gap: "1rem" }}>
-                  <button 
-                    onClick={() => {
-                      setView("list");
-                      setScannedChild(null);
-                    }}
-                    style={{ flex: 1, padding: "12px", border: "1px solid var(--alvo-line)", background: "white", color: "var(--alvo-ink)", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    Cancelar
-                  </button>
+                (() => {
+                  const who = releasedTo.trim();
+                  const authorized = [scannedChild.parentName, ...(scannedChild.authorizedPickupNames ?? [])]
+                    .map(n => n.trim().toLowerCase());
+                  // Retirando não listado → exige observação (override auditado).
+                  const isListed = who === "" || authorized.includes(who.toLowerCase());
+                  const needsNote = !isListed && releaseNote.trim() === "";
+                  return (
+                    <div>
+                      {!isListed && (
+                        <div style={{ background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "10px 14px", borderRadius: "12px", marginBottom: "1rem", fontSize: "0.78rem", color: "#b45309", display: "flex", alignItems: "center", gap: 8 }}>
+                          <AlertTriangle size={16} />
+                          <strong>{who}</strong> não está na lista de autorizados. Registre a observação para liberar sob responsabilidade do operador.
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: "1rem" }}>
+                        <button
+                          onClick={() => {
+                            setView("list");
+                            setScannedChild(null);
+                            setReleasedTo("");
+                            setReleaseNote("");
+                          }}
+                          style={{ flex: 1, padding: "12px", border: "1px solid var(--alvo-line)", background: "white", color: "var(--alvo-ink)", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Cancelar
+                        </button>
 
-                  <button 
-                    onClick={handleCheckout}
-                    disabled={checkoutStatus === "pending"}
-                    style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
-                  >
-                    {checkoutStatus === "pending" ? "Validando Token..." : "Confirmar Liberação"}
-                  </button>
-                </div>
+                        <button
+                          onClick={() => void handleCheckout()}
+                          disabled={checkoutStatus === "pending" || needsNote}
+                          style={{ flex: 1, padding: "12px", background: needsNote ? "var(--alvo-line)" : "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: needsNote ? "not-allowed" : "pointer", opacity: needsNote ? 0.7 : 1 }}
+                        >
+                          {checkoutStatus === "pending" ? "Registrando..." : isListed ? "Confirmar Liberação" : "Liberar com Override"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
               )}
             </div>
 

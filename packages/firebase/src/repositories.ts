@@ -3366,10 +3366,15 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     securityToken: String(data.securityToken ?? ""),
     childName: data.childName ? String(data.childName) : undefined,
     guardianName: data.guardianName ? String(data.guardianName) : undefined,
+    guardianPhone: data.guardianPhone ? String(data.guardianPhone) : undefined,
+    authorizedPickupNames: Array.isArray(data.authorizedPickupNames) ? data.authorizedPickupNames.map(String) : undefined,
+    pickupCode: data.pickupCode ? String(data.pickupCode) : undefined,
     allergies: data.allergies ? String(data.allergies) : undefined,
     securityRestrictions: data.securityRestrictions ? String(data.securityRestrictions) : undefined,
     photoUrl: data.photoUrl ? String(data.photoUrl) : undefined,
     photoConsentAt: data.photoConsentAt ? String(data.photoConsentAt) : undefined,
+    releasedTo: data.releasedTo ? String(data.releasedTo) : undefined,
+    releaseNote: data.releaseNote ? String(data.releaseNote) : undefined,
     notes: data.notes ? String(data.notes) : undefined
   };
 }
@@ -3421,12 +3426,32 @@ export async function fetchKidsCheckInByToken(
   return d ? toKidsCheckIn(d.id, d.data()) : null;
 }
 
-// Retirada: marca checked_out registrando quem retirou.
+// Resolve um check-in ATIVO pelo código curto de retirada (fallback ao QR).
+export async function fetchKidsCheckInByCode(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  pickupCode: string
+): Promise<KidsCheckIn | null> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getKidsCheckInsCollectionPath(context)),
+      where("pickupCode", "==", pickupCode.toUpperCase()),
+      where("status", "==", "checked_in"),
+      limit(1)
+    )
+  );
+  const d = snap.docs[0];
+  return d ? toKidsCheckIn(d.id, d.data()) : null;
+}
+
+// Retirada: marca checked_out registrando quem retirou + auditoria (releasedTo/releaseNote).
 export async function checkoutKidsCheckIn(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
   checkInId: string,
-  byParentId: string
+  byParentId: string,
+  audit?: { releasedTo?: string; releaseNote?: string }
 ) {
   const firestore = getFirebaseFirestore(config);
   await setDoc(
@@ -3434,7 +3459,9 @@ export async function checkoutKidsCheckIn(
     cleanFirestoreData({
       status: "checked_out",
       checkedOutAt: new Date().toISOString(),
-      checkedOutByParentId: byParentId
+      checkedOutByParentId: byParentId,
+      releasedTo: audit?.releasedTo,
+      releaseNote: audit?.releaseNote
     }),
     { merge: true }
   );

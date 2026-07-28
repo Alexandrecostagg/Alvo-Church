@@ -1185,10 +1185,15 @@ export interface KidsCheckIn {
   // Denormalizado p/ exibição (essencial quando a criança é cadastro rápido, sem Person):
   childName?: string;
   guardianName?: string;
+  guardianPhone?: string;          // WhatsApp de quem deixou (só dígitos c/ DDI) — p/ autorizar retirada
+  authorizedPickupNames?: string[];// nomes livres autorizados a retirar (além do responsável)
+  pickupCode?: string;             // código curto de retirada (fallback ao QR: sem app/bateria/visitante)
   allergies?: string;
   securityRestrictions?: string;
   photoUrl?: string;               // foto tirada na hora
   photoConsentAt?: string;         // consentimento LGPD do responsável (timestamp)
+  releasedTo?: string;             // quem retirou (nome) — auditoria
+  releaseNote?: string;            // observação da liberação (ex.: "autorizado por [mãe] via WhatsApp")
   notes?: string;
 }
 
