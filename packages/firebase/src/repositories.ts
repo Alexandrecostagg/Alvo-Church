@@ -314,6 +314,7 @@ function toPerson(documentId: string, data: DocumentData): Person {
     personType: (data.personType as Person["personType"]) ?? "adult",
     memberStatus: (data.memberStatus as Person["memberStatus"]) ?? "visitor",
     status: (data.status as Person["status"]) ?? "active",
+    createdAt: data.createdAt ? String(data.createdAt) : undefined,
     tribePrimaryCode: data.tribePrimaryCode as Person["tribePrimaryCode"],
     tribeSecondaryCode: data.tribeSecondaryCode as Person["tribeSecondaryCode"]
   };
@@ -1117,9 +1118,14 @@ export async function savePersonProfile(
   // incrementar o contador de membros — usado pela regra do Firestore que
   // barra o cadastro acima do limite do plano — quando é um cadastro novo.
   const existing = await getDoc(ref);
-  await setDoc(ref, cleanFirestoreData(person), { merge: true });
+  const isNew = !existing.exists();
+  // Carimba a data de entrada só na criação (não sobrescreve cadastros existentes).
+  const payload = isNew && !person.createdAt
+    ? { ...person, createdAt: new Date().toISOString() }
+    : person;
+  await setDoc(ref, cleanFirestoreData(payload), { merge: true });
 
-  if (!existing.exists()) {
+  if (isNew) {
     await updateDoc(doc(firestore, "organizations", context.organizationId), {
       memberCount: increment(1)
     }).catch(() => {

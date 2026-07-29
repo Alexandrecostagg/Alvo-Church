@@ -67,8 +67,9 @@ export function ReportsView() {
   const totalVisitors  = people.filter(p => p.memberStatus === "visitor").length;
   const activeGroups   = groups.filter(g => g.status === "active").length;
   const totalEvents    = events.length;
-  // Sem data de ingresso no Person; usamos o consentimento LGPD (feito no cadastro) como sinal real de entrada.
-  const newThisMonth   = people.filter(p => p.consentLgpdAt && p.consentLgpdAt >= monthStartISO).length;
+  // Data de entrada real (createdAt); cadastros antigos caem no consentimento LGPD.
+  const joinedAt = (p: Person) => p.createdAt ?? p.consentLgpdAt;
+  const newThisMonth   = people.filter(p => { const j = joinedAt(p); return j !== undefined && j >= monthStartISO; }).length;
 
   /* ── Arrecadação real (ledger financeiro) ────────────────────────────── */
   const incomeByMonth = new Map<string, number>();
@@ -91,7 +92,7 @@ export function ReportsView() {
     { label: "Visitantes", value: totalVisitors, sub: "cadastrados", color: "#d97706", bg: "#fef3c7" },
     { label: "Grupos ativos", value: activeGroups, sub: `de ${groups.length} grupos`, color: "#7c3aed", bg: "#f5f3ff" },
     { label: "Eventos", value: totalEvents, sub: "cadastrados", color: "#059669", bg: "#ecfdf5" },
-    { label: "Novos membros", value: newThisMonth, sub: "este mês (LGPD)", color: "#0891b2", bg: "#ecfeff" },
+    { label: "Novos membros", value: newThisMonth, sub: "este mês", color: "#0891b2", bg: "#ecfeff" },
     { label: "Arrecadação", value: hasFinance ? fmtBRL(givingThisMonth) : "—", sub: "mês atual", color: "#16a34a", bg: "#f0fdf4" },
   ];
 

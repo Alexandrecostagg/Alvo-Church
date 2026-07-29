@@ -375,6 +375,7 @@ export interface Person {
   personType: PersonType;
   memberStatus: MemberStatus;
   status: PersonStatus;
+  createdAt?: string;           // ISO — data de entrada/cadastro (carimbada na criação)
   tribePrimaryCode?: TribeCode;
   tribeSecondaryCode?: TribeCode;
   tribeClassificationReason?: string;          // "porquê" da classificação (IA ou motivo do admin)

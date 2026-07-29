@@ -41,19 +41,21 @@ function buildNotifications(people: Person[], tasks: FollowUpTask[], events: Eve
   const notifs: Notification[] = [];
   const now = new Date();
 
-  // Novos visitantes (últimos 30 dias) — usa o consentimento LGPD como data de cadastro real.
+  // Novos visitantes (últimos 30 dias) — data de entrada real (createdAt); fallback no LGPD.
+  const joinedAt = (p: Person) => p.createdAt ?? p.consentLgpdAt;
   const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
   const newVisitors = people
-    .filter(p => p.memberStatus === "visitor" && p.consentLgpdAt && p.consentLgpdAt >= monthAgo)
-    .sort((a, b) => (b.consentLgpdAt ?? "").localeCompare(a.consentLgpdAt ?? ""))
+    .filter(p => { const j = joinedAt(p); return p.memberStatus === "visitor" && j !== undefined && j >= monthAgo; })
+    .sort((a, b) => (joinedAt(b) ?? "").localeCompare(joinedAt(a) ?? ""))
     .slice(0, 5);
   for (const v of newVisitors) {
+    const j = joinedAt(v);
     notifs.push({
       id: `visitor-${v.id}`,
       type: "visitor",
       title: "Novo visitante",
       body: `${v.firstName} ${v.lastName ?? ""} visitou pela primeira vez.`,
-      time: v.consentLgpdAt ? new Date(v.consentLgpdAt).toLocaleDateString("pt-BR") : "Recente",
+      time: j ? new Date(j).toLocaleDateString("pt-BR") : "Recente",
       read: false,
       href: `/members/${v.id}`,
     });
