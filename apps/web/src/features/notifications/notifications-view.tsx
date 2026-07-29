@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import {
-  Bell, UserPlus, CheckCircle2, CalendarRange,
+  Bell, UserPlus, CalendarRange,
   Heart, AlertTriangle, RefreshCw, CheckCheck,
-  Waypoints, TrendingUp,
+  TrendingUp,
 } from "lucide-react";
 import {
-  fetchPeople, fetchFollowUpTasks, fetchEvents,
+  fetchFollowUpTasks, fetchEvents,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
 import { cachedFetchPeople } from "../../lib/org-data-cache";
@@ -41,18 +41,19 @@ function buildNotifications(people: Person[], tasks: FollowUpTask[], events: Eve
   const notifs: Notification[] = [];
   const now = new Date();
 
-  // Novos visitantes (últimos 7 dias)
-  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+  // Novos visitantes (últimos 30 dias) — usa o consentimento LGPD como data de cadastro real.
+  const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
   const newVisitors = people
-    .filter(p => p.memberStatus === "visitor" && (p as unknown as {createdAt?: string}).createdAt && (p as unknown as {createdAt?: string}).createdAt! >= weekAgo)
-    .slice(0, 3);
+    .filter(p => p.memberStatus === "visitor" && p.consentLgpdAt && p.consentLgpdAt >= monthAgo)
+    .sort((a, b) => (b.consentLgpdAt ?? "").localeCompare(a.consentLgpdAt ?? ""))
+    .slice(0, 5);
   for (const v of newVisitors) {
     notifs.push({
       id: `visitor-${v.id}`,
       type: "visitor",
       title: "Novo visitante",
       body: `${v.firstName} ${v.lastName ?? ""} visitou pela primeira vez.`,
-      time: "Recentemente",
+      time: v.consentLgpdAt ? new Date(v.consentLgpdAt).toLocaleDateString("pt-BR") : "Recente",
       read: false,
       href: `/members/${v.id}`,
     });
@@ -104,30 +105,12 @@ function buildNotifications(people: Person[], tasks: FollowUpTask[], events: Eve
     });
   }
 
-  // Milestone: se tiver poucos itens, adiciona notificações de sistema
-  if (notifs.length < 3) {
-    notifs.push(
-      { id: "sys-1", type: "milestone", title: "Meta de membros", body: "A igreja está a 95% da meta mensal de novos membros.", time: "Hoje", read: false },
-      { id: "sys-2", type: "system", title: "Backup concluído", body: "Dados da organização sincronizados com sucesso.", time: "Há 1h", read: true },
-      { id: "sys-3", type: "event", title: "Culto de domingo", body: "Lembrete: culto domingo às 18h. Confirme as escalas.", time: "Amanhã", read: true, href: "/serving" },
-      { id: "sys-4", type: "milestone", title: "Relatório disponível", body: "O relatório mensal já está disponível para impressão.", time: "Hoje", read: false, href: "/reports" },
-    );
-  }
-
-  return notifs.sort((a, b) => (a.read ? 1 : 0) - (b.read ? 1 : 0));
+  // Mais recentes primeiro; não lidas no topo.
+  return notifs.sort((a, b) => {
+    if (a.read !== b.read) return a.read ? 1 : -1;
+    return b.time.localeCompare(a.time);
+  });
 }
-
-/* ── Mock fallback ─────────────────────────────────────────────────────────── */
-const MOCK_NOTIFS: Notification[] = [
-  { id:"n1", type:"visitor",   title:"Novo visitante",       body:"Marina Costa visitou pela primeira vez.",                     time:"Há 2h",    read:false, href:"/members" },
-  { id:"n2", type:"task",      title:"Tarefa em atraso",     body:"Acompanhamento com João Silva — venceu ontem.",               time:"Ontem",    read:false, href:"/members" },
-  { id:"n3", type:"milestone", title:"Meta de membros",      body:"A igreja está a 95% da meta mensal de novos membros.",        time:"Hoje",     read:false, href:"/reports" },
-  { id:"n4", type:"event",     title:"Culto de domingo",     body:"Lembrete: culto domingo às 18h. Confirme as escalas.",        time:"Amanhã",   read:true,  href:"/serving" },
-  { id:"n5", type:"birthday",  title:"Aniversário este mês", body:"Paulo Mendes faz aniversário em 25/06.",                      time:"25/06",    read:true,  href:"/members" },
-  { id:"n6", type:"system",    title:"Backup concluído",     body:"Dados sincronizados com sucesso.",                            time:"Há 1h",    read:true  },
-  { id:"n7", type:"visitor",   title:"Novo visitante",       body:"Carlos e Ana Rodrigues visitaram pela primeira vez.",         time:"Ontem",    read:true,  href:"/members" },
-  { id:"n8", type:"milestone", title:"Relatório disponível", body:"O relatório mensal já está disponível para impressão.",      time:"Hoje",     read:true,  href:"/reports" },
-];
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
 export function NotificationsView() {
@@ -140,16 +123,15 @@ export function NotificationsView() {
 
   useEffect(() => {
     async function load() {
-      if (!isReal || !organizationId) { setNotifs(MOCK_NOTIFS); setLoading(false); return; }
+      if (!isReal || !organizationId) { setNotifs([]); setLoading(false); return; }
       try {
         const [people, tasks, events] = await Promise.all([
           cachedFetchPeople(firebaseConfig, { organizationId }, 500),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 50),
           fetchEvents(firebaseConfig, { organizationId }),
         ]);
-        const built = buildNotifications(people, tasks, events);
-        setNotifs(built.length >= 2 ? built : MOCK_NOTIFS);
-      } catch { setNotifs(MOCK_NOTIFS); } finally { setLoading(false); }
+        setNotifs(buildNotifications(people, tasks, events));
+      } catch { setNotifs([]); } finally { setLoading(false); }
     }
     void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
