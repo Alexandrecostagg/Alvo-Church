@@ -81,6 +81,7 @@ import type {
   NetworkAffiliate,
   NetworkSnapshot,
   KidsCheckIn,
+  BannerHistoryEntry,
   OrganizationKidsSettings,
   GivingIntent,
   GivingCampaign,
@@ -141,6 +142,7 @@ import {
   getPlatformProgramLessonsCollectionPath,
   getProgramEntitlementsCollectionPath,
   getKidsCheckInsCollectionPath,
+  getBannerHistoryCollectionPath,
   getOrganizationKidsSettingsDocumentPath,
   getGivingIntentsCollectionPath,
   getGivingCampaignsCollectionPath,
@@ -3471,6 +3473,75 @@ export async function checkoutKidsCheckIn(
     }),
     { merge: true }
   );
+}
+
+/* ── Gerador de Banner: histórico ──────────────────────────────────────── */
+
+function toBannerHistoryEntry(documentId: string, data: DocumentData): BannerHistoryEntry {
+  const copy = (data.copy ?? {}) as DocumentData;
+  return {
+    id: documentId,
+    organizationId: String(data.organizationId ?? ""),
+    createdAt: String(data.createdAt ?? ""),
+    createdByUserId: data.createdByUserId ? String(data.createdByUserId) : undefined,
+    template: String(data.template ?? "classico"),
+    formato: (data.formato as BannerHistoryEntry["formato"]) ?? "feed",
+    tipo: String(data.tipo ?? ""),
+    tema: String(data.tema ?? ""),
+    pregador: data.pregador ? String(data.pregador) : undefined,
+    data: data.data ? String(data.data) : undefined,
+    estilo: String(data.estilo ?? "impactante"),
+    seed: Number(data.seed ?? 0),
+    bgPrompt: String(data.bgPrompt ?? ""),
+    copy: {
+      titulo: String(copy.titulo ?? ""),
+      subtitulo: String(copy.subtitulo ?? ""),
+      versiculo: String(copy.versiculo ?? ""),
+      versiculoRef: String(copy.versiculoRef ?? ""),
+      hashtags: String(copy.hashtags ?? "")
+    },
+    thumbnailDataUrl: String(data.thumbnailDataUrl ?? ""),
+    photoDataUrl: data.photoDataUrl ? String(data.photoDataUrl) : undefined
+  };
+}
+
+export async function saveBannerHistoryEntry(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  entry: BannerHistoryEntry
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getBannerHistoryCollectionPath(context), entry.id),
+    cleanFirestoreData(entry),
+    { merge: true }
+  );
+}
+
+// Histórico de banners da organização (mais recentes primeiro).
+export async function fetchBannerHistory(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  max = 24
+): Promise<BannerHistoryEntry[]> {
+  const firestore = getFirebaseFirestore(config);
+  const snap = await getDocs(
+    query(
+      collection(firestore, getBannerHistoryCollectionPath(context)),
+      orderBy("createdAt", "desc"),
+      limit(max)
+    )
+  );
+  return snap.docs.map((d) => toBannerHistoryEntry(d.id, d.data()));
+}
+
+export async function deleteBannerHistoryEntry(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  entryId: string
+) {
+  const firestore = getFirebaseFirestore(config);
+  await deleteDoc(doc(firestore, getBannerHistoryCollectionPath(context), entryId));
 }
 
 export async function fetchKidsSettings(

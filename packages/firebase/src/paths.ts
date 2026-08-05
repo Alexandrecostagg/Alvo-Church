@@ -49,6 +49,11 @@ export function getKidsCheckInsCollectionPath(context: TenantContext) {
   return `organizations/${context.organizationId}/kidsCheckIns`;
 }
 
+// Mídia: histórico de banners gerados (com thumbnail + inputs p/ reabrir).
+export function getBannerHistoryCollectionPath(context: TenantContext) {
+  return `organizations/${context.organizationId}/bannerHistory`;
+}
+
 export function getOrganizationBrandAssetPath(
   context: TenantContext,
   assetKind: "logoLight" | "logoDark" | "icon" | "favicon",

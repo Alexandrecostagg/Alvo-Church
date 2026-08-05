@@ -95,9 +95,79 @@ O `organizationId` hoje está hardcoded como `"org_alvo_demo"` em `apps/web/app/
 
 ---
 
+## Épico 14: Segurança + Ativação da IA (concluído)
+
+### Correções de segurança aplicadas
+
+| Arquivo | Correção | Severidade |
+|---------|----------|-----------|
+| `apps/web/app/api/_lib/rate-limiter.ts` | Rate limiter sliding window (5/min/IP) | HIGH |
+| `apps/web/app/api/public/visit/route.ts` | Rate limit aplicado no endpoint | HIGH |
+| `apps/web/middleware.ts` | Headers de segurança (X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, HSTS, Permissions-Policy) | LOW |
+| `apps/web/app/api/_lib/safe-compare.ts` | `safeStringCompare()` com `crypto.subtle.timingSafeEqual` | LOW |
+| `apps/worker-api/src/index.ts` (upload, notify, wifi) | Bearer token timing-safe em 3 endpoints | LOW |
+| `apps/worker-api/src/index.ts` (wifi intake) | Auth (WIFI_INTAKE_BEARER_TOKEN) + rate limit + org bind (SSID→orgId) | HIGH |
+| `apps/worker-api/src/index.ts` (whatsapp) | Valida destinatário antes de enviar | MEDIUM |
+| `apps/web/app/api/ai/route.ts` | Verifica membro ativo da org antes de processar IA | LOW |
+| `apps/web/.gitignore` | Adicionado wrangler.jsonc, eas.json, *.pem, *.key, credentials.json, google-services.json | LOW |
+
+### Ativação da IA
+
+- ✅ `DEEPSEEK_API_KEY` adicionado ao `.env.local`
+- ✅ `DEEPSEEK_API_KEY` configurado como wrangler secret (`wrangler secret put`)
+- ✅ `GROQ_API_KEY` configurado como wrangler secret
+- ✅ Seed Firebase executado (módulo AI habilitado, plano Comunidade = 50 queries/mês)
+- ✅ Deploy realizado em `https://alvo-church-web.alexandrecostagg.workers.dev`
+- ✅ Endpoint `/api/ai` respondendo corretamente
+
+### Stack de IA
+
+- **Primário**: DeepSeek (`deepseek-chat`)
+- **Fallback**: Groq (cascata: 20B → 70B → 120B)
+- **Imagens**: Pollinations.ai (gratuito, sem key)
+- **8 capacidades**: cell_script, cell_dynamic, cell_meeting_summary, absence_message, care_reply, pastoral_suggestion, tribe_classify, banner_copy
+
+---
+
+## Épico 15: Route Guards (concluído)
+
+### Componente `ModuleGuard`
+
+**`apps/web/contexts/ModuleGuard.tsx`**
+- Client component que verifica `isEnabled(moduleKey)` via `useOrgFeatures()`
+- Redireciona para `/upgrade?module=X` quando módulo está desativado
+- Renderiza `null` enquanto carrega ou módulo bloqueado
+
+### Páginas com guards implementados (19 total)
+
+| Rota | ModuleKey | Status |
+|------|-----------|--------|
+| `/reception` | `visitors` | ✅ |
+| `/pastoral-ai` | `ai` | ✅ |
+| `/finance` | `finance` | ✅ |
+| `/communication` | `communication` | ✅ |
+| `/tribes` | `tribes` | ✅ |
+| `/groups` | `groups` | ✅ |
+| `/journeys` | `journeys` | ✅ |
+| `/learning/academy` | `journeys` | ✅ |
+| `/learning/manage` | `journeys` | ✅ |
+| `/events` | `events` | ✅ |
+| `/serving` | `volunteers` | ✅ |
+| `/serving/worship` | `volunteers` | ✅ |
+| `/kids/scan` | `children` | ✅ |
+| `/marketplace` | `marketplace` | ✅ |
+| `/marketplace-community` | `marketplace` | ✅ |
+| `/giving` | `giving` | ✅ |
+| `/care-radar` | `ai` | ✅ |
+| `/weekly-theme` | `groups` | ✅ |
+| `/reports` | `volunteers` | ✅ |
+
+**Deploy:** Realizado em `https://alvo-church-web.alexandrecostagg.workers.dev`
+
+---
+
 ## O que ainda falta no Épico 13
 
-- [ ] **Guard nas rotas** — cada `page.tsx` de módulo gated deve chamar `redirect('/upgrade?module=X')` quando o módulo não está ativo. Hoje o menu some, mas a URL ainda é acessível diretamente.
 - [ ] **Badge "beta"** no menu — itens de módulos com `beta: true` no Firestore deveriam mostrar um badge visual.
 - [ ] **organizationId dinâmico** — remover o hardcode `"org_alvo_demo"` e derivar do usuário autenticado (provavelmente do custom claim do Firebase ou do documento do user no Firestore).
 - [ ] **Skeleton do menu** — enquanto `tenantReady === false`, o menu mostra só os itens core. Poderia ter um estado visual de loading mais explícito.

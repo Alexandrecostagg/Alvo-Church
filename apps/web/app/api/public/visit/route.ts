@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { RateLimiter } from "../../_lib/rate-limiter";
 
 // Formulário público de visitantes: cria SOMENTE um visitorIntake com os
 // dados do formulário, via API REST do Firestore (o SDK client não roda bem
@@ -7,6 +8,9 @@ import { NextRequest, NextResponse } from "next/server";
 // As regras do Firestore validam campos, tipos e tamanhos deste create.
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
+
+// Rate limiter: 5 requisições por minuto por IP para prevenir abuso do form.
+const VISIT_RATE_LIMITER = new RateLimiter({ max: 5, windowMs: 60_000 });
 
 function firestoreUrl(path: string) {
   return `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`;
@@ -25,6 +29,17 @@ function optStr(value: string | undefined | null, max: number): FirestoreValue {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting por IP para evitar abuso do formulário público.
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || req.headers.get("cf-connecting-ip")
+      || "127.0.0.1";
+    if (!VISIT_RATE_LIMITER.tryGet(`visit:${clientIp}`)) {
+      return NextResponse.json(
+        { error: "Muitas requisições. Aguarde um momento e tente novamente." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await req.json() as {
       orgSlug: string;
       name: string;

@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   Share,
@@ -38,8 +39,12 @@ import {
   signOutFromFirebaseMobile,
   subscribeToFirebaseMobileAuthState,
   fetchMarketplacePromotions,
+  fetchServiceAssignments,
+  saveServiceAssignment,
+  fetchMemberJourneyProfile,
   type FirebaseAuthUser
 } from "@alvo/firebase";
+import type { ServiceAssignment, ServiceAssignmentStatus, MemberJourneyProfile } from "@alvo/types";
 import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -236,8 +241,9 @@ export default function App() {
     let cancelled = false;
     async function load() {
       try {
-        const orgId = linkedOrg?.id ?? "org_alvo_demo";
-        const ctx = { organizationId: orgId };
+  const orgId = linkedOrg?.id ?? "";
+  if (!orgId) { setDataReady(true); return; }
+  const ctx = { organizationId: orgId };
         const [snap, evts, grps] = await Promise.all([
           fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
           fetchEvents(firebaseConfig, ctx, 8),
@@ -472,7 +478,7 @@ function PromocoesScreen({ primary, promotions, onBack }: {
 // (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
 // que a Escola EAD do web usa.
 function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
-  primary: string; orgId: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
+  primary: string; orgId?: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
 }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -722,7 +728,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
-  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "org_alvo_demo";
+  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "";
   const brandLogo = tenantRuntime?.settings?.branding?.logoLightUrl ?? tenantRuntime?.settings?.branding?.logoDarkUrl ?? tenantRuntime?.settings?.branding?.iconUrl ?? undefined;
 
   useEffect(() => {
@@ -780,20 +786,20 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
+          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
           {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
-          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
+          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "escala" && <EscalaScreen primary={primary} onBack={pop} />}
+          {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} onBack={pop} />}
+          {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "promocoes" && <PromocoesScreen primary={primary} promotions={promotions} onBack={pop} />}
           {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} orgName={orgName} logoUrl={brandLogo} onBack={pop} />}
         </View>
@@ -825,15 +831,29 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
 // ─── Home Tab ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos }: {
+function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos }: {
   primary: string; events: Event[]; groups: Group[]; dataReady: boolean;
+  user: FirebaseAuthUser; orgId?: string;
   onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void; onOpenCursos: () => void;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
   const nextEvent = events[0];
   const myGroup = groups[0];
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (!orgId) return;
+      await Promise.all([
+        fetchEvents(firebaseConfig, { organizationId: orgId }, 8),
+        fetchGroups(firebaseConfig, { organizationId: orgId }, 8)
+      ]);
+    } catch {}
+    finally { setRefreshing(false); }
+  };
+
   return (
-    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando dados da sua igreja..." />}
 
       {/* Next event */}
@@ -875,7 +895,7 @@ function HomeTab({ primary, events, groups, dataReady, onOpenDoacoes, onOpenKids
       )}
 
       {/* Journey */}
-      <JourneySection primary={primary} />
+      <JourneySection primary={primary} user={user} orgId={orgId} />
     </ScrollView>
   );
 }
@@ -890,26 +910,60 @@ type JourneyStepDef = {
 };
 
 // Vocabulário alinhado ao JourneyStage do backend (@alvo/types): exploring → connecting/grounding → serving.
-// Ainda não busca o MemberJourneyProfile real (falta resolver personId a partir do uid no mobile) — a etapa
-// atual segue fixa em "connecting" por enquanto, mas a UI já está pronta para receber dados reais.
 const JOURNEY_STEPS: JourneyStepDef[] = [
   { key: "exploring", label: "Chegou", icon: "footsteps-outline", nudge: "" },
   { key: "connecting", label: "Conectado", icon: "people", nudge: "Confirme presença na sua célula para avançar" },
-  { key: "serving", label: "Servindo", icon: "hand-left-outline", nudge: "" }
+  { key: "grounding", label: "Enraizado", icon: "leaf", nudge: "Complete o curso de novos membros" },
+  { key: "serving", label: "Servindo", icon: "hand-left-outline", nudge: "" },
+  { key: "developing", label: "Crescendo", icon: "trending-up", nudge: "Inicie um projeto de missões" },
+  { key: "leading", label: "Liderando", icon: "star", nudge: "" }
 ];
-const CURRENT_STEP_INDEX = 1;
 
-function JourneySection({ primary }: { primary: string }) {
-  const currentStep = JOURNEY_STEPS[CURRENT_STEP_INDEX];
+const JOURNEY_STAGE_INDEX: Record<string, number> = {
+  exploring: 0,
+  connecting: 1,
+  grounding: 2,
+  serving: 3,
+  developing: 4,
+  leading: 5
+};
+
+function JourneySection({ primary, user, orgId }: { primary: string; user: FirebaseAuthUser; orgId?: string }) {
+  const [profile, setProfile] = useState<MemberJourneyProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orgId || !user) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId }, user.uid);
+        if (!cancelled) setProfile(p);
+      } catch {
+        if (!cancelled) setProfile(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [orgId, user?.uid]);
+
+  if (loading) return null;
+
+  const stage = profile?.currentStage ?? "exploring";
+  const stepIndex = JOURNEY_STAGE_INDEX[stage] ?? 0;
+  const currentStep = JOURNEY_STEPS[stepIndex];
+
   return (
     <>
-      <Text style={s.sectionTitle}>Minha jornada · etapa {CURRENT_STEP_INDEX + 1} de {JOURNEY_STEPS.length}</Text>
+      <Text style={s.sectionTitle}>Minha jornada · etapa {stepIndex + 1} de {JOURNEY_STEPS.length}</Text>
       <View style={s.card}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           {JOURNEY_STEPS.map((step, i, arr) => {
-            const done = i < CURRENT_STEP_INDEX;
-            const current = i === CURRENT_STEP_INDEX;
-            const locked = i > CURRENT_STEP_INDEX;
+            const done = i < stepIndex;
+            const current = i === stepIndex;
+            const locked = i > stepIndex;
             return (
               <View key={step.key} style={{ flexDirection: "row", alignItems: "flex-start", flex: i < arr.length - 1 ? 1 : undefined }}>
                 <View style={s.journeyStep}>
@@ -990,7 +1044,7 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
+function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId?: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
   const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false); const [prayerSending, setPrayerSending] = useState(false);
@@ -1146,8 +1200,8 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
 
 // ─── Perfil Tab ───────────────────────────────────────────────────────────────
 
-function PerfilTab({ user, orgName, linkedOrg, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil }: {
-  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null;
+function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil }: {
+  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null; orgId?: string;
   primary: string; pushToken: string | null; onSignOut: () => void;
   onOpenEscala: () => void; onOpenMusica: () => void; onOpenMeuPerfil: () => void;
 }) {
@@ -1238,7 +1292,7 @@ const WEEKDAYS = [
   { value: "dom", label: "Dom" },
 ];
 
-function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: FirebaseAuthUser; onBack: () => void }) {
+function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
   const [interests, setInterests] = useState<string[]>([]);
   const [serving, setServing] = useState<string>("");
   const [availability, setAvailability] = useState<string[]>([]);
@@ -1251,12 +1305,13 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
 
   // Load existing profile from Firestore users doc
   useEffect(() => {
+    if (!orgId) return;
+    let cancelled = false;
     async function load() {
       try {
         const sdk = await import("@alvo/firebase");
-        const orgId = "org_alvo_demo";
         const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
-        if (existing) {
+        if (!cancelled && existing) {
           const d = existing as any;
           if (d.ministerialInterests) setInterests(d.ministerialInterests);
           if (d.servingProfile) setServing(d.servingProfile);
@@ -1266,16 +1321,17 @@ function MeuPerfilScreen({ primary, user, onBack }: { primary: string; user: Fir
           if (d.householdIncomeRange) setIncome(d.householdIncomeRange);
         }
       } catch {}
-      setLoaded(true);
+      finally { if (!cancelled) setLoaded(true); }
     }
     void load();
-  }, [user.uid]);
+    return () => { cancelled = true; };
+  }, [user.uid, orgId]);
 
   async function handleSave() {
+    if (!orgId) { Alert.alert("Erro", "Organização não vinculada."); return; }
     setSaving(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const orgId = "org_alvo_demo";
       // reuse ensureTenantUserAccess with merge to save ministerial profile fields
       await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
         ministerialInterests: interests,
@@ -1423,7 +1479,7 @@ const mpStyles = StyleSheet.create({
 // ─── Doações Screen ───────────────────────────────────────────────────────────
 
 function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
-  primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
+  primary: string; orgName: string; orgId?: string; user: FirebaseAuthUser; onBack: () => void;
 }) {
   const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
@@ -1694,7 +1750,7 @@ function newKidsToken() {
 // Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho
 // (gera o crachá digital com QR no celular dele, com foto e consentimento) e o
 // voluntário escalado escaneia o QR na retirada para validar e dar baixa.
-function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [canOperate, setCanOperate] = useState(false);
   const [mode, setMode] = useState<"guardian" | "volunteer">("guardian");
@@ -1951,11 +2007,72 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
 // ─── Escala Screen ────────────────────────────────────────────────────────────
 
-function EscalaScreen({ primary, onBack }: { primary: string; onBack: () => void }) {
-  const [slots, setSlots] = useState<EscalaSlot[]>(MOCK_ESCALA);
+function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+  const [slots, setSlots] = useState<EscalaSlot[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function respond(id: string, status: EscalaStatus) {
-    setSlots(p => p.map(s => s.id === id ? { ...s, status } : s));
+  useEffect(() => {
+    if (!orgId || !user) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        const assignments = await fetchServiceAssignments(firebaseConfig, { organizationId: orgId }, 120);
+        const myAssignments = assignments
+          .filter(a => a.personId === user.uid)
+          .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+          .slice(0, 12);
+
+        const converted: EscalaSlot[] = myAssignments.map(a => ({
+          id: a.id,
+          date: new Date(a.serviceDate).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }),
+          time: new Date(a.serviceDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          service: a.role,
+          role: a.role,
+          status: a.status === "confirmed" ? "confirmado" : a.status === "declined" ? "recusado" : "pendente"
+        }));
+
+        if (!cancelled) setSlots(converted);
+      } catch {
+        if (!cancelled) setSlots([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [orgId, user?.uid]);
+
+  async function respond(id: string, status: EscalaStatus, note?: string) {
+    if (!orgId || !user) return;
+    const assignment = slots.find(s => s.id === id);
+    if (!assignment) return;
+
+    const firestoreStatus: ServiceAssignmentStatus = status === "confirmado" ? "confirmed" : "declined";
+    const now = new Date().toISOString();
+
+    try {
+      await saveServiceAssignment(firebaseConfig, { organizationId: orgId }, {
+        id,
+        organizationId: orgId,
+        serviceTeamId: "",
+        ministryCode: "",
+        personId: user.uid,
+        role: assignment.role,
+        serviceDate: assignment.date,
+        status: firestoreStatus,
+        responseNote: note,
+        confirmedAt: status === "confirmado" ? now : undefined,
+        declinedAt: status === "recusado" ? now : undefined,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      setSlots(p => p.map(s => s.id === id ? { ...s, status } : s));
+    } catch (e) {
+      if (__DEV__) console.warn("saveServiceAssignment falhou:", e);
+      Alert.alert("Erro", "Não foi possível atualizar sua escala.");
+    }
   }
 
   const statusColor: Record<EscalaStatus, string> = { pendente: "#f59e0b", confirmado: "#16a34a", recusado: "#dc2626" };
@@ -1969,36 +2086,50 @@ function EscalaScreen({ primary, onBack }: { primary: string; onBack: () => void
           <Text style={s.infoText}>Você receberá uma notificação quando uma nova escala for publicada. Confirme ou solicite substituição com antecedência.</Text>
         </View>
 
-        {slots.map(slot => (
-          <View key={slot.id} style={s.card}>
-            <View style={s.row}>
-              <View style={s.fill}>
-                <Text style={s.cardTitle}>{slot.service}</Text>
-                <Text style={s.cardMeta}>{slot.date} · {slot.time}</Text>
-                <View style={[s.badge, { backgroundColor: `${primary}15`, alignSelf: "flex-start", marginTop: 6 }]}>
-                  <Text style={[s.badgeText, { color: primary }]}>Função: {slot.role}</Text>
+        {loading ? (
+          <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando escalas..." /></View>
+        ) : slots.length === 0 ? (
+          <View style={[s.fill, s.center, { padding: 32 }]}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>📋</Text>
+            <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma escala atribuída</Text>
+            <Text style={[s.screenSub, { textAlign: "center" }]}>Quando a liderança publicar escalas, elas aparecem aqui.</Text>
+          </View>
+        ) : (
+          slots.map(slot => (
+            <View key={slot.id} style={s.card}>
+              <View style={s.row}>
+                <View style={s.fill}>
+                  <Text style={s.cardTitle}>{slot.service}</Text>
+                  <Text style={s.cardMeta}>{slot.date} · {slot.time}</Text>
+                  <View style={[s.badge, { backgroundColor: `${primary}15`, alignSelf: "flex-start", marginTop: 6 }]}>
+                    <Text style={[s.badgeText, { color: primary }]}>Função: {slot.role}</Text>
+                  </View>
+                </View>
+                <View style={[s.badge, { backgroundColor: `${statusColor[slot.status]}20`, alignSelf: "flex-start" }]}>
+                  <Text style={[s.badgeText, { color: statusColor[slot.status] }]}>{statusLabel[slot.status]}</Text>
                 </View>
               </View>
-              <View style={[s.badge, { backgroundColor: `${statusColor[slot.status]}20`, alignSelf: "flex-start" }]}>
-                <Text style={[s.badgeText, { color: statusColor[slot.status] }]}>{statusLabel[slot.status]}</Text>
-              </View>
-            </View>
 
-            {slot.status === "pendente" && (
-              <View style={[s.row, { marginTop: 14, gap: 10 }]}>
-                <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#dcfce7", borderColor: "#16a34a", flex: 1 }]} onPress={() => respond(slot.id, "confirmado")}>
-                  <Text style={{ color: "#16a34a", fontWeight: "700", textAlign: "center" }}>✓  Confirmar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#fee2e2", borderColor: "#dc2626", flex: 1 }]} onPress={() => respond(slot.id, "recusado")}>
-                  <Text style={{ color: "#dc2626", fontWeight: "700", textAlign: "center" }}>✗  Recusar</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {slot.status === "recusado" && (
-              <TextInput style={[s.input, { marginTop: 10 }]} placeholder="Motivo da recusa (opcional)" placeholderTextColor="#9ca3af" />
-            )}
-          </View>
-        ))}
+              {slot.status === "pendente" && (
+                <View style={[s.row, { marginTop: 14, gap: 10 }]}>
+                  <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#dcfce7", borderColor: "#16a34a", flex: 1 }]} onPress={() => respond(slot.id, "confirmado")}>
+                    <Text style={{ color: "#16a34a", fontWeight: "700", textAlign: "center" }}>✓  Confirmar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#fee2e2", borderColor: "#dc2626", flex: 1 }]} onPress={() => {
+                    Alert.prompt("Recusar escala", "Motivo (opcional):", async (note) => {
+                      await respond(slot.id, "recusado", note);
+                    }, "plain-text", "");
+                  }}>
+                    <Text style={{ color: "#dc2626", fontWeight: "700", textAlign: "center" }}>✗  Recusar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {slot.status === "recusado" && (
+                <TextInput style={[s.input, { marginTop: 10 }]} value={slots.find(s => s.id === slot.id)?.role === slot.role ? "" : ""} placeholder="Motivo da recusa (opcional)" placeholderTextColor="#9ca3af" editable={false} />
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -2107,7 +2238,7 @@ function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: stri
 
 // ─── Inscrição Screen ─────────────────────────────────────────────────────────
 
-function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
   const [method, setMethod] = useState<"pix" | "cartao" | "free">(event.isPaid ? "pix" : "free");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -2288,7 +2419,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
 type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
 
-function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
   const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);

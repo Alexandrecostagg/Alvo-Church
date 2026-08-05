@@ -158,6 +158,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
   }
 
+  // O organizationId fornecido pelo cliente pode ser inventado — o usuário
+  // autenticado pode tentar acessar IA de outra organização. Verifica, via
+  // Firestore Rules (mesmo idToken), que o uid é membro ativo da org.
+  async function isOrgMember(orgId: string, uid: string): Promise<boolean> {
+    const res = await fetch(
+      firestoreDocUrl(`organizations/${orgId}/users/${uid}`),
+      { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return false;
+    const data = (await res.json()) as {
+      fields?: { isActive?: { booleanValue?: boolean } };
+    };
+    return data.fields?.isActive?.booleanValue === true;
+  }
+
+  const orgMember = await isOrgMember(organizationId, uid);
+  if (!orgMember) {
+    return NextResponse.json(
+      { error: "Usuário não é membro desta organização." },
+      { status: 403 }
+    );
+  }
+
   // Checagem de role (só para tarefas pastorais) e leituras de cota são
   // independentes — rodam em paralelo. Nenhuma tem efeito colateral, então
   // é seguro dispará-las juntas mesmo que uma delas negue o acesso.

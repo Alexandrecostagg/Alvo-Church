@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminPatchDocument } from "../../_lib/firestore-admin";
+import { safeStringCompare } from "../../_lib/safe-compare";
 
 // Webhook do Asaas: nenhum usuário logado aqui, então a escrita usa a
 // service account (ver _lib/firestore-admin.ts), não o SDK client.
@@ -32,7 +33,7 @@ interface AsaasWebhookPayload {
 export async function POST(req: NextRequest) {
   const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
   const receivedToken = req.headers.get("asaas-access-token");
-  if (!expectedToken || receivedToken !== expectedToken) {
+  if (!expectedToken || !receivedToken || !safeStringCompare(expectedToken, receivedToken)) {
     return NextResponse.json({ error: "Token de webhook inválido" }, { status: 401 });
   }
 

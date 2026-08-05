@@ -1489,3 +1489,41 @@ export interface PrayerRequest {
   prayerCount: number;
 }
 
+/* ── Gerador de Banner (Mídia) ─────────────────────────────────────────── */
+
+// Texto do banner gerado pela IA (Groq). Espelha a resposta da rota
+// /api/media/banner-copy — mantido aqui para o histórico persistir a copy.
+export interface BannerCopyContent {
+  titulo: string;
+  subtitulo: string;
+  versiculo: string;
+  versiculoRef: string;
+  hashtags: string;
+}
+
+// Um banner gerado e salvo no histórico. Guarda TODOS os inputs para
+// reabrir/regenerar em alta resolução (o fundo do Pollinations é determinístico
+// pelo seed), mais um thumbnail JPEG compacto para o preview do histórico e a
+// foto do pregador já reduzida (quando houver), para o re-render ficar fiel.
+export interface BannerHistoryEntry {
+  id: string;
+  organizationId: string;
+  createdAt: string;               // ISO
+  createdByUserId?: string;
+  // Inputs reproduzíveis
+  template: string;                // id do layout
+  formato: "feed" | "story";
+  tipo: string;
+  tema: string;
+  pregador?: string;
+  data?: string;
+  estilo: string;
+  seed: number;
+  bgPrompt: string;
+  // Copy gerada
+  copy: BannerCopyContent;
+  // Preview + foto (data URLs JPEG compactos)
+  thumbnailDataUrl: string;
+  photoDataUrl?: string;
+}
+

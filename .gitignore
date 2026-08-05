@@ -27,3 +27,13 @@ apps/web/.vercel/
 service-account.json
 *service-account*.json
 serviceAccount*.json
+
+# Arquivos de configuração de build que podem conter credenciais
+wrangler.jsonc
+eas.json
+credentials.json
+google-services.json
+
+# Chaves privadas (pem, key) — NUNCA commitar
+*.pem
+*.key

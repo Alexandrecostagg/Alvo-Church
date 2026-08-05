@@ -261,6 +261,19 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
+    // Mídia — histórico de banners gerados (thumbnail + inputs para reabrir).
+    // Material de divulgação, não sensível. O catch-all abaixo já deixa membro
+    // ler e admin escrever; este bloco (via OR) libera create/update para
+    // QUALQUER membro — a equipe de mídia que gera banner nem sempre é admin.
+    // Apagar continua restrito a admin.
+    match /organizations/{orgId}/bannerHistory/{bannerId} {
+      allow read: if isTenantMember(orgId);
+      allow create: if isTenantMember(orgId)
+        && request.resource.data.organizationId == orgId;
+      allow update: if isTenantMember(orgId);
+      allow delete: if isTenantAdmin(orgId);
+    }
+
     // Public visitor form: unauthenticated create with strict shape and
     // size validation. Reads/updates stay restricted to the tenant team.
     match /organizations/{orgId}/visitorIntakes/{intakeId} {

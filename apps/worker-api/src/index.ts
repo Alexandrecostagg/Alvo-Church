@@ -2,6 +2,26 @@ import { Hono } from "hono";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
 import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
+function safeStringCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  // Cloudflare Workers suportam Web Crypto, mas os types do wrangler não
+  // declaram timingSafeEqual. Cast seguro: a função existe no runtime.
+  try {
+    return (crypto.subtle as any).timingSafeEqual(bufA, bufB);
+  } catch {
+    // Fallback: comparação ponto a ponto com variável acumuladora para
+    // evitar early-return que vaze timing.
+    let diff = 0;
+    for (let i = 0; i < bufA.length; i++) {
+      diff |= bufA[i] ^ bufB[i];
+    }
+    return diff === 0;
+  }
+}
+
 type WorkerEnv = {
   BRAND_ASSETS_BUCKET?: R2Bucket;
   PUBLIC_BRAND_BASE_URL?: string;
@@ -13,6 +33,12 @@ type WorkerEnv = {
   // — nunca deve ser embutido em código de cliente. É a única coisa que
   // protege esse endpoint de virar um disparador de WhatsApp aberto ao público.
   NOTIFY_API_BEARER_TOKEN?: string;
+  // Segredo compartilhado com a infraestrutura Wi-Fi (MikroTik/UniFi). O SSID
+  // configurado no roteador deve corresponder a uma chave deste mapa para que
+  // a intake seja vinculada a uma organização.
+  WIFI_INTAKE_BEARER_TOKEN?: string;
+  // Mapeamento SSID → organizationId. Ex.: wrangler secret put WIFI_SSID_ORG_MAP '{"wifi-alvo":"org_123","wifi-visitantes":"org_456"}'
+  WIFI_SSID_ORG_MAP?: string;
   // Service account (JSON) para o cron de NetworkSnapshot — mesma SA usada
   // pelo backend do web. Configurar via `wrangler secret put`.
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;
@@ -52,7 +78,8 @@ app.post("/tenant-assets/upload", async (c) => {
     return jsonError("UPLOAD_API_BEARER_TOKEN nao configurado no Worker.", 503);
   }
 
-  if (!authorization || authorization !== `Bearer ${configuredToken}`) {
+  const expected = `Bearer ${configuredToken}`;
+  if (!authorization || !safeStringCompare(authorization, expected)) {
     return jsonError("Nao autorizado para upload de assets.", 401);
   }
 
@@ -98,8 +125,58 @@ app.post("/tenant-assets/upload", async (c) => {
 });
 
 // Endpoint: Wi-Fi Captive Portal Intake (LGPD Compliant Registration)
+// Protegido por: bearer token (compartilhado com roteadores), rate limiting
+// (5/min por IP), e binding a organização via SSID mapeado.
 app.post("/wifi/intake", async (c) => {
   try {
+    // 1. Autenticação via bearer token.
+    const configuredToken = c.env.WIFI_INTAKE_BEARER_TOKEN;
+    if (!configuredToken) {
+      return jsonError("WIFI_INTAKE_BEARER_TOKEN nao configurado no Worker.", 503);
+    }
+    const authorization = c.req.header("authorization");
+    const expected = `Bearer ${configuredToken}`;
+    if (!authorization || !safeStringCompare(authorization, expected)) {
+      return jsonError("Nao autorizado para Wi-Fi intake.", 401);
+    }
+
+    // 2. Rate limiting por IP (5 requisições por minuto).
+    const clientIp = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "127.0.0.1";
+    const ipKey = `wifi:${clientIp}`;
+    const now = Date.now();
+    const windowMs = 60_000;
+    const maxRequests = 5;
+
+    // Cleanup de entradas expiradas a cada chamada para evitar crescimento infinito.
+    const rateLimit = (c as any).env.__wifiRateLimit ?? ((c as any).env.__wifiRateLimit = new Map());
+    const existing = rateLimit.get(ipKey);
+    if (existing && existing.windowStart < now - windowMs) {
+      rateLimit.delete(ipKey);
+    } else if (existing && existing.count >= maxRequests) {
+      return c.json({ error: "Limite de requisições excedido. Tente novamente em instantes." }, { status: 429 });
+    }
+
+    const rateState = existing ?? { count: 0, windowStart: now };
+    rateState.count++;
+    rateLimit.set(ipKey, rateState);
+
+    // 3. Binding a organização via SSID.
+    const ssid = String(c.req.header("cf-access-client-identity") ?? c.req.header("x-wifi-ssid") ?? "").trim();
+    let orgId = "";
+    if (ssid) {
+      let ssidMap: Record<string, string> = {};
+      try {
+        ssidMap = JSON.parse(c.env.WIFI_SSID_ORG_MAP ?? "{}");
+      } catch {
+        // Mapa inválido — rejeita para segurança (fail closed).
+        return jsonError("Configuração de SSID inválida.", 503);
+      }
+      orgId = ssidMap[ssid] ?? "";
+      if (!orgId) {
+        return jsonError(`SSID "${ssid}" não está mapeado para nenhuma organização.`, 403);
+      }
+    }
+
     const body = await c.req.json().catch(() => ({}));
     const fullName = String(body.fullName ?? "").trim();
     const whatsapp = String(body.whatsapp ?? "").trim();
@@ -110,16 +187,19 @@ app.post("/wifi/intake", async (c) => {
       return jsonError("Nome, WhatsApp, E-mail e Data de Nascimento sao obrigatorios.", 422);
     }
 
-    const clientIp = c.req.header("cf-connecting-ip") || "127.0.0.1";
+    // Validação básica de dados.
+    const digits = String(whatsapp).replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 14) {
+      return jsonError("Telefone inválido.", 400);
+    }
 
-    // Aqui a liderança/consolidação registra o visitante no banco de dados.
-    // Retornamos sucesso indicando que o hotspot de roteadores locais (MikroTik/UniFi) 
-    // está autorizado a liberar o tráfego de IP de internet para o dispositivo.
     return c.json({
       success: true,
       message: "Perfil cadastrado e tráfego de internet autorizado com sucesso.",
       clientIp,
       authorized: true,
+      organizationId: orgId,
+      ssid,
       registeredAt: new Date().toISOString()
     });
   } catch (err) {
@@ -164,7 +244,8 @@ app.post("/notify/whatsapp", async (c) => {
   if (!configuredToken) {
     return jsonError("NOTIFY_API_BEARER_TOKEN nao configurado no Worker.", 503);
   }
-  if (!authorization || authorization !== `Bearer ${configuredToken}`) {
+  const expectedNotify = `Bearer ${configuredToken}`;
+  if (!authorization || !safeStringCompare(authorization, expectedNotify)) {
     return jsonError("Nao autorizado para notificacao.", 401);
   }
 
@@ -172,6 +253,7 @@ app.post("/notify/whatsapp", async (c) => {
   const to = String(body.to ?? "");
   const message = String(body.message ?? "");
   const mediaUrl = body.mediaUrl ? String(body.mediaUrl) : undefined;
+  const organizationId = String(body.organizationId ?? "");
 
   const sid = c.env.TWILIO_ACCOUNT_SID;
   const token = c.env.TWILIO_AUTH_TOKEN;
@@ -183,6 +265,39 @@ app.post("/notify/whatsapp", async (c) => {
 
   if (!to || !message) {
     return jsonError("to e message sao obrigatorios.", 422);
+  }
+
+  // Destinatário deve ser membro ativo da organização. Impede que o endpoint
+  // seja usado para disparar mensagens a números externos, mesmo com bearer
+  // token comprometido.
+  if (organizationId) {
+    const digits = String(to).replace(/\D/g, "");
+    const normalized = `whatsapp:+${digits}`;
+    const projectId = c.env.FIREBASE_PROJECT_ID ?? "";
+    const queryRes = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations/${encodeURIComponent(organizationId)}/users?filter=fields.isActive.booleanValue==true`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (queryRes.ok) {
+      const queryData = (await queryRes.json()) as {
+        documents?: Array<{ fields?: { phone?: { stringValue?: string } } }>;
+      };
+      const memberPhones = new Set(
+        (queryData.documents ?? [])
+          .map((d) => {
+            const raw = d.fields?.phone?.stringValue ?? "";
+            if (!raw) return "";
+            return `whatsapp:+${String(raw).replace(/\D/g, "")}`;
+          })
+          .filter((p) => p.length > 0)
+      );
+      if (!memberPhones.has(normalized)) {
+        return jsonError(
+          `Destinatário ${to} não é membro ativo da organização ${organizationId}.`,
+          403
+        );
+      }
+    }
   }
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const MarketplaceView = dynamic(
@@ -11,7 +12,9 @@ const MarketplaceView = dynamic(
 export default function MarketplacePage() {
   return (
     <PlanGuard feature="marketplace">
-      <MarketplaceView />
+      <ModuleGuard moduleKey="marketplace">
+        <MarketplaceView />
+      </ModuleGuard>
     </PlanGuard>
   );
 }

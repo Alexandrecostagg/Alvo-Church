@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { RoleGuard } from "../../../src/components/role-guard";
 
 const CareRadarView = dynamic(
@@ -11,7 +12,9 @@ const CareRadarView = dynamic(
 export default function CareRadarPage() {
   return (
     <RoleGuard required={["super_admin", "church_admin", "pastor", "secretary"]}>
-      <CareRadarView />
+      <ModuleGuard moduleKey="ai">
+        <CareRadarView />
+      </ModuleGuard>
     </RoleGuard>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const WeeklyThemeView = dynamic(
   () =>
@@ -11,5 +12,9 @@ const WeeklyThemeView = dynamic(
 );
 
 export default function WeeklyThemePage() {
-  return <WeeklyThemeView />;
+  return (
+    <ModuleGuard moduleKey="groups">
+      <WeeklyThemeView />
+    </ModuleGuard>
+  );
 }
