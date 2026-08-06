@@ -7,20 +7,23 @@ const MODULES = [
   {
     tag: "Recepção",
     title: "Recepção & Visitantes",
+    subtitle: "Cada visitante conhecido em segundos",
     description:
-      "Check-in digital no culto, ficha do visitante, follow-up automático e painel do pastor em tempo real — tudo na tela enquanto o culto acontece.",
+      "Check-in digital no culto, ficha do visitante, follow-up automático e painel do pastor em tempo real — tudo na tela enquanto o culto acontece. Pastor sabe quem chegou antes de descer do palco.",
     visual: "reception",
   },
   {
     tag: "Células",
     title: "Grupos & Discipulado",
+    subtitle: "Ninguém se perde no meio da multidão",
     description:
-      "Presença por célula, jornada de discipulado por membro e radar de quem está se afastando — antes que a liderança precise perguntar.",
+      "Presença por célula, jornada de discipulado por membro e radar de quem está se afastando — antes que a liderança precise perguntar. Você enxerga a igreja como um organismo vivo.",
     visual: "groups",
   },
   {
     tag: "IA Pastoral",
     title: "Cuidado Pastoral com IA",
+    subtitle: "Um auxiliar que conhece a Bíblia profundamente",
     description:
       "O pastor descreve a situação e a IA sugere abordagem, versículos e próximos passos — respeitando os limites do cuidado pastoral e nunca substituindo o discernimento humano.",
     visual: "ai",
@@ -28,15 +31,17 @@ const MODULES = [
   {
     tag: "Escalas",
     title: "Escalas & Voluntários",
+    subtitle: "Escala pronta em minutos, não em horas",
     description:
-      "Monte a escala de louvor, portaria e kids em minutos. Cada voluntário recebe notificação automática e confirma presença pelo celular.",
+      "Monte a escala de louvor, portaria e kids em minutos. Cada voluntário recebe notificação automática e confirma presença pelo celular. Fim dos grupos de WhatsApp confusos.",
     visual: "serving",
   },
   {
     tag: "Finanças",
     title: "Finanças Transparentes",
+    subtitle: "Relatório mensal com um clique",
     description:
-      "Lançamentos de dízimos e ofertas, controle de despesas, metas e relatório mensal com um clique. Dados só para quem deve ver.",
+      "Lançamentos de dízimos e ofertas, controle de despesas, metas e relatório mensal com um clique. Dados só para quem deve ver. A congregação tem transparência, a liderança tem controle.",
     visual: "finance",
   },
 ];
@@ -58,7 +63,8 @@ function ModuleVisual({ type }: { type: string }) {
         <VisualChrome />
         <div className="lp-visual-header">Recepção · Culto de Domingo</div>
         <div className="lp-visual-row highlight">
-          <span className="lp-visual-dot green live" /> João Silva — <em>1ª visita</em>
+          <span className="lp-visual-dot green live" /> João Silva —{" "}
+          <em>1ª visita</em>
           <span className="lp-visual-badge">Novo</span>
         </div>
         <div className="lp-visual-row">
@@ -68,7 +74,8 @@ function ModuleVisual({ type }: { type: string }) {
           <span className="lp-visual-dot blue" /> Pedro Alves — Membro
         </div>
         <div className="lp-visual-row">
-          <span className="lp-visual-dot green live" /> Ana Lima — <em>2ª visita</em>
+          <span className="lp-visual-dot green live" /> Ana Lima —{" "}
+          <em>2ª visita</em>
           <span className="lp-visual-badge">Retorno</span>
         </div>
         <div className="lp-visual-footer">
@@ -82,7 +89,9 @@ function ModuleVisual({ type }: { type: string }) {
     return (
       <div className="lp-visual-card">
         <VisualChrome />
-        <div className="lp-visual-header">Células · Presença dos últimos 6 encontros</div>
+        <div className="lp-visual-header">
+          Células · Presença dos últimos 6 encontros
+        </div>
         <div className="lp-visual-bars">
           {[
             { label: "CG Centro", value: 92 },
@@ -93,7 +102,10 @@ function ModuleVisual({ type }: { type: string }) {
             <div key={row.label} className="lp-visual-bar-row">
               <span className="lp-visual-bar-label">{row.label}</span>
               <span className="lp-visual-bar-track">
-                <span className="lp-visual-bar-fill" style={{ width: `${row.value}%` }} />
+                <span
+                  className="lp-visual-bar-fill"
+                  style={{ width: `${row.value}%` }}
+                />
               </span>
               <span className="lp-visual-bar-value">{row.value}%</span>
             </div>
@@ -112,11 +124,17 @@ function ModuleVisual({ type }: { type: string }) {
         <VisualChrome />
         <div className="lp-visual-header">IA Pastoral</div>
         <div className="lp-visual-bubble user">
-          Um membro está passando por depressão severa. Como posso ajudar pastoralmente?
+          Um membro está passando por depressão severa. Como posso ajudar
+          pastoralmente?
         </div>
         <div className="lp-visual-bubble ai">
-          <strong>Abordagem sugerida:</strong> Presença e escuta ativa primeiro. Indicar acompanhamento profissional paralelamente. Versículo inicial: Salmo 34:18<span className="lp-visual-cursor" />
-          <div className="lp-visual-disclaimer">Sugestão pastoral · Valide com seu discernimento</div>
+          <strong>Abordagem sugerida:</strong> Presença e escuta ativa
+          primeiro. Indicar acompanhamento profissional paralelamente. Versículo
+          inicial: Salmo 34:18
+          <span className="lp-visual-cursor" />
+          <div className="lp-visual-disclaimer">
+            Sugestão pastoral · Valide com seu discernimento
+          </div>
         </div>
       </div>
     );
@@ -137,7 +155,10 @@ function ModuleVisual({ type }: { type: string }) {
             { label: "Diáconos", filled: true },
             { label: "Louvor 2", filled: true },
           ].map((slot) => (
-            <div key={slot.label} className={`lp-visual-slot${slot.filled ? " filled" : ""}`}>
+            <div
+              key={slot.label}
+              className={`lp-visual-slot${slot.filled ? " filled" : ""}`}
+            >
               {slot.label}
             </div>
           ))}
@@ -183,7 +204,11 @@ export function ModuleShowcaseClient() {
 
   return (
     <>
-      <div className="lp-module-tabs" role="tablist" aria-label="Módulos da plataforma">
+      <div
+        className="lp-module-tabs"
+        role="tablist"
+        aria-label="Módulos da plataforma"
+      >
         {MODULES.map((m, i) => (
           <button
             key={m.title}
@@ -200,7 +225,11 @@ export function ModuleShowcaseClient() {
       <div className="lp-module-row lp-module-panel" key={mod.title}>
         <div className="lp-module-text">
           <span className="lp-module-tag">{mod.tag}</span>
-          <h3>{mod.title}</h3>
+          <h3>
+            {mod.title}
+            <br />
+            <span className="lp-module-subtitle">{mod.subtitle}</span>
+          </h3>
           <p>{mod.description}</p>
           <Link href="/signup" className="lp-btn-primary">
             Experimentar →

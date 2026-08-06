@@ -9,7 +9,13 @@ const PLANS = [
     name: "Gratuito",
     priceMonthly: 0,
     desc: "Para igrejas começando",
-    features: ["Até 50 membros", "Recepção & visitantes", "Cadastro completo", "Dashboard básico"],
+    features: [
+      "Até 100 membros",
+      "Recepção & visitantes",
+      "Cadastro completo",
+      "Dashboard básico",
+      "Suporte por e-mail",
+    ],
     cta: "Começar grátis",
     highlight: false,
   },
@@ -81,23 +87,36 @@ export function PricingClient() {
           <span className="lp-toggle-thumb" />
         </button>
         <span className={annual ? "active" : ""}>
-          Anual <span className="lp-toggle-badge">-20%</span>
+          Anual{" "}
+          <span className="lp-toggle-badge">-20%</span>
         </span>
       </div>
 
       <div className="lp-pricing-grid">
         {PLANS.map((plan) => {
-          const price = annual ? Math.round(plan.priceMonthly * (1 - ANNUAL_DISCOUNT)) : plan.priceMonthly;
+          const price = annual
+            ? Math.round(plan.priceMonthly * (1 - ANNUAL_DISCOUNT))
+            : plan.priceMonthly;
           return (
-            <div key={plan.id} className={`lp-plan-card${plan.highlight ? " highlight" : ""}`}>
-              {plan.highlight && <div className="lp-plan-badge">Mais popular</div>}
+            <div
+              key={plan.id}
+              className={`lp-plan-card${plan.highlight ? " highlight" : ""}`}
+            >
+              {plan.highlight && (
+                <div className="lp-plan-badge">Mais popular</div>
+              )}
               <div className="lp-plan-name">{plan.name}</div>
               <div className="lp-plan-price">
-                <strong>{price === 0 ? "R$ 0" : `R$ ${price.toLocaleString("pt-BR")}`}</strong>
+                <strong>
+                  {price === 0 ? "R$ 0" : `R$ ${price.toLocaleString("pt-BR")}`}
+                </strong>
                 <span>/mês</span>
               </div>
               {annual && plan.priceMonthly > 0 && (
-                <div className="lp-plan-annual-note">cobrado R$ {(price * 12).toLocaleString("pt-BR")}/ano</div>
+                <div className="lp-plan-annual-note">
+                  cobrado R${" "}
+                  {(price * 12).toLocaleString("pt-BR")}/ano
+                </div>
               )}
               <div className="lp-plan-desc">{plan.desc}</div>
               <ul className="lp-plan-features">
@@ -117,7 +136,10 @@ export function PricingClient() {
                   {plan.cta}
                 </a>
               ) : (
-                <Link href="/signup" className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}>
+                <Link
+                  href="/signup"
+                  className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}
+                >
                   {plan.cta}
                 </Link>
               )}

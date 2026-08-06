@@ -6,23 +6,42 @@ import { Counter } from "./components/Counter";
 import { ModuleShowcaseClient } from "./components/ModuleShowcaseClient";
 import { PricingClient } from "./components/PricingClient";
 import { TestimonialsClient } from "./components/TestimonialsClient";
+import { FAQClient } from "./components/FAQClient";
+import { NavActive } from "./components/NavActive";
 
 export const metadata: Metadata = {
   title: "Plataforma Esdras — Gestão para Igrejas e Redes",
   description:
-    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado.",
+    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado. Grátis até 100 membros, sem cartão de crédito.",
+  openGraph: {
+    title: "Plataforma Esdras — Gestão para Igrejas e Redes",
+    description:
+      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado.",
+    type: "website",
+    url: "https://alvo-church-web.alexandrecostagg.workers.dev",
+    siteName: "Plataforma Esdras",
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Plataforma Esdras — Gestão para Igrejas e Redes",
+    description:
+      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado.",
+  },
 };
 
 export default function LandingPage() {
   return (
     <div className="lp-root">
       <LPNav />
+      <NavActive />
       <Hero />
       <TrustBar />
       <Features />
       <ModuleShowcase />
       <Testimonials />
       <Pricing />
+      <FAQClient />
       <FinalCTA />
       <LPFooter />
     </div>
@@ -37,14 +56,27 @@ function LPNav() {
           <div className="lp-logo-mark">E</div>
           <span className="lp-logo-name">Plataforma Esdras</span>
         </div>
-        <nav className="lp-nav-links">
-          <a href="#modulos">Módulos</a>
-          <a href="#planos">Planos</a>
-          <a href="#depoimentos">Depoimentos</a>
+        <nav className="lp-nav-links" aria-label="Navegação principal">
+          <a href="#modulos" className="lp-nav-link" data-section="modulos">
+            Módulos
+          </a>
+          <a href="#planos" className="lp-nav-link" data-section="planos">
+            Planos
+          </a>
+          <a href="#depoimentos" className="lp-nav-link" data-section="depoimentos">
+            Depoimentos
+          </a>
+          <a href="#perguntas" className="lp-nav-link" data-section="perguntas">
+            FAQ
+          </a>
         </nav>
         <div className="lp-nav-ctas">
-          <Link href="/login" className="lp-btn-ghost">Entrar</Link>
-          <Link href="/signup" className="lp-btn-primary">Começar grátis</Link>
+          <Link href="/login" className="lp-btn-ghost">
+            Entrar
+          </Link>
+          <Link href="/signup" className="lp-btn-primary">
+            Começar grátis
+          </Link>
         </div>
       </div>
     </header>
@@ -53,7 +85,7 @@ function LPNav() {
 
 function Hero() {
   return (
-    <section className="lp-hero">
+    <section className="lp-hero" id="hero">
       <div className="lp-container lp-hero-inner">
         <h1 className="lp-hero-title">
           Toda a sua igreja,<br />finalmente em um só lugar.
@@ -73,7 +105,12 @@ function Hero() {
         <p className="lp-hero-note">
           Grátis até 100 membros. Sem cartão de crédito.
           {" · "}
-          <a href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras." target="_blank" rel="noreferrer" className="lp-hero-network-link">
+          <a
+            href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras."
+            target="_blank"
+            rel="noreferrer"
+            className="lp-hero-network-link"
+          >
             Sou uma rede de igrejas →
           </a>
         </p>
@@ -92,8 +129,17 @@ function Hero() {
               </div>
               <div className="lp-preview-body">
                 <div className="lp-preview-sidebar">
-                  {["Dashboard", "Pessoas", "Células", "Finanças", "IA Pastoral"].map((item, i) => (
-                    <div key={item} className={`lp-preview-nav-item${i === 0 ? " active" : ""}`}>
+                  {[
+                    "Dashboard",
+                    "Pessoas",
+                    "Células",
+                    "Finanças",
+                    "IA Pastoral",
+                  ].map((item, i) => (
+                    <div
+                      key={item}
+                      className={`lp-preview-nav-item${i === 0 ? " active" : ""}`}
+                    >
                       <span className="lp-preview-nav-dot" />
                       {item}
                     </div>
@@ -116,7 +162,11 @@ function Hero() {
                   </div>
                   <div className="lp-preview-chart">
                     {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
-                      <div key={i} className="lp-preview-bar" style={{ height: `${h}%` }} />
+                      <div
+                        key={i}
+                        className="lp-preview-bar"
+                        style={{ height: `${h}%` }}
+                      />
                     ))}
                   </div>
                 </div>
@@ -145,27 +195,37 @@ function Hero() {
 
 function TrustBar() {
   return (
-    <section className="lp-trust">
+    <section className="lp-trust" id="trust">
       <div className="lp-container lp-trust-inner">
-        <span className="lp-trust-label">Confiado por igrejas em todo o Brasil</span>
+        <span className="lp-trust-label">
+          Confiado por igrejas em todo o Brasil
+        </span>
         <div className="lp-trust-stats">
           <div className="lp-trust-stat">
-            <strong><Counter to={500} prefix="+" /></strong>
+            <strong>
+              <Counter to={500} prefix="+" />
+            </strong>
             <span>Igrejas ativas</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong><Counter to={120} prefix="+" suffix=" mil" /></strong>
+            <strong>
+              <Counter to={120} prefix="+" suffix=" mil" />
+            </strong>
             <span>Membros gerenciados</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong><Counter to={98} suffix="%" /></strong>
+            <strong>
+              <Counter to={98} suffix="%" />
+            </strong>
             <span>Satisfação dos pastores</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong><Counter to={4} suffix=" estados" /></strong>
+            <strong>
+              <Counter to={4} suffix=" estados" />
+            </strong>
             <span>Com redes denominacionais</span>
           </div>
         </div>
@@ -177,21 +237,21 @@ function TrustBar() {
 const FEATURES = [
   {
     icon: "👥",
-    title: "Gestão de Membros",
+    title: "Conheça cada membro, de verdade",
     body:
       "Ficha completa, histórico de visitas, documentos, batismo e jornada espiritual. Tudo conectado ao fluxo real da sua igreja.",
     tag: "Todos os planos",
   },
   {
     icon: "🤖",
-    title: "IA Pastoral",
+    title: "Um auxiliar pastoral que nunca dorme",
     body:
       "Apoio ao pastor com análise de situações delicadas, orientação bíblica contextualizada e acompanhamento de membros em crise — com limites éticos claros.",
     tag: "Plano Pastoral +",
   },
   {
     icon: "💰",
-    title: "Finanças",
+    title: "Dízimos e ofertas sem planilha",
     body:
       "Controle de dízimos, ofertas, despesas e relatórios. Transparência total para a liderança e para a congregação.",
     tag: "Comunidade +",
@@ -205,7 +265,7 @@ const FEATURES = [
   },
   {
     icon: "📅",
-    title: "Escalas & Voluntários",
+    title: "Escalas prontas em minutos",
     body:
       "Monte escalas de louvor, portaria, kids e ministérios. Notificação automática para cada voluntário.",
     tag: "Pastoral +",
@@ -221,7 +281,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section className="lp-features">
+    <section className="lp-features" id="features">
       <div className="lp-container">
         <p className="lp-features-eyebrow">Uma plataforma. Tudo integrado.</p>
         <div className="lp-features-strip">
@@ -292,19 +352,33 @@ function Pricing() {
 
 function FinalCTA() {
   return (
-    <section className="lp-final-cta">
+    <section className="lp-final-cta" id="cta-final">
       <div className="lp-container lp-final-cta-inner">
         <Reveal>
           <h2>Sua igreja merece uma gestão à altura da missão.</h2>
         </Reveal>
         <Reveal delay={80}>
-          <p>Comece hoje, gratuitamente. Sem cartão de crédito.</p>
+          <p>
+            Comece hoje, gratuitamente. Sem cartão de crédito.
+            <br />
+            <span className="lp-final-cta-guarantee">
+              14 dias grátis nos planos pagos. Cancele quando quiser.
+            </span>
+          </p>
         </Reveal>
         <Reveal delay={160}>
           <div className="lp-hero-ctas">
             <Link href="/signup" className="lp-btn-primary lp-btn-lg lp-btn-white">
               Criar conta grátis
             </Link>
+            <a
+              href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras."
+              target="_blank"
+              rel="noreferrer"
+              className="lp-btn-ghost lp-btn-lg lp-btn-network"
+            >
+              Sou uma rede de igrejas
+            </a>
           </div>
         </Reveal>
       </div>
@@ -323,9 +397,12 @@ function LPFooter() {
         <div className="lp-footer-links">
           <a href="#modulos">Módulos</a>
           <a href="#planos">Planos</a>
+          <a href="#perguntas">Perguntas frequentes</a>
           <Link href="/login">Entrar</Link>
         </div>
-        <p className="lp-footer-copy">© 2025 Plataforma Esdras. Feito com propósito.</p>
+        <p className="lp-footer-copy">
+          © {new Date().getFullYear()} Plataforma Esdras. Feito com propósito.
+        </p>
       </div>
     </footer>
   );
