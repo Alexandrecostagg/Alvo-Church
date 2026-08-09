@@ -1,0 +1,42 @@
+/* SpecularButton - Botão com efeito de brilho no hover */
+.lp-specular-btn {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+}
+
+.lp-specular-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.3),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lp-specular-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.4);
+}
+
+.lp-specular-btn:hover::before {
+  opacity: 1;
+}
+
+.lp-specular-btn > * {
+  position: relative;
+  z-index: 1;
+}

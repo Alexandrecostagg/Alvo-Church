@@ -22,6 +22,8 @@ wrangler*.log
 apps/web/dist-cloudflare
 .claude/
 apps/web/.vercel/
+apps/lp/out/
+apps/lp/playwright-html*.html
 
 # Chave de service account do Firebase (NUNCA commitar — vaza credencial)
 service-account.json

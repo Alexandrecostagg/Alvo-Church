@@ -1,0 +1,11 @@
+{
+  "name": "@alvo/lp-worker",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.88.0",
+    "typescript": "^5.8.2"
+  }
+}

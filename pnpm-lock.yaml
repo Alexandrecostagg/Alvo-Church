@@ -30,6 +30,46 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  apps/lp:
+    dependencies:
+      next:
+        specifier: ^16.2.4
+        version: 16.2.4(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.6)
+    devDependencies:
+      '@opennextjs/cloudflare':
+        specifier: ^1.19.6
+        version: 1.19.6(next@16.2.4(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.6))(react@19.2.6))(wrangler@4.88.0)
+      '@types/node':
+        specifier: ^22.14.0
+        version: 22.19.15
+      '@types/react':
+        specifier: ^19.2.2
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.2
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      wrangler:
+        specifier: ^4.88.0
+        version: 4.88.0
+
+  apps/lp-worker:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      wrangler:
+        specifier: ^4.88.0
+        version: 4.88.0
+
   apps/mobile:
     dependencies:
       '@alvo/domain':

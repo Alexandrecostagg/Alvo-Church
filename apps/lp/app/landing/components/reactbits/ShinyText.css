@@ -1,0 +1,21 @@
+/* ShinyText - Versão CSS pura */
+.lp-shiny-text {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-slide 3s ease-in-out infinite;
+}
+
+@keyframes shiny-slide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

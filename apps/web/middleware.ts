@@ -28,7 +28,7 @@ const CSP_VALUE = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://servicodados.ibge.gov.br",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

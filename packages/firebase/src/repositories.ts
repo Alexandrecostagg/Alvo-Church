@@ -1002,9 +1002,22 @@ export async function provisionSelfServeOrganization(
     taxId?: string;
     addressCity?: string;
     addressState?: string;
+    addressLine?: string;
+    addressNumber?: string;
+    addressComplement?: string;
+    addressNeighborhood?: string;
+    addressSector?: string;
+    addressQuadra?: string;
+    addressLote?: string;
+    addressReference?: string;
   }
 ): Promise<void> {
-  const { organizationId, churchName, ownerUid, ownerEmail, taxId, addressCity, addressState } = params;
+  const {
+    organizationId, churchName, ownerUid, ownerEmail, taxId,
+    addressCity, addressState,
+    addressLine, addressNumber, addressComplement,
+    addressNeighborhood, addressSector, addressQuadra, addressLote, addressReference,
+  } = params;
   const now = new Date().toISOString();
 
   const organization: Organization = {
@@ -1022,7 +1035,15 @@ export async function provisionSelfServeOrganization(
     ownerUid,
     taxId,
     addressCity,
-    addressState
+    addressState,
+    addressLine,
+    addressNumber,
+    addressComplement,
+    addressNeighborhood,
+    addressSector,
+    addressQuadra,
+    addressLote,
+    addressReference,
   };
 
   await saveOrganizationProfile(config, organization);
@@ -1068,17 +1089,17 @@ export async function provisionSelfServeOrganization(
       visitors: mod(true, "plan"),
       groups: mod(true, "plan"),
       events: mod(true, "plan"),
-      children: mod(true, "manual"),
+      children: mod(false, "manual"),
       youth: mod(false, "addon"),
-      volunteers: mod(true, "addon"),
-      tribes: mod(true, "plan"),
-      journeys: mod(true, "plan"),
+      volunteers: mod(false, "addon"),
+      tribes: mod(false, "plan"),
+      journeys: mod(false, "plan"),
       communication: mod(false, "addon"),
       marketplace: mod(false, "addon"),
-      giving: mod(true, "addon"),
+      giving: mod(false, "addon"),
       publicForms: mod(true, "plan"),
-      finance: mod(true, "addon"),
-      ai: mod(true, "trial")
+      finance: mod(false, "addon"),
+      ai: mod(false, "trial")
     }
   };
 

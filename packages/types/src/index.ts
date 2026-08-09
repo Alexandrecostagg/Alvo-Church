@@ -76,6 +76,14 @@ export interface Organization {
   taxId?: string;
   addressCity?: string;
   addressState?: string;
+  addressLine?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressNeighborhood?: string;
+  addressSector?: string;
+  addressQuadra?: string;
+  addressLote?: string;
+  addressReference?: string;
 }
 
 export interface OrganizationBrandingSettings {

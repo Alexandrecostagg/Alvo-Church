@@ -2,6 +2,10 @@
   "name": "alvo-church-web",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-01",
+  "routes": [
+    { "pattern": "plataformaesdras.com.br/*", "zone_name": "plataformaesdras.com.br" },
+    { "pattern": "www.plataformaesdras.com.br/*", "zone_name": "plataformaesdras.com.br" }
+  ],
   "compatibility_flags": [
     "nodejs_compat",
     "global_fetch_strictly_public"

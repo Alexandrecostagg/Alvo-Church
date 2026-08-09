@@ -1,0 +1,44 @@
+/* SoftAurora - Versão CSS pura */
+.lp-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.lp-aurora::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(124, 58, 237, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(168, 85, 247, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 20%, rgba(236, 72, 153, 0.2) 0%, transparent 50%);
+  animation: aurora-move 8s ease-in-out infinite;
+}
+
+.lp-aurora::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 50px,
+      rgba(124, 58, 237, 0.1) 50px,
+      rgba(124, 58, 237, 0.1) 100px
+    );
+  animation: aurora-waves 12s ease-in-out infinite;
+}
+
+@keyframes aurora-move {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes aurora-waves {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-20px) scaleY(1.2); }
+}
