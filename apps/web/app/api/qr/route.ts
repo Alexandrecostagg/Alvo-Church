@@ -23,3 +23,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Falha ao gerar QR." }, { status: 500 });
   }
 }
+export const runtime = 'edge';

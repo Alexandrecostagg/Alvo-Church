@@ -503,3 +503,4 @@ const errorStyle = {
   fontSize: 13,
   lineHeight: 1.5
 } as const;
+export const runtime = 'edge';

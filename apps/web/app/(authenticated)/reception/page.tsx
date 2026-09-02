@@ -15,3 +15,4 @@ export default function ReceptionPage() {
     </ModuleGuard>
   );
 }
+export const runtime = 'edge';

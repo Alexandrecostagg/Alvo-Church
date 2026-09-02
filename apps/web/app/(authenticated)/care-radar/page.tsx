@@ -18,3 +18,4 @@ export default function CareRadarPage() {
     </RoleGuard>
   );
 }
+export const runtime = 'edge';

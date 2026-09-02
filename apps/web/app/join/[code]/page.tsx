@@ -253,3 +253,4 @@ const inp:  React.CSSProperties = { padding: "10px 14px", borderRadius: 10, bord
 const btn:  React.CSSProperties = { padding: "13px", borderRadius: 12, background: "var(--esdras-primary-dark)", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%" };
 const btnSecondary: React.CSSProperties = { flex: 1, padding: "13px", borderRadius: 12, border: "1px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#374151" };
 const notice: React.CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", fontSize: 13, color: "#64748b", lineHeight: 1.5 };
+export const runtime = 'edge';

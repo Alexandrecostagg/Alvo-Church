@@ -15,3 +15,4 @@ export default function SettingsUsersPage() {
     </RoleGuard>
   );
 }
+export const runtime = 'edge';

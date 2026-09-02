@@ -10,3 +10,4 @@ const PlatformAdminView = dynamic(
 export default function PlatformAdminPage() {
   return <PlatformAdminView />;
 }
+export const runtime = 'edge';

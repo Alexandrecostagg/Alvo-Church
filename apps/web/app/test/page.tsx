@@ -7,3 +7,4 @@ export default function TestPage() {
     </div>
   );
 }
+export const runtime = 'edge';

@@ -18,3 +18,4 @@ export default function GivingPage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

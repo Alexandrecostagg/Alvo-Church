@@ -13,3 +13,4 @@ const CapacitacaoStoreView = dynamic(
 export default function Page() {
   return <CapacitacaoStoreView />;
 }
+export const runtime = 'edge';

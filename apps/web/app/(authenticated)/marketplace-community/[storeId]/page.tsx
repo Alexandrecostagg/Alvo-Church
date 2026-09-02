@@ -13,3 +13,4 @@ export default function Page({ params }: { params: Promise<{ storeId: string }> 
   const { storeId } = use(params);
   return <StoreDetailView storeId={storeId} />;
 }
+export const runtime = 'edge';

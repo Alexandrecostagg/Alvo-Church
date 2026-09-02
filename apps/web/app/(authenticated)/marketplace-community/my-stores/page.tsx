@@ -10,3 +10,4 @@ const MyStoresView = dynamic(
 export default function Page() {
   return <MyStoresView />;
 }
+export const runtime = 'edge';

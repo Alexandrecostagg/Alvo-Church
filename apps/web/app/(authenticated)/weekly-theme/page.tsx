@@ -18,3 +18,4 @@ export default function WeeklyThemePage() {
     </ModuleGuard>
   );
 }
+export const runtime = 'edge';

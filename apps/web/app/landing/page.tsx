@@ -407,3 +407,4 @@ function LPFooter() {
     </footer>
   );
 }
+export const runtime = 'edge';

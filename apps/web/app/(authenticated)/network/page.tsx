@@ -15,3 +15,4 @@ export default function NetworkPage() {
     </RoleGuard>
   );
 }
+export const runtime = 'edge';

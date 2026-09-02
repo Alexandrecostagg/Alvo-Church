@@ -16,12 +16,14 @@
     "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
     "cross-env": "^10.1.0",
     "firebase-admin": "^13.7.0",
     "firebase-tools": "^15.16.0",
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {

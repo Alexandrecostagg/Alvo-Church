@@ -10,3 +10,4 @@ const StoreFormView = dynamic(
 export default function Page() {
   return <StoreFormView />;
 }
+export const runtime = 'edge';

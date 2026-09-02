@@ -10,3 +10,4 @@ const MarketplaceModerationView = dynamic(
 export default function Page() {
   return <MarketplaceModerationView />;
 }
+export const runtime = 'edge';

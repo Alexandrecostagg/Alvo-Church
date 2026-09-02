@@ -21,3 +21,4 @@ export default function CommunicationPage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

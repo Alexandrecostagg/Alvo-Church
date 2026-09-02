@@ -15,3 +15,4 @@ export default function Page() {
     </ModuleGuard>
   );
 }
+export const runtime = 'edge';
