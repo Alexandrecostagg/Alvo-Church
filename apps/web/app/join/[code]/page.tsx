@@ -1,7 +1,9 @@
 "use client";
+export const runtime = "edge";
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+
 import {
   Building2, CheckCircle, XCircle, Loader2, Link as LinkIcon, AlertTriangle
 } from "lucide-react";
