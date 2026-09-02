@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getCountFromServer,
@@ -4274,4 +4275,48 @@ export async function updatePrayerRequestStatus(
     respondedAt: new Date().toISOString(),
     respondedByUserId: params.respondedByUserId ?? null
   });
+}
+
+
+export async function fetchNetworkSnapshotsBulk(
+  config: FirebaseWebRuntimeConfig,
+  childOrganizationIds: string[],
+  months = 6
+): Promise<NetworkSnapshot[]> {
+  const firestore = getFirebaseFirestore(config);
+
+  if (childOrganizationIds.length === 0) return [];
+
+  const chunks = [];
+  for (let i = 0; i < childOrganizationIds.length; i += 30) {
+    chunks.push(childOrganizationIds.slice(i, i + 30));
+  }
+
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(
+        collectionGroup(firestore, "networkSnapshots"),
+        where("organizationId", "in", chunk)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as NetworkSnapshot));
+    })
+  );
+
+  const allSnapshots = results.flat();
+  // Sort descending by date
+  allSnapshots.sort((a, b) => b.date.localeCompare(a.date));
+
+  const byOrg = new Map<string, NetworkSnapshot[]>();
+  for (const snap of allSnapshots) {
+    if (!byOrg.has(snap.organizationId)) {
+      byOrg.set(snap.organizationId, []);
+    }
+    const list = byOrg.get(snap.organizationId)!;
+    if (list.length < months) {
+      list.push(snap);
+    }
+  }
+
+  return Array.from(byOrg.values()).flat();
 }

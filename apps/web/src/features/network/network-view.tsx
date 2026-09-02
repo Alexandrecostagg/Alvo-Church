@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import {
   fetchNetworkAffiliates,
-  fetchLatestNetworkSnapshot,
-  fetchNetworkSnapshotsHistory,
+  fetchNetworkSnapshotsBulk,
   saveNetworkAffiliate,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
@@ -164,13 +163,24 @@ export function NetworkView() {
         const snaps: Record<string, NetworkSnapshot> = {};
         const histByMonth: Record<string, NetworkSnapshot> = {};
 
-        await Promise.all(
-          usedAffs.filter(a => a.status === "active").map(async a => {
-            const [latest, hist] = await Promise.all([
-              fetchLatestNetworkSnapshot(firebaseConfig, a.childOrganizationId),
-              fetchNetworkSnapshotsHistory(firebaseConfig, a.childOrganizationId, 6),
-            ]);
+        const activeAffs = usedAffs.filter(a => a.status === "active");
+        if (activeAffs.length > 0) {
+          const childIds = activeAffs.map(a => a.childOrganizationId);
+          const allSnapshots = await fetchNetworkSnapshotsBulk(firebaseConfig, childIds, 6);
+
+          // Group by child organization ID
+          const byOrg = new Map<string, NetworkSnapshot[]>();
+          for (const snap of allSnapshots) {
+            if (!byOrg.has(snap.organizationId)) byOrg.set(snap.organizationId, []);
+            byOrg.get(snap.organizationId)!.push(snap);
+          }
+
+          for (const a of activeAffs) {
+            const hist = byOrg.get(a.childOrganizationId) || [];
+            const latest = hist[0];
+
             if (latest) snaps[a.childOrganizationId] = latest;
+
             // Aggregate history across all affiliates by month
             for (const h of hist) {
               if (!histByMonth[h.month]) {
@@ -186,8 +196,8 @@ export function NetworkView() {
                 acc.totalEventAttendance += h.totalEventAttendance;
               }
             }
-          })
-        );
+          }
+        }
 
         setSnapshots(Object.keys(snaps).length ? snaps : MOCK_SNAPSHOTS);
         const sortedHistory = Object.values(histByMonth).sort((a, b) => a.month.localeCompare(b.month));
