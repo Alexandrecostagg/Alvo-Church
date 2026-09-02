@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: 1
   },
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Replace eval-based dynamic require with a no-op in Worker environments

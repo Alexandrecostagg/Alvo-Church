@@ -9,6 +9,7 @@
     "lint": "corepack pnpm -r lint",
     "typecheck": "corepack pnpm -r typecheck",
     "format": "corepack pnpm -r format",
+    "test": "corepack pnpm -r test",
     "seed:firebase": "tsx scripts/seed-firebase.ts",
     "seed:capacitacao": "tsx scripts/seed-capacitacao.ts",
     "seed:catalogo-final": "tsx scripts/seed-catalogo-final.ts",
