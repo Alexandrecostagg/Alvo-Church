@@ -11,3 +11,4 @@ const MemberProfileView = dynamic(
 export default function MemberProfilePage() {
   return <MemberProfileView />;
 }
+export const runtime = 'edge';
