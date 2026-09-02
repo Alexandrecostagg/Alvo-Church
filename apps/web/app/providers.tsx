@@ -247,7 +247,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [configured, firebaseConfig]);
 
   // Memoizado: sem isso, cada render de AppProviders criava um objeto novo
-  // e re-renderizava TODO consumidor de useAppAuth (praticamente o app
+  // e re-renderizava todo consumidor de useAppAuth (praticamente o app
   // inteiro), mesmo quando nada relevante mudou.
   const contextValue = useMemo<AuthContextValue>(
     () => ({
