@@ -90,3 +90,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: `Erro ao falar com o Asaas: ${message}` }, { status: 502 });
   }
 }
+export const runtime = 'edge';

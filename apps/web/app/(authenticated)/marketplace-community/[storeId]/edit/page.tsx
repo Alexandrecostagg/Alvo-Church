@@ -14,3 +14,4 @@ export default function Page({ params }: { params: Promise<{ storeId: string }> 
   const { storeId } = use(params);
   return <StoreFormView />;
 }
+export const runtime = 'edge';

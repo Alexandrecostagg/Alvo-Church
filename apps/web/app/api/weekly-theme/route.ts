@@ -98,3 +98,4 @@ export async function GET(req: NextRequest) {
     { headers: { "Cache-Control": "private, max-age=3600" } }
   );
 }
+export const runtime = 'edge';
