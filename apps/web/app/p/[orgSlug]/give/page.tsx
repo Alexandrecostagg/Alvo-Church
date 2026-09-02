@@ -12,7 +12,7 @@ import {
   saveGivingIntent,
   saveGivingReceipt,
 } from "@alvo/firebase";
-import { buildPixPayload } from "@alvo/domain";
+import { generatePixPayload } from "@alvo/domain";
 
 const SUGGESTED_AMOUNTS = [20, 50, 100, 200];
 
@@ -114,7 +114,7 @@ export default function PublicGivePage() {
   async function generatePix() {
     if (!amount || Number(amount) <= 0 || !donorName.trim() || !donorWhatsapp.trim()) return;
     const key = pixKey || "demo@pix.esdras";
-    const payload = buildPixPayload({
+    const payload = generatePixPayload({
       key,
       receiverName: pixName,
       amount: Number(amount),

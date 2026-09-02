@@ -29,7 +29,7 @@ export interface PixPayload {
   description?: string;
 }
 
-export function buildPixPayload({
+export function generatePixPayload({
   key,
   receiverName,
   city = "SAO PAULO",
