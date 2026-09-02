@@ -25,7 +25,10 @@ const FIRESTORE_SCOPE = "https://www.googleapis.com/auth/datastore";
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
@@ -39,7 +42,9 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
+async function getGoogleAccessToken(
+  serviceAccountJson: string,
+): Promise<string> {
   const serviceAccount = JSON.parse(serviceAccountJson) as ServiceAccountJson;
 
   const now = Math.floor(Date.now() / 1000);
@@ -49,7 +54,7 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
     scope: FIRESTORE_SCOPE,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
-    exp: now + 3600
+    exp: now + 3600,
   };
 
   const encoder = new TextEncoder();
@@ -63,10 +68,14 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
     pemToArrayBuffer(serviceAccount.private_key),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(signingInput));
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    encoder.encode(signingInput),
+  );
   const jwt = `${signingInput}.${base64UrlEncode(new Uint8Array(signature))}`;
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -74,9 +83,9 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt
+      assertion: jwt,
     }),
-    signal: AbortSignal.timeout(10000)
+    signal: AbortSignal.timeout(10000),
   });
 
   if (!res.ok) {
@@ -97,8 +106,8 @@ function eqFilter(field: string, value: string): FirestoreFilter {
     fieldFilter: {
       field: { fieldPath: field },
       op: "EQUAL",
-      value: { stringValue: value }
-    }
+      value: { stringValue: value },
+    },
   };
 }
 
@@ -107,8 +116,10 @@ function inFilter(field: string, values: string[]): FirestoreFilter {
     fieldFilter: {
       field: { fieldPath: field },
       op: "IN",
-      value: { arrayValue: { values: values.map((v) => ({ stringValue: v })) } }
-    }
+      value: {
+        arrayValue: { values: values.map((v) => ({ stringValue: v })) },
+      },
+    },
   };
 }
 
@@ -117,8 +128,8 @@ function gteFilter(field: string, value: string): FirestoreFilter {
     fieldFilter: {
       field: { fieldPath: field },
       op: "GREATER_THAN_OR_EQUAL",
-      value: { stringValue: value }
-    }
+      value: { stringValue: value },
+    },
   };
 }
 
@@ -131,24 +142,29 @@ async function countDocuments(params: {
 }): Promise<number> {
   const url = `https://firestore.googleapis.com/v1/projects/${params.projectId}/databases/(default)/documents/${params.parentPath}:runAggregationQuery`;
   const structuredQuery: Record<string, unknown> = {
-    from: [{ collectionId: params.collectionId }]
+    from: [{ collectionId: params.collectionId }],
   };
   if (params.where) structuredQuery.where = params.where;
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${params.token}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${params.token}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       structuredAggregationQuery: {
         structuredQuery,
-        aggregations: [{ count: {}, alias: "c" }]
-      }
+        aggregations: [{ count: {}, alias: "c" }],
+      },
     }),
-    signal: AbortSignal.timeout(10000)
+    signal: AbortSignal.timeout(10000),
   });
 
   if (!res.ok) {
-    throw new Error(`runAggregationQuery falhou (${params.collectionId}): ${res.status} ${await res.text()}`);
+    throw new Error(
+      `runAggregationQuery falhou (${params.collectionId}): ${res.status} ${await res.text()}`,
+    );
   }
 
   const rows = (await res.json()) as Array<{
@@ -157,13 +173,16 @@ async function countDocuments(params: {
   return Number(rows[0]?.result?.aggregateFields?.c?.integerValue ?? 0);
 }
 
-async function listOrganizationIds(projectId: string, token: string): Promise<string[]> {
+async function listOrganizationIds(
+  projectId: string,
+  token: string,
+): Promise<string[]> {
   const ids: string[] = [];
   let pageToken: string | undefined;
 
   do {
     const url = new URL(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations`
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations`,
     );
     url.searchParams.set("pageSize", "300");
     // Só precisamos dos IDs — não baixa os campos dos documentos.
@@ -172,10 +191,12 @@ async function listOrganizationIds(projectId: string, token: string): Promise<st
 
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      throw new Error(`Listagem de organizações falhou: ${res.status} ${await res.text()}`);
+      throw new Error(
+        `Listagem de organizações falhou: ${res.status} ${await res.text()}`,
+      );
     }
 
     const data = (await res.json()) as {
@@ -205,24 +226,34 @@ async function patchSnapshot(params: {
     .map(([k]) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
     .join("&");
 
-  const firestoreFields: Record<string, { stringValue: string } | { integerValue: string }> = {};
+  const firestoreFields: Record<
+    string,
+    { stringValue: string } | { integerValue: string }
+  > = {};
   for (const [key, value] of fieldEntries) {
     firestoreFields[key] =
-      typeof value === "number" ? { integerValue: String(value) } : { stringValue: value };
+      typeof value === "number"
+        ? { integerValue: String(value) }
+        : { stringValue: value };
   }
 
   const res = await fetch(
     `https://firestore.googleapis.com/v1/projects/${params.projectId}/databases/(default)/documents/${path}?${updateMask}`,
     {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${params.token}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${params.token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ fields: firestoreFields }),
-      signal: AbortSignal.timeout(10000)
-    }
+      signal: AbortSignal.timeout(10000),
+    },
   );
 
   if (!res.ok) {
-    throw new Error(`PATCH do snapshot falhou (${params.organizationId}): ${res.status} ${await res.text()}`);
+    throw new Error(
+      `PATCH do snapshot falhou (${params.organizationId}): ${res.status} ${await res.text()}`,
+    );
   }
 }
 
@@ -234,7 +265,9 @@ export async function writeDailyNetworkSnapshots(env: {
 }): Promise<{ ok: number; failed: number }> {
   const serviceAccountJson = env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
-    console.warn("[network-snapshot] GOOGLE_SERVICE_ACCOUNT_JSON não configurado — cron ignorado.");
+    console.warn(
+      "[network-snapshot] GOOGLE_SERVICE_ACCOUNT_JSON não configurado — cron ignorado.",
+    );
     return { ok: 0, failed: 0 };
   }
   const projectId = env.FIREBASE_PROJECT_ID ?? "alvo-church";
@@ -257,19 +290,37 @@ export async function writeDailyNetworkSnapshots(env: {
       const base = { projectId, token, parentPath };
 
       // Só agregações — nenhum documento de pessoa/grupo é transferido.
-      const [totalPeople, visitors, activeMembers, newThisMonth, totalGroups, activeGroups] =
-        await Promise.all([
-          countDocuments({ ...base, collectionId: "people" }),
-          countDocuments({ ...base, collectionId: "people", where: eqFilter("memberStatus", "visitor") }),
-          countDocuments({
-            ...base,
-            collectionId: "people",
-            where: inFilter("memberStatus", ["member", "leader", "volunteer"])
-          }),
-          countDocuments({ ...base, collectionId: "people", where: gteFilter("createdAt", monthStart) }),
-          countDocuments({ ...base, collectionId: "groups" }),
-          countDocuments({ ...base, collectionId: "groups", where: eqFilter("status", "active") })
-        ]);
+      const [
+        totalPeople,
+        visitors,
+        activeMembers,
+        newThisMonth,
+        totalGroups,
+        activeGroups,
+      ] = await Promise.all([
+        countDocuments({ ...base, collectionId: "people" }),
+        countDocuments({
+          ...base,
+          collectionId: "people",
+          where: eqFilter("memberStatus", "visitor"),
+        }),
+        countDocuments({
+          ...base,
+          collectionId: "people",
+          where: inFilter("memberStatus", ["member", "leader", "volunteer"]),
+        }),
+        countDocuments({
+          ...base,
+          collectionId: "people",
+          where: gteFilter("createdAt", monthStart),
+        }),
+        countDocuments({ ...base, collectionId: "groups" }),
+        countDocuments({
+          ...base,
+          collectionId: "groups",
+          where: eqFilter("status", "active"),
+        }),
+      ]);
 
       // Mesma semântica do writer do cliente: totalMembers = todos - visitantes.
       const totalMembers = totalPeople - visitors;
@@ -295,9 +346,12 @@ export async function writeDailyNetworkSnapshots(env: {
           totalEventAttendance: 0,
           givingThisMonth: 0,
           givingLastMonth: 0,
-          serviceAttendanceRate: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
-          createdAt
-        }
+          serviceAttendanceRate:
+            totalMembers > 0
+              ? Math.round((activeMembers / totalMembers) * 100)
+              : 0,
+          createdAt,
+        },
       });
 
       ok++;
@@ -307,6 +361,5 @@ export async function writeDailyNetworkSnapshots(env: {
     }
   }
 
-  console.log(`[network-snapshot] concluído: ${ok} ok, ${failed} falhas, data=${today}`);
   return { ok, failed };
 }
