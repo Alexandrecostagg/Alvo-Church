@@ -21,7 +21,8 @@
     "firebase-tools": "^15.16.0",
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {
