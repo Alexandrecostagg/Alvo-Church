@@ -85,3 +85,4 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
 
   return NextResponse.json({ ok: true, copy });
 }
+export const runtime = 'edge';

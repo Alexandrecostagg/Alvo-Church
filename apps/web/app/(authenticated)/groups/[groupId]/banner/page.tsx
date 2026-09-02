@@ -13,3 +13,4 @@ export default function Page({ params }: { params: Promise<{ groupId: string }> 
   const { groupId } = use(params);
   return <GroupBannerView groupId={groupId} />;
 }
+export const runtime = 'edge';

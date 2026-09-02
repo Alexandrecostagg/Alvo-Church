@@ -16,7 +16,10 @@ const firebaseEnvKeys = [
 const workspaceEnv = readDotEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   experimental: {
+
+
     cpus: 1
   },
   webpack: (config, { isServer }) => {

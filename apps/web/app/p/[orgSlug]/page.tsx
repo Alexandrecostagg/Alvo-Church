@@ -157,3 +157,4 @@ const infoRowStyle = {
   fontSize: 14,
   color: "#64748b",
 };
+export const runtime = 'edge';
