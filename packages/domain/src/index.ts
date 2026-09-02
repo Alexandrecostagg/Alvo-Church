@@ -1,5 +1,6 @@
 export function calculateProgress(completed: number, total: number) {
   if (total <= 0) return 0;
+  if (completed >= total) return 100;
   return Math.round((completed / total) * 100);
 }
 import type {
