@@ -17,7 +17,7 @@ export function TenantTheme({ children }: { children: ReactNode }) {
     ["--alvo-ink" as string]: brandTheme.colors.ink,
     ["--alvo-ink-soft" as string]: brandTheme.colors.inkSoft,
     ["--alvo-line" as string]: brandTheme.colors.line,
-    minHeight: "100vh"
+    minHeight: "100vh",
   } as CSSProperties;
 
   return (

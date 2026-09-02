@@ -3,13 +3,6 @@
   "compilerOptions": {
     "types": ["react", "react-native"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "types/**/*.d.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
+  "exclude": ["node_modules"]
 }
-

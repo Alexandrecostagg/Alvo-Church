@@ -34,11 +34,27 @@ export type MemberStatus =
 export type OrganizationStatus = "active" | "inactive" | "suspended";
 export type CampusStatus = "active" | "inactive";
 export type PersonStatus = "active" | "inactive" | "archived";
-export type OrganizationBrandMode = "alvo_managed" | "co_branded" | "white_label";
-export type SubscriptionPlanTier = "base" | "growth" | "advanced" | "enterprise";
+export type OrganizationBrandMode =
+  | "alvo_managed"
+  | "co_branded"
+  | "white_label";
+export type SubscriptionPlanTier =
+  | "base"
+  | "growth"
+  | "advanced"
+  | "enterprise";
 export type BillingCycle = "monthly" | "yearly" | "custom";
-export type MemberRange = "up_to_100" | "101_to_300" | "301_to_800" | "801_plus";
-export type BrandAssetKind = "logoLight" | "logoDark" | "icon" | "favicon" | "kidsPhoto";
+export type MemberRange =
+  | "up_to_100"
+  | "101_to_300"
+  | "301_to_800"
+  | "801_plus";
+export type BrandAssetKind =
+  | "logoLight"
+  | "logoDark"
+  | "icon"
+  | "favicon"
+  | "kidsPhoto";
 
 export type TribeCode =
   | "LEVI"
@@ -98,7 +114,7 @@ export interface OrganizationBrandingSettings {
   poweredByLabel?: string;
   pixKey?: string;
   pixReceiverName?: string;
-  givingWhatsappNumber?: string;   // WhatsApp da igreja p/ o link wa.me na doação pública (só dígitos, com DDI)
+  givingWhatsappNumber?: string; // WhatsApp da igreja p/ o link wa.me na doação pública (só dígitos, com DDI)
   groupsModuleLabel?: string;
   groupsModelType?: "cell" | "gc" | "leadership" | "generic";
 }
@@ -230,8 +246,8 @@ export interface NetworkAffiliate {
 export interface NetworkSnapshot {
   id: string;
   organizationId: string;
-  date: string;                    // "YYYY-MM-DD"
-  month: string;                   // "YYYY-MM"
+  date: string; // "YYYY-MM-DD"
+  month: string; // "YYYY-MM"
   // Membros
   totalMembers: number;
   newMembersThisMonth: number;
@@ -248,14 +264,14 @@ export interface NetworkSnapshot {
   givingThisMonth: number;
   givingLastMonth: number;
   // Engajamento
-  serviceAttendanceRate: number;   // 0–100
+  serviceAttendanceRate: number; // 0–100
   // Meta
   createdAt: string;
 }
 
 export interface NetworkDashboardSnapshot {
   affiliates: NetworkAffiliate[];
-  snapshots: Record<string, NetworkSnapshot>;  // keyed by childOrganizationId
+  snapshots: Record<string, NetworkSnapshot>; // keyed by childOrganizationId
   totals: {
     churches: number;
     members: number;
@@ -371,18 +387,24 @@ export interface Person {
   consentLgpdAt?: string;
   memberCardCode?: string;
   partnerBenefitsEnabled?: boolean;
-  photoUrl?: string;            // foto de perfil (ex.: capturada no check-in kids)
+  photoUrl?: string; // foto de perfil (ex.: capturada no check-in kids)
   personType: PersonType;
   memberStatus: MemberStatus;
   status: PersonStatus;
-  createdAt?: string;           // ISO — data de entrada/cadastro (carimbada na criação)
+  createdAt?: string; // ISO — data de entrada/cadastro (carimbada na criação)
   tribePrimaryCode?: TribeCode;
   tribeSecondaryCode?: TribeCode;
-  tribeClassificationReason?: string;          // "porquê" da classificação (IA ou motivo do admin)
+  tribeClassificationReason?: string; // "porquê" da classificação (IA ou motivo do admin)
   tribeClassificationSource?: "ai" | "manual"; // quem definiu a tribo atual
-  tribeClassifiedAt?: string;                  // ISO — quando a tribo foi definida/ajustada
+  tribeClassifiedAt?: string; // ISO — quando a tribo foi definida/ajustada
   ministerialInterests?: string[];
-  servingProfile?: "leading" | "teaching" | "creating" | "caring" | "organizing" | "interceding";
+  servingProfile?:
+    | "leading"
+    | "teaching"
+    | "creating"
+    | "caring"
+    | "organizing"
+    | "interceding";
   availability?: string[];
 }
 
@@ -461,9 +483,17 @@ export interface MemberBenefitValidation {
   exposedFields: readonly string[];
 }
 
-export type CommunityStoreStatus = "pending" | "approved" | "rejected" | "suspended";
+export type CommunityStoreStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "suspended";
 export type CommunityOfferStatus = "active" | "expired" | "suspended";
-export type CommunityOfferType = "percentage" | "fixed_amount" | "freebie" | "promotion";
+export type CommunityOfferType =
+  | "percentage"
+  | "fixed_amount"
+  | "freebie"
+  | "promotion";
 
 export interface CommunityStore {
   id: string;
@@ -554,7 +584,13 @@ export interface CommunityStoreModerationLog {
   id: string;
   organizationId: string;
   storeId: string;
-  action: "created" | "approved" | "rejected" | "suspended" | "reactivated" | "updated";
+  action:
+    | "created"
+    | "approved"
+    | "rejected"
+    | "suspended"
+    | "reactivated"
+    | "updated";
   moderatedBy: string; // UserId
   reason?: string;
   previousStatus?: CommunityStoreStatus;
@@ -632,7 +668,11 @@ export type FollowUpTaskType =
   | "invite_to_class"
   | "pastoral_contact";
 
-export type FollowUpTaskStatus = "open" | "in_progress" | "completed" | "cancelled";
+export type FollowUpTaskStatus =
+  | "open"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export interface VisitorJourney {
   id: string;
@@ -683,7 +723,10 @@ export interface VisitorDashboardSnapshot extends PeopleDashboardSnapshot {
   openFollowUps: FollowUpTask[];
 }
 
-export type FinancialTransparencyReportStatus = "draft" | "published" | "archived";
+export type FinancialTransparencyReportStatus =
+  | "draft"
+  | "published"
+  | "archived";
 
 export interface FinancialTransparencyEntry {
   id: string;
@@ -702,9 +745,9 @@ export interface FinancialTransaction {
   organizationId: string;
   kind: FinancialTransactionKind;
   label: string;
-  amount: number;              // sempre positivo; o kind define o sinal
+  amount: number; // sempre positivo; o kind define o sinal
   note?: string;
-  date: string;                // ISO — data do lançamento
+  date: string; // ISO — data do lançamento
   createdByUserId?: string;
   createdAt: string;
 }
@@ -884,7 +927,7 @@ export interface Event {
   capacity?: number;
   isPaid: boolean;
   locationName?: string; // nome do local exibido (ex.: "Auditório Principal") — Event não tinha rótulo de local
-  priceAmount?: number;  // preço do ingresso em R$ (modelo simples de 1 preço; distinto de EventTicket)
+  priceAmount?: number; // preço do ingresso em R$ (modelo simples de 1 preço; distinto de EventTicket)
 }
 
 export interface EventTicket {
@@ -906,7 +949,7 @@ export interface EventRegistration {
   status: RegistrationStatus;
   paymentStatus: "not_required" | "pending" | "paid";
   registeredAt: string;
-  personName?: string;  // nome do inscrito denormalizado no ato (p/ a plataforma exibir sem lookup)
+  personName?: string; // nome do inscrito denormalizado no ato (p/ a plataforma exibir sem lookup)
   personEmail?: string; // email denormalizado no ato
   checkedInAt?: string; // ISO do check-in (presença confirmada na entrada); ausente = ainda não entrou
   receiptImage?: string; // comprovante PIX (base64) do evento pago, quando anexado; a liderança confere e confirma
@@ -946,7 +989,11 @@ export type JourneyKind =
   | "care";
 
 export type JourneyMissionKind = "automatic" | "suggested" | "pastoral";
-export type JourneyMissionStatus = "locked" | "available" | "completed" | "skipped";
+export type JourneyMissionStatus =
+  | "locked"
+  | "available"
+  | "completed"
+  | "skipped";
 export type BadgeCategory = "journey" | "consistency" | "training" | "impact";
 
 export interface MemberJourneyProfile {
@@ -1007,7 +1054,11 @@ export type TribeAssessmentStatus =
   | "validated"
   | "superseded";
 
-export type TribeValidationStatus = "not_required" | "pending" | "validated" | "adjusted";
+export type TribeValidationStatus =
+  | "not_required"
+  | "pending"
+  | "validated"
+  | "adjusted";
 
 export interface TribeDefinition {
   id: string;
@@ -1067,9 +1118,9 @@ export interface MemberTribeHistoryEntry {
     | "scheduled_revalidation"
     | "partial_reclassification"
     | "full_reclassification";
-  source?: "ai" | "manual";     // origem da mudança (IA classificou ou admin ajustou)
-  reason?: string;              // motivo registrado (frase da IA ou justificativa do admin)
-  changedByUserId?: string;     // admin que fez o ajuste manual
+  source?: "ai" | "manual"; // origem da mudança (IA classificou ou admin ajustou)
+  reason?: string; // motivo registrado (frase da IA ou justificativa do admin)
+  changedByUserId?: string; // admin que fez o ajuste manual
   effectiveFrom: string;
 }
 
@@ -1172,29 +1223,29 @@ export interface KidsCheckIn {
   id: string;
   organizationId: string;
   campusId?: string;
-  childId: string;                 // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
-  parentId: string;                // responsável que fez o check-in
-  authorizedPickUpIds: string[];   // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
+  childId: string; // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
+  parentId: string; // responsável que fez o check-in
+  authorizedPickUpIds: string[]; // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
   checkedInAt: string;
   checkedOutAt?: string;
   checkedOutByParentId?: string;
-  checkedInByUserId?: string;      // voluntário/uid que operou a entrada
+  checkedInByUserId?: string; // voluntário/uid que operou a entrada
   status: KidsCheckInStatus;
   roomCode?: string;
-  serviceTeamId?: string;          // sala kids (ServiceTeam) onde a criança está
-  securityToken: string;           // payload do QR de retirada
+  serviceTeamId?: string; // sala kids (ServiceTeam) onde a criança está
+  securityToken: string; // payload do QR de retirada
   // Denormalizado p/ exibição (essencial quando a criança é cadastro rápido, sem Person):
   childName?: string;
   guardianName?: string;
-  guardianPhone?: string;          // WhatsApp de quem deixou (só dígitos c/ DDI) — p/ autorizar retirada
-  authorizedPickupNames?: string[];// nomes livres autorizados a retirar (além do responsável)
-  pickupCode?: string;             // código curto de retirada (fallback ao QR: sem app/bateria/visitante)
+  guardianPhone?: string; // WhatsApp de quem deixou (só dígitos c/ DDI) — p/ autorizar retirada
+  authorizedPickupNames?: string[]; // nomes livres autorizados a retirar (além do responsável)
+  pickupCode?: string; // código curto de retirada (fallback ao QR: sem app/bateria/visitante)
   allergies?: string;
   securityRestrictions?: string;
-  photoUrl?: string;               // foto tirada na hora
-  photoConsentAt?: string;         // consentimento LGPD do responsável (timestamp)
-  releasedTo?: string;             // quem retirou (nome) — auditoria
-  releaseNote?: string;            // observação da liberação (ex.: "autorizado por [mãe] via WhatsApp")
+  photoUrl?: string; // foto tirada na hora
+  photoConsentAt?: string; // consentimento LGPD do responsável (timestamp)
+  releasedTo?: string; // quem retirou (nome) — auditoria
+  releaseNote?: string; // observação da liberação (ex.: "autorizado por [mãe] via WhatsApp")
   notes?: string;
 }
 
@@ -1210,13 +1261,18 @@ export interface KidsSecuritySession {
 // Config da Segurança Kids por organização (settings/kids). O admin define
 // quais papéis podem gerar/operar o QR e quais ServiceTeams são "salas kids".
 export interface OrganizationKidsSettings {
-  qrGeneratorRoles: AppRole[];     // papéis autorizados a gerar/operar o check-in por QR
-  kidsTeamIds: string[];           // ServiceTeam.id que representam salas kids
+  qrGeneratorRoles: AppRole[]; // papéis autorizados a gerar/operar o check-in por QR
+  kidsTeamIds: string[]; // ServiceTeam.id que representam salas kids
   updatedAt?: string;
 }
 
 // Leader Wellness Types
-export type EmotionalMood = "tired" | "anxious" | "neutral" | "happy" | "energetic";
+export type EmotionalMood =
+  | "tired"
+  | "anxious"
+  | "neutral"
+  | "happy"
+  | "energetic";
 
 export interface LeaderEmotionalPulse {
   id: string;
@@ -1311,7 +1367,7 @@ export interface Course {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  instructorName?: string;  // Nome do ministrador/professor — impresso no certificado
+  instructorName?: string; // Nome do ministrador/professor — impresso no certificado
   instructorTitle?: string; // Cargo opcional (ex.: "Pastor", "Professora") exibido antes do nome
   badgeUnlockedId?: string; // Destrava Badge do Esdras Journeys ao concluir
   isActive: boolean;
@@ -1359,11 +1415,11 @@ export interface TrainingProgram {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  priceBRL: number;             // preço em REAIS (não centavos) — convenção do Asaas/repo
-  isPublished: boolean;         // rascunho x visível no catálogo
-  instructorName?: string;      // Nome do ministrador/professor — impresso no certificado
-  instructorTitle?: string;     // Cargo opcional (ex.: "Pastor", "Professora")
-  badgeUnlockedId?: string;     // destrava badge/certificado ao concluir (reusa mecanismo do EAD)
+  priceBRL: number; // preço em REAIS (não centavos) — convenção do Asaas/repo
+  isPublished: boolean; // rascunho x visível no catálogo
+  instructorName?: string; // Nome do ministrador/professor — impresso no certificado
+  instructorTitle?: string; // Cargo opcional (ex.: "Pastor", "Professora")
+  badgeUnlockedId?: string; // destrava badge/certificado ao concluir (reusa mecanismo do EAD)
   createdAt: string;
   updatedAt: string;
 }
@@ -1384,13 +1440,13 @@ export interface TrainingLesson {
   durationMinutes: number;
   sortOrder: number;
   materialUrl?: string; // link opcional de material de apoio (PDF/slide/apostila) da aula
-  content?: string;     // apostila/conteúdo da aula em markdown — lido no app abaixo do vídeo
+  content?: string; // apostila/conteúdo da aula em markdown — lido no app abaixo do vídeo
 }
 
 // Entitlement por org: gravado SOMENTE pelo webhook de pagamento (service
 // account). Cliente só lê. "revogar" = flip de status, nunca delete.
 export interface ProgramEntitlement {
-  id: string;                   // = programId
+  id: string; // = programId
   programId: string;
   status: "active" | "revoked";
   purchasedAt: string;
@@ -1401,24 +1457,29 @@ export interface ProgramEntitlement {
 // ─── Tema Semanal de Células ──────────────────────────────────────────────────
 
 export type WeeklyThemeScope =
-  | "all"        // todas as células da organização
-  | "specific"   // apenas as células listadas em groupIds
-  | "open";      // líder decide o próprio tema livremente
+  | "all" // todas as células da organização
+  | "specific" // apenas as células listadas em groupIds
+  | "open"; // líder decide o próprio tema livremente
 
 export interface WeeklyTheme {
   id: string;
   organizationId: string;
-  title: string;               // tema da semana
-  bibleVerse?: string;         // passagem bíblica sugerida
-  description?: string;        // orientação extra do pastor
+  title: string; // tema da semana
+  bibleVerse?: string; // passagem bíblica sugerida
+  description?: string; // orientação extra do pastor
   scope: WeeklyThemeScope;
-  groupIds: string[];          // vazio = todas as células (quando scope = "all")
-  weekStartDate: string;       // ISO date da segunda-feira da semana (YYYY-MM-DD)
-  createdBy: string;           // userId do pastor/admin
+  groupIds: string[]; // vazio = todas as células (quando scope = "all")
+  weekStartDate: string; // ISO date da segunda-feira da semana (YYYY-MM-DD)
+  createdBy: string; // userId do pastor/admin
   createdAt: string;
 }
 
-export type ContributionType = "dizimo" | "oferta" | "campanha" | "missao" | "outro";
+export type ContributionType =
+  | "dizimo"
+  | "oferta"
+  | "campanha"
+  | "missao"
+  | "outro";
 
 export type ContributionStatus = "pending" | "confirmed";
 export type ContributionMethod = "pix" | "manual" | "cash" | "card";
@@ -1426,27 +1487,27 @@ export type ContributionMethod = "pix" | "manual" | "cash" | "card";
 export interface MemberContribution {
   id: string;
   organizationId: string;
-  userId: string;           // Firebase Auth UID do membro
-  personId?: string;        // Link para Person record
+  userId: string; // Firebase Auth UID do membro
+  personId?: string; // Link para Person record
   contributorName?: string; // Nome do membro (denormalizado no ato) p/ a secretaria identificar quem pagou
-  amount: number;           // valor em R$ (float)
+  amount: number; // valor em R$ (float)
   type: ContributionType;
-  date: string;             // ISO date YYYY-MM-DD
-  description?: string;     // ex: "Oferta de Missões Junho"
-  culto?: string;           // ex: "Culto Domingo Noite"
+  date: string; // ISO date YYYY-MM-DD
+  description?: string; // ex: "Oferta de Missões Junho"
+  culto?: string; // ex: "Culto Domingo Noite"
   receiptNumber?: string;
-  registeredBy: string;     // userId de quem registrou (staff/admin, ou o próprio membro quando pending)
-  registeredAt: string;     // ISO datetime
+  registeredBy: string; // userId de quem registrou (staff/admin, ou o próprio membro quando pending)
+  registeredAt: string; // ISO datetime
   // Auto-declarado pelo app (mobile/web) via PIX: o membro registra que pagou,
   // fica "pending" até a liderança conferir e confirmar (recibo bate com o extrato).
   // Registros lançados manualmente por staff continuam sem `status` (tratados como
   // confirmados, mesmo comportamento de antes).
   status?: ContributionStatus;
   method?: ContributionMethod;
-  receiptId?: string;       // id do doc de comprovante (imagem base64 em contributionReceipts)
-  receiptUrl?: string;      // (futuro) URL do comprovante quando migrar p/ Storage
-  confirmedBy?: string;     // userId do admin que confirmou o pending
-  confirmedAt?: string;     // ISO datetime da confirmação
+  receiptId?: string; // id do doc de comprovante (imagem base64 em contributionReceipts)
+  receiptUrl?: string; // (futuro) URL do comprovante quando migrar p/ Storage
+  confirmedBy?: string; // userId do admin que confirmou o pending
+  confirmedAt?: string; // ISO datetime da confirmação
 }
 
 // ─── Radar Pastoral: presença em culto ──────────────────────────────────────
@@ -1455,8 +1516,8 @@ export interface ChurchAttendance {
   id: string;
   organizationId: string;
   personId: string;
-  serviceDate: string;         // ISO date YYYY-MM-DD
-  serviceLabel?: string;       // ex: "Culto Domingo Manhã"
+  serviceDate: string; // ISO date YYYY-MM-DD
+  serviceLabel?: string; // ex: "Culto Domingo Manhã"
   registeredByUserId?: string;
   createdAt: string;
 }
@@ -1508,10 +1569,10 @@ export interface BannerCopyContent {
 export interface BannerHistoryEntry {
   id: string;
   organizationId: string;
-  createdAt: string;               // ISO
+  createdAt: string; // ISO
   createdByUserId?: string;
   // Inputs reproduzíveis
-  template: string;                // id do layout
+  template: string; // id do layout
   formato: "feed" | "story";
   tipo: string;
   tema: string;
@@ -1526,4 +1587,3 @@ export interface BannerHistoryEntry {
   thumbnailDataUrl: string;
   photoDataUrl?: string;
 }
-

@@ -23,7 +23,9 @@ function firestoreDocUrl(path: string) {
 
 export async function POST(req: NextRequest) {
   const authorization = req.headers.get("authorization") ?? "";
-  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const idToken = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : "";
   const uid = await verifyFirebaseIdToken(req);
   if (!uid || !idToken) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -38,7 +40,10 @@ export async function POST(req: NextRequest) {
 
   const { organizationId, amount, description } = body;
   if (!organizationId || !amount || amount <= 0) {
-    return NextResponse.json({ error: "organizationId e amount (> 0) são obrigatórios" }, { status: 400 });
+    return NextResponse.json(
+      { error: "organizationId e amount (> 0) são obrigatórios" },
+      { status: 400 },
+    );
   }
 
   // Lê o branding com o próprio token de quem chamou — as Firestore rules
@@ -47,10 +52,16 @@ export async function POST(req: NextRequest) {
   // organização (senão a leitura falha e caímos no catch abaixo).
   const brandingRes = await fetch(
     firestoreDocUrl(`organizations/${organizationId}/settings/branding`),
-    { headers: { Authorization: `Bearer ${idToken}` }, signal: AbortSignal.timeout(8000) }
+    {
+      headers: { Authorization: `Bearer ${idToken}` },
+      signal: AbortSignal.timeout(8000),
+    },
   );
   if (!brandingRes.ok) {
-    return NextResponse.json({ error: "Não foi possível ler as configurações da organização." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Não foi possível ler as configurações da organização." },
+      { status: 403 },
+    );
   }
   const brandingData = (await brandingRes.json()) as {
     fields?: {
@@ -67,8 +78,11 @@ export async function POST(req: NextRequest) {
 
   if (!pixKey) {
     return NextResponse.json(
-      { error: "Esta organização ainda não configurou a chave PIX (Configurações → Doações)." },
-      { status: 422 }
+      {
+        error:
+          "Esta organização ainda não configurou a chave PIX (Configurações → Doações).",
+      },
+      { status: 422 },
     );
   }
 
@@ -76,18 +90,27 @@ export async function POST(req: NextRequest) {
     key: pixKey,
     receiverName,
     amount,
-    description: description?.slice(0, 72) ?? "Oferta/Dizimo"
+    description: description?.slice(0, 72) ?? "Oferta/Dizimo",
   });
 
   try {
     const qrDataUrl = await QRCode.toDataURL(payload, {
       width: 300,
       margin: 2,
-      color: { dark: "#1c2433", light: "#ffffff" }
+      color: { dark: "#1c2433", light: "#ffffff" },
     });
-    return NextResponse.json({ ok: true, payload, qrDataUrl, pixKey, receiverName });
+    return NextResponse.json({
+      ok: true,
+      payload,
+      qrDataUrl,
+      pixKey,
+      receiverName,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido";
-    return NextResponse.json({ error: `Erro ao gerar QR Code: ${message}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Erro ao gerar QR Code: ${message}` },
+      { status: 500 },
+    );
   }
 }

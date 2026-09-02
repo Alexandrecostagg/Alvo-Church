@@ -6,9 +6,9 @@ import { ModuleGuard } from "../../../contexts/ModuleGuard";
 const WeeklyThemeView = dynamic(
   () =>
     import("../../../src/features/weekly-theme/weekly-theme-view").then(
-      (mod) => mod.WeeklyThemeView
+      (mod) => mod.WeeklyThemeView,
     ),
-  { ssr: false }
+  { ssr: false },
 );
 
 export default function WeeklyThemePage() {

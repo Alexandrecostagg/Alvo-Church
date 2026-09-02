@@ -6,8 +6,11 @@ import { PlanGuard } from "../../../src/components/plan-guard";
 import { RoleGuard } from "../../../src/components/role-guard";
 
 const PastoralAiWithRadarView = dynamic(
-  () => import("../../../src/features/pastoral-ai/pastoral-ai-with-radar-view").then((mod) => mod.PastoralAiWithRadarView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/pastoral-ai/pastoral-ai-with-radar-view").then(
+      (mod) => mod.PastoralAiWithRadarView,
+    ),
+  { ssr: false },
 );
 
 export default function PastoralAiPage() {

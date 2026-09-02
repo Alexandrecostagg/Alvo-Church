@@ -44,7 +44,8 @@ export function FAQClient() {
           <span className="lp-faq-eyebrow">Tirando dúvidas</span>
           <h2>Perguntas frequentes</h2>
           <p>
-            Se a dúvida não estiver aqui, chama a gente no WhatsApp que respondemos em minutos.
+            Se a dúvida não estiver aqui, chama a gente no WhatsApp que
+            respondemos em minutos.
           </p>
         </div>
 

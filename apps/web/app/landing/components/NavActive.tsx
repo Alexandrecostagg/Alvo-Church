@@ -2,7 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
-const SECTION_IDS = ["modulos", "planos", "depoimentos", "perguntas", "features", "trust", "hero"];
+const SECTION_IDS = [
+  "modulos",
+  "planos",
+  "depoimentos",
+  "perguntas",
+  "features",
+  "trust",
+  "hero",
+];
 
 export function NavActive() {
   const linksRef = useRef<HTMLDivElement>(null);
@@ -41,7 +49,7 @@ export function NavActive() {
         {
           rootMargin: "-40% 0px -40% 0px",
           threshold: 0,
-        }
+        },
       );
 
       observer.observe(section);

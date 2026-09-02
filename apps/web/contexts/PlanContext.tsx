@@ -1,8 +1,19 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import type { PlanId, PlanFeatureKey, AiQuotaStatus } from "@alvo/firebase";
-import { fetchOrgBillingInfo, getAiQuotaStatus, incrementAiUsage, planHasFeature } from "@alvo/firebase";
+import {
+  fetchOrgBillingInfo,
+  getAiQuotaStatus,
+  incrementAiUsage,
+  planHasFeature,
+} from "@alvo/firebase";
 import { useAppAuth } from "../app/providers";
 
 type BillingStatus = "active" | "overdue" | "suspended";
@@ -53,7 +64,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     if (!tenantReady || !organizationId) return;
     try {
       const quota = await getAiQuotaStatus(firebaseConfig, context);
-      setAiQuota(isSuperAdmin ? { ...quota, plan: "enterprise", limit: 9999, allowed: true } : quota);
+      setAiQuota(
+        isSuperAdmin
+          ? { ...quota, plan: "enterprise", limit: 9999, allowed: true }
+          : quota,
+      );
     } catch {
       setAiQuota(null);
     }
@@ -79,16 +94,18 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, [tenantReady, organizationId]);
 
   return (
-    <PlanContext.Provider value={{
-      plan,
-      ready,
-      hasFeature: (key) => isSuperAdmin || planHasFeature(plan, key),
-      aiQuota,
-      refreshAiQuota,
-      useAiQuery,
-      billingStatus,
-      overdueSince,
-    }}>
+    <PlanContext.Provider
+      value={{
+        plan,
+        ready,
+        hasFeature: (key) => isSuperAdmin || planHasFeature(plan, key),
+        aiQuota,
+        refreshAiQuota,
+        useAiQuery,
+        billingStatus,
+        overdueSince,
+      }}
+    >
       {children}
     </PlanContext.Provider>
   );

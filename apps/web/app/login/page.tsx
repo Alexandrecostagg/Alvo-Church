@@ -26,10 +26,18 @@ export default function LoginPage() {
     >
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
             <BrandLogo size={56} iconOnly />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Plataforma Esdras</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
+            Plataforma Esdras
+          </h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
             Plataforma de gestão da sua igreja
           </p>

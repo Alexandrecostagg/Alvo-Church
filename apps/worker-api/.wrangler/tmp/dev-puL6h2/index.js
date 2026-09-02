@@ -1,5 +1,6 @@
 var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+var __name = (target, value) =>
+  __defProp(target, "name", { value, configurable: true });
 
 // ../../node_modules/.pnpm/hono@4.12.8/node_modules/hono/dist/compose.js
 var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
@@ -18,7 +19,7 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
         handler = middleware[i][0][0];
         context.req.routeIndex = i;
       } else {
-        handler = i === middleware.length && next || void 0;
+        handler = (i === middleware.length && next) || void 0;
       }
       if (handler) {
         try {
@@ -50,15 +51,22 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
 var GET_MATCH_RESULT = /* @__PURE__ */ Symbol();
 
 // ../../node_modules/.pnpm/hono@4.12.8/node_modules/hono/dist/utils/body.js
-var parseBody = /* @__PURE__ */ __name(async (request, options = /* @__PURE__ */ Object.create(null)) => {
-  const { all = false, dot = false } = options;
-  const headers = request instanceof HonoRequest ? request.raw.headers : request.headers;
-  const contentType = headers.get("Content-Type");
-  if (contentType?.startsWith("multipart/form-data") || contentType?.startsWith("application/x-www-form-urlencoded")) {
-    return parseFormData(request, { all, dot });
-  }
-  return {};
-}, "parseBody");
+var parseBody = /* @__PURE__ */ __name(
+  async (request, options = /* @__PURE__ */ Object.create(null)) => {
+    const { all = false, dot = false } = options;
+    const headers =
+      request instanceof HonoRequest ? request.raw.headers : request.headers;
+    const contentType = headers.get("Content-Type");
+    if (
+      contentType?.startsWith("multipart/form-data") ||
+      contentType?.startsWith("application/x-www-form-urlencoded")
+    ) {
+      return parseFormData(request, { all, dot });
+    }
+    return {};
+  },
+  "parseBody",
+);
 async function parseFormData(request, options) {
   const formData = await request.formData();
   if (formData) {
@@ -92,7 +100,6 @@ __name(convertFormDataToBodyData, "convertFormDataToBodyData");
 var handleParsingAllValues = /* @__PURE__ */ __name((form, key, value) => {
   if (form[key] !== void 0) {
     if (Array.isArray(form[key])) {
-      ;
       form[key].push(value);
     } else {
       form[key] = [form[key], value];
@@ -115,7 +122,12 @@ var handleParsingNestedValues = /* @__PURE__ */ __name((form, key, value) => {
     if (index === keys.length - 1) {
       nestedForm[key2] = value;
     } else {
-      if (!nestedForm[key2] || typeof nestedForm[key2] !== "object" || Array.isArray(nestedForm[key2]) || nestedForm[key2] instanceof File) {
+      if (
+        !nestedForm[key2] ||
+        typeof nestedForm[key2] !== "object" ||
+        Array.isArray(nestedForm[key2]) ||
+        nestedForm[key2] instanceof File
+      ) {
         nestedForm[key2] = /* @__PURE__ */ Object.create(null);
       }
       nestedForm = nestedForm[key2];
@@ -167,7 +179,10 @@ var getPattern = /* @__PURE__ */ __name((label, next) => {
     const cacheKey = `${label}#${next}`;
     if (!patternCache[cacheKey]) {
       if (match2[2]) {
-        patternCache[cacheKey] = next && next[0] !== ":" && next[0] !== "*" ? [cacheKey, match2[1], new RegExp(`^${match2[2]}(?=/${next})`)] : [label, match2[1], new RegExp(`^${match2[2]}$`)];
+        patternCache[cacheKey] =
+          next && next[0] !== ":" && next[0] !== "*"
+            ? [cacheKey, match2[1], new RegExp(`^${match2[2]}(?=/${next})`)]
+            : [label, match2[1], new RegExp(`^${match2[2]}$`)];
       } else {
         patternCache[cacheKey] = [label, match2[1], true];
       }
@@ -189,7 +204,10 @@ var tryDecode = /* @__PURE__ */ __name((str, decoder) => {
     });
   }
 }, "tryDecode");
-var tryDecodeURI = /* @__PURE__ */ __name((str) => tryDecode(str, decodeURI), "tryDecodeURI");
+var tryDecodeURI = /* @__PURE__ */ __name(
+  (str) => tryDecode(str, decodeURI),
+  "tryDecodeURI",
+);
 var getPath = /* @__PURE__ */ __name((request) => {
   const url = request.url;
   const start = url.indexOf("/", url.indexOf(":") + 4);
@@ -199,9 +217,18 @@ var getPath = /* @__PURE__ */ __name((request) => {
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
-      const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
+      const end =
+        queryIndex === -1
+          ? hashIndex === -1
+            ? void 0
+            : hashIndex
+          : hashIndex === -1
+            ? queryIndex
+            : Math.min(queryIndex, hashIndex);
       const path = url.slice(start, end);
-      return tryDecodeURI(path.includes("%25") ? path.replace(/%25/g, "%2525") : path);
+      return tryDecodeURI(
+        path.includes("%25") ? path.replace(/%25/g, "%2525") : path,
+      );
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -210,7 +237,9 @@ var getPath = /* @__PURE__ */ __name((request) => {
 }, "getPath");
 var getPathNoStrict = /* @__PURE__ */ __name((request) => {
   const result = getPath(request);
-  return result.length > 1 && result.at(-1) === "/" ? result.slice(0, -1) : result;
+  return result.length > 1 && result.at(-1) === "/"
+    ? result.slice(0, -1)
+    : result;
 }, "getPathNoStrict");
 var mergePath = /* @__PURE__ */ __name((base, sub, ...rest) => {
   if (rest.length) {
@@ -252,7 +281,9 @@ var _decodeURI = /* @__PURE__ */ __name((value) => {
   if (value.indexOf("+") !== -1) {
     value = value.replace(/\+/g, " ");
   }
-  return value.indexOf("%") !== -1 ? tryDecode(value, decodeURIComponent_) : value;
+  return value.indexOf("%") !== -1
+    ? tryDecode(value, decodeURIComponent_)
+    : value;
 }, "_decodeURI");
 var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
   let encoded;
@@ -269,7 +300,9 @@ var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
       if (trailingKeyCode === 61) {
         const valueIndex = keyIndex2 + key.length + 2;
         const endIndex = url.indexOf("&", valueIndex);
-        return _decodeURI(url.slice(valueIndex, endIndex === -1 ? void 0 : endIndex));
+        return _decodeURI(
+          url.slice(valueIndex, endIndex === -1 ? void 0 : endIndex),
+        );
       } else if (trailingKeyCode == 38 || isNaN(trailingKeyCode)) {
         return "";
       }
@@ -291,7 +324,11 @@ var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
     }
     let name = url.slice(
       keyIndex + 1,
-      valueIndex === -1 ? nextKeyIndex === -1 ? void 0 : nextKeyIndex : valueIndex
+      valueIndex === -1
+        ? nextKeyIndex === -1
+          ? void 0
+          : nextKeyIndex
+        : valueIndex,
     );
     if (encoded) {
       name = _decodeURI(name);
@@ -304,7 +341,10 @@ var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
     if (valueIndex === -1) {
       value = "";
     } else {
-      value = url.slice(valueIndex + 1, nextKeyIndex === -1 ? void 0 : nextKeyIndex);
+      value = url.slice(
+        valueIndex + 1,
+        nextKeyIndex === -1 ? void 0 : nextKeyIndex,
+      );
       if (encoded) {
         value = _decodeURI(value);
       }
@@ -313,7 +353,6 @@ var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
       if (!(results[name] && Array.isArray(results[name]))) {
         results[name] = [];
       }
-      ;
       results[name].push(value);
     } else {
       results[name] ??= value;
@@ -328,7 +367,10 @@ var getQueryParams = /* @__PURE__ */ __name((url, key) => {
 var decodeURIComponent_ = decodeURIComponent;
 
 // ../../node_modules/.pnpm/hono@4.12.8/node_modules/hono/dist/request.js
-var tryDecodeURIComponent = /* @__PURE__ */ __name((str) => tryDecode(str, decodeURIComponent_), "tryDecodeURIComponent");
+var tryDecodeURIComponent = /* @__PURE__ */ __name(
+  (str) => tryDecode(str, decodeURIComponent_),
+  "tryDecodeURIComponent",
+);
 var HonoRequest = class {
   static {
     __name(this, "HonoRequest");
@@ -384,7 +426,9 @@ var HonoRequest = class {
     const decoded = {};
     const keys = Object.keys(this.#matchResult[0][this.routeIndex][1]);
     for (const key of keys) {
-      const value = this.#getParamValue(this.#matchResult[0][this.routeIndex][1][key]);
+      const value = this.#getParamValue(
+        this.#matchResult[0][this.routeIndex][1][key],
+      );
       if (value !== void 0) {
         decoded[key] = /\%/.test(value) ? tryDecodeURIComponent(value) : value;
       }
@@ -411,7 +455,7 @@ var HonoRequest = class {
     return headerData;
   }
   async parseBody(options) {
-    return this.bodyCache.parsedBody ??= await parseBody(this, options);
+    return (this.bodyCache.parsedBody ??= await parseBody(this, options));
   }
   #cachedBody = /* @__PURE__ */ __name((key) => {
     const { bodyCache, raw: raw2 } = this;
@@ -428,7 +472,7 @@ var HonoRequest = class {
         return new Response(body)[key]();
       });
     }
-    return bodyCache[key] = raw2[key]();
+    return (bodyCache[key] = raw2[key]());
   }, "#cachedBody");
   /**
    * `.json()` can parse Request body of type `application/json`
@@ -594,7 +638,8 @@ var HonoRequest = class {
    * ```
    */
   get routePath() {
-    return this.#matchResult[0].map(([[, route]]) => route)[this.routeIndex].path;
+    return this.#matchResult[0].map(([[, route]]) => route)[this.routeIndex]
+      .path;
   }
 };
 
@@ -602,7 +647,7 @@ var HonoRequest = class {
 var HtmlEscapedCallbackPhase = {
   Stringify: 1,
   BeforeStream: 2,
-  Stream: 3
+  Stream: 3,
 };
 var raw = /* @__PURE__ */ __name((value, callbacks) => {
   const escapedString = new String(value);
@@ -610,45 +655,55 @@ var raw = /* @__PURE__ */ __name((value, callbacks) => {
   escapedString.callbacks = callbacks;
   return escapedString;
 }, "raw");
-var resolveCallback = /* @__PURE__ */ __name(async (str, phase, preserveCallbacks, context, buffer) => {
-  if (typeof str === "object" && !(str instanceof String)) {
-    if (!(str instanceof Promise)) {
-      str = str.toString();
+var resolveCallback = /* @__PURE__ */ __name(
+  async (str, phase, preserveCallbacks, context, buffer) => {
+    if (typeof str === "object" && !(str instanceof String)) {
+      if (!(str instanceof Promise)) {
+        str = str.toString();
+      }
+      if (str instanceof Promise) {
+        str = await str;
+      }
     }
-    if (str instanceof Promise) {
-      str = await str;
+    const callbacks = str.callbacks;
+    if (!callbacks?.length) {
+      return Promise.resolve(str);
     }
-  }
-  const callbacks = str.callbacks;
-  if (!callbacks?.length) {
-    return Promise.resolve(str);
-  }
-  if (buffer) {
-    buffer[0] += str;
-  } else {
-    buffer = [str];
-  }
-  const resStr = Promise.all(callbacks.map((c) => c({ phase, buffer, context }))).then(
-    (res) => Promise.all(
-      res.filter(Boolean).map((str2) => resolveCallback(str2, phase, false, context, buffer))
-    ).then(() => buffer[0])
-  );
-  if (preserveCallbacks) {
-    return raw(await resStr, callbacks);
-  } else {
-    return resStr;
-  }
-}, "resolveCallback");
+    if (buffer) {
+      buffer[0] += str;
+    } else {
+      buffer = [str];
+    }
+    const resStr = Promise.all(
+      callbacks.map((c) => c({ phase, buffer, context })),
+    ).then((res) =>
+      Promise.all(
+        res
+          .filter(Boolean)
+          .map((str2) => resolveCallback(str2, phase, false, context, buffer)),
+      ).then(() => buffer[0]),
+    );
+    if (preserveCallbacks) {
+      return raw(await resStr, callbacks);
+    } else {
+      return resStr;
+    }
+  },
+  "resolveCallback",
+);
 
 // ../../node_modules/.pnpm/hono@4.12.8/node_modules/hono/dist/context.js
 var TEXT_PLAIN = "text/plain; charset=UTF-8";
 var setDefaultContentType = /* @__PURE__ */ __name((contentType, headers) => {
   return {
     "Content-Type": contentType,
-    ...headers
+    ...headers,
   };
 }, "setDefaultContentType");
-var createResponseInstance = /* @__PURE__ */ __name((body, init) => new Response(body, init), "createResponseInstance");
+var createResponseInstance = /* @__PURE__ */ __name(
+  (body, init) => new Response(body, init),
+  "createResponseInstance",
+);
 var Context = class {
   static {
     __name(this, "Context");
@@ -716,7 +771,11 @@ var Context = class {
    * `.req` is the instance of {@link HonoRequest}.
    */
   get req() {
-    this.#req ??= new HonoRequest(this.#rawRequest, this.#path, this.#matchResult);
+    this.#req ??= new HonoRequest(
+      this.#rawRequest,
+      this.#path,
+      this.#matchResult,
+    );
     return this.#req;
   }
   /**
@@ -750,9 +809,9 @@ var Context = class {
    * The Response object for the current request.
    */
   get res() {
-    return this.#res ||= createResponseInstance(null, {
-      headers: this.#preparedHeaders ??= new Headers()
-    });
+    return (this.#res ||= createResponseInstance(null, {
+      headers: (this.#preparedHeaders ??= new Headers()),
+    }));
   }
   /**
    * Sets the Response object for the current request.
@@ -802,7 +861,10 @@ var Context = class {
    * @param layout - The layout to set.
    * @returns The layout function.
    */
-  setLayout = /* @__PURE__ */ __name((layout) => this.#layout = layout, "setLayout");
+  setLayout = /* @__PURE__ */ __name(
+    (layout) => (this.#layout = layout),
+    "setLayout",
+  );
   /**
    * Gets the current layout for the response.
    *
@@ -853,7 +915,9 @@ var Context = class {
     if (this.finalized) {
       this.#res = createResponseInstance(this.#res.body, this.#res);
     }
-    const headers = this.#res ? this.#res.headers : this.#preparedHeaders ??= new Headers();
+    const headers = this.#res
+      ? this.#res.headers
+      : (this.#preparedHeaders ??= new Headers());
     if (value === void 0) {
       headers.delete(name);
     } else if (options?.append) {
@@ -916,9 +980,12 @@ var Context = class {
     return Object.fromEntries(this.#var);
   }
   #newResponse(data, arg, headers) {
-    const responseHeaders = this.#res ? new Headers(this.#res.headers) : this.#preparedHeaders ?? new Headers();
+    const responseHeaders = this.#res
+      ? new Headers(this.#res.headers)
+      : (this.#preparedHeaders ?? new Headers());
     if (typeof arg === "object" && "headers" in arg) {
-      const argHeaders = arg.headers instanceof Headers ? arg.headers : new Headers(arg.headers);
+      const argHeaders =
+        arg.headers instanceof Headers ? arg.headers : new Headers(arg.headers);
       for (const [key, value] of argHeaders) {
         if (key.toLowerCase() === "set-cookie") {
           responseHeaders.append(key, value);
@@ -939,10 +1006,14 @@ var Context = class {
         }
       }
     }
-    const status = typeof arg === "number" ? arg : arg?.status ?? this.#status;
+    const status =
+      typeof arg === "number" ? arg : (arg?.status ?? this.#status);
     return createResponseInstance(data, { status, headers: responseHeaders });
   }
-  newResponse = /* @__PURE__ */ __name((...args) => this.#newResponse(...args), "newResponse");
+  newResponse = /* @__PURE__ */ __name(
+    (...args) => this.#newResponse(...args),
+    "newResponse",
+  );
   /**
    * `.body()` can return the HTTP response.
    * You can set headers with `.header()` and set HTTP status code with `.status`.
@@ -964,7 +1035,10 @@ var Context = class {
    * })
    * ```
    */
-  body = /* @__PURE__ */ __name((data, arg, headers) => this.#newResponse(data, arg, headers), "body");
+  body = /* @__PURE__ */ __name(
+    (data, arg, headers) => this.#newResponse(data, arg, headers),
+    "body",
+  );
   /**
    * `.text()` can render text as `Content-Type:text/plain`.
    *
@@ -978,11 +1052,17 @@ var Context = class {
    * ```
    */
   text = /* @__PURE__ */ __name((text, arg, headers) => {
-    return !this.#preparedHeaders && !this.#status && !arg && !headers && !this.finalized ? new Response(text) : this.#newResponse(
-      text,
-      arg,
-      setDefaultContentType(TEXT_PLAIN, headers)
-    );
+    return !this.#preparedHeaders &&
+      !this.#status &&
+      !arg &&
+      !headers &&
+      !this.finalized
+      ? new Response(text)
+      : this.#newResponse(
+          text,
+          arg,
+          setDefaultContentType(TEXT_PLAIN, headers),
+        );
   }, "text");
   /**
    * `.json()` can render JSON as `Content-Type:application/json`.
@@ -1000,12 +1080,27 @@ var Context = class {
     return this.#newResponse(
       JSON.stringify(object),
       arg,
-      setDefaultContentType("application/json", headers)
+      setDefaultContentType("application/json", headers),
     );
   }, "json");
   html = /* @__PURE__ */ __name((html, arg, headers) => {
-    const res = /* @__PURE__ */ __name((html2) => this.#newResponse(html2, arg, setDefaultContentType("text/html; charset=UTF-8", headers)), "res");
-    return typeof html === "object" ? resolveCallback(html, HtmlEscapedCallbackPhase.Stringify, false, {}).then(res) : res(html);
+    const res = /* @__PURE__ */ __name(
+      (html2) =>
+        this.#newResponse(
+          html2,
+          arg,
+          setDefaultContentType("text/html; charset=UTF-8", headers),
+        ),
+      "res",
+    );
+    return typeof html === "object"
+      ? resolveCallback(
+          html,
+          HtmlEscapedCallbackPhase.Stringify,
+          false,
+          {},
+        ).then(res)
+      : res(html);
   }, "html");
   /**
    * `.redirect()` can Redirect, default status code is 302.
@@ -1028,7 +1123,9 @@ var Context = class {
       "Location",
       // Multibyes should be encoded
       // eslint-disable-next-line no-control-regex
-      !/[^\x00-\xFF]/.test(locationString) ? locationString : encodeURI(locationString)
+      !/[^\x00-\xFF]/.test(locationString)
+        ? locationString
+        : encodeURI(locationString),
     );
     return this.newResponse(null, status ?? 302);
   }, "redirect");
@@ -1054,7 +1151,8 @@ var Context = class {
 var METHOD_NAME_ALL = "ALL";
 var METHOD_NAME_ALL_LOWERCASE = "all";
 var METHODS = ["get", "post", "put", "delete", "options", "patch"];
-var MESSAGE_MATCHER_IS_ALREADY_BUILT = "Can not add a route since the matcher is already built.";
+var MESSAGE_MATCHER_IS_ALREADY_BUILT =
+  "Can not add a route since the matcher is already built.";
 var UnsupportedPathError = class extends Error {
   static {
     __name(this, "UnsupportedPathError");
@@ -1139,12 +1237,13 @@ var Hono = class _Hono {
     };
     const { strict, ...optionsWithoutStrict } = options;
     Object.assign(this, optionsWithoutStrict);
-    this.getPath = strict ?? true ? options.getPath ?? getPath : getPathNoStrict;
+    this.getPath =
+      (strict ?? true) ? (options.getPath ?? getPath) : getPathNoStrict;
   }
   #clone() {
     const clone = new _Hono({
       router: this.router,
-      getPath: this.getPath
+      getPath: this.getPath,
     });
     clone.errorHandler = this.errorHandler;
     clone.#notFoundHandler = this.#notFoundHandler;
@@ -1179,7 +1278,12 @@ var Hono = class _Hono {
       if (app2.errorHandler === errorHandler) {
         handler = r.handler;
       } else {
-        handler = /* @__PURE__ */ __name(async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res, "handler");
+        handler = /* @__PURE__ */ __name(
+          async (c, next) =>
+            (await compose([], app2.errorHandler)(c, () => r.handler(c, next)))
+              .res,
+          "handler",
+        );
         handler[COMPOSED_HANDLER] = r.handler;
       }
       subApp.#addRoute(r.method, r.path, handler);
@@ -1284,23 +1388,27 @@ var Hono = class _Hono {
       } else {
         optionHandler = options.optionHandler;
         if (options.replaceRequest === false) {
-          replaceRequest = /* @__PURE__ */ __name((request) => request, "replaceRequest");
+          replaceRequest = /* @__PURE__ */ __name(
+            (request) => request,
+            "replaceRequest",
+          );
         } else {
           replaceRequest = options.replaceRequest;
         }
       }
     }
-    const getOptions = optionHandler ? (c) => {
-      const options2 = optionHandler(c);
-      return Array.isArray(options2) ? options2 : [options2];
-    } : (c) => {
-      let executionContext = void 0;
-      try {
-        executionContext = c.executionCtx;
-      } catch {
-      }
-      return [c.env, executionContext];
-    };
+    const getOptions = optionHandler
+      ? (c) => {
+          const options2 = optionHandler(c);
+          return Array.isArray(options2) ? options2 : [options2];
+        }
+      : (c) => {
+          let executionContext = void 0;
+          try {
+            executionContext = c.executionCtx;
+          } catch {}
+          return [c.env, executionContext];
+        };
     replaceRequest ||= (() => {
       const mergedPath = mergePath(this._basePath, path);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
@@ -1311,7 +1419,10 @@ var Hono = class _Hono {
       };
     })();
     const handler = /* @__PURE__ */ __name(async (c, next) => {
-      const res = await applicationHandler(replaceRequest(c.req.raw), ...getOptions(c));
+      const res = await applicationHandler(
+        replaceRequest(c.req.raw),
+        ...getOptions(c),
+      );
       if (res) {
         return res;
       }
@@ -1335,7 +1446,11 @@ var Hono = class _Hono {
   }
   #dispatch(request, executionCtx, env, method) {
     if (method === "HEAD") {
-      return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
+      return (async () =>
+        new Response(
+          null,
+          await this.#dispatch(request, executionCtx, env, "GET"),
+        ))();
     }
     const path = this.getPath(request, { env });
     const matchResult = this.router.match(method, path);
@@ -1344,7 +1459,7 @@ var Hono = class _Hono {
       matchResult,
       env,
       executionCtx,
-      notFoundHandler: this.#notFoundHandler
+      notFoundHandler: this.#notFoundHandler,
     });
     if (matchResult[0].length === 1) {
       let res;
@@ -1355,17 +1470,26 @@ var Hono = class _Hono {
       } catch (err) {
         return this.#handleError(err, c);
       }
-      return res instanceof Promise ? res.then(
-        (resolved) => resolved || (c.finalized ? c.res : this.#notFoundHandler(c))
-      ).catch((err) => this.#handleError(err, c)) : res ?? this.#notFoundHandler(c);
+      return res instanceof Promise
+        ? res
+            .then(
+              (resolved) =>
+                resolved || (c.finalized ? c.res : this.#notFoundHandler(c)),
+            )
+            .catch((err) => this.#handleError(err, c))
+        : (res ?? this.#notFoundHandler(c));
     }
-    const composed = compose(matchResult[0], this.errorHandler, this.#notFoundHandler);
+    const composed = compose(
+      matchResult[0],
+      this.errorHandler,
+      this.#notFoundHandler,
+    );
     return (async () => {
       try {
         const context = await composed(c);
         if (!context.finalized) {
           throw new Error(
-            "Context is not finalized. Did you forget to return a Response object or `await next()`?"
+            "Context is not finalized. Did you forget to return a Response object or `await next()`?",
           );
         }
         return context.res;
@@ -1402,16 +1526,22 @@ var Hono = class _Hono {
    */
   request = /* @__PURE__ */ __name((input, requestInit, Env, executionCtx) => {
     if (input instanceof Request) {
-      return this.fetch(requestInit ? new Request(input, requestInit) : input, Env, executionCtx);
+      return this.fetch(
+        requestInit ? new Request(input, requestInit) : input,
+        Env,
+        executionCtx,
+      );
     }
     input = input.toString();
     return this.fetch(
       new Request(
-        /^https?:\/\//.test(input) ? input : `http://localhost${mergePath("/", input)}`,
-        requestInit
+        /^https?:\/\//.test(input)
+          ? input
+          : `http://localhost${mergePath("/", input)}`,
+        requestInit,
       ),
       Env,
-      executionCtx
+      executionCtx,
     );
   }, "request");
   /**
@@ -1433,7 +1563,9 @@ var Hono = class _Hono {
    */
   fire = /* @__PURE__ */ __name(() => {
     addEventListener("fetch", (event) => {
-      event.respondWith(this.#dispatch(event.request, event, void 0, event.request.method));
+      event.respondWith(
+        this.#dispatch(event.request, event, void 0, event.request.method),
+      );
     });
   }, "fire");
 };
@@ -1442,7 +1574,7 @@ var Hono = class _Hono {
 var emptyParam = [];
 function match(method, path) {
   const matchers = this.buildAllMatchers();
-  const match2 = /* @__PURE__ */ __name(((method2, path2) => {
+  const match2 = /* @__PURE__ */ __name((method2, path2) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
     const staticMatch = matcher[2][path2];
     if (staticMatch) {
@@ -1454,7 +1586,7 @@ function match(method, path) {
     }
     const index = match3.indexOf("", 1);
     return [matcher[1][index], match3];
-  }), "match2");
+  }, "match2");
   this.match = match2;
   return match2(method, path);
 }
@@ -1468,14 +1600,17 @@ var PATH_ERROR = /* @__PURE__ */ Symbol();
 var regExpMetaChars = new Set(".\\+*[^]$()");
 function compareKey(a, b) {
   if (a.length === 1) {
-    return b.length === 1 ? a < b ? -1 : 1 : -1;
+    return b.length === 1 ? (a < b ? -1 : 1) : -1;
   }
   if (b.length === 1) {
     return 1;
   }
   if (a === ONLY_WILDCARD_REG_EXP_STR || a === TAIL_WILDCARD_REG_EXP_STR) {
     return 1;
-  } else if (b === ONLY_WILDCARD_REG_EXP_STR || b === TAIL_WILDCARD_REG_EXP_STR) {
+  } else if (
+    b === ONLY_WILDCARD_REG_EXP_STR ||
+    b === TAIL_WILDCARD_REG_EXP_STR
+  ) {
     return -1;
   }
   if (a === LABEL_REG_EXP_STR) {
@@ -1483,7 +1618,7 @@ function compareKey(a, b) {
   } else if (b === LABEL_REG_EXP_STR) {
     return -1;
   }
-  return a.length === b.length ? a < b ? -1 : 1 : b.length - a.length;
+  return a.length === b.length ? (a < b ? -1 : 1) : b.length - a.length;
 }
 __name(compareKey, "compareKey");
 var Node = class _Node {
@@ -1505,7 +1640,14 @@ var Node = class _Node {
       return;
     }
     const [token, ...restTokens] = tokens;
-    const pattern = token === "*" ? restTokens.length === 0 ? ["", "", ONLY_WILDCARD_REG_EXP_STR] : ["", "", LABEL_REG_EXP_STR] : token === "/*" ? ["", "", TAIL_WILDCARD_REG_EXP_STR] : token.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/);
+    const pattern =
+      token === "*"
+        ? restTokens.length === 0
+          ? ["", "", ONLY_WILDCARD_REG_EXP_STR]
+          : ["", "", LABEL_REG_EXP_STR]
+        : token === "/*"
+          ? ["", "", TAIL_WILDCARD_REG_EXP_STR]
+          : token.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/);
     let node;
     if (pattern) {
       const name = pattern[1];
@@ -1521,9 +1663,13 @@ var Node = class _Node {
       }
       node = this.#children[regexpStr];
       if (!node) {
-        if (Object.keys(this.#children).some(
-          (k) => k !== ONLY_WILDCARD_REG_EXP_STR && k !== TAIL_WILDCARD_REG_EXP_STR
-        )) {
+        if (
+          Object.keys(this.#children).some(
+            (k) =>
+              k !== ONLY_WILDCARD_REG_EXP_STR &&
+              k !== TAIL_WILDCARD_REG_EXP_STR,
+          )
+        ) {
           throw PATH_ERROR;
         }
         if (pathErrorCheckOnly) {
@@ -1540,9 +1686,14 @@ var Node = class _Node {
     } else {
       node = this.#children[token];
       if (!node) {
-        if (Object.keys(this.#children).some(
-          (k) => k.length > 1 && k !== ONLY_WILDCARD_REG_EXP_STR && k !== TAIL_WILDCARD_REG_EXP_STR
-        )) {
+        if (
+          Object.keys(this.#children).some(
+            (k) =>
+              k.length > 1 &&
+              k !== ONLY_WILDCARD_REG_EXP_STR &&
+              k !== TAIL_WILDCARD_REG_EXP_STR,
+          )
+        ) {
           throw PATH_ERROR;
         }
         if (pathErrorCheckOnly) {
@@ -1557,7 +1708,13 @@ var Node = class _Node {
     const childKeys = Object.keys(this.#children).sort(compareKey);
     const strList = childKeys.map((k) => {
       const c = this.#children[k];
-      return (typeof c.#varIndex === "number" ? `(${k})@${c.#varIndex}` : regExpMetaChars.has(k) ? `\\${k}` : k) + c.buildRegExpStr();
+      return (
+        (typeof c.#varIndex === "number"
+          ? `(${k})@${c.#varIndex}`
+          : regExpMetaChars.has(k)
+            ? `\\${k}`
+            : k) + c.buildRegExpStr()
+      );
     });
     if (typeof this.#index === "number") {
       strList.unshift(`#${this.#index}`);
@@ -1605,7 +1762,13 @@ var Trie = class {
         }
       }
     }
-    this.#root.insert(tokens, index, paramAssoc, this.#context, pathErrorCheckOnly);
+    this.#root.insert(
+      tokens,
+      index,
+      paramAssoc,
+      this.#context,
+      pathErrorCheckOnly,
+    );
     return paramAssoc;
   }
   buildRegExp() {
@@ -1616,17 +1779,20 @@ var Trie = class {
     let captureIndex = 0;
     const indexReplacementMap = [];
     const paramReplacementMap = [];
-    regexp = regexp.replace(/#(\d+)|@(\d+)|\.\*\$/g, (_, handlerIndex, paramIndex) => {
-      if (handlerIndex !== void 0) {
-        indexReplacementMap[++captureIndex] = Number(handlerIndex);
-        return "$()";
-      }
-      if (paramIndex !== void 0) {
-        paramReplacementMap[Number(paramIndex)] = ++captureIndex;
+    regexp = regexp.replace(
+      /#(\d+)|@(\d+)|\.\*\$/g,
+      (_, handlerIndex, paramIndex) => {
+        if (handlerIndex !== void 0) {
+          indexReplacementMap[++captureIndex] = Number(handlerIndex);
+          return "$()";
+        }
+        if (paramIndex !== void 0) {
+          paramReplacementMap[Number(paramIndex)] = ++captureIndex;
+          return "";
+        }
         return "";
-      }
-      return "";
-    });
+      },
+    );
     return [new RegExp(`^${regexp}`), indexReplacementMap, paramReplacementMap];
   }
 };
@@ -1635,12 +1801,13 @@ var Trie = class {
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
 function buildWildcardRegExp(path) {
-  return wildcardRegExpCache[path] ??= new RegExp(
-    path === "*" ? "" : `^${path.replace(
-      /\/\*$|([.\\+*[^\]$()])/g,
-      (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
-    )}$`
-  );
+  return (wildcardRegExpCache[path] ??= new RegExp(
+    path === "*"
+      ? ""
+      : `^${path.replace(/\/\*$|([.\\+*[^\]$()])/g, (_, metaChar) =>
+          metaChar ? `\\${metaChar}` : "(?:|/.*)",
+        )}$`,
+  ));
 }
 __name(buildWildcardRegExp, "buildWildcardRegExp");
 function clearWildcardRegExpCache() {
@@ -1653,16 +1820,19 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   if (routes.length === 0) {
     return nullMatcher;
   }
-  const routesWithStaticPathFlag = routes.map(
-    (route) => [!/\*|\/:/.test(route[0]), ...route]
-  ).sort(
-    ([isStaticA, pathA], [isStaticB, pathB]) => isStaticA ? 1 : isStaticB ? -1 : pathA.length - pathB.length
-  );
+  const routesWithStaticPathFlag = routes
+    .map((route) => [!/\*|\/:/.test(route[0]), ...route])
+    .sort(([isStaticA, pathA], [isStaticB, pathB]) =>
+      isStaticA ? 1 : isStaticB ? -1 : pathA.length - pathB.length,
+    );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
     const [pathErrorCheckOnly, path, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path] = [
+        handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]),
+        emptyParam,
+      ];
     } else {
       j++;
     }
@@ -1704,7 +1874,10 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-__name(buildMatcherFromPreprocessedRoutes, "buildMatcherFromPreprocessedRoutes");
+__name(
+  buildMatcherFromPreprocessedRoutes,
+  "buildMatcherFromPreprocessedRoutes",
+);
 function findMiddleware(middleware, path) {
   if (!middleware) {
     return void 0;
@@ -1725,7 +1898,9 @@ var RegExpRouter = class {
   #middleware;
   #routes;
   constructor() {
-    this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
+    this.#middleware = {
+      [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null),
+    };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
   add(method, path, handler) {
@@ -1735,7 +1910,6 @@ var RegExpRouter = class {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
     if (!middleware[method]) {
-      ;
       [middleware, routes].forEach((handlerMap) => {
         handlerMap[method] = /* @__PURE__ */ Object.create(null);
         Object.keys(handlerMap[METHOD_NAME_ALL]).forEach((p) => {
@@ -1751,10 +1925,16 @@ var RegExpRouter = class {
       const re = buildWildcardRegExp(path);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path] ||= findMiddleware(middleware[m], path) || findMiddleware(middleware[METHOD_NAME_ALL], path) || [];
+          middleware[m][path] ||=
+            findMiddleware(middleware[m], path) ||
+            findMiddleware(middleware[METHOD_NAME_ALL], path) ||
+            [];
         });
       } else {
-        middleware[method][path] ||= findMiddleware(middleware[method], path) || findMiddleware(middleware[METHOD_NAME_ALL], path) || [];
+        middleware[method][path] ||=
+          findMiddleware(middleware[method], path) ||
+          findMiddleware(middleware[METHOD_NAME_ALL], path) ||
+          [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -1766,7 +1946,7 @@ var RegExpRouter = class {
       Object.keys(routes).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
           Object.keys(routes[m]).forEach(
-            (p) => re.test(p) && routes[m][p].push([handler, paramCount])
+            (p) => re.test(p) && routes[m][p].push([handler, paramCount]),
           );
         }
       });
@@ -1778,7 +1958,9 @@ var RegExpRouter = class {
       Object.keys(routes).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
           routes[m][path2] ||= [
-            ...findMiddleware(middleware[m], path2) || findMiddleware(middleware[METHOD_NAME_ALL], path2) || []
+            ...(findMiddleware(middleware[m], path2) ||
+              findMiddleware(middleware[METHOD_NAME_ALL], path2) ||
+              []),
           ];
           routes[m][path2].push([handler, paramCount - len + i + 1]);
         }
@@ -1788,9 +1970,11 @@ var RegExpRouter = class {
   match = match;
   buildAllMatchers() {
     const matchers = /* @__PURE__ */ Object.create(null);
-    Object.keys(this.#routes).concat(Object.keys(this.#middleware)).forEach((method) => {
-      matchers[method] ||= this.#buildMatcher(method);
-    });
+    Object.keys(this.#routes)
+      .concat(Object.keys(this.#middleware))
+      .forEach((method) => {
+        matchers[method] ||= this.#buildMatcher(method);
+      });
     this.#middleware = this.#routes = void 0;
     clearWildcardRegExpCache();
     return matchers;
@@ -1799,13 +1983,18 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path) => [path, r[method][path]]) : [];
+      const ownRoute = r[method]
+        ? Object.keys(r[method]).map((path) => [path, r[method][path]])
+        : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path) => [path, r[METHOD_NAME_ALL][path]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path) => [
+            path,
+            r[METHOD_NAME_ALL][path],
+          ]),
         );
       }
     });
@@ -1930,8 +2119,8 @@ var Node2 = class _Node2 {
       [method]: {
         handler,
         possibleKeys: possibleKeys.filter((v, i, a) => a.indexOf(v) === i),
-        score: this.#order
-      }
+        score: this.#order,
+      },
     });
     return curNode;
   }
@@ -1943,11 +2132,18 @@ var Node2 = class _Node2 {
       if (handlerSet !== void 0) {
         handlerSet.params = /* @__PURE__ */ Object.create(null);
         handlerSets.push(handlerSet);
-        if (nodeParams !== emptyParams || params && params !== emptyParams) {
-          for (let i2 = 0, len2 = handlerSet.possibleKeys.length; i2 < len2; i2++) {
+        if (nodeParams !== emptyParams || (params && params !== emptyParams)) {
+          for (
+            let i2 = 0, len2 = handlerSet.possibleKeys.length;
+            i2 < len2;
+            i2++
+          ) {
             const key = handlerSet.possibleKeys[i2];
             const processed = processedSet[handlerSet.score];
-            handlerSet.params[key] = params?.[key] && !processed ? params[key] : nodeParams[key] ?? params?.[key];
+            handlerSet.params[key] =
+              params?.[key] && !processed
+                ? params[key]
+                : (nodeParams[key] ?? params?.[key]);
             processedSet[handlerSet.score] = true;
           }
         }
@@ -1974,7 +2170,12 @@ var Node2 = class _Node2 {
           nextNode.#params = node.#params;
           if (isLast) {
             if (nextNode.#children["*"]) {
-              this.#pushHandlerSets(handlerSets, nextNode.#children["*"], method, node.#params);
+              this.#pushHandlerSets(
+                handlerSets,
+                nextNode.#children["*"],
+                method,
+                node.#params,
+              );
             }
             this.#pushHandlerSets(handlerSets, nextNode, method, node.#params);
           } else {
@@ -1983,7 +2184,8 @@ var Node2 = class _Node2 {
         }
         for (let k = 0, len3 = node.#patterns.length; k < len3; k++) {
           const pattern = node.#patterns[k];
-          const params = node.#params === emptyParams ? {} : { ...node.#params };
+          const params =
+            node.#params === emptyParams ? {} : { ...node.#params };
           if (pattern === "*") {
             const astNode = node.#children["*"];
             if (astNode) {
@@ -2011,11 +2213,17 @@ var Node2 = class _Node2 {
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
-              this.#pushHandlerSets(handlerSets, child, method, node.#params, params);
+              this.#pushHandlerSets(
+                handlerSets,
+                child,
+                method,
+                node.#params,
+                params,
+              );
               if (hasChildren(child.#children)) {
                 child.#params = params;
                 const componentCount = m[0].match(/\//)?.length ?? 0;
-                const targetCurNodes = curNodesQueue[componentCount] ||= [];
+                const targetCurNodes = (curNodesQueue[componentCount] ||= []);
                 targetCurNodes.push(child);
               }
               continue;
@@ -2024,14 +2232,20 @@ var Node2 = class _Node2 {
           if (matcher === true || matcher.test(part)) {
             params[name] = part;
             if (isLast) {
-              this.#pushHandlerSets(handlerSets, child, method, params, node.#params);
+              this.#pushHandlerSets(
+                handlerSets,
+                child,
+                method,
+                params,
+                node.#params,
+              );
               if (child.#children["*"]) {
                 this.#pushHandlerSets(
                   handlerSets,
                   child.#children["*"],
                   method,
                   params,
-                  node.#params
+                  node.#params,
                 );
               }
             } else {
@@ -2090,9 +2304,11 @@ var Hono2 = class extends Hono {
    */
   constructor(options = {}) {
     super(options);
-    this.router = options.router ?? new SmartRouter({
-      routers: [new RegExpRouter(), new TrieRouter()]
-    });
+    this.router =
+      options.router ??
+      new SmartRouter({
+        routers: [new RegExpRouter(), new TrieRouter()],
+      });
   }
 };
 
@@ -2102,21 +2318,21 @@ function jsonError(message, status = 400) {
   return new Response(JSON.stringify({ success: false, error: message }), {
     status,
     headers: {
-      "content-type": "application/json"
-    }
+      "content-type": "application/json",
+    },
   });
 }
 __name(jsonError, "jsonError");
 app.get("/", (c) => {
   return c.json({
     name: "Alvo Church Worker API",
-    status: "ok"
+    status: "ok",
   });
 });
 app.get("/health", (c) => {
   return c.json({
     status: "healthy",
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    timestamp: /* @__PURE__ */ new Date().toISOString(),
   });
 });
 app.post("/tenant-assets/upload", async (c) => {
@@ -2142,37 +2358,41 @@ app.post("/tenant-assets/upload", async (c) => {
   const objectKey = `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
     httpMetadata: {
-      contentType: file.type || "application/octet-stream"
-    }
+      contentType: file.type || "application/octet-stream",
+    },
   });
-  const publicBaseUrl = c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ?? "https://assets.alvochurch.app";
+  const publicBaseUrl =
+    c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ??
+    "https://assets.alvochurch.app";
   const payload = {
     success: true,
     assetKind,
     fileName,
     objectKey,
-    publicUrl: `${publicBaseUrl}/${objectKey}`
+    publicUrl: `${publicBaseUrl}/${objectKey}`,
   };
   return c.json(payload);
 });
 var src_default = app;
 
 // ../../node_modules/.pnpm/wrangler@4.75.0_@cloudflare+workers-types@4.20260317.1/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
-var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } finally {
+var drainBody = /* @__PURE__ */ __name(
+  async (request, env, _ctx, middlewareCtx) => {
     try {
-      if (request.body !== null && !request.bodyUsed) {
-        const reader = request.body.getReader();
-        while (!(await reader.read()).done) {
+      return await middlewareCtx.next(request, env);
+    } finally {
+      try {
+        if (request.body !== null && !request.bodyUsed) {
+          const reader = request.body.getReader();
+          while (!(await reader.read()).done) {}
         }
+      } catch (e) {
+        console.error("Failed to drain the unused request body.", e);
       }
-    } catch (e) {
-      console.error("Failed to drain the unused request body.", e);
     }
-  }
-}, "drainBody");
+  },
+  "drainBody",
+);
 var middleware_ensure_req_body_drained_default = drainBody;
 
 // ../../node_modules/.pnpm/wrangler@4.75.0_@cloudflare+workers-types@4.20260317.1/node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
@@ -2181,27 +2401,30 @@ function reduceError(e) {
     name: e?.name,
     message: e?.message ?? String(e),
     stack: e?.stack,
-    cause: e?.cause === void 0 ? void 0 : reduceError(e.cause)
+    cause: e?.cause === void 0 ? void 0 : reduceError(e.cause),
   };
 }
 __name(reduceError, "reduceError");
-var jsonError2 = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } catch (e) {
-    const error = reduceError(e);
-    return Response.json(error, {
-      status: 500,
-      headers: { "MF-Experimental-Error-Stack": "true" }
-    });
-  }
-}, "jsonError");
+var jsonError2 = /* @__PURE__ */ __name(
+  async (request, env, _ctx, middlewareCtx) => {
+    try {
+      return await middlewareCtx.next(request, env);
+    } catch (e) {
+      const error = reduceError(e);
+      return Response.json(error, {
+        status: 500,
+        headers: { "MF-Experimental-Error-Stack": "true" },
+      });
+    }
+  },
+  "jsonError",
+);
 var middleware_miniflare3_json_error_default = jsonError2;
 
 // .wrangler/tmp/bundle-VtJGNA/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
-  middleware_miniflare3_json_error_default
+  middleware_miniflare3_json_error_default,
 ];
 var middleware_insertion_facade_default = src_default;
 
@@ -2217,7 +2440,7 @@ function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
     dispatch,
     next(newRequest, newEnv) {
       return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
-    }
+    },
   };
   return head(request, env, ctx, middlewareCtx);
 }
@@ -2225,7 +2448,7 @@ __name(__facade_invokeChain__, "__facade_invokeChain__");
 function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
   return __facade_invokeChain__(request, env, ctx, dispatch, [
     ...__facade_middleware__,
-    finalMiddleware
+    finalMiddleware,
   ]);
 }
 __name(__facade_invoke__, "__facade_invoke__");
@@ -2249,13 +2472,16 @@ var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   }
 };
 function wrapExportedHandler(worker) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
+  if (
+    __INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 ||
+    __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0
+  ) {
     return worker;
   }
   for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
     __facade_register__(middleware);
   }
-  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
+  const fetchDispatcher = /* @__PURE__ */ __name(function (request, env, ctx) {
     if (worker.fetch === void 0) {
       throw new Error("Handler does not export a fetch() function.");
     }
@@ -2264,24 +2490,26 @@ function wrapExportedHandler(worker) {
   return {
     ...worker,
     fetch(request, env, ctx) {
-      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
+      const dispatcher = /* @__PURE__ */ __name(function (type, init) {
         if (type === "scheduled" && worker.scheduled !== void 0) {
           const controller = new __Facade_ScheduledController__(
             Date.now(),
             init.cron ?? "",
-            () => {
-            }
+            () => {},
           );
           return worker.scheduled(controller, env, ctx);
         }
       }, "dispatcher");
       return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
-    }
+    },
   };
 }
 __name(wrapExportedHandler, "wrapExportedHandler");
 function wrapWorkerEntrypoint(klass) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
+  if (
+    __INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 ||
+    __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0
+  ) {
     return klass;
   }
   for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
@@ -2301,8 +2529,7 @@ function wrapWorkerEntrypoint(klass) {
         const controller = new __Facade_ScheduledController__(
           Date.now(),
           init.cron ?? "",
-          () => {
-          }
+          () => {},
         );
         return super.scheduled(controller);
       }
@@ -2313,7 +2540,7 @@ function wrapWorkerEntrypoint(klass) {
         this.env,
         this.ctx,
         this.#dispatcher,
-        this.#fetchDispatcher
+        this.#fetchDispatcher,
       );
     }
   };
@@ -2328,6 +2555,6 @@ if (typeof middleware_insertion_facade_default === "object") {
 var middleware_loader_entry_default = WRAPPED_ENTRY;
 export {
   __INTERNAL_WRANGLER_MIDDLEWARE__,
-  middleware_loader_entry_default as default
+  middleware_loader_entry_default as default,
 };
 //# sourceMappingURL=index.js.map

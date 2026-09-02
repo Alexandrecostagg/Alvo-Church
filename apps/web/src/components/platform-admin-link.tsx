@@ -14,10 +14,17 @@ export function PlatformAdminLink() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!user) { setVisible(false); return; }
+    if (!user) {
+      setVisible(false);
+      return;
+    }
     let active = true;
-    isPlatformAdmin(firebaseConfig, user.uid).then((ok) => { if (active) setVisible(ok); });
-    return () => { active = false; };
+    isPlatformAdmin(firebaseConfig, user.uid).then((ok) => {
+      if (active) setVisible(ok);
+    });
+    return () => {
+      active = false;
+    };
   }, [user, firebaseConfig]);
 
   if (!visible) return null;
@@ -27,10 +34,18 @@ export function PlatformAdminLink() {
       href="/platform-admin"
       title="Painel Esdras (admin da plataforma)"
       style={{
-        display: "flex", alignItems: "center", gap: 6,
-        background: "#0f172a", border: "none", borderRadius: 8,
-        padding: "6px 10px", cursor: "pointer", fontSize: 13,
-        color: "#fff", flexShrink: 0, textDecoration: "none"
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        background: "#0f172a",
+        border: "none",
+        borderRadius: 8,
+        padding: "6px 10px",
+        cursor: "pointer",
+        fontSize: 13,
+        color: "#fff",
+        flexShrink: 0,
+        textDecoration: "none",
       }}
     >
       <ShieldCheck size={14} />

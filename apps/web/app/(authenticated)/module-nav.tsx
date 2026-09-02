@@ -48,64 +48,207 @@ type NavGroup = {
 };
 
 const ORG_TIER_LABELS: Record<string, string> = {
-  solo:         "Igreja",
-  campus:       "Multi-campus",
-  network:      "Rede de Igrejas",
+  solo: "Igreja",
+  campus: "Multi-campus",
+  network: "Rede de Igrejas",
   denomination: "Denominação",
 };
 
-function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[] {
+function buildNavigationGroups(
+  groupsLabel: string,
+  orgTier: string,
+): NavGroup[] {
   return [
     {
       title: "Geral",
       items: [
-        { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
-        { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname) => pathname.startsWith("/reception") },
-        { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") || pathname.startsWith("/care-radar") },
-        { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },
-      ]
+        {
+          label: "Dashboard",
+          icon: LayoutDashboard,
+          href: "/",
+          match: (pathname) => pathname === "/",
+        },
+        {
+          label: "Recepção",
+          icon: ClipboardList,
+          href: "/reception",
+          moduleKey: "visitors",
+          match: (pathname) => pathname.startsWith("/reception"),
+        },
+        {
+          label: "Cuidado Pastoral",
+          icon: Bot,
+          href: "/pastoral-ai",
+          moduleKey: "ai",
+          match: (pathname) =>
+            pathname.startsWith("/pastoral-ai") ||
+            pathname.startsWith("/care-radar"),
+        },
+        {
+          label: "Finanças",
+          icon: Landmark,
+          href: "/finance",
+          moduleKey: "finance",
+          match: (pathname) => pathname.startsWith("/finance"),
+        },
+      ],
     },
     {
       title: "Membros",
       items: [
-        { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname.startsWith("/me") },
-        { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname.startsWith("/members") },
-        { label: "Marketplace", icon: Store, href: "/marketplace-community", moduleKey: "marketplace", match: (pathname) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
-        { label: "Comunicação", icon: MessageSquareText, href: "/communication", moduleKey: "communication", match: (pathname) => pathname.startsWith("/communication") },
-        { label: "Doações", icon: HeartHandshake, href: "/giving", moduleKey: "giving", match: (pathname) => pathname.startsWith("/giving") },
-      ]
+        {
+          label: "Meu Perfil",
+          icon: UserCircle,
+          href: "/me",
+          match: (pathname) => pathname.startsWith("/me"),
+        },
+        {
+          label: "Pessoas",
+          icon: UsersRound,
+          href: "/members",
+          match: (pathname) => pathname.startsWith("/members"),
+        },
+        {
+          label: "Marketplace",
+          icon: Store,
+          href: "/marketplace-community",
+          moduleKey: "marketplace",
+          match: (pathname) =>
+            pathname.startsWith("/marketplace-community") ||
+            pathname.startsWith("/marketplace"),
+        },
+        {
+          label: "Comunicação",
+          icon: MessageSquareText,
+          href: "/communication",
+          moduleKey: "communication",
+          match: (pathname) => pathname.startsWith("/communication"),
+        },
+        {
+          label: "Doações",
+          icon: HeartHandshake,
+          href: "/giving",
+          moduleKey: "giving",
+          match: (pathname) => pathname.startsWith("/giving"),
+        },
+      ],
     },
     {
       title: "Estrategia",
       items: [
-        { label: "Tribos", icon: Tent, href: "/tribes", moduleKey: "tribes", match: (pathname) => pathname.startsWith("/tribes") },
-        { label: groupsLabel, icon: Waypoints, href: "/groups", moduleKey: "groups", match: (pathname) => pathname.startsWith("/groups") || pathname.startsWith("/weekly-theme") },
-        { label: "Jornadas", icon: MapIcon, href: "/journeys", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/journeys") },
-        { label: "Escola EAD", icon: GraduationCap, href: "/learning/academy", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning") && !pathname.startsWith("/learning/manage") },
-        { label: "Gerenciar Cursos", icon: BookOpenCheck, href: "/learning/manage", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning/manage") },
-        { label: "Capacitação", icon: Award, href: "/capacitacao", match: (pathname) => pathname.startsWith("/capacitacao") },
-        { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
-        { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving") },
-        { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
-      ]
+        {
+          label: "Tribos",
+          icon: Tent,
+          href: "/tribes",
+          moduleKey: "tribes",
+          match: (pathname) => pathname.startsWith("/tribes"),
+        },
+        {
+          label: groupsLabel,
+          icon: Waypoints,
+          href: "/groups",
+          moduleKey: "groups",
+          match: (pathname) =>
+            pathname.startsWith("/groups") ||
+            pathname.startsWith("/weekly-theme"),
+        },
+        {
+          label: "Jornadas",
+          icon: MapIcon,
+          href: "/journeys",
+          moduleKey: "journeys",
+          match: (pathname) => pathname.startsWith("/journeys"),
+        },
+        {
+          label: "Escola EAD",
+          icon: GraduationCap,
+          href: "/learning/academy",
+          moduleKey: "journeys",
+          match: (pathname) =>
+            pathname.startsWith("/learning") &&
+            !pathname.startsWith("/learning/manage"),
+        },
+        {
+          label: "Gerenciar Cursos",
+          icon: BookOpenCheck,
+          href: "/learning/manage",
+          moduleKey: "journeys",
+          match: (pathname) => pathname.startsWith("/learning/manage"),
+        },
+        {
+          label: "Capacitação",
+          icon: Award,
+          href: "/capacitacao",
+          match: (pathname) => pathname.startsWith("/capacitacao"),
+        },
+        {
+          label: "Eventos",
+          icon: CalendarRange,
+          href: "/events",
+          moduleKey: "events",
+          match: (pathname) => pathname.startsWith("/events"),
+        },
+        {
+          label: "Escalas",
+          icon: Handshake,
+          href: "/serving",
+          moduleKey: "volunteers",
+          match: (pathname) => pathname.startsWith("/serving"),
+        },
+        {
+          label: "Segurança Kids",
+          icon: ShieldCheck,
+          href: "/kids/scan",
+          moduleKey: "children",
+          match: (pathname) => pathname.startsWith("/kids/scan"),
+        },
+      ],
     },
     {
       title: "Mídia",
       items: [
-        { label: "Banner", icon: ImagePlay, href: "/media/banner", match: (pathname) => pathname.startsWith("/media/banner") },
-      ]
+        {
+          label: "Banner",
+          icon: ImagePlay,
+          href: "/media/banner",
+          match: (pathname) => pathname.startsWith("/media/banner"),
+        },
+      ],
     },
     {
       title: "Admin",
       items: [
-        ...(orgTier === "network" || orgTier === "denomination" ? [
-          { label: "Rede de Igrejas", icon: NetworkIcon, href: "/network", match: (pathname: string) => pathname.startsWith("/network") },
-        ] : []),
-        { label: "Relatórios", icon: FileBarChart2, href: "/reports", match: (pathname: string) => pathname.startsWith("/reports") },
-        { label: "Notificações", icon: Bell, href: "/notifications", match: (pathname: string) => pathname.startsWith("/notifications") },
-        { label: "Configurações", icon: Settings, href: "/settings", match: (pathname: string) => pathname.startsWith("/settings") || pathname.startsWith("/saas") },
-      ]
-    }
+        ...(orgTier === "network" || orgTier === "denomination"
+          ? [
+              {
+                label: "Rede de Igrejas",
+                icon: NetworkIcon,
+                href: "/network",
+                match: (pathname: string) => pathname.startsWith("/network"),
+              },
+            ]
+          : []),
+        {
+          label: "Relatórios",
+          icon: FileBarChart2,
+          href: "/reports",
+          match: (pathname: string) => pathname.startsWith("/reports"),
+        },
+        {
+          label: "Notificações",
+          icon: Bell,
+          href: "/notifications",
+          match: (pathname: string) => pathname.startsWith("/notifications"),
+        },
+        {
+          label: "Configurações",
+          icon: Settings,
+          href: "/settings",
+          match: (pathname: string) =>
+            pathname.startsWith("/settings") || pathname.startsWith("/saas"),
+        },
+      ],
+    },
   ];
 }
 
@@ -117,7 +260,10 @@ export function ModuleNav() {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    activeLinkRef.current?.scrollIntoView({ block: "center", inline: "nearest" });
+    activeLinkRef.current?.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+    });
   }, [pathname]);
 
   const navigationGroups = buildNavigationGroups(groupsLabel, orgTier);
@@ -128,14 +274,17 @@ export function ModuleNav() {
       items: group.items.filter((item) => {
         if (!item.moduleKey) return true;
         return isEnabled(item.moduleKey);
-      })
+      }),
     }))
     .filter((group) => group.items.length > 0);
 
   const CollapseIcon = collapsed ? ChevronRight : ChevronLeft;
 
   return (
-    <aside className="app-sidebar" data-collapsed={collapsed ? "true" : "false"}>
+    <aside
+      className="app-sidebar"
+      data-collapsed={collapsed ? "true" : "false"}
+    >
       <div className="sidebar-header">
         <BrandLogo compact size={42} iconOnly={collapsed} />
         <button
@@ -159,7 +308,9 @@ export function ModuleNav() {
                     key={item.label}
                     href={item.href}
                     ref={isActive ? activeLinkRef : undefined}
-                    className={isActive ? "app-nav-item is-active" : "app-nav-item"}
+                    className={
+                      isActive ? "app-nav-item is-active" : "app-nav-item"
+                    }
                     title={collapsed ? item.label : undefined}
                   >
                     <item.icon size={18} strokeWidth={2.2} />
@@ -179,12 +330,13 @@ export function ModuleNav() {
           <ShieldCheck size={14} />
           <span>Esdras · {ORG_TIER_LABELS[orgTier]}</span>
         </div>
-        {!collapsed && (orgTier === "network" || orgTier === "denomination") && (
-          <div className="sidebar-tier-badge">
-            <Layers size={11} />
-            <span>{ORG_TIER_LABELS[orgTier]}</span>
-          </div>
-        )}
+        {!collapsed &&
+          (orgTier === "network" || orgTier === "denomination") && (
+            <div className="sidebar-tier-badge">
+              <Layers size={11} />
+              <span>{ORG_TIER_LABELS[orgTier]}</span>
+            </div>
+          )}
       </div>
     </aside>
   );

@@ -13,7 +13,7 @@ import {
   UserPlus,
   UsersRound,
   Waypoints,
-  X
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -30,9 +30,15 @@ import {
   recordGroupAttendance,
   removeGroupMember,
   updateGroup,
-  updateGroupMeetingStatus
+  updateGroupMeetingStatus,
 } from "@alvo/firebase";
-import type { Group, GroupAttendance, GroupMeeting, GroupMember, Person } from "@alvo/types";
+import type {
+  Group,
+  GroupAttendance,
+  GroupMeeting,
+  GroupMember,
+  Person,
+} from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { useGroupsLabel } from "../../../contexts/OrgFeaturesContext";
 
@@ -43,7 +49,7 @@ const weekdayOptions = [
   { label: "Quarta", value: 3 },
   { label: "Quinta", value: 4 },
   { label: "Sexta", value: 5 },
-  { label: "Sábado", value: 6 }
+  { label: "Sábado", value: 6 },
 ];
 
 type GroupFollowUpItem = {
@@ -57,7 +63,8 @@ type GroupFollowUpItem = {
 
 export function GroupsView() {
   const groupsLabel = useGroupsLabel();
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } =
+    useAppAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [meetings, setMeetings] = useState<GroupMeeting[]>([]);
@@ -65,8 +72,12 @@ export function GroupsView() {
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [status, setStatus] = useState("Carregando células...");
-  const [copiedFollowUpPersonId, setCopiedFollowUpPersonId] = useState<string | null>(null);
-  const [copiedMeetingSummaryId, setCopiedMeetingSummaryId] = useState<string | null>(null);
+  const [copiedFollowUpPersonId, setCopiedFollowUpPersonId] = useState<
+    string | null
+  >(null);
+  const [copiedMeetingSummaryId, setCopiedMeetingSummaryId] = useState<
+    string | null
+  >(null);
   const [groupForm, setGroupForm] = useState({
     capacity: "12",
     city: "",
@@ -75,7 +86,7 @@ export function GroupsView() {
     name: "",
     state: "",
     type: "cell",
-    leaderPersonId: ""
+    leaderPersonId: "",
   });
   const [groupFormError, setGroupFormError] = useState("");
   const [groupFormSuccess, setGroupFormSuccess] = useState("");
@@ -86,7 +97,12 @@ export function GroupsView() {
   const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
 
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !firebaseReady ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setStatus("Entre no Firebase para carregar células reais.");
       return;
     }
@@ -99,16 +115,31 @@ export function GroupsView() {
       try {
         const [nextGroups, nextPeople] = await Promise.all([
           fetchGroups(firebaseConfig, { organizationId }, 80),
-          fetchPeople(firebaseConfig, { organizationId }, 160)
+          fetchPeople(firebaseConfig, { organizationId }, 160),
         ]);
         const [nextMembers, nextMeetings] = nextGroups.length
           ? await Promise.all([
-              fetchGroupMembers(firebaseConfig, { organizationId }, nextGroups, 60),
-              fetchGroupMeetings(firebaseConfig, { organizationId }, nextGroups, 8)
+              fetchGroupMembers(
+                firebaseConfig,
+                { organizationId },
+                nextGroups,
+                60,
+              ),
+              fetchGroupMeetings(
+                firebaseConfig,
+                { organizationId },
+                nextGroups,
+                8,
+              ),
             ])
           : [[], []];
         const nextAttendance = nextMeetings.length
-          ? await fetchGroupAttendance(firebaseConfig, { organizationId }, nextMeetings, 80)
+          ? await fetchGroupAttendance(
+              firebaseConfig,
+              { organizationId },
+              nextMeetings,
+              80,
+            )
           : [];
 
         if (cancelled) {
@@ -121,9 +152,11 @@ export function GroupsView() {
         setGroupMembers(nextMembers);
         setMeetings(nextMeetings);
         setAttendance(nextAttendance);
-        setSelectedGroupId((currentId) => currentId ?? nextGroups[0]?.id ?? null);
+        setSelectedGroupId(
+          (currentId) => currentId ?? nextGroups[0]?.id ?? null,
+        );
         setStatus(
-          `${nextGroups.length} célula(s), ${nextMembers.length} vínculo(s), ${nextMeetings.length} encontro(s).`
+          `${nextGroups.length} célula(s), ${nextMembers.length} vínculo(s), ${nextMeetings.length} encontro(s).`,
         );
       } catch (error) {
         if (!cancelled) {
@@ -139,7 +172,8 @@ export function GroupsView() {
     };
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
-  const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
+  const selectedGroup =
+    groups.find((group) => group.id === selectedGroupId) ?? null;
   const selectedMembers = selectedGroup
     ? groupMembers.filter((member) => member.groupId === selectedGroup.id)
     : [];
@@ -150,24 +184,28 @@ export function GroupsView() {
     ? attendance.filter((item) => item.groupId === selectedGroup.id)
     : [];
   const selectedActiveMeeting =
-    selectedMeetings.find((meeting) => meeting.meetingStatus === "scheduled") ?? null;
+    selectedMeetings.find((meeting) => meeting.meetingStatus === "scheduled") ??
+    null;
   const selectedReportMeeting =
     selectedActiveMeeting ??
     [...selectedMeetings].sort(
       (firstMeeting, secondMeeting) =>
         new Date(secondMeeting.scheduledStartAt).getTime() -
-        new Date(firstMeeting.scheduledStartAt).getTime()
+        new Date(firstMeeting.scheduledStartAt).getTime(),
     )[0] ??
     null;
   const peopleWithoutGroup = people.filter(
-    (person) => !groupMembers.some((member) => member.personId === person.id)
+    (person) => !groupMembers.some((member) => member.personId === person.id),
   );
-  const totalCapacity = groups.reduce((sum, group) => sum + (group.capacity ?? 0), 0);
+  const totalCapacity = groups.reduce(
+    (sum, group) => sum + (group.capacity ?? 0),
+    0,
+  );
   // Vagas disponíveis = capacidade total − pessoas já vinculadas (não a capacidade toda).
   const availableSlots = Math.max(totalCapacity - groupMembers.length, 0);
   const activeGroups = groups.filter((group) => group.status === "active");
   const presentCount = attendance.filter((item) =>
-    ["present", "first_time_guest"].includes(item.attendanceStatus)
+    ["present", "first_time_guest"].includes(item.attendanceStatus),
   ).length;
   const attendanceRate = attendance.length
     ? Math.round((presentCount / attendance.length) * 100)
@@ -175,22 +213,24 @@ export function GroupsView() {
   const groupHealth = selectedGroup
     ? getGroupHealth(selectedGroup, selectedMembers, selectedAttendance)
     : null;
-  const selectedMeetingSummary = selectedGroup && selectedReportMeeting
-    ? getMeetingSummary({
-        attendance: selectedAttendance,
-        group: selectedGroup,
-        meeting: selectedReportMeeting,
-        members: selectedMembers
-      })
-    : null;
-  const selectedFollowUpQueue = selectedGroup && selectedReportMeeting
-    ? getGroupFollowUpQueue({
-        attendance: selectedAttendance,
-        meeting: selectedReportMeeting,
-        members: selectedMembers,
-        people
-      })
-    : [];
+  const selectedMeetingSummary =
+    selectedGroup && selectedReportMeeting
+      ? getMeetingSummary({
+          attendance: selectedAttendance,
+          group: selectedGroup,
+          meeting: selectedReportMeeting,
+          members: selectedMembers,
+        })
+      : null;
+  const selectedFollowUpQueue =
+    selectedGroup && selectedReportMeeting
+      ? getGroupFollowUpQueue({
+          attendance: selectedAttendance,
+          meeting: selectedReportMeeting,
+          members: selectedMembers,
+          people,
+        })
+      : [];
 
   async function handleAssignPerson(person: Person) {
     if (!selectedGroup) {
@@ -204,28 +244,40 @@ export function GroupsView() {
       groupId: selectedGroup.id,
       personId: person.id,
       roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member",
-      joinedAt: new Date().toISOString()
+      joinedAt: new Date().toISOString(),
     };
     setGroupMembers((currentMembers) => [
       localMember,
-      ...currentMembers.filter((member) => member.id !== localMember.id)
+      ...currentMembers.filter((member) => member.id !== localMember.id),
     ]);
     setStatus(`${getFullName(person)} vinculado a ${selectedGroup.name}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Vínculo criado localmente. Conecte o Firebase para persistir.");
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
+      setStatus(
+        "Vínculo criado localmente. Conecte o Firebase para persistir.",
+      );
       return;
     }
 
     try {
-      const savedMember = await assignPersonToGroup(firebaseConfig, { organizationId }, {
-        assignedByUserId: user.uid,
-        groupId: selectedGroup.id,
-        personId: person.id,
-        roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member"
-      });
+      const savedMember = await assignPersonToGroup(
+        firebaseConfig,
+        { organizationId },
+        {
+          assignedByUserId: user.uid,
+          groupId: selectedGroup.id,
+          personId: person.id,
+          roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member",
+        },
+      );
       setGroupMembers((currentMembers) =>
-        currentMembers.map((member) => (member.id === localMember.id ? savedMember : member))
+        currentMembers.map((member) =>
+          member.id === localMember.id ? savedMember : member,
+        ),
       );
       setStatus("Vínculo com célula salvo no Firestore.");
     } catch (error) {
@@ -235,8 +287,14 @@ export function GroupsView() {
 
   function resetGroupForm() {
     setGroupForm({
-      capacity: "12", city: "", meetingDayOfWeek: "3", meetingTime: "19:30",
-      name: "", state: "", type: "cell", leaderPersonId: ""
+      capacity: "12",
+      city: "",
+      meetingDayOfWeek: "3",
+      meetingTime: "19:30",
+      name: "",
+      state: "",
+      type: "cell",
+      leaderPersonId: "",
     });
   }
 
@@ -250,7 +308,9 @@ export function GroupsView() {
 
   function openEditGroup(group: Group) {
     setEditingGroupId(group.id);
-    const leader = groupMembers.find((m) => m.groupId === group.id && m.roleInGroup === "leader");
+    const leader = groupMembers.find(
+      (m) => m.groupId === group.id && m.roleInGroup === "leader",
+    );
     setGroupForm({
       capacity: String(group.capacity ?? "12"),
       city: group.city ?? "",
@@ -259,7 +319,7 @@ export function GroupsView() {
       name: group.name,
       state: group.state ?? "",
       type: group.type,
-      leaderPersonId: leader?.personId ?? ""
+      leaderPersonId: leader?.personId ?? "",
     });
     setGroupFormError("");
     setGroupFormSuccess("");
@@ -275,7 +335,11 @@ export function GroupsView() {
       setGroupFormError("Digite o nome da célula para continuar.");
       return;
     }
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setGroupFormError("Entre na sua conta para salvar a célula.");
       return;
     }
@@ -289,13 +353,20 @@ export function GroupsView() {
     async function assignLeader(groupId: string) {
       if (!groupForm.leaderPersonId || !user) return;
       try {
-        const savedLeader = await assignPersonToGroup(firebaseConfig, { organizationId }, {
-          assignedByUserId: user.uid,
-          groupId,
-          personId: groupForm.leaderPersonId,
-          roleInGroup: "leader"
-        });
-        setGroupMembers((current) => [savedLeader, ...current.filter((m) => m.id !== savedLeader.id)]);
+        const savedLeader = await assignPersonToGroup(
+          firebaseConfig,
+          { organizationId },
+          {
+            assignedByUserId: user.uid,
+            groupId,
+            personId: groupForm.leaderPersonId,
+            roleInGroup: "leader",
+          },
+        );
+        setGroupMembers((current) => [
+          savedLeader,
+          ...current.filter((m) => m.id !== savedLeader.id),
+        ]);
       } catch (error) {
         console.error("Falha ao vincular líder:", error);
       }
@@ -305,28 +376,56 @@ export function GroupsView() {
       if (editingGroupId) {
         // Edição de célula existente.
         await updateGroup(firebaseConfig, { organizationId }, editingGroupId, {
-          name, type: groupForm.type as Group["type"], meetingDayOfWeek: dayOfWeek,
+          name,
+          type: groupForm.type as Group["type"],
+          meetingDayOfWeek: dayOfWeek,
           meetingTime: groupForm.meetingTime || undefined,
           city: groupForm.city.trim() || undefined,
-          state: groupForm.state.trim() || undefined, capacity
+          state: groupForm.state.trim() || undefined,
+          capacity,
         });
-        setGroups((current) => current.map((g) => (g.id === editingGroupId ? {
-          ...g, name, type: groupForm.type as Group["type"], meetingDayOfWeek: dayOfWeek,
-          meetingTime: groupForm.meetingTime || undefined, city: groupForm.city.trim() || undefined,
-          state: groupForm.state.trim() || undefined, capacity
-        } : g)));
+        setGroups((current) =>
+          current.map((g) =>
+            g.id === editingGroupId
+              ? {
+                  ...g,
+                  name,
+                  type: groupForm.type as Group["type"],
+                  meetingDayOfWeek: dayOfWeek,
+                  meetingTime: groupForm.meetingTime || undefined,
+                  city: groupForm.city.trim() || undefined,
+                  state: groupForm.state.trim() || undefined,
+                  capacity,
+                }
+              : g,
+          ),
+        );
         // Se trocou/definiu o líder e ele ainda não é membro-líder, vincula.
-        const currentLeader = groupMembers.find((m) => m.groupId === editingGroupId && m.roleInGroup === "leader");
-        if (groupForm.leaderPersonId && currentLeader?.personId !== groupForm.leaderPersonId) {
+        const currentLeader = groupMembers.find(
+          (m) => m.groupId === editingGroupId && m.roleInGroup === "leader",
+        );
+        if (
+          groupForm.leaderPersonId &&
+          currentLeader?.personId !== groupForm.leaderPersonId
+        ) {
           await assignLeader(editingGroupId);
         }
         setStatus(`Célula "${name}" atualizada.`);
       } else {
-        const savedGroup = await createGroup(firebaseConfig, { organizationId }, {
-          capacity, city: groupForm.city.trim() || undefined, createdByUserId: user.uid,
-          meetingDayOfWeek: dayOfWeek, meetingTime: groupForm.meetingTime || undefined,
-          name, state: groupForm.state.trim() || undefined, type: groupForm.type as Group["type"]
-        });
+        const savedGroup = await createGroup(
+          firebaseConfig,
+          { organizationId },
+          {
+            capacity,
+            city: groupForm.city.trim() || undefined,
+            createdByUserId: user.uid,
+            meetingDayOfWeek: dayOfWeek,
+            meetingTime: groupForm.meetingTime || undefined,
+            name,
+            state: groupForm.state.trim() || undefined,
+            type: groupForm.type as Group["type"],
+          },
+        );
         setGroups((current) => [savedGroup, ...current]);
         setSelectedGroupId(savedGroup.id);
         await assignLeader(savedGroup.id);
@@ -336,7 +435,9 @@ export function GroupsView() {
       setEditingGroupId(null);
       resetGroupForm();
     } catch (error) {
-      setGroupFormError(friendlyError(error, "Não foi possível salvar a célula."));
+      setGroupFormError(
+        friendlyError(error, "Não foi possível salvar a célula."),
+      );
     } finally {
       setGroupFormSaving(false);
     }
@@ -349,7 +450,8 @@ export function GroupsView() {
     setGroups((current) => current.filter((g) => g.id !== group.id));
     setGroupMembers((current) => current.filter((m) => m.groupId !== group.id));
     setSelectedGroupId((id) => (id === group.id ? null : id));
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
     try {
       await deleteGroup(firebaseConfig, { organizationId }, group.id);
       setStatus(`Célula "${group.name}" excluída.`);
@@ -363,12 +465,20 @@ export function GroupsView() {
     const label = person ? getFullName(person) : member.personId;
     if (!window.confirm(`Remover ${label} desta célula?`)) return;
     setGroupMembers((current) => current.filter((m) => m.id !== member.id));
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
     try {
-      await removeGroupMember(firebaseConfig, { organizationId }, member.groupId, member.personId);
+      await removeGroupMember(
+        firebaseConfig,
+        { organizationId },
+        member.groupId,
+        member.personId,
+      );
       setStatus(`${label} removido da célula.`);
     } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível remover o participante."));
+      setStatus(
+        friendlyError(error, "Não foi possível remover o participante."),
+      );
     }
   }
 
@@ -379,33 +489,45 @@ export function GroupsView() {
     }
 
     // Usa a data escolhida (datetime-local) ou "agora" se em branco.
-    const scheduledStartAt = meetingDate ? new Date(meetingDate).toISOString() : new Date().toISOString();
+    const scheduledStartAt = meetingDate
+      ? new Date(meetingDate).toISOString()
+      : new Date().toISOString();
     const localMeeting: GroupMeeting = {
       id: `meeting_local_${Date.now()}`,
       organizationId,
       groupId: selectedGroup.id,
       scheduledStartAt,
-      meetingStatus: "scheduled"
+      meetingStatus: "scheduled",
     };
     setMeetings((currentMeetings) => [localMeeting, ...currentMeetings]);
     setMeetingDate("");
     setStatus(`Encontro aberto para ${selectedGroup.name}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Encontro criado localmente. Conecte o Firebase para persistir.");
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
+      setStatus(
+        "Encontro criado localmente. Conecte o Firebase para persistir.",
+      );
       return;
     }
 
     try {
-      const savedMeeting = await createGroupMeeting(firebaseConfig, { organizationId }, {
-        createdByUserId: user.uid,
-        groupId: selectedGroup.id,
-        scheduledStartAt
-      });
+      const savedMeeting = await createGroupMeeting(
+        firebaseConfig,
+        { organizationId },
+        {
+          createdByUserId: user.uid,
+          groupId: selectedGroup.id,
+          scheduledStartAt,
+        },
+      );
       setMeetings((currentMeetings) =>
         currentMeetings.map((meeting) =>
-          meeting.id === localMeeting.id ? savedMeeting : meeting
-        )
+          meeting.id === localMeeting.id ? savedMeeting : meeting,
+        ),
       );
       setStatus("Encontro salvo no Firestore.");
     } catch (error) {
@@ -415,7 +537,7 @@ export function GroupsView() {
 
   async function handleAttendance(
     member: GroupMember,
-    attendanceStatus: GroupAttendance["attendanceStatus"]
+    attendanceStatus: GroupAttendance["attendanceStatus"],
   ) {
     if (!selectedGroup || !selectedActiveMeeting) {
       setStatus("Abra um encontro antes de registrar presença.");
@@ -428,31 +550,41 @@ export function GroupsView() {
       groupId: selectedGroup.id,
       groupMeetingId: selectedActiveMeeting.id,
       personId: member.personId,
-      attendanceStatus
+      attendanceStatus,
     };
     setAttendance((currentAttendance) => [
       localAttendance,
-      ...currentAttendance.filter((item) => item.id !== localAttendance.id)
+      ...currentAttendance.filter((item) => item.id !== localAttendance.id),
     ]);
     setStatus(`Presença marcada como ${getAttendanceLabel(attendanceStatus)}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Presença registrada localmente. Conecte o Firebase para persistir.");
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
+      setStatus(
+        "Presença registrada localmente. Conecte o Firebase para persistir.",
+      );
       return;
     }
 
     try {
-      const savedAttendance = await recordGroupAttendance(firebaseConfig, { organizationId }, {
-        groupId: selectedGroup.id,
-        groupMeetingId: selectedActiveMeeting.id,
-        personId: member.personId,
-        recordedByUserId: user.uid,
-        status: attendanceStatus
-      });
+      const savedAttendance = await recordGroupAttendance(
+        firebaseConfig,
+        { organizationId },
+        {
+          groupId: selectedGroup.id,
+          groupMeetingId: selectedActiveMeeting.id,
+          personId: member.personId,
+          recordedByUserId: user.uid,
+          status: attendanceStatus,
+        },
+      );
       setAttendance((currentAttendance) =>
         currentAttendance.map((item) =>
-          item.id === localAttendance.id ? savedAttendance : item
-        )
+          item.id === localAttendance.id ? savedAttendance : item,
+        ),
       );
       setStatus("Presença salva no Firestore.");
     } catch (error) {
@@ -470,23 +602,33 @@ export function GroupsView() {
       currentMeetings.map((meeting) =>
         meeting.id === selectedActiveMeeting.id
           ? { ...meeting, meetingStatus: "completed" }
-          : meeting
-      )
+          : meeting,
+      ),
     );
     setStatus(`Encontro de ${selectedGroup.name} encerrado.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Encontro encerrado localmente. Conecte o Firebase para persistir.");
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
+      setStatus(
+        "Encontro encerrado localmente. Conecte o Firebase para persistir.",
+      );
       return;
     }
 
     try {
-      await updateGroupMeetingStatus(firebaseConfig, { organizationId }, {
-        groupId: selectedGroup.id,
-        meetingId: selectedActiveMeeting.id,
-        status: "completed",
-        updatedByUserId: user.uid
-      });
+      await updateGroupMeetingStatus(
+        firebaseConfig,
+        { organizationId },
+        {
+          groupId: selectedGroup.id,
+          meetingId: selectedActiveMeeting.id,
+          status: "completed",
+          updatedByUserId: user.uid,
+        },
+      );
       setStatus("Encontro encerrado no Firestore.");
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível encerrar o encontro."));
@@ -499,7 +641,9 @@ export function GroupsView() {
       setCopiedFollowUpPersonId(item.personId);
       setStatus(`Mensagem de cuidado copiada para ${item.personName}.`);
     } catch {
-      setStatus("Não foi possível copiar automaticamente. Selecione a mensagem e copie manualmente.");
+      setStatus(
+        "Não foi possível copiar automaticamente. Selecione a mensagem e copie manualmente.",
+      );
     }
   }
 
@@ -523,10 +667,20 @@ export function GroupsView() {
       <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">{groupsLabel}</h1>
-          <p className="page-subtitle">Acompanhe capacidade, participantes, encontros e conexões</p>
+          <p className="page-subtitle">
+            Acompanhe capacidade, participantes, encontros e conexões
+          </p>
         </div>
         <div className="page-header-actions">
-          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: "var(--alvo-ink-soft)",
+              background: "var(--alvo-surface-muted)",
+              padding: "4px 10px",
+              borderRadius: 8,
+            }}
+          >
             {status}
           </span>
         </div>
@@ -534,24 +688,54 @@ export function GroupsView() {
 
       <div className="stats-row">
         <div className="stat-card">
-          <div className="stat-icon"><Waypoints size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Células ativas</span><span className="stat-value">{activeGroups.length}</span></div>
+          <div className="stat-icon">
+            <Waypoints size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Células ativas</span>
+            <span className="stat-value">{activeGroups.length}</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon"><UsersRound size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Participantes</span><span className="stat-value">{groupMembers.length}</span></div>
+          <div className="stat-icon">
+            <UsersRound size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Participantes</span>
+            <span className="stat-value">{groupMembers.length}</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon"><UserPlus size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Vagas disponíveis</span><span className="stat-value">{totalCapacity ? availableSlots : "—"}</span></div>
+          <div className="stat-icon">
+            <UserPlus size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Vagas disponíveis</span>
+            <span className="stat-value">
+              {totalCapacity ? availableSlots : "—"}
+            </span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon"><CheckCircle2 size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Taxa de presença</span><span className="stat-value">{attendanceRate}%</span></div>
+          <div className="stat-icon">
+            <CheckCircle2 size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Taxa de presença</span>
+            <span className="stat-value">{attendanceRate}%</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}><AlertTriangle size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Sem célula</span><span className="stat-value">{peopleWithoutGroup.length}</span></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}
+          >
+            <AlertTriangle size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Sem célula</span>
+            <span className="stat-value">{peopleWithoutGroup.length}</span>
+          </div>
         </div>
       </div>
 
@@ -571,162 +755,199 @@ export function GroupsView() {
                 type="button"
                 style={{ marginBottom: 8 }}
               >
-                <UserPlus size={15} />
-                + Nova célula
+                <UserPlus size={15} />+ Nova célula
               </button>
             )}
             {groupFormOpen && (
-            <div className="quick-group-form antigravity-float-delayed">
-              <p className="eyebrow">{editingGroupId ? "Editar célula" : "Nova célula"}</p>
-              {groupFormError && (
-                <div className="form-inline-error">
-                  ⚠️ {groupFormError}
-                </div>
-              )}
-              {groupFormSuccess && (
-                <div className="form-inline-success">
-                  {groupFormSuccess}
-                </div>
-              )}
-              <label>
-                Nome da célula *
-                <input
-                  onChange={(event) => {
-                    setGroupFormError("");
-                    setGroupForm((currentForm) => ({ ...currentForm, name: event.target.value }));
-                  }}
-                  placeholder="Ex.: Célula Centro Sul"
-                  value={groupForm.name}
-                  style={groupFormError && !groupForm.name ? { borderColor: '#ef4444' } : {}}
-                />
-              </label>
-              <label>
-                Líder da célula
-                <select
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, leaderPersonId: event.target.value }))
-                  }
-                  value={groupForm.leaderPersonId}
-                >
-                  <option value="">Selecionar líder...</option>
-                  {people.filter(p => ["member", "leader", "volunteer"].includes(p.memberStatus)).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Tipo
-                <select
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, type: event.target.value }))
-                  }
-                  value={groupForm.type}
-                >
-                  <option value="cell">Célula</option>
-                  <option value="small_group">Pequeno Grupo</option>
-                  <option value="class">Classe / Escola</option>
-                  <option value="youth_group">Grupo de Jovens</option>
-                </select>
-              </label>
-              <div className="quick-group-grid">
+              <div className="quick-group-form antigravity-float-delayed">
+                <p className="eyebrow">
+                  {editingGroupId ? "Editar célula" : "Nova célula"}
+                </p>
+                {groupFormError && (
+                  <div className="form-inline-error">⚠️ {groupFormError}</div>
+                )}
+                {groupFormSuccess && (
+                  <div className="form-inline-success">{groupFormSuccess}</div>
+                )}
                 <label>
-                  Dia
+                  Nome da célula *
+                  <input
+                    onChange={(event) => {
+                      setGroupFormError("");
+                      setGroupForm((currentForm) => ({
+                        ...currentForm,
+                        name: event.target.value,
+                      }));
+                    }}
+                    placeholder="Ex.: Célula Centro Sul"
+                    value={groupForm.name}
+                    style={
+                      groupFormError && !groupForm.name
+                        ? { borderColor: "#ef4444" }
+                        : {}
+                    }
+                  />
+                </label>
+                <label>
+                  Líder da célula
                   <select
                     onChange={(event) =>
                       setGroupForm((currentForm) => ({
                         ...currentForm,
-                        meetingDayOfWeek: event.target.value
+                        leaderPersonId: event.target.value,
                       }))
                     }
-                    value={groupForm.meetingDayOfWeek}
+                    value={groupForm.leaderPersonId}
                   >
-                    {weekdayOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                    <option value="">Selecionar líder...</option>
+                    {people
+                      .filter((p) =>
+                        ["member", "leader", "volunteer"].includes(
+                          p.memberStatus,
+                        ),
+                      )
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.firstName} {p.lastName}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label>
-                  Horário
-                  <input
+                  Tipo
+                  <select
                     onChange={(event) =>
                       setGroupForm((currentForm) => ({
                         ...currentForm,
-                        meetingTime: event.target.value
+                        type: event.target.value,
                       }))
                     }
-                    type="time"
-                    value={groupForm.meetingTime}
-                  />
+                    value={groupForm.type}
+                  >
+                    <option value="cell">Célula</option>
+                    <option value="small_group">Pequeno Grupo</option>
+                    <option value="class">Classe / Escola</option>
+                    <option value="youth_group">Grupo de Jovens</option>
+                  </select>
                 </label>
-              </div>
-              <div className="quick-group-grid">
+                <div className="quick-group-grid">
+                  <label>
+                    Dia
+                    <select
+                      onChange={(event) =>
+                        setGroupForm((currentForm) => ({
+                          ...currentForm,
+                          meetingDayOfWeek: event.target.value,
+                        }))
+                      }
+                      value={groupForm.meetingDayOfWeek}
+                    >
+                      {weekdayOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Horário
+                    <input
+                      onChange={(event) =>
+                        setGroupForm((currentForm) => ({
+                          ...currentForm,
+                          meetingTime: event.target.value,
+                        }))
+                      }
+                      type="time"
+                      value={groupForm.meetingTime}
+                    />
+                  </label>
+                </div>
+                <div className="quick-group-grid">
+                  <label>
+                    Cidade
+                    <input
+                      onChange={(event) =>
+                        setGroupForm((currentForm) => ({
+                          ...currentForm,
+                          city: event.target.value,
+                        }))
+                      }
+                      placeholder="Cidade"
+                      value={groupForm.city}
+                    />
+                  </label>
+                  <label>
+                    Estado (UF)
+                    <input
+                      maxLength={2}
+                      onChange={(event) =>
+                        setGroupForm((currentForm) => ({
+                          ...currentForm,
+                          state: event.target.value.toUpperCase(),
+                        }))
+                      }
+                      placeholder="PA"
+                      value={groupForm.state}
+                    />
+                  </label>
+                </div>
                 <label>
-                  Cidade
+                  Vagas
                   <input
+                    min="1"
                     onChange={(event) =>
-                      setGroupForm((currentForm) => ({ ...currentForm, city: event.target.value }))
+                      setGroupForm((currentForm) => ({
+                        ...currentForm,
+                        capacity: event.target.value,
+                      }))
                     }
-                    placeholder="Cidade"
-                    value={groupForm.city}
+                    type="number"
+                    value={groupForm.capacity}
                   />
                 </label>
-                <label>
-                  Estado (UF)
-                  <input
-                    maxLength={2}
-                    onChange={(event) =>
-                      setGroupForm((currentForm) => ({ ...currentForm, state: event.target.value.toUpperCase() }))
-                    }
-                    placeholder="PA"
-                    value={groupForm.state}
-                  />
-                </label>
+                <button
+                  className="primary-button full"
+                  onClick={() => void handleCreateGroup()}
+                  type="button"
+                  disabled={groupFormSaving}
+                  style={groupFormSaving ? { opacity: 0.7 } : {}}
+                >
+                  <UserPlus size={15} />
+                  {groupFormSaving
+                    ? "Salvando..."
+                    : editingGroupId
+                      ? "Salvar alterações"
+                      : "Criar célula"}
+                </button>
+                <button
+                  className="ghost-button full"
+                  onClick={() => {
+                    setGroupFormOpen(false);
+                    setEditingGroupId(null);
+                    setGroupFormError("");
+                    resetGroupForm();
+                  }}
+                  type="button"
+                >
+                  Cancelar
+                </button>
               </div>
-              <label>
-                Vagas
-                <input
-                  min="1"
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({
-                      ...currentForm,
-                      capacity: event.target.value
-                    }))
-                  }
-                  type="number"
-                  value={groupForm.capacity}
-                />
-              </label>
-              <button
-                className="primary-button full"
-                onClick={() => void handleCreateGroup()}
-                type="button"
-                disabled={groupFormSaving}
-                style={groupFormSaving ? { opacity: 0.7 } : {}}
-              >
-                <UserPlus size={15} />
-                {groupFormSaving ? "Salvando..." : editingGroupId ? "Salvar alterações" : "Criar célula"}
-              </button>
-              <button
-                className="ghost-button full"
-                onClick={() => { setGroupFormOpen(false); setEditingGroupId(null); setGroupFormError(""); resetGroupForm(); }}
-                type="button"
-              >
-                Cancelar
-              </button>
-            </div>
             )}
             {groups.length ? (
               groups.map((group) => {
-                const members = groupMembers.filter((member) => member.groupId === group.id);
+                const members = groupMembers.filter(
+                  (member) => member.groupId === group.id,
+                );
                 const occupancy = getOccupancyPercent(group, members.length);
 
                 return (
                   <button
-                    className={selectedGroupId === group.id ? "group-card is-selected" : "group-card"}
+                    className={
+                      selectedGroupId === group.id
+                        ? "group-card is-selected"
+                        : "group-card"
+                    }
                     key={group.id}
                     onClick={() => setSelectedGroupId(group.id)}
                     type="button"
@@ -734,13 +955,15 @@ export function GroupsView() {
                     <span>{getGroupTypeLabel(group.type)}</span>
                     <strong>{group.name}</strong>
                     <p>
-                      {getMeetingLabel(group)} - {group.city ?? "cidade não informada"}
+                      {getMeetingLabel(group)} -{" "}
+                      {group.city ?? "cidade não informada"}
                     </p>
                     <div className="occupancy-bar">
                       <i style={{ width: `${occupancy}%` }} />
                     </div>
                     <small>
-                      {members.length}/{group.capacity ?? "sem limite"} participantes
+                      {members.length}/{group.capacity ?? "sem limite"}{" "}
+                      participantes
                     </small>
                   </button>
                 );
@@ -764,11 +987,17 @@ export function GroupsView() {
                 </div>
                 <div className="section-actions">
                   {groupHealth ? (
-                    <span className={`group-health-pill is-${groupHealth.level}`}>
+                    <span
+                      className={`group-health-pill is-${groupHealth.level}`}
+                    >
                       {groupHealth.label}
                     </span>
                   ) : null}
-                  <Link href={`/groups/${selectedGroup.id}/banner`} className="primary-button compact-button" style={{ backgroundColor: "#10b981", color: "white" }}>
+                  <Link
+                    href={`/groups/${selectedGroup.id}/banner`}
+                    className="primary-button compact-button"
+                    style={{ backgroundColor: "#10b981", color: "white" }}
+                  >
                     <Sparkles size={15} />
                     Gerar Banner da Célula
                   </Link>
@@ -777,21 +1006,51 @@ export function GroupsView() {
                     value={meetingDate}
                     onChange={(event) => setMeetingDate(event.target.value)}
                     title="Data do encontro (deixe em branco para agora)"
-                    style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid var(--alvo-line)", fontSize: 12 }}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border: "1px solid var(--alvo-line)",
+                      fontSize: 12,
+                    }}
                   />
-                  <button className="primary-button compact-button" onClick={() => void handleCreateMeeting()} type="button">
+                  <button
+                    className="primary-button compact-button"
+                    onClick={() => void handleCreateMeeting()}
+                    type="button"
+                  >
                     <CalendarDays size={15} />
                     Abrir encontro
                   </button>
                   {selectedActiveMeeting ? (
-                    <button className="ghost-button" onClick={() => void handleCloseMeeting()} type="button">
+                    <button
+                      className="ghost-button"
+                      onClick={() => void handleCloseMeeting()}
+                      type="button"
+                    >
                       Encerrar
                     </button>
                   ) : null}
-                  <button className="ghost-button" onClick={() => openEditGroup(selectedGroup)} type="button" title="Editar célula" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <button
+                    className="ghost-button"
+                    onClick={() => openEditGroup(selectedGroup)}
+                    type="button"
+                    title="Editar célula"
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                  >
                     <Pencil size={14} /> Editar
                   </button>
-                  <button className="ghost-button" onClick={() => setDeleteTarget(selectedGroup)} type="button" title="Excluir célula" style={{ display: "flex", alignItems: "center", gap: 4, color: "#dc2626" }}>
+                  <button
+                    className="ghost-button"
+                    onClick={() => setDeleteTarget(selectedGroup)}
+                    type="button"
+                    title="Excluir célula"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      color: "#dc2626",
+                    }}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -814,7 +1073,8 @@ export function GroupsView() {
                 <span>
                   {selectedActiveMeeting
                     ? selectedAttendance.filter(
-                        (item) => item.groupMeetingId === selectedActiveMeeting.id
+                        (item) =>
+                          item.groupMeetingId === selectedActiveMeeting.id,
                       ).length
                     : 0}
                   /{selectedMembers.length}
@@ -827,10 +1087,20 @@ export function GroupsView() {
                     <div>
                       <p className="eyebrow">Resumo do encontro</p>
                       <h3>{selectedMeetingSummary.groupName}</h3>
-                      <p>{formatDate(selectedMeetingSummary.scheduledStartAt)} - {selectedMeetingSummary.status}</p>
+                      <p>
+                        {formatDate(selectedMeetingSummary.scheduledStartAt)} -{" "}
+                        {selectedMeetingSummary.status}
+                      </p>
                     </div>
-                    <button className="ghost-button" onClick={() => void handleCopyMeetingSummary()} type="button">
-                      {copiedMeetingSummaryId === selectedMeetingSummary.meetingId ? "Copiado" : "Copiar resumo"}
+                    <button
+                      className="ghost-button"
+                      onClick={() => void handleCopyMeetingSummary()}
+                      type="button"
+                    >
+                      {copiedMeetingSummaryId ===
+                      selectedMeetingSummary.meetingId
+                        ? "Copiado"
+                        : "Copiar resumo"}
                     </button>
                   </div>
                   <div className="meeting-summary-grid">
@@ -879,13 +1149,33 @@ export function GroupsView() {
                   <div className="group-member-list">
                     {selectedMembers.length ? (
                       selectedMembers.map((member) => {
-                        const person = people.find((item) => item.id === member.personId);
+                        const person = people.find(
+                          (item) => item.id === member.personId,
+                        );
 
                         return (
                           <div key={member.id}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                              <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {member.roleInGroup === "leader" && <Crown size={13} style={{ color: "#d97706" }} />}
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 8,
+                              }}
+                            >
+                              <strong
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                {member.roleInGroup === "leader" && (
+                                  <Crown
+                                    size={13}
+                                    style={{ color: "#d97706" }}
+                                  />
+                                )}
                                 {person ? getFullName(person) : member.personId}
                               </strong>
                               <button
@@ -893,37 +1183,55 @@ export function GroupsView() {
                                 onClick={() => void handleRemoveMember(member)}
                                 type="button"
                                 title="Remover da célula"
-                                style={{ padding: "2px 6px", color: "#dc2626", lineHeight: 1 }}
+                                style={{
+                                  padding: "2px 6px",
+                                  color: "#dc2626",
+                                  lineHeight: 1,
+                                }}
                               >
                                 <X size={13} />
                               </button>
                             </div>
-                            <p>{getRoleLabel(member.roleInGroup)} - desde {formatDate(member.joinedAt)}</p>
+                            <p>
+                              {getRoleLabel(member.roleInGroup)} - desde{" "}
+                              {formatDate(member.joinedAt)}
+                            </p>
                             <div className="attendance-actions">
                               <button
                                 className="ghost-button"
-                                onClick={() => void handleAttendance(member, "present")}
+                                onClick={() =>
+                                  void handleAttendance(member, "present")
+                                }
                                 type="button"
                               >
                                 Presente
                               </button>
                               <button
                                 className="ghost-button"
-                                onClick={() => void handleAttendance(member, "first_time_guest")}
+                                onClick={() =>
+                                  void handleAttendance(
+                                    member,
+                                    "first_time_guest",
+                                  )
+                                }
                                 type="button"
                               >
                                 Visitante
                               </button>
                               <button
                                 className="ghost-button"
-                                onClick={() => void handleAttendance(member, "justified")}
+                                onClick={() =>
+                                  void handleAttendance(member, "justified")
+                                }
                                 type="button"
                               >
                                 Justificou
                               </button>
                               <button
                                 className="ghost-button"
-                                onClick={() => void handleAttendance(member, "absent")}
+                                onClick={() =>
+                                  void handleAttendance(member, "absent")
+                                }
                                 type="button"
                               >
                                 Ausente
@@ -947,14 +1255,17 @@ export function GroupsView() {
                     {selectedMeetings.length ? (
                       selectedMeetings.map((meeting) => {
                         const meetingAttendance = selectedAttendance.filter(
-                          (item) => item.groupMeetingId === meeting.id
+                          (item) => item.groupMeetingId === meeting.id,
                         );
 
                         return (
                           <div key={meeting.id}>
-                            <strong>{formatDate(meeting.scheduledStartAt)}</strong>
+                            <strong>
+                              {formatDate(meeting.scheduledStartAt)}
+                            </strong>
                             <p>
-                              {meeting.meetingStatus} - {meetingAttendance.length} presença(s)
+                              {meeting.meetingStatus} -{" "}
+                              {meetingAttendance.length} presença(s)
                             </p>
                           </div>
                         );
@@ -980,8 +1291,13 @@ export function GroupsView() {
                 <div className="group-followup-list">
                   {selectedFollowUpQueue.length ? (
                     selectedFollowUpQueue.map((item) => (
-                      <div className={`group-followup-item is-${item.level}`} key={item.personId}>
-                        <span>{item.level === "risk" ? "Prioritario" : "Acompanhar"}</span>
+                      <div
+                        className={`group-followup-item is-${item.level}`}
+                        key={item.personId}
+                      >
+                        <span>
+                          {item.level === "risk" ? "Prioritario" : "Acompanhar"}
+                        </span>
                         <strong>{item.personName}</strong>
                         <p>{item.reason}</p>
                         <small>{item.message}</small>
@@ -991,10 +1307,17 @@ export function GroupsView() {
                             onClick={() => void handleCopyFollowUp(item)}
                             type="button"
                           >
-                            {copiedFollowUpPersonId === item.personId ? "Copiado" : "Copiar"}
+                            {copiedFollowUpPersonId === item.personId
+                              ? "Copiado"
+                              : "Copiar"}
                           </button>
                           {item.whatsappHref ? (
-                            <a className="primary-button compact-button" href={item.whatsappHref} rel="noreferrer" target="_blank">
+                            <a
+                              className="primary-button compact-button"
+                              href={item.whatsappHref}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
                               WhatsApp
                             </a>
                           ) : null}
@@ -1004,7 +1327,10 @@ export function GroupsView() {
                   ) : (
                     <div className="empty-state">
                       <strong>Sem alerta pastoral</strong>
-                      <p>Quando houver falta, ausência de chamada ou visitante novo, aparecerá aqui.</p>
+                      <p>
+                        Quando houver falta, ausência de chamada ou visitante
+                        novo, aparecerá aqui.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1014,7 +1340,9 @@ export function GroupsView() {
             <div className="empty-state">
               <AlertTriangle size={20} />
               <strong>Selecione uma célula</strong>
-              <p>Escolha um grupo para ver participantes, encontros e integração.</p>
+              <p>
+                Escolha um grupo para ver participantes, encontros e integração.
+              </p>
             </div>
           )}
         </article>
@@ -1037,7 +1365,9 @@ export function GroupsView() {
                 >
                   <strong>{getFullName(person)}</strong>
                   <p>{getMemberStatusLabel(person.memberStatus)}</p>
-                  <small>Vincular a {selectedGroup?.name ?? "célula selecionada"}</small>
+                  <small>
+                    Vincular a {selectedGroup?.name ?? "célula selecionada"}
+                  </small>
                 </button>
               ))
             ) : (
@@ -1053,30 +1383,109 @@ export function GroupsView() {
       {deleteTarget && (
         <div
           onClick={() => setDeleteTarget(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 1000,
+          }}
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{ maxWidth: 420, width: "100%", background: "var(--alvo-surface, #fff)", borderRadius: 16, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+            style={{
+              maxWidth: 420,
+              width: "100%",
+              background: "var(--alvo-surface, #fff)",
+              borderRadius: 16,
+              padding: 22,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(220,38,38,0.12)", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "rgba(220,38,38,0.12)",
+                  color: "#dc2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <AlertTriangle size={20} />
               </div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--alvo-ink, #0f172a)" }}>Excluir esta célula?</h3>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 17,
+                  fontWeight: 800,
+                  color: "var(--alvo-ink, #0f172a)",
+                }}
+              >
+                Excluir esta célula?
+              </h3>
             </div>
-            <p style={{ margin: "0 0 6px", fontSize: 14, color: "var(--alvo-ink, #0f172a)" }}>
-              Você está prestes a excluir <strong>“{deleteTarget.name}”</strong>.
+            <p
+              style={{
+                margin: "0 0 6px",
+                fontSize: 14,
+                color: "var(--alvo-ink, #0f172a)",
+              }}
+            >
+              Você está prestes a excluir <strong>“{deleteTarget.name}”</strong>
+              .
             </p>
-            <p style={{ margin: "0 0 18px", fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
-              Esta ação é irreversível. Os vínculos, encontros e presenças da célula deixarão de aparecer e não poderão ser recuperados.
+            <p
+              style={{
+                margin: "0 0 18px",
+                fontSize: 13,
+                color: "#dc2626",
+                fontWeight: 600,
+              }}
+            >
+              Esta ação é irreversível. Os vínculos, encontros e presenças da
+              célula deixarão de aparecer e não poderão ser recuperados.
             </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button className="ghost-button" onClick={() => setDeleteTarget(null)} type="button">Cancelar</button>
+            <div
+              style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}
+            >
+              <button
+                className="ghost-button"
+                onClick={() => setDeleteTarget(null)}
+                type="button"
+              >
+                Cancelar
+              </button>
               <button
                 onClick={() => void confirmDeleteGroup()}
                 type="button"
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, background: "#dc2626", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "9px 16px",
+                  borderRadius: 10,
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
               >
                 <Trash2 size={15} /> Sim, excluir definitivamente
               </button>
@@ -1169,9 +1578,10 @@ function getAttendanceLabel(status: GroupAttendance["attendanceStatus"]) {
 }
 
 function getMeetingLabel(group: Group) {
-  const day = typeof group.meetingDayOfWeek === "number"
-    ? getWeekdayLabel(group.meetingDayOfWeek)
-    : "dia a definir";
+  const day =
+    typeof group.meetingDayOfWeek === "number"
+      ? getWeekdayLabel(group.meetingDayOfWeek)
+      : "dia a definir";
 
   return `${day} - ${group.meetingTime ?? "horário a definir"}`;
 }
@@ -1194,31 +1604,33 @@ function getOccupancyPercent(group: Group, memberCount: number) {
 function getGroupHealth(
   group: Group,
   members: readonly GroupMember[],
-  attendance: readonly GroupAttendance[]
+  attendance: readonly GroupAttendance[],
 ) {
   const occupancy = getOccupancyPercent(group, members.length);
   const present = attendance.filter((item) =>
-    ["present", "first_time_guest"].includes(item.attendanceStatus)
+    ["present", "first_time_guest"].includes(item.attendanceStatus),
   ).length;
-  const attendanceRate = attendance.length ? Math.round((present / attendance.length) * 100) : 0;
+  const attendanceRate = attendance.length
+    ? Math.round((present / attendance.length) * 100)
+    : 0;
 
   if (occupancy >= 95) {
     return {
       label: "Quase cheia",
-      level: "attention" as const
+      level: "attention" as const,
     };
   }
 
   if (attendance.length && attendanceRate < 55) {
     return {
       label: "Cuidar presença",
-      level: "risk" as const
+      level: "risk" as const,
     };
   }
 
   return {
     label: "Saudavel",
-    level: "stable" as const
+    level: "stable" as const,
   };
 }
 
@@ -1226,7 +1638,7 @@ function getMeetingSummary({
   attendance,
   group,
   meeting,
-  members
+  members,
 }: {
   attendance: readonly GroupAttendance[];
   group: Group;
@@ -1234,14 +1646,23 @@ function getMeetingSummary({
   members: readonly GroupMember[];
 }) {
   const meetingAttendance = attendance.filter(
-    (item) => item.groupMeetingId === meeting.id
+    (item) => item.groupMeetingId === meeting.id,
   );
-  const present = meetingAttendance.filter((item) => item.attendanceStatus === "present").length;
-  const guests = meetingAttendance.filter((item) => item.attendanceStatus === "first_time_guest").length;
-  const justified = meetingAttendance.filter((item) => item.attendanceStatus === "justified").length;
-  const absent = meetingAttendance.filter((item) => item.attendanceStatus === "absent").length;
+  const present = meetingAttendance.filter(
+    (item) => item.attendanceStatus === "present",
+  ).length;
+  const guests = meetingAttendance.filter(
+    (item) => item.attendanceStatus === "first_time_guest",
+  ).length;
+  const justified = meetingAttendance.filter(
+    (item) => item.attendanceStatus === "justified",
+  ).length;
+  const absent = meetingAttendance.filter(
+    (item) => item.attendanceStatus === "absent",
+  ).length;
   const pending = Math.max(members.length - meetingAttendance.length, 0);
-  const status = meeting.meetingStatus === "completed" ? "encerrado" : "em andamento";
+  const status =
+    meeting.meetingStatus === "completed" ? "encerrado" : "em andamento";
   const text = [
     `Resumo da célula ${group.name}`,
     `Data: ${formatDate(meeting.scheduledStartAt)}`,
@@ -1250,7 +1671,7 @@ function getMeetingSummary({
     `Visitantes: ${guests}`,
     `Justificados: ${justified}`,
     `Ausentes: ${absent}`,
-    `Sem registro: ${pending}`
+    `Sem registro: ${pending}`,
   ].join("\n");
 
   return {
@@ -1263,7 +1684,7 @@ function getMeetingSummary({
     present,
     scheduledStartAt: meeting.scheduledStartAt,
     status,
-    text
+    text,
   };
 }
 
@@ -1271,7 +1692,7 @@ function getGroupFollowUpQueue({
   attendance,
   meeting,
   members,
-  people
+  people,
 }: {
   attendance: readonly GroupAttendance[];
   meeting: GroupMeeting;
@@ -1282,7 +1703,9 @@ function getGroupFollowUpQueue({
     .map((member) => {
       const person = people.find((item) => item.id === member.personId);
       const attendanceRecord = attendance.find(
-        (item) => item.groupMeetingId === meeting.id && item.personId === member.personId
+        (item) =>
+          item.groupMeetingId === meeting.id &&
+          item.personId === member.personId,
       );
       const joinedRecently = isWithinDays(member.joinedAt, 21);
       const personName = person ? getFullName(person) : member.personId;
@@ -1296,7 +1719,7 @@ function getGroupFollowUpQueue({
           personId: member.personId,
           personName,
           reason: "Ausente no encontro ativo",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
+          whatsappHref: person ? getWhatsappHref(person, message) : null,
         };
       }
 
@@ -1309,7 +1732,7 @@ function getGroupFollowUpQueue({
           personId: member.personId,
           personName,
           reason: "Presença não registrada",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
+          whatsappHref: person ? getWhatsappHref(person, message) : null,
         };
       }
 
@@ -1327,7 +1750,7 @@ function getGroupFollowUpQueue({
           personId: member.personId,
           personName,
           reason: "Pessoa em fase de integração",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
+          whatsappHref: person ? getWhatsappHref(person, message) : null,
         };
       }
 
@@ -1381,6 +1804,6 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
-    year: "2-digit"
+    year: "2-digit",
   }).format(date);
 }

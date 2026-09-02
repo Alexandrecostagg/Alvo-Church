@@ -7,12 +7,30 @@ import { transposeChordsText } from "@alvo/domain";
 import type { WorshipSong } from "@alvo/types";
 import { MOCK_WORSHIP_SONGS } from "../../lib/mock-data";
 import { useAppAuth } from "../../../app/providers";
-import { fetchWorshipSongs, saveWorshipSong, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import {
+  fetchWorshipSongs,
+  saveWorshipSong,
+  isFirebaseWebRuntimeConfigured,
+} from "@alvo/firebase";
 
-const CHROMATIC_SCALE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const CHROMATIC_SCALE = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 
 export function WorshipView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } =
+    useAppAuth();
   const [songs, setSongs] = useState<WorshipSong[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string>("song_2");
   const [selectedKey, setSelectedKey] = useState<string>("D");
@@ -25,12 +43,17 @@ export function WorshipView() {
     tempoBpm: "75",
     chordsLyrics: "",
     spotifyUrl: "",
-    youtubeUrl: ""
+    youtubeUrl: "",
   });
 
   // Carrega e sincroniza músicas do Firestore
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !firebaseReady ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setSongs(MOCK_WORSHIP_SONGS);
       setStatus("Exibindo louvores de demonstração offline.");
       return;
@@ -41,7 +64,9 @@ export function WorshipView() {
     async function loadSongs() {
       try {
         setStatus("Sincronizando com Firestore...");
-        const dbSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
+        const dbSongs = await fetchWorshipSongs(firebaseConfig, {
+          organizationId,
+        });
         if (cancelled) return;
 
         if (dbSongs.length === 0) {
@@ -51,10 +76,12 @@ export function WorshipView() {
             MOCK_WORSHIP_SONGS.map(async (song) => {
               const toSave = { ...song, organizationId };
               await saveWorshipSong(firebaseConfig, { organizationId }, toSave);
-            })
+            }),
           );
           if (cancelled) return;
-          const freshSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
+          const freshSongs = await fetchWorshipSongs(firebaseConfig, {
+            organizationId,
+          });
           if (cancelled) return;
           setSongs(freshSongs);
           setStatus("Repertório padrão inicializado.");
@@ -79,13 +106,13 @@ export function WorshipView() {
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const selectedSong = useMemo(() => {
-    return songs.find(s => s.id === selectedSongId) ?? songs[0];
+    return songs.find((s) => s.id === selectedSongId) ?? songs[0];
   }, [songs, selectedSongId]);
 
   // Sincroniza a chave selecionada com a tonalidade original do louvor selecionado
   const handleSelectSong = (songId: string) => {
     setSelectedSongId(songId);
-    const targetSong = songs.find(s => s.id === songId);
+    const targetSong = songs.find((s) => s.id === songId);
     if (targetSong) {
       setSelectedKey(targetSong.originalKey);
     }
@@ -97,7 +124,7 @@ export function WorshipView() {
     return transposeChordsText(
       selectedSong.chordsLyrics ?? "",
       selectedSong.originalKey,
-      selectedKey
+      selectedKey,
     );
   }, [selectedSong, selectedKey]);
 
@@ -116,22 +143,29 @@ export function WorshipView() {
       spotifyUrl: newSong.spotifyUrl || undefined,
       youtubeUrl: newSong.youtubeUrl || undefined,
       chordsLyrics: newSong.chordsLyrics || undefined,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     // Salva no Firestore
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      configured &&
+      firebaseReady &&
+      user &&
+      isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setStatus("Salvando...");
       try {
         await saveWorshipSong(firebaseConfig, { organizationId }, added);
         setStatus("Música salva.");
       } catch (err) {
         console.error(err);
-        setStatus("Não foi possível salvar. A alteração ficou apenas neste dispositivo.");
+        setStatus(
+          "Não foi possível salvar. A alteração ficou apenas neste dispositivo.",
+        );
       }
     }
 
-    setSongs(current => [...current, added]);
+    setSongs((current) => [...current, added]);
     setSelectedSongId(added.id);
     setSelectedKey(added.originalKey);
     setShowAddForm(false);
@@ -142,7 +176,7 @@ export function WorshipView() {
       tempoBpm: "75",
       chordsLyrics: "",
       spotifyUrl: "",
-      youtubeUrl: ""
+      youtubeUrl: "",
     });
   };
 
@@ -151,27 +185,62 @@ export function WorshipView() {
       <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Louvor & Cifras</h1>
-          <p className="page-subtitle">Repertório, transposição e preparação para o culto</p>
+          <p className="page-subtitle">
+            Repertório, transposição e preparação para o culto
+          </p>
         </div>
         <div className="page-header-actions">
-          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
-            {configured && firebaseReady ? "Firestore conectado" : "Modo demonstração"}
+          <span
+            style={{
+              fontSize: 12,
+              color: "var(--alvo-ink-soft)",
+              background: "var(--alvo-surface-muted)",
+              padding: "4px 10px",
+              borderRadius: 8,
+            }}
+          >
+            {configured && firebaseReady
+              ? "Firestore conectado"
+              : "Modo demonstração"}
           </span>
         </div>
       </header>
 
       <div className="stats-row">
         <div className="stat-card">
-          <div className="stat-icon"><Music size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Músicas no repertório</span><span className="stat-value">{songs.length}</span></div>
+          <div className="stat-icon">
+            <Music size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Músicas no repertório</span>
+            <span className="stat-value">{songs.length}</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent-dark)" }}><Play size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Tom selecionado</span><span className="stat-value">{selectedKey}</span></div>
+          <div
+            className="stat-icon"
+            style={{
+              background: "var(--alvo-accent-soft)",
+              color: "var(--alvo-accent-dark)",
+            }}
+          >
+            <Play size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Tom selecionado</span>
+            <span className="stat-value">{selectedKey}</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon"><Music size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Tom original</span><span className="stat-value">{selectedSong?.originalKey ?? "—"}</span></div>
+          <div className="stat-icon">
+            <Music size={20} />
+          </div>
+          <div className="stat-body">
+            <span className="stat-label">Tom original</span>
+            <span className="stat-value">
+              {selectedSong?.originalKey ?? "—"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -193,11 +262,15 @@ export function WorshipView() {
           </div>
 
           <div className="worship-song-list">
-            {songs.map(song => (
+            {songs.map((song) => (
               <button
                 key={song.id}
                 onClick={() => handleSelectSong(song.id)}
-                className={selectedSongId === song.id ? "worship-song-card is-selected" : "worship-song-card"}
+                className={
+                  selectedSongId === song.id
+                    ? "worship-song-card is-selected"
+                    : "worship-song-card"
+                }
                 type="button"
               >
                 <span>Tom {song.originalKey}</span>
@@ -226,7 +299,9 @@ export function WorshipView() {
                     type="text"
                     required
                     value={newSong.title}
-                    onChange={e => setNewSong(c => ({ ...c, title: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, title: e.target.value }))
+                    }
                     placeholder="Ex: A Ele a Glória"
                   />
                 </label>
@@ -236,7 +311,9 @@ export function WorshipView() {
                     type="text"
                     required
                     value={newSong.artist}
-                    onChange={e => setNewSong(c => ({ ...c, artist: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, artist: e.target.value }))
+                    }
                     placeholder="Ex: Diante do Trono"
                   />
                 </label>
@@ -247,10 +324,14 @@ export function WorshipView() {
                   Tom original *
                   <select
                     value={newSong.originalKey}
-                    onChange={e => setNewSong(c => ({ ...c, originalKey: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, originalKey: e.target.value }))
+                    }
                   >
-                    {CHROMATIC_SCALE.map(k => (
-                      <option key={k} value={k}>{k}</option>
+                    {CHROMATIC_SCALE.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -259,7 +340,9 @@ export function WorshipView() {
                   <input
                     type="number"
                     value={newSong.tempoBpm}
-                    onChange={e => setNewSong(c => ({ ...c, tempoBpm: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, tempoBpm: e.target.value }))
+                    }
                     placeholder="Ex: 78"
                   />
                 </label>
@@ -271,7 +354,9 @@ export function WorshipView() {
                   <input
                     type="url"
                     value={newSong.spotifyUrl}
-                    onChange={e => setNewSong(c => ({ ...c, spotifyUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, spotifyUrl: e.target.value }))
+                    }
                     placeholder="https://open.spotify.com/..."
                   />
                 </label>
@@ -280,7 +365,9 @@ export function WorshipView() {
                   <input
                     type="url"
                     value={newSong.youtubeUrl}
-                    onChange={e => setNewSong(c => ({ ...c, youtubeUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setNewSong((c) => ({ ...c, youtubeUrl: e.target.value }))
+                    }
                     placeholder="https://youtube.com/..."
                   />
                 </label>
@@ -291,10 +378,14 @@ export function WorshipView() {
                 <textarea
                   rows={12}
                   value={newSong.chordsLyrics}
-                  onChange={e => setNewSong(c => ({ ...c, chordsLyrics: e.target.value }))}
+                  onChange={(e) =>
+                    setNewSong((c) => ({ ...c, chordsLyrics: e.target.value }))
+                  }
                   placeholder="[G] Deus enviou Seu Filho..."
                 />
-                <small>Use acordes entre colchetes, como [G], [C#m7] ou [D/F#].</small>
+                <small>
+                  Use acordes entre colchetes, como [G], [C#m7] ou [D/F#].
+                </small>
               </label>
 
               <div className="worship-form-actions">
@@ -302,7 +393,11 @@ export function WorshipView() {
                   <Save size={16} />
                   Salvar no repertório
                 </button>
-                <button type="button" onClick={() => setShowAddForm(false)} className="worship-secondary-action">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="worship-secondary-action"
+                >
                   Cancelar
                 </button>
               </div>
@@ -315,25 +410,35 @@ export function WorshipView() {
                   <h2>{selectedSong.title}</h2>
                   <div className="worship-song-links">
                     {selectedSong.spotifyUrl && (
-                      <a href={selectedSong.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={selectedSong.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <Play size={14} />
                         Spotify
                       </a>
                     )}
                     {selectedSong.youtubeUrl && (
-                      <a href={selectedSong.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={selectedSong.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <ExternalLink size={14} />
                         YouTube
                       </a>
                     )}
-                    {selectedSong.tempoBpm && <span>{selectedSong.tempoBpm} BPM</span>}
+                    {selectedSong.tempoBpm && (
+                      <span>{selectedSong.tempoBpm} BPM</span>
+                    )}
                   </div>
                 </div>
 
                 <div className="worship-key-control">
                   <span>Transpositor</span>
                   <div className="worship-key-grid">
-                    {CHROMATIC_SCALE.map(k => (
+                    {CHROMATIC_SCALE.map((k) => (
                       <button
                         key={k}
                         onClick={() => setSelectedKey(k)}
@@ -356,11 +461,7 @@ export function WorshipView() {
                       <div key={idx} className="worship-chord-line">
                         {parts.map((part, pIdx) => {
                           if (part.startsWith("[") && part.endsWith("]")) {
-                            return (
-                              <strong key={pIdx}>
-                                {part}
-                              </strong>
-                            );
+                            return <strong key={pIdx}>{part}</strong>;
                           }
                           return part;
                         })}
@@ -387,8 +488,16 @@ export function WorshipView() {
           padding: 32px clamp(20px, 3vw, 44px) 56px;
           color: #111827;
           background:
-            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
-            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            radial-gradient(
+              circle at 8% 0%,
+              rgba(37, 99, 235, 0.08),
+              transparent 28%
+            ),
+            radial-gradient(
+              circle at 92% 0%,
+              rgba(22, 163, 74, 0.1),
+              transparent 24%
+            ),
             linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
         }
 
@@ -399,7 +508,7 @@ export function WorshipView() {
           align-items: end;
           margin-bottom: 24px;
           padding-bottom: 24px;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.1);
         }
 
         .worship-hero .back-link,
@@ -419,10 +528,10 @@ export function WorshipView() {
         .worship-hero .back-link,
         .worship-secondary-action {
           padding: 0 18px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           background: #ffffff;
           color: #334155;
-          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.5);
         }
 
         .worship-hero .eyebrow,
@@ -455,7 +564,7 @@ export function WorshipView() {
         .worship-status-card,
         .worship-kpis article,
         .worship-panel {
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.96);
           box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
@@ -565,7 +674,7 @@ export function WorshipView() {
           border: 0;
           background: #ea580c;
           color: #ffffff;
-          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.7);
           white-space: nowrap;
         }
 
@@ -578,7 +687,7 @@ export function WorshipView() {
           width: 100%;
           min-height: 112px;
           padding: 16px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 14px;
           background: #f8fafc;
           color: #111827;
@@ -645,7 +754,7 @@ export function WorshipView() {
           border-radius: 999px;
           background: #f8fafc;
           color: #334155;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           font-size: 13px;
           font-weight: 850;
         }
@@ -653,7 +762,7 @@ export function WorshipView() {
         .worship-key-control {
           min-width: 260px;
           padding: 14px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 14px;
           background: #f8fafc;
         }
@@ -683,7 +792,7 @@ export function WorshipView() {
 
         .worship-key-grid button {
           min-height: 34px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 8px;
           background: #ffffff;
           color: #334155;
@@ -701,7 +810,7 @@ export function WorshipView() {
           flex: 1;
           overflow: auto;
           padding: 24px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 16px;
           background: #fffdf8;
           box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03);
@@ -710,7 +819,9 @@ export function WorshipView() {
         .worship-chord-sheet code {
           display: block;
           color: #1f2937;
-          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+          font-family:
+            "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+            Consolas, "Liberation Mono", monospace;
           font-size: 17px;
           line-height: 1.85;
           white-space: pre-wrap;
@@ -764,7 +875,9 @@ export function WorshipView() {
 
         .worship-song-form textarea {
           padding: 14px;
-          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+          font-family:
+            "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+            Consolas, "Liberation Mono", monospace;
           line-height: 1.55;
           resize: vertical;
         }

@@ -1,51 +1,118 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  HeartPulse, 
-  AlertTriangle, 
-  Calendar, 
-  Video, 
-  BookOpen, 
-  LineChart, 
-  Smile, 
-  Meh, 
-  Frown, 
-  Zap, 
+import {
+  HeartPulse,
+  AlertTriangle,
+  Calendar,
+  Video,
+  BookOpen,
+  LineChart,
+  Smile,
+  Meh,
+  Frown,
+  Zap,
   ShieldAlert,
   UserCheck,
   MessageCircle,
   Play,
-  Loader2
+  Loader2,
 } from "lucide-react";
-import type { LeaderEmotionalPulse, WellBeingResource, MentoringSession, TenantContext } from "@alvo/types";
+import type {
+  LeaderEmotionalPulse,
+  WellBeingResource,
+  MentoringSession,
+  TenantContext,
+} from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { 
-  fetchLeaderEmotionalPulses, 
-  fetchWellBeingResources, 
+import {
+  fetchLeaderEmotionalPulses,
+  fetchWellBeingResources,
   fetchMentoringSessions,
   saveLeaderEmotionalPulse,
-  triggerEmergencySOS
+  triggerEmergencySOS,
 } from "@alvo/firebase";
 
 const mockPulses: LeaderEmotionalPulse[] = [
-  { id: "pulse_1", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "happy", energyLevel: 8, stressLevel: 3, notedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_2", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "neutral", energyLevel: 6, stressLevel: 4, notedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_3", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "tired", energyLevel: 4, stressLevel: 6, notedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_4", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "energetic", energyLevel: 9, stressLevel: 2, notedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+  {
+    id: "pulse_1",
+    leaderId: "user_admin_demo",
+    organizationId: "org_alvo_demo",
+    mood: "happy",
+    energyLevel: 8,
+    stressLevel: 3,
+    notedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "pulse_2",
+    leaderId: "user_admin_demo",
+    organizationId: "org_alvo_demo",
+    mood: "neutral",
+    energyLevel: 6,
+    stressLevel: 4,
+    notedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "pulse_3",
+    leaderId: "user_admin_demo",
+    organizationId: "org_alvo_demo",
+    mood: "tired",
+    energyLevel: 4,
+    stressLevel: 6,
+    notedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "pulse_4",
+    leaderId: "user_admin_demo",
+    organizationId: "org_alvo_demo",
+    mood: "energetic",
+    energyLevel: 9,
+    stressLevel: 2,
+    notedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
 ];
 
 const mockResources: WellBeingResource[] = [
-  { id: "res_1", organizationId: "org_alvo_demo", title: "Lidando com o Burnout Ministerial", description: "Conselhos práticos de saúde mental para líderes de pequenos grupos.", category: "mental", durationMinutes: 15, contentUrl: "", tags: ["mental", "burnout"] },
-  { id: "res_2", organizationId: "org_alvo_demo", title: "Ritmos Saudáveis de Trabalho", description: "Como manter o ritmo espiritual de excelência e evitar a exaustão física.", category: "spiritual", durationMinutes: 20, contentUrl: "", tags: ["trabalho", "escala"] },
+  {
+    id: "res_1",
+    organizationId: "org_alvo_demo",
+    title: "Lidando com o Burnout Ministerial",
+    description:
+      "Conselhos práticos de saúde mental para líderes de pequenos grupos.",
+    category: "mental",
+    durationMinutes: 15,
+    contentUrl: "",
+    tags: ["mental", "burnout"],
+  },
+  {
+    id: "res_2",
+    organizationId: "org_alvo_demo",
+    title: "Ritmos Saudáveis de Trabalho",
+    description:
+      "Como manter o ritmo espiritual de excelência e evitar a exaustão física.",
+    category: "spiritual",
+    durationMinutes: 20,
+    contentUrl: "",
+    tags: ["trabalho", "escala"],
+  },
 ];
 
 const mockSessions: MentoringSession[] = [
-  { id: "sess_1", organizationId: "org_alvo_demo", leaderId: "user_admin_demo", mentorName: "Pr. Roberto Oliveira", scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), meetingLink: "https://zoom.us/j/123", status: "scheduled", durationMinutes: 60 }
+  {
+    id: "sess_1",
+    organizationId: "org_alvo_demo",
+    leaderId: "user_admin_demo",
+    mentorName: "Pr. Roberto Oliveira",
+    scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    meetingLink: "https://zoom.us/j/123",
+    status: "scheduled",
+    durationMinutes: 60,
+  },
 ];
 
 export function WellnessView() {
-  const { user, firebaseConfig, organizationId, firebaseReady, tenantReady } = useAppAuth();
+  const { user, firebaseConfig, organizationId, firebaseReady, tenantReady } =
+    useAppAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [pulses, setPulses] = useState<LeaderEmotionalPulse[]>([]);
   const [resources, setResources] = useState<WellBeingResource[]>([]);
@@ -67,7 +134,7 @@ export function WellnessView() {
         const [p, r, s] = await Promise.all([
           fetchLeaderEmotionalPulses(firebaseConfig, context, user.uid),
           fetchWellBeingResources(firebaseConfig, context),
-          fetchMentoringSessions(firebaseConfig, context, user.uid)
+          fetchMentoringSessions(firebaseConfig, context, user.uid),
         ]);
         setPulses(p.length > 0 ? p : mockPulses);
         setResources(r.length > 0 ? r : mockResources);
@@ -86,10 +153,10 @@ export function WellnessView() {
 
   const handleMoodSelect = async (moodId: string) => {
     if (!firebaseReady || !tenantReady || !user?.uid) return;
-    
+
     const context: TenantContext = { organizationId };
     setSelectedMood(moodId);
-    
+
     // Map moodId to numeric energy level (simple mapping for now)
     const energyMap: Record<string, number> = {
       radiant: 10,
@@ -97,7 +164,7 @@ export function WellnessView() {
       neutral: 5,
       tired: 3,
       exhausted: 1,
-      distressed: 0
+      distressed: 0,
     };
 
     try {
@@ -109,13 +176,22 @@ export function WellnessView() {
         stressLevel: 5, // Default for now
         notedAt: new Date().toISOString(),
       });
-      
+
       // Refresh pulses
-      const updatedPulses = await fetchLeaderEmotionalPulses(firebaseConfig, context, user.uid);
+      const updatedPulses = await fetchLeaderEmotionalPulses(
+        firebaseConfig,
+        context,
+        user.uid,
+      );
       setPulses(updatedPulses);
-      
-      if (moodId === 'distressed') {
-        await triggerEmergencySOS(firebaseConfig, context, user.uid, "Auto-triggered via mood tracker");
+
+      if (moodId === "distressed") {
+        await triggerEmergencySOS(
+          firebaseConfig,
+          context,
+          user.uid,
+          "Auto-triggered via mood tracker",
+        );
         alert("Seu alerta foi registrado.");
       }
     } catch (error) {
@@ -128,7 +204,12 @@ export function WellnessView() {
     { id: "happy", icon: Smile, label: "Bem", color: "#10b981" },
     { id: "neutral", icon: Meh, label: "Ok", color: "#6b7280" },
     { id: "tired", icon: Frown, label: "Cansado", color: "#f59e0b" },
-    { id: "exhausted", icon: AlertTriangle, label: "Exausto", color: "#ef4444" },
+    {
+      id: "exhausted",
+      icon: AlertTriangle,
+      label: "Exausto",
+      color: "#ef4444",
+    },
     { id: "distressed", icon: ShieldAlert, label: "S.O.S", color: "#7f1d1d" },
   ];
 
@@ -141,16 +222,24 @@ export function WellnessView() {
             Cuidado e Sustentabilidade
           </div>
           <h1>Saúde do Líder</h1>
-          <p>Porque para cuidar de outros, você precisa estar bem. Monitore sua saúde emocional e acesse suporte especializado.</p>
+          <p>
+            Porque para cuidar de outros, você precisa estar bem. Monitore sua
+            saúde emocional e acesse suporte especializado.
+          </p>
         </div>
 
-        <button 
+        <button
           className="sos-emergency-btn"
           onClick={async () => {
             if (!firebaseReady || !tenantReady || !user?.uid) return;
             const context: TenantContext = { organizationId };
             if (confirm("Você deseja disparar um S.O.S Liderança?")) {
-              await triggerEmergencySOS(firebaseConfig, context, user.uid, "Manual trigger via SOS button");
+              await triggerEmergencySOS(
+                firebaseConfig,
+                context,
+                user.uid,
+                "Manual trigger via SOS button",
+              );
               alert("Seu alerta foi registrado.");
             }
           }}
@@ -180,11 +269,11 @@ export function WellnessView() {
           </div>
           <div className="mood-options">
             {moods.map((mood) => (
-              <button 
-                key={mood.id} 
-                className={`mood-btn ${selectedMood === mood.id ? 'active' : ''}`}
+              <button
+                key={mood.id}
+                className={`mood-btn ${selectedMood === mood.id ? "active" : ""}`}
                 onClick={() => handleMoodSelect(mood.id)}
-                style={{ '--mood-color': mood.color } as any}
+                style={{ "--mood-color": mood.color } as any}
               >
                 <mood.icon size={24} />
                 <span>{mood.label}</span>
@@ -206,16 +295,23 @@ export function WellnessView() {
             <div className="mock-chart">
               {pulses.map((pulse, i) => (
                 <div key={pulse.id} className="chart-bar-wrapper">
-                  <div 
-                    className="chart-bar" 
-                    style={{ 
+                  <div
+                    className="chart-bar"
+                    style={{
                       height: `${(pulse.energyLevel / 10) * 100}%`,
-                      background: i === pulses.length - 1 ? 'var(--alvo-accent)' : 'var(--alvo-line)'
+                      background:
+                        i === pulses.length - 1
+                          ? "var(--alvo-accent)"
+                          : "var(--alvo-line)",
                     }}
                   >
                     <div className="bar-tooltip">{pulse.energyLevel}/10</div>
                   </div>
-                  <span className="bar-label">{new Date(pulse.notedAt).toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
+                  <span className="bar-label">
+                    {new Date(pulse.notedAt).toLocaleDateString("pt-BR", {
+                      weekday: "short",
+                    })}
+                  </span>
                 </div>
               ))}
             </div>
@@ -232,7 +328,7 @@ export function WellnessView() {
             <button className="primary-link">Agendar Nova</button>
           </div>
           <div className="sessions-list">
-            {sessions.map(session => (
+            {sessions.map((session) => (
               <div key={session.id} className="session-item">
                 <div className="session-info">
                   <div className="specialist-avatar">
@@ -245,14 +341,27 @@ export function WellnessView() {
                 </div>
                 <div className="session-time">
                   <Calendar size={14} />
-                  <span>{new Date(session.scheduledAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>
+                    {new Date(session.scheduledAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
-                <a href={session.meetingLink} target="_blank" className="join-btn">
+                <a
+                  href={session.meetingLink}
+                  target="_blank"
+                  className="join-btn"
+                >
                   <Video size={16} /> Entrar
                 </a>
               </div>
             ))}
-            {sessions.length === 0 && <p className="empty-state">Nenhuma mentoria agendada.</p>}
+            {sessions.length === 0 && (
+              <p className="empty-state">Nenhuma mentoria agendada.</p>
+            )}
           </div>
         </section>
 
@@ -265,13 +374,17 @@ export function WellnessView() {
             </div>
           </div>
           <div className="resources-grid">
-            {resources.map(resource => (
+            {resources.map((resource) => (
               <div key={resource.id} className="resource-mini-card">
                 <div className="resource-thumb">
                   <Play size={24} fill="white" />
                 </div>
                 <div className="resource-meta">
-                  <span className="res-cat">{resource.category === 'mental' ? 'Saúde Mental' : 'Liderança'}</span>
+                  <span className="res-cat">
+                    {resource.category === "mental"
+                      ? "Saúde Mental"
+                      : "Liderança"}
+                  </span>
                   <h4>{resource.title}</h4>
                   <div className="res-footer">
                     <span>Plataforma Esdras</span>
@@ -280,7 +393,9 @@ export function WellnessView() {
                 </div>
               </div>
             ))}
-            {resources.length === 0 && <p className="empty-state">Nenhum recurso disponível.</p>}
+            {resources.length === 0 && (
+              <p className="empty-state">Nenhum recurso disponível.</p>
+            )}
           </div>
         </section>
       </div>
@@ -360,8 +475,14 @@ export function WellnessView() {
         }
 
         @keyframes sos-pulse {
-          0% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(1.4); opacity: 0; }
+          0% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
         }
 
         .wellness-grid {
@@ -575,7 +696,10 @@ export function WellnessView() {
         /* Resources Styles */
         .resources-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+          grid-template-columns: repeat(
+            auto-fill,
+            minmax(min(100%, 280px), 1fr)
+          );
           gap: 1rem;
         }
 
@@ -630,7 +754,8 @@ export function WellnessView() {
           font-weight: 600;
         }
 
-        .text-link, .primary-link {
+        .text-link,
+        .primary-link {
           background: none;
           border: none;
           font-size: 0.875rem;
@@ -649,7 +774,9 @@ export function WellnessView() {
           .wellness-header {
             flex-direction: column;
           }
-          h1 { font-size: 2.25rem; }
+          h1 {
+            font-size: 2.25rem;
+          }
           .mood-options {
             grid-template-columns: repeat(3, 1fr);
           }

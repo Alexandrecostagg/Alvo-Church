@@ -29,7 +29,14 @@ export function RoleGuard({ required, children }: RoleGuardProps) {
 
   if (!tenantReady) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "60vh",
+        }}
+      >
         <div className="spinner" />
       </div>
     );
@@ -39,13 +46,50 @@ export function RoleGuard({ required, children }: RoleGuardProps) {
 
   if (!allowed) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60vh", gap: 16, color: "var(--color-text-secondary)" }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "60vh",
+          gap: 16,
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            background: "#FCEBEB",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ShieldOff size={28} color="#A32D2D" />
         </div>
-        <p style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)", margin: 0 }}>Acesso restrito</p>
-        <p style={{ fontSize: 14, margin: 0, textAlign: "center", maxWidth: 320 }}>
-          Você não tem permissão para acessar esta página.<br />
+        <p
+          style={{
+            fontSize: 18,
+            fontWeight: 500,
+            color: "var(--color-text-primary)",
+            margin: 0,
+          }}
+        >
+          Acesso restrito
+        </p>
+        <p
+          style={{
+            fontSize: 14,
+            margin: 0,
+            textAlign: "center",
+            maxWidth: 320,
+          }}
+        >
+          Você não tem permissão para acessar esta página.
+          <br />
           Solicite acesso ao administrador da organização.
         </p>
       </div>

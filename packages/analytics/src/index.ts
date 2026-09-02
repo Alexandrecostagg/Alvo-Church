@@ -8,4 +8,3 @@ export interface ProductEvent {
 export function trackEvent(event: ProductEvent) {
   return event;
 }
-

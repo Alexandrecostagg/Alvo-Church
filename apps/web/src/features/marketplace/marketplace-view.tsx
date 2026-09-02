@@ -1,26 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Store, 
-  Search, 
-  MapPin, 
-  Instagram, 
-  Globe, 
-  BadgeCheck, 
-  Tag, 
+import {
+  Store,
+  Search,
+  MapPin,
+  Instagram,
+  Globe,
+  BadgeCheck,
+  Tag,
   ArrowRight,
   Navigation,
   ExternalLink,
-  Loader2
+  Loader2,
 } from "lucide-react";
-import { recentPeople, partnerOrganizations, partnerBenefits } from "../../lib/mock-data";
-import type { PartnerOrganization, PartnerBenefit, Person, TenantContext } from "@alvo/types";
+import {
+  recentPeople,
+  partnerOrganizations,
+  partnerBenefits,
+} from "../../lib/mock-data";
+import type {
+  PartnerOrganization,
+  PartnerBenefit,
+  Person,
+  TenantContext,
+} from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { fetchPartnerOrganizations, fetchPartnerBenefits } from "@alvo/firebase";
+import {
+  fetchPartnerOrganizations,
+  fetchPartnerBenefits,
+} from "@alvo/firebase";
 
 export function MarketplaceView() {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady } =
+    useAppAuth();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [businesses, setBusinesses] = useState<PartnerOrganization[]>([]);
@@ -40,10 +53,18 @@ export function MarketplaceView() {
         const context: TenantContext = { organizationId };
         const [orgs, bens] = await Promise.all([
           fetchPartnerOrganizations(firebaseConfig, context),
-          fetchPartnerBenefits(firebaseConfig, context)
+          fetchPartnerBenefits(firebaseConfig, context),
         ]);
-        setBusinesses(orgs.length > 0 ? orgs : (partnerOrganizations as PartnerOrganization[]));
-        setBenefits(bens.length > 0 ? bens : (partnerBenefits as unknown as PartnerBenefit[]));
+        setBusinesses(
+          orgs.length > 0
+            ? orgs
+            : (partnerOrganizations as PartnerOrganization[]),
+        );
+        setBenefits(
+          bens.length > 0
+            ? bens
+            : (partnerBenefits as unknown as PartnerBenefit[]),
+        );
       } catch (error) {
         console.error("Error loading marketplace data:", error);
         setBusinesses(partnerOrganizations as PartnerOrganization[]);
@@ -63,18 +84,21 @@ export function MarketplaceView() {
     { id: "community", label: "Comunidade", color: "#8b5cf6" },
   ];
 
-  const filteredBusinesses = businesses.filter(business => {
-    const matchesSearch = business.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = !activeCategory || business.category === activeCategory;
+  const filteredBusinesses = businesses.filter((business) => {
+    const matchesSearch = business.name
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchesCategory =
+      !activeCategory || business.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
   const getOwnerInfo = (ownerId?: string): Person | undefined => {
-    return recentPeople.find(p => p.id === ownerId);
+    return recentPeople.find((p) => p.id === ownerId);
   };
 
   const getBusinessBenefits = (businessId: string): PartnerBenefit[] => {
-    return benefits.filter(b => b.partnerId === businessId);
+    return benefits.filter((b) => b.partnerId === businessId);
   };
 
   return (
@@ -86,32 +110,35 @@ export function MarketplaceView() {
             Economia Solidária
           </div>
           <h1>Marketplace da Comunidade</h1>
-          <p>Apoie os empreendimentos dos nossos membros e aproveite descontos exclusivos com seu Esdras Passe.</p>
+          <p>
+            Apoie os empreendimentos dos nossos membros e aproveite descontos
+            exclusivos com seu Esdras Passe.
+          </p>
         </div>
 
         <div className="search-bar-container">
           <div className="search-input-wrapper">
             <Search size={18} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="O que você está procurando hoje?" 
+            <input
+              type="text"
+              placeholder="O que você está procurando hoje?"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="category-pills">
-            <button 
-              className={`pill ${!activeCategory ? 'active' : ''}`}
+            <button
+              className={`pill ${!activeCategory ? "active" : ""}`}
               onClick={() => setActiveCategory(null)}
             >
               Todos
             </button>
-            {categories.map(cat => (
-              <button 
+            {categories.map((cat) => (
+              <button
                 key={cat.id}
-                className={`pill ${activeCategory === cat.id ? 'active' : ''}`}
+                className={`pill ${activeCategory === cat.id ? "active" : ""}`}
                 onClick={() => setActiveCategory(cat.id)}
-                style={{ '--pill-accent': cat.color } as any}
+                style={{ "--pill-accent": cat.color } as any}
               >
                 {cat.label}
               </button>
@@ -127,12 +154,15 @@ export function MarketplaceView() {
         </div>
       ) : (
         <section className="business-grid">
-          {filteredBusinesses.map(business => {
+          {filteredBusinesses.map((business) => {
             const owner = getOwnerInfo(business.ownerPersonId);
             const benefits = getBusinessBenefits(business.id);
 
             return (
-              <article key={business.id} className="business-card antigravity-float">
+              <article
+                key={business.id}
+                className="business-card antigravity-float"
+              >
                 <div className="business-image-header">
                   {business.logoUrl ? (
                     <img src={business.logoUrl} alt={business.name} />
@@ -149,23 +179,34 @@ export function MarketplaceView() {
                 </div>
 
                 <div className="business-body">
-                  <div className="category-tag" style={{ color: categories.find(c => c.id === business.category)?.color }}>
-                    {categories.find(c => c.id === business.category)?.label}
+                  <div
+                    className="category-tag"
+                    style={{
+                      color: categories.find((c) => c.id === business.category)
+                        ?.color,
+                    }}
+                  >
+                    {categories.find((c) => c.id === business.category)?.label}
                   </div>
                   <h3>{business.name}</h3>
-                  
+
                   {owner && (
                     <div className="owner-mini">
                       <div className="owner-avatar">
-                        {owner.firstName[0]}{owner.lastName[0]}
+                        {owner.firstName[0]}
+                        {owner.lastName[0]}
                       </div>
-                      <span>Propriedade de <strong>{owner.firstName}</strong></span>
+                      <span>
+                        Propriedade de <strong>{owner.firstName}</strong>
+                      </span>
                     </div>
                   )}
 
                   <div className="address-info">
                     <MapPin size={14} />
-                    <span>{business.address?.district}, {business.address?.city}</span>
+                    <span>
+                      {business.address?.district}, {business.address?.city}
+                    </span>
                   </div>
 
                   {benefits.length > 0 && (
@@ -228,7 +269,9 @@ export function MarketplaceView() {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .marketplace-header {
@@ -374,7 +417,11 @@ export function MarketplaceView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.05) 0%, rgba(15, 23, 42, 0.1) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.05) 0%,
+            rgba(15, 23, 42, 0.1) 100%
+          );
         }
 
         .member-badge {
@@ -518,9 +565,15 @@ export function MarketplaceView() {
         }
 
         @media (max-width: 768px) {
-          h1 { font-size: 2.25rem; }
-          .marketplace-header { margin-bottom: 2.5rem; }
-          .business-grid { grid-template-columns: 1fr; }
+          h1 {
+            font-size: 2.25rem;
+          }
+          .marketplace-header {
+            margin-bottom: 2.5rem;
+          }
+          .business-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </main>

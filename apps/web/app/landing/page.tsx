@@ -63,7 +63,11 @@ function LPNav() {
           <a href="#planos" className="lp-nav-link" data-section="planos">
             Planos
           </a>
-          <a href="#depoimentos" className="lp-nav-link" data-section="depoimentos">
+          <a
+            href="#depoimentos"
+            className="lp-nav-link"
+            data-section="depoimentos"
+          >
             Depoimentos
           </a>
           <a href="#perguntas" className="lp-nav-link" data-section="perguntas">
@@ -88,7 +92,9 @@ function Hero() {
     <section className="lp-hero" id="hero">
       <div className="lp-container lp-hero-inner">
         <h1 className="lp-hero-title">
-          Toda a sua igreja,<br />finalmente em um só lugar.
+          Toda a sua igreja,
+          <br />
+          finalmente em um só lugar.
         </h1>
         <p className="lp-hero-subtitle">
           Membros, células, finanças, escalas e cuidado pastoral com IA —
@@ -152,7 +158,9 @@ function Hero() {
                       <div className="lp-preview-card-value">247</div>
                     </div>
                     <div className="lp-preview-card">
-                      <div className="lp-preview-card-label">Células ativas</div>
+                      <div className="lp-preview-card-label">
+                        Células ativas
+                      </div>
                       <div className="lp-preview-card-value">18</div>
                     </div>
                     <div className="lp-preview-card">
@@ -238,43 +246,37 @@ const FEATURES = [
   {
     icon: "👥",
     title: "Conheça cada membro, de verdade",
-    body:
-      "Ficha completa, histórico de visitas, documentos, batismo e jornada espiritual. Tudo conectado ao fluxo real da sua igreja.",
+    body: "Ficha completa, histórico de visitas, documentos, batismo e jornada espiritual. Tudo conectado ao fluxo real da sua igreja.",
     tag: "Todos os planos",
   },
   {
     icon: "🤖",
     title: "Um auxiliar pastoral que nunca dorme",
-    body:
-      "Apoio ao pastor com análise de situações delicadas, orientação bíblica contextualizada e acompanhamento de membros em crise — com limites éticos claros.",
+    body: "Apoio ao pastor com análise de situações delicadas, orientação bíblica contextualizada e acompanhamento de membros em crise — com limites éticos claros.",
     tag: "Plano Pastoral +",
   },
   {
     icon: "💰",
     title: "Dízimos e ofertas sem planilha",
-    body:
-      "Controle de dízimos, ofertas, despesas e relatórios. Transparência total para a liderança e para a congregação.",
+    body: "Controle de dízimos, ofertas, despesas e relatórios. Transparência total para a liderança e para a congregação.",
     tag: "Comunidade +",
   },
   {
     icon: "🏕️",
     title: "Tribos & Células",
-    body:
-      "Classifique membros por vocação (tribos) e comunidade (células). A IA sugere pertencimento; o pastor decide.",
+    body: "Classifique membros por vocação (tribos) e comunidade (células). A IA sugere pertencimento; o pastor decide.",
     tag: "Comunidade +",
   },
   {
     icon: "📅",
     title: "Escalas prontas em minutos",
-    body:
-      "Monte escalas de louvor, portaria, kids e ministérios. Notificação automática para cada voluntário.",
+    body: "Monte escalas de louvor, portaria, kids e ministérios. Notificação automática para cada voluntário.",
     tag: "Pastoral +",
   },
   {
     icon: "🌐",
     title: "Rede de Igrejas",
-    body:
-      "Para denominações e redes: visão unificada de todas as igrejas, consolidação de membros e financeiro centralizado.",
+    body: "Para denominações e redes: visão unificada de todas as igrejas, consolidação de membros e financeiro centralizado.",
     tag: "Plano Rede",
   },
 ];
@@ -368,7 +370,10 @@ function FinalCTA() {
         </Reveal>
         <Reveal delay={160}>
           <div className="lp-hero-ctas">
-            <Link href="/signup" className="lp-btn-primary lp-btn-lg lp-btn-white">
+            <Link
+              href="/signup"
+              className="lp-btn-primary lp-btn-lg lp-btn-white"
+            >
               Criar conta grátis
             </Link>
             <a

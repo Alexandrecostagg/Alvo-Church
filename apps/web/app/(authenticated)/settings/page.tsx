@@ -4,8 +4,11 @@ import dynamic from "next/dynamic";
 import { RoleGuard } from "../../../src/components/role-guard";
 
 const SettingsWithAdminTabsView = dynamic(
-  () => import("../../../src/features/settings/settings-with-admin-tabs-view").then((mod) => mod.SettingsWithAdminTabsView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/settings/settings-with-admin-tabs-view").then(
+      (mod) => mod.SettingsWithAdminTabsView,
+    ),
+  { ssr: false },
 );
 
 export default function SettingsPage() {

@@ -9,7 +9,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   // Close drawer on navigation
-  useEffect(() => { close(); }, [pathname]);
+  useEffect(() => {
+    close();
+  }, [pathname]);
 
   return (
     <div className="app-shell" data-mobile-open={open ? "true" : "false"}>

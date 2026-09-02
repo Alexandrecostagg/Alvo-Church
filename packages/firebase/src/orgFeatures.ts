@@ -4,7 +4,7 @@ import { fetchOrganizationFeaturesSettings } from "./repositories";
 
 export async function fetchOrgFeatures(
   config: FirebaseWebRuntimeConfig,
-  organizationId: string
+  organizationId: string,
 ): Promise<OrganizationFeaturesSettings | null> {
   return fetchOrganizationFeaturesSettings(config, { organizationId });
 }

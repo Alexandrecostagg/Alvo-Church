@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Wifi, Shield, CheckCircle2, Loader2, Sparkles, Smartphone } from "lucide-react";
+import {
+  Wifi,
+  Shield,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  Smartphone,
+} from "lucide-react";
 
 export default function WifiPortalPage() {
   const [formData, setFormData] = useState({
@@ -10,15 +17,22 @@ export default function WifiPortalPage() {
     email: "",
     birthDate: "",
     consentTerms: false,
-    consentContact: false
+    consentContact: false,
   });
-  
-  const [status, setStatus] = useState<"idle" | "connecting" | "success" | "error">("idle");
+
+  const [status, setStatus] = useState<
+    "idle" | "connecting" | "success" | "error"
+  >("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.whatsapp || !formData.email || !formData.birthDate) {
+    if (
+      !formData.fullName ||
+      !formData.whatsapp ||
+      !formData.email ||
+      !formData.birthDate
+    ) {
       setErrorMessage("Todos os campos de cadastro são obrigatórios.");
       setStatus("error");
       return;
@@ -35,19 +49,22 @@ export default function WifiPortalPage() {
 
     try {
       // Envia os dados de cadastro para a Cloudflare Worker API
-      const response = await fetch("https://worker-api.plataformaesdras.com.br/wifi/intake", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+      const response = await fetch(
+        "https://worker-api.plataformaesdras.com.br/wifi/intake",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullName: formData.fullName,
+            whatsapp: formData.whatsapp,
+            email: formData.email,
+            birthDate: formData.birthDate,
+            consentedAt: new Date().toISOString(),
+          }),
         },
-        body: JSON.stringify({
-          fullName: formData.fullName,
-          whatsapp: formData.whatsapp,
-          email: formData.email,
-          birthDate: formData.birthDate,
-          consentedAt: new Date().toISOString()
-        })
-      }).catch(() => ({ ok: true })); // Fallback local de sucesso para desenvolvimento local sem internet
+      ).catch(() => ({ ok: true })); // Fallback local de sucesso para desenvolvimento local sem internet
 
       if (response.ok) {
         // Simulando fluxo realista de Handshake de Hotspot de Roteador
@@ -75,7 +92,7 @@ export default function WifiPortalPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "1.5rem",
-        fontFamily: "Outfit, sans-serif"
+        fontFamily: "Outfit, sans-serif",
       }}
     >
       <div
@@ -88,7 +105,7 @@ export default function WifiPortalPage() {
           padding: "2.5rem",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
           backdropFilter: "blur(12px)",
-          color: "white"
+          color: "white",
         }}
       >
         {status === "success" ? (
@@ -100,14 +117,33 @@ export default function WifiPortalPage() {
                 padding: "1rem",
                 borderRadius: "50%",
                 backgroundColor: "rgba(16, 185, 129, 0.15)",
-                marginBottom: "1.5rem"
+                marginBottom: "1.5rem",
               }}
             >
-              <CheckCircle2 size={48} style={{ color: "#10b981" }} className="antigravity-float" />
+              <CheckCircle2
+                size={48}
+                style={{ color: "#10b981" }}
+                className="antigravity-float"
+              />
             </div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.75rem" }}>Internet Liberada!</h1>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.95rem", lineHeight: "1.5rem" }}>
-              Seja muito bem-vindo à nossa comunidade! Você já está conectado com sucesso à rede Wi-Fi da igreja.
+            <h1
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 800,
+                marginBottom: "0.75rem",
+              }}
+            >
+              Internet Liberada!
+            </h1>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.7)",
+                fontSize: "0.95rem",
+                lineHeight: "1.5rem",
+              }}
+            >
+              Seja muito bem-vindo à nossa comunidade! Você já está conectado
+              com sucesso à rede Wi-Fi da igreja.
             </p>
             <div
               style={{
@@ -120,25 +156,47 @@ export default function WifiPortalPage() {
                 color: "rgba(255,255,255,0.5)",
                 display: "flex",
                 alignItems: "center",
-                gap: 8
+                gap: 8,
               }}
             >
               <Shield size={16} style={{ color: "#d27836", flexShrink: 0 }} />
-              <span>Acolhimento automático ativo. Nosso time de consolidação enviará uma mensagem de boas-vindas.</span>
+              <span>
+                Acolhimento automático ativo. Nosso time de consolidação enviará
+                uma mensagem de boas-vindas.
+              </span>
             </div>
           </div>
         ) : status === "connecting" ? (
           /* Animação Realista de Conexão */
-          <div style={{ textAlign: "center", padding: "2rem 0" }} className="animate-entrance">
-            <Loader2 size={48} style={{ color: "#d27836", margin: "0 auto 1.5rem" }} className="spin-animation" />
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>Autenticando Dispositivo...</h2>
+          <div
+            style={{ textAlign: "center", padding: "2rem 0" }}
+            className="animate-entrance"
+          >
+            <Loader2
+              size={48}
+              style={{ color: "#d27836", margin: "0 auto 1.5rem" }}
+              className="spin-animation"
+            />
+            <h2
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+              }}
+            >
+              Autenticando Dispositivo...
+            </h2>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem" }}>
-              Negociando credenciais criptografadas de navegação com o gateway de roteadores locais da igreja.
+              Negociando credenciais criptografadas de navegação com o gateway
+              de roteadores locais da igreja.
             </p>
           </div>
         ) : (
           /* Formulário de Cadastro LGPD Cativo */
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+          >
             <div style={{ textAlign: "center", marginBottom: "1rem" }}>
               <div
                 style={{
@@ -147,14 +205,23 @@ export default function WifiPortalPage() {
                   borderRadius: "50%",
                   backgroundColor: "rgba(210, 120, 54, 0.15)",
                   color: "#d27836",
-                  marginBottom: "0.75rem"
+                  marginBottom: "0.75rem",
                 }}
               >
                 <Wifi size={32} />
               </div>
-              <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>Esdras Wi-Fi</h1>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem", marginTop: 4 }}>
-                Cadastre-se rapidamente para liberar seu acesso à internet de alta velocidade.
+              <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>
+                Esdras Wi-Fi
+              </h1>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontSize: "0.85rem",
+                  marginTop: 4,
+                }}
+              >
+                Cadastre-se rapidamente para liberar seu acesso à internet de
+                alta velocidade.
               </p>
             </div>
 
@@ -166,14 +233,22 @@ export default function WifiPortalPage() {
                   color: "#fca5a5",
                   padding: "0.75rem 1rem",
                   borderRadius: 12,
-                  fontSize: "0.85rem"
+                  fontSize: "0.85rem",
                 }}
               >
                 ⚠️ {errorMessage}
               </div>
             )}
 
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "0.85rem", fontWeight: 600 }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
               Nome Completo *
               <input
                 type="text"
@@ -185,14 +260,24 @@ export default function WifiPortalPage() {
                   padding: "0.75rem 1rem",
                   borderRadius: 12,
                   color: "white",
-                  fontSize: "0.9rem"
+                  fontSize: "0.9rem",
                 }}
                 value={formData.fullName}
-                onChange={e => setFormData(c => ({ ...c, fullName: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((c) => ({ ...c, fullName: e.target.value }))
+                }
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "0.85rem", fontWeight: 600 }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
               WhatsApp (Com DDD) *
               <input
                 type="tel"
@@ -204,14 +289,24 @@ export default function WifiPortalPage() {
                   padding: "0.75rem 1rem",
                   borderRadius: 12,
                   color: "white",
-                  fontSize: "0.9rem"
+                  fontSize: "0.9rem",
                 }}
                 value={formData.whatsapp}
-                onChange={e => setFormData(c => ({ ...c, whatsapp: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((c) => ({ ...c, whatsapp: e.target.value }))
+                }
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "0.85rem", fontWeight: 600 }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
               E-mail Principal *
               <input
                 type="email"
@@ -223,14 +318,24 @@ export default function WifiPortalPage() {
                   padding: "0.75rem 1rem",
                   borderRadius: 12,
                   color: "white",
-                  fontSize: "0.9rem"
+                  fontSize: "0.9rem",
                 }}
                 value={formData.email}
-                onChange={e => setFormData(c => ({ ...c, email: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((c) => ({ ...c, email: e.target.value }))
+                }
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "0.85rem", fontWeight: 600 }}>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
               Data de Nascimento *
               <input
                 type="date"
@@ -241,33 +346,74 @@ export default function WifiPortalPage() {
                   padding: "0.75rem 1rem",
                   borderRadius: 12,
                   color: "white",
-                  fontSize: "0.9rem"
+                  fontSize: "0.9rem",
                 }}
                 value={formData.birthDate}
-                onChange={e => setFormData(c => ({ ...c, birthDate: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((c) => ({ ...c, birthDate: e.target.value }))
+                }
               />
             </label>
 
             {/* Checkboxes LGPD */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: 8 }}>
-              <label style={{ display: "flex", gap: 10, fontSize: "0.75rem", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+                marginTop: 8,
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  fontSize: "0.75rem",
+                  color: "rgba(255,255,255,0.7)",
+                  cursor: "pointer",
+                }}
+              >
                 <input
                   type="checkbox"
                   style={{ marginTop: 2 }}
                   checked={formData.consentTerms}
-                  onChange={e => setFormData(c => ({ ...c, consentTerms: e.target.checked }))}
+                  onChange={(e) =>
+                    setFormData((c) => ({
+                      ...c,
+                      consentTerms: e.target.checked,
+                    }))
+                  }
                 />
-                <span>Declaro ter lido e aceito os Termos de Uso e as Políticas de Tratamento de Dados (LGPD) da Igreja.</span>
+                <span>
+                  Declaro ter lido e aceito os Termos de Uso e as Políticas de
+                  Tratamento de Dados (LGPD) da Igreja.
+                </span>
               </label>
 
-              <label style={{ display: "flex", gap: 10, fontSize: "0.75rem", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>
+              <label
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  fontSize: "0.75rem",
+                  color: "rgba(255,255,255,0.7)",
+                  cursor: "pointer",
+                }}
+              >
                 <input
                   type="checkbox"
                   style={{ marginTop: 2 }}
                   checked={formData.consentContact}
-                  onChange={e => setFormData(c => ({ ...c, consentContact: e.target.checked }))}
+                  onChange={(e) =>
+                    setFormData((c) => ({
+                      ...c,
+                      consentContact: e.target.checked,
+                    }))
+                  }
                 />
-                <span>Consinto voluntariamente com o tratamento dos meus dados para receber contatos de acolhimento pastoral.</span>
+                <span>
+                  Consinto voluntariamente com o tratamento dos meus dados para
+                  receber contatos de acolhimento pastoral.
+                </span>
               </label>
             </div>
 
@@ -287,7 +433,7 @@ export default function WifiPortalPage() {
                 alignItems: "center",
                 gap: 8,
                 marginTop: "0.5rem",
-                transition: "background 0.2s"
+                transition: "background 0.2s",
               }}
             >
               <Smartphone size={18} />
@@ -302,8 +448,12 @@ export default function WifiPortalPage() {
           animation: spin 1.2s linear infinite;
         }
         @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </main>

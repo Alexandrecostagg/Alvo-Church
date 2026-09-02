@@ -6,11 +6,11 @@ import { StarfieldBackground } from "./starfield-background";
 
 export const metadata: Metadata = {
   title: "Plataforma Esdras",
-  description: "Plataforma de gestão para igrejas e redes eclesiásticas."
+  description: "Plataforma de gestão para igrejas e redes eclesiásticas.",
 };
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {

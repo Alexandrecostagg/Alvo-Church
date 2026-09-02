@@ -10,11 +10,20 @@ import {
   Eye,
   Ban,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchCommunityStores, fetchCommunityStoreModerationLogs, saveCommunityStore, saveCommunityStoreModerationLog } from "@alvo/firebase";
-import type { CommunityStore, CommunityStoreModerationLog, TenantContext } from "@alvo/types";
+import {
+  fetchCommunityStores,
+  fetchCommunityStoreModerationLogs,
+  saveCommunityStore,
+  saveCommunityStoreModerationLog,
+} from "@alvo/firebase";
+import type {
+  CommunityStore,
+  CommunityStoreModerationLog,
+  TenantContext,
+} from "@alvo/types";
 
 const mockModerationStores: CommunityStore[] = [
   {
@@ -22,29 +31,33 @@ const mockModerationStores: CommunityStore[] = [
     organizationId: "org_alvo_demo",
     ownerId: "user_admin_demo",
     name: "Doces & Travessuras",
-    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde.",
+    description:
+      "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde.",
     category: "food",
     status: "pending",
     images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=200&auto=format&fit=crop",
+    bannerImageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=200&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "store_2",
     organizationId: "org_alvo_demo",
     ownerId: "user_admin_demo",
     name: "Conecta Informática",
-    description: "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade.",
+    description:
+      "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade.",
     category: "services",
     status: "pending",
     images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200&auto=format&fit=crop",
+    bannerImageUrl:
+      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=200&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 const mockModerationLogs: CommunityStoreModerationLog[] = [
@@ -54,19 +67,24 @@ const mockModerationLogs: CommunityStoreModerationLog[] = [
     storeId: "store_1",
     action: "created",
     moderatedBy: "user_admin_demo",
-    timestamp: new Date().toISOString()
-  }
+    timestamp: new Date().toISOString(),
+  },
 ];
 
 export function MarketplaceModerationView() {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } =
+    useAppAuth();
   const [stores, setStores] = useState<CommunityStore[]>([]);
   const [logs, setLogs] = useState<CommunityStoreModerationLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("pending");
   const [actioningStore, setActioningStore] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectionForm, setShowRejectionForm] = useState<string | null>(null);
+  const [showRejectionForm, setShowRejectionForm] = useState<string | null>(
+    null,
+  );
   const [generatingDemo, setGeneratingDemo] = useState(false);
 
   const handleGenerateDemoStores = async () => {
@@ -81,11 +99,13 @@ export function MarketplaceModerationView() {
           organizationId,
           ownerId: user.uid,
           name: "Padaria Graça e Pão",
-          description: "Pães quentinhos artesanais, bolos caseiros deliciosos e cafés especiais feitos com amor por membros da nossa comunidade para abençoar a sua família.",
+          description:
+            "Pães quentinhos artesanais, bolos caseiros deliciosos e cafés especiais feitos com amor por membros da nossa comunidade para abençoar a sua família.",
           category: "food",
           status: "pending",
           images: [],
-          bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=60",
+          bannerImageUrl:
+            "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=60",
           contact: {
             phone: "+55 11 98888-7777",
             email: "contato@gracaepao.com.br",
@@ -95,26 +115,28 @@ export function MarketplaceModerationView() {
               district: "Centro",
               city: "São Paulo",
               state: "SP",
-              postalCode: "01000-000"
-            }
+              postalCode: "01000-000",
+            },
           },
           socialLinks: {
             whatsapp: "5511988887777",
-            instagram: "gracaepao"
+            instagram: "gracaepao",
           },
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
         {
           id: `store_demo_2_${Date.now()}`,
           organizationId,
           ownerId: user.uid,
           name: "Clínica Integrada Aliança",
-          description: "Atendimento psicológico de qualidade, fisioterapia e apoio psicoterapêutico com profissionais cristãos altamente qualificados, focado na restauração integral.",
+          description:
+            "Atendimento psicológico de qualidade, fisioterapia e apoio psicoterapêutico com profissionais cristãos altamente qualificados, focado na restauração integral.",
           category: "health",
           status: "pending",
           images: [],
-          bannerImageUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60",
+          bannerImageUrl:
+            "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60",
           contact: {
             phone: "+55 11 97777-6666",
             email: "clinica@alianca.com.br",
@@ -124,26 +146,28 @@ export function MarketplaceModerationView() {
               district: "Jardins",
               city: "São Paulo",
               state: "SP",
-              postalCode: "02000-000"
-            }
+              postalCode: "02000-000",
+            },
           },
           socialLinks: {
             whatsapp: "5511977776666",
-            instagram: "clinicaalianca"
+            instagram: "clinicaalianca",
           },
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
         {
           id: `store_demo_3_${Date.now()}`,
           organizationId,
           ownerId: user.uid,
           name: "Esdras Digital Code",
-          description: "Criação de sites premium, systems web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
+          description:
+            "Criação de sites premium, systems web avançados, e-commerce de alta conversão e consultoria digital completa para posicionar sua empresa com autoridade.",
           category: "services",
           status: "pending",
           images: [],
-          bannerImageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60",
+          bannerImageUrl:
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60",
           contact: {
             phone: "+55 11 96666-5555",
             email: "suporte@plataformaesdras.com.br",
@@ -153,36 +177,43 @@ export function MarketplaceModerationView() {
               district: "Bela Vista",
               city: "São Paulo",
               state: "SP",
-              postalCode: "01310-100"
-            }
+              postalCode: "01310-100",
+            },
           },
           socialLinks: {
             whatsapp: "5511966665555",
-            instagram: "esdrasdigital"
+            instagram: "esdrasdigital",
           },
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       await Promise.all([
-        ...demoStores.map(store => saveCommunityStore(firebaseConfig, context, store)),
-        ...demoStores.map(store => {
+        ...demoStores.map((store) =>
+          saveCommunityStore(firebaseConfig, context, store),
+        ),
+        ...demoStores.map((store) => {
           const log: CommunityStoreModerationLog = {
             id: `log_demo_${store.id}`,
             organizationId,
             storeId: store.id,
             action: "created",
             moderatedBy: user.uid,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           };
           return saveCommunityStoreModerationLog(firebaseConfig, context, log);
-        })
+        }),
       ]);
 
       const [allStores, allLogs] = await Promise.all([
         fetchCommunityStores(firebaseConfig, context, 200),
-        fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500)
+        fetchCommunityStoreModerationLogs(
+          firebaseConfig,
+          context,
+          undefined,
+          500,
+        ),
       ]);
       setStores(allStores);
       setLogs(allLogs);
@@ -207,7 +238,12 @@ export function MarketplaceModerationView() {
         const context: TenantContext = { organizationId };
         const [allStores, allLogs] = await Promise.all([
           fetchCommunityStores(firebaseConfig, context, 200),
-          fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500)
+          fetchCommunityStoreModerationLogs(
+            firebaseConfig,
+            context,
+            undefined,
+            500,
+          ),
         ]);
         setStores(allStores.length > 0 ? allStores : mockModerationStores);
         setLogs(allLogs.length > 0 ? allLogs : mockModerationLogs);
@@ -222,7 +258,7 @@ export function MarketplaceModerationView() {
     loadData();
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady]);
 
-  const filteredStores = stores.filter(store => {
+  const filteredStores = stores.filter((store) => {
     if (filterStatus === "all") return true;
     return store.status === filterStatus;
   });
@@ -232,14 +268,14 @@ export function MarketplaceModerationView() {
     try {
       setActioningStore(storeId);
       const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
+      const store = stores.find((s) => s.id === storeId);
       if (!store) throw new Error("Store not found");
 
       const now = new Date().toISOString();
       const updatedStore: CommunityStore = {
         ...store,
         status: "approved",
-        approvedAt: now
+        approvedAt: now,
       };
 
       const log: CommunityStoreModerationLog = {
@@ -248,16 +284,18 @@ export function MarketplaceModerationView() {
         storeId,
         action: "approved",
         moderatedBy: user.uid,
-        timestamp: now
+        timestamp: now,
       };
 
       await Promise.all([
         saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
+        saveCommunityStoreModerationLog(firebaseConfig, context, log),
       ]);
 
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
+      setStores((prev) =>
+        prev.map((s) => (s.id === storeId ? updatedStore : s)),
+      );
+      setLogs((prev) => [log, ...prev]);
     } catch (error) {
       console.error("Error approving store:", error);
     } finally {
@@ -273,14 +311,14 @@ export function MarketplaceModerationView() {
     try {
       setActioningStore(storeId);
       const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
+      const store = stores.find((s) => s.id === storeId);
       if (!store) throw new Error("Store not found");
 
       const now = new Date().toISOString();
       const updatedStore: CommunityStore = {
         ...store,
         status: "rejected",
-        rejectionReason
+        rejectionReason,
       };
 
       const log: CommunityStoreModerationLog = {
@@ -290,16 +328,18 @@ export function MarketplaceModerationView() {
         action: "rejected",
         moderatedBy: user.uid,
         reason: rejectionReason,
-        timestamp: now
+        timestamp: now,
       };
 
       await Promise.all([
         saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
+        saveCommunityStoreModerationLog(firebaseConfig, context, log),
       ]);
 
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
+      setStores((prev) =>
+        prev.map((s) => (s.id === storeId ? updatedStore : s)),
+      );
+      setLogs((prev) => [log, ...prev]);
       setShowRejectionForm(null);
       setRejectionReason("");
     } catch (error) {
@@ -314,14 +354,14 @@ export function MarketplaceModerationView() {
     try {
       setActioningStore(storeId);
       const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
+      const store = stores.find((s) => s.id === storeId);
       if (!store) throw new Error("Store not found");
 
       const now = new Date().toISOString();
       const updatedStore: CommunityStore = {
         ...store,
         status: "suspended",
-        suspensionReason: "Suspensa pela moderação"
+        suspensionReason: "Suspensa pela moderação",
       };
 
       const log: CommunityStoreModerationLog = {
@@ -331,16 +371,18 @@ export function MarketplaceModerationView() {
         action: "suspended",
         moderatedBy: user.uid,
         previousStatus: store.status,
-        timestamp: now
+        timestamp: now,
       };
 
       await Promise.all([
         saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
+        saveCommunityStoreModerationLog(firebaseConfig, context, log),
       ]);
 
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
+      setStores((prev) =>
+        prev.map((s) => (s.id === storeId ? updatedStore : s)),
+      );
+      setLogs((prev) => [log, ...prev]);
     } catch (error) {
       console.error("Error suspending store:", error);
     } finally {
@@ -349,10 +391,10 @@ export function MarketplaceModerationView() {
   };
 
   const stats = {
-    pending: stores.filter(s => s.status === "pending").length,
-    approved: stores.filter(s => s.status === "approved").length,
-    rejected: stores.filter(s => s.status === "rejected").length,
-    suspended: stores.filter(s => s.status === "suspended").length
+    pending: stores.filter((s) => s.status === "pending").length,
+    approved: stores.filter((s) => s.status === "approved").length,
+    rejected: stores.filter((s) => s.status === "rejected").length,
+    suspended: stores.filter((s) => s.status === "suspended").length,
   };
 
   const getStatusIcon = (status: CommunityStore["status"]) => {
@@ -412,7 +454,7 @@ export function MarketplaceModerationView() {
 
       {/* Filters */}
       <section className="filters">
-        {(["pending", "approved", "rejected", "all"] as const).map(status => (
+        {(["pending", "approved", "rejected", "all"] as const).map((status) => (
           <button
             key={status}
             className={`filter-btn ${filterStatus === status ? "active" : ""}`}
@@ -431,13 +473,19 @@ export function MarketplaceModerationView() {
         {filteredStores.length === 0 ? (
           <div className="empty-queue">
             <CheckCircle size={48} opacity={0.3} />
-            <p>{filterStatus === "pending" ? "Nenhuma loja aguardando aprovação!" : "Nenhuma loja neste status"}</p>
+            <p>
+              {filterStatus === "pending"
+                ? "Nenhuma loja aguardando aprovação!"
+                : "Nenhuma loja neste status"}
+            </p>
             {filterStatus === "pending" && (
               <div className="demo-injector-box">
                 <p>
-                  Para fins de teste e demonstração do sistema, você pode injetar lojas de demonstração diretamente no seu Firestore em 1 clique!
+                  Para fins de teste e demonstração do sistema, você pode
+                  injetar lojas de demonstração diretamente no seu Firestore em
+                  1 clique!
                 </p>
-                <button 
+                <button
                   className="action-btn approve demo-btn"
                   onClick={handleGenerateDemoStores}
                   disabled={generatingDemo}
@@ -456,7 +504,7 @@ export function MarketplaceModerationView() {
           </div>
         ) : (
           <div className="stores-list">
-            {filteredStores.map(store => (
+            {filteredStores.map((store) => (
               <div key={store.id} className="store-card">
                 <div className="store-preview">
                   {store.bannerImageUrl ? (
@@ -483,28 +531,36 @@ export function MarketplaceModerationView() {
                   <div className="store-info">
                     <span className="info-item">📁 {store.category}</span>
                     {store.contact?.address?.city && (
-                      <span className="info-item">📍 {store.contact.address.city}</span>
+                      <span className="info-item">
+                        📍 {store.contact.address.city}
+                      </span>
                     )}
-                    <span className="info-item">📅 {new Date(store.createdAt).toLocaleDateString('pt-BR')}</span>
+                    <span className="info-item">
+                      📅 {new Date(store.createdAt).toLocaleDateString("pt-BR")}
+                    </span>
                   </div>
 
                   {store.rejectionReason && (
                     <div className="rejection-box">
                       <AlertCircle size={14} />
-                      <span><strong>Rejeição:</strong> {store.rejectionReason}</span>
+                      <span>
+                        <strong>Rejeição:</strong> {store.rejectionReason}
+                      </span>
                     </div>
                   )}
 
                   {store.suspensionReason && (
                     <div className="suspension-box">
                       <Ban size={14} />
-                      <span><strong>Suspensão:</strong> {store.suspensionReason}</span>
+                      <span>
+                        <strong>Suspensão:</strong> {store.suspensionReason}
+                      </span>
                     </div>
                   )}
                 </div>
 
                 <div className="store-actions">
-                  <Link 
+                  <Link
                     href={`/marketplace-community/${store.id}`}
                     className="action-btn view"
                     target="_blank"
@@ -593,17 +649,33 @@ export function MarketplaceModerationView() {
         <section className="recent-logs">
           <h2>Atividade Recente</h2>
           <div className="logs-list">
-            {logs.slice(0, 10).map(log => (
+            {logs.slice(0, 10).map((log) => (
               <div key={log.id} className="log-item">
-                <div className="log-icon" style={{
-                  background: log.action === "approved" ? "rgba(16, 185, 129, 0.15)" :
-                             log.action === "rejected" ? "rgba(239, 68, 68, 0.15)" :
-                             log.action === "suspended" ? "rgba(100, 116, 139, 0.15)" : "rgba(245, 158, 11, 0.15)"
-                }}>
-                  {log.action === "approved" && <CheckCircle size={16} color="#10b981" />}
-                  {log.action === "rejected" && <XCircle size={16} color="#ef4444" />}
-                  {log.action === "suspended" && <Ban size={16} color="#64748b" />}
-                  {log.action === "created" && <Clock size={16} color="#f59e0b" />}
+                <div
+                  className="log-icon"
+                  style={{
+                    background:
+                      log.action === "approved"
+                        ? "rgba(16, 185, 129, 0.15)"
+                        : log.action === "rejected"
+                          ? "rgba(239, 68, 68, 0.15)"
+                          : log.action === "suspended"
+                            ? "rgba(100, 116, 139, 0.15)"
+                            : "rgba(245, 158, 11, 0.15)",
+                  }}
+                >
+                  {log.action === "approved" && (
+                    <CheckCircle size={16} color="#10b981" />
+                  )}
+                  {log.action === "rejected" && (
+                    <XCircle size={16} color="#ef4444" />
+                  )}
+                  {log.action === "suspended" && (
+                    <Ban size={16} color="#64748b" />
+                  )}
+                  {log.action === "created" && (
+                    <Clock size={16} color="#f59e0b" />
+                  )}
                 </div>
                 <div className="log-content">
                   <div className="log-action">
@@ -612,7 +684,9 @@ export function MarketplaceModerationView() {
                     {log.action === "suspended" && "Loja suspensa"}
                     {log.action === "created" && "Loja criada"}
                   </div>
-                  <div className="log-time">{new Date(log.timestamp).toLocaleString('pt-BR')}</div>
+                  <div className="log-time">
+                    {new Date(log.timestamp).toLocaleString("pt-BR")}
+                  </div>
                 </div>
               </div>
             ))}
@@ -654,7 +728,9 @@ export function MarketplaceModerationView() {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .back-link {
@@ -739,10 +815,18 @@ export function MarketplaceModerationView() {
           letter-spacing: -0.03em;
         }
 
-        .stat-card.pending .stat-count { color: #f97316; }
-        .stat-card.approved .stat-count { color: #10b981; }
-        .stat-card.rejected .stat-count { color: #ef4444; }
-        .stat-card.suspended .stat-count { color: #64748b; }
+        .stat-card.pending .stat-count {
+          color: #f97316;
+        }
+        .stat-card.approved .stat-count {
+          color: #10b981;
+        }
+        .stat-card.rejected .stat-count {
+          color: #ef4444;
+        }
+        .stat-card.suspended .stat-count {
+          color: #64748b;
+        }
 
         .stat-label {
           font-size: 0.85rem;
@@ -873,7 +957,11 @@ export function MarketplaceModerationView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.2) 0%,
+            rgba(15, 23, 42, 0.4) 100%
+          );
           font-weight: 700;
           color: #475569;
         }

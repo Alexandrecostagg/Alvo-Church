@@ -4,8 +4,11 @@ import dynamic from "next/dynamic";
 import { RoleGuard } from "../../../../src/components/role-guard";
 
 const UsersView = dynamic(
-  () => import("../../../../src/features/settings/users-view").then((mod) => mod.UsersView),
-  { ssr: false }
+  () =>
+    import("../../../../src/features/settings/users-view").then(
+      (mod) => mod.UsersView,
+    ),
+  { ssr: false },
 );
 
 export default function SettingsUsersPage() {

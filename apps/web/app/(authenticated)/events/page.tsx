@@ -5,8 +5,11 @@ import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const EventsView = dynamic(
-  () => import("../../../src/features/events/events-view").then((mod) => mod.EventsView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/events/events-view").then(
+      (mod) => mod.EventsView,
+    ),
+  { ssr: false },
 );
 
 export default function EventsPage() {

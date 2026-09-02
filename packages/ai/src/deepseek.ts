@@ -23,7 +23,7 @@ export interface AiResponse {
 export async function callDeepSeek(
   apiKey: string,
   messages: AiMessage[],
-  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean }
+  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean },
 ): Promise<AiResponse> {
   const body = {
     model: DEEPSEEK_MODEL,
@@ -31,17 +31,19 @@ export async function callDeepSeek(
     max_tokens: opts?.maxTokens ?? 1024,
     temperature: opts?.temperature ?? 0.7,
     stream: false,
-    ...(opts?.jsonMode ? { response_format: { type: "json_object" as const } } : {})
+    ...(opts?.jsonMode
+      ? { response_format: { type: "json_object" as const } }
+      : {}),
   };
 
   const res = await fetch(DEEPSEEK_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -59,7 +61,7 @@ export async function callDeepSeek(
     model: data.model,
     usage: {
       promptTokens: data.usage?.prompt_tokens ?? 0,
-      completionTokens: data.usage?.completion_tokens ?? 0
-    }
+      completionTokens: data.usage?.completion_tokens ?? 0,
+    },
   };
 }

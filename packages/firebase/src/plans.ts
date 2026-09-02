@@ -7,35 +7,78 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
-  free:        { maxMembers: 50,       aiQueriesPerMonth: 0,    maxBranchOrgs: 0 },
-  comunidade:  { maxMembers: 300,      aiQueriesPerMonth: 50,   maxBranchOrgs: 0 },
-  pastoral:    { maxMembers: Infinity, aiQueriesPerMonth: 500,  maxBranchOrgs: 0 },
-  rede:        { maxMembers: Infinity, aiQueriesPerMonth: 500,  maxBranchOrgs: 50 },
-  enterprise:  { maxMembers: Infinity, aiQueriesPerMonth: 9999, maxBranchOrgs: 999 },
+  free: { maxMembers: 50, aiQueriesPerMonth: 0, maxBranchOrgs: 0 },
+  comunidade: { maxMembers: 300, aiQueriesPerMonth: 50, maxBranchOrgs: 0 },
+  pastoral: { maxMembers: Infinity, aiQueriesPerMonth: 500, maxBranchOrgs: 0 },
+  rede: { maxMembers: Infinity, aiQueriesPerMonth: 500, maxBranchOrgs: 50 },
+  enterprise: {
+    maxMembers: Infinity,
+    aiQueriesPerMonth: 9999,
+    maxBranchOrgs: 999,
+  },
 };
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   // Free existe pra provar valor, não pra sustentar a operação diária —
   // Eventos e Comunicação (uso recorrente/retenção) ficam no Comunidade+.
-  free:       ["members", "app"],
+  free: ["members", "app"],
   // Doações (PIX de terceiros) anda junto com Finanças — quem já cobra
   // dízimo digital é operacionalmente maduro o bastante pra isso.
-  comunidade: ["members", "events", "communication", "app", "tribes", "finance", "groups", "ai_preview", "giving"],
+  comunidade: [
+    "members",
+    "events",
+    "communication",
+    "app",
+    "tribes",
+    "finance",
+    "groups",
+    "ai_preview",
+    "giving",
+  ],
   // Marketplace é "recompensa" do topo — baixo custo de incluir, não é
   // motivo suficiente pra alguém migrar sozinho.
-  pastoral:   ["members", "events", "communication", "app", "tribes", "finance", "groups",
-               "pastoral-ai", "serving", "kids", "learning", "worship", "reports", "journeys",
-               "giving", "marketplace"],
-  rede:       ["all"],
+  pastoral: [
+    "members",
+    "events",
+    "communication",
+    "app",
+    "tribes",
+    "finance",
+    "groups",
+    "pastoral-ai",
+    "serving",
+    "kids",
+    "learning",
+    "worship",
+    "reports",
+    "journeys",
+    "giving",
+    "marketplace",
+  ],
+  rede: ["all"],
   enterprise: ["all"],
 };
 
 export type PlanFeatureKey =
-  | "members" | "events" | "communication" | "app"
-  | "tribes" | "finance" | "groups" | "ai_preview"
-  | "pastoral-ai" | "serving" | "kids" | "learning"
-  | "worship" | "reports" | "journeys" | "network"
-  | "giving" | "marketplace" | "all";
+  | "members"
+  | "events"
+  | "communication"
+  | "app"
+  | "tribes"
+  | "finance"
+  | "groups"
+  | "ai_preview"
+  | "pastoral-ai"
+  | "serving"
+  | "kids"
+  | "learning"
+  | "worship"
+  | "reports"
+  | "journeys"
+  | "network"
+  | "giving"
+  | "marketplace"
+  | "all";
 
 export function planHasFeature(plan: PlanId, feature: PlanFeatureKey): boolean {
   const features = PLAN_FEATURES[plan];
@@ -55,7 +98,7 @@ export type BillingStatus = "active" | "overdue" | "suspended";
 // chegar (ou o cliente pagar exatamente no limite do prazo).
 export function resolveBillingStatus(
   rawStatus: BillingStatus | undefined,
-  overdueSince: string | undefined
+  overdueSince: string | undefined,
 ): BillingStatus {
   if (rawStatus !== "overdue" || !overdueSince) return rawStatus ?? "active";
   const overdueDate = new Date(overdueSince).getTime();
@@ -77,12 +120,16 @@ export function currentAiMonth(): string {
 // existindo como rede de segurança para organizações antigas ou criadas por
 // algum caminho que ainda não tenha sido migrado para gravar `plan` direto.
 export function planTierToPlanId(
-  planTier: "base" | "growth" | "advanced" | "enterprise" | undefined
+  planTier: "base" | "growth" | "advanced" | "enterprise" | undefined,
 ): PlanId {
   switch (planTier) {
-    case "growth": return "comunidade";
-    case "advanced": return "pastoral";
-    case "enterprise": return "rede";
-    default: return "free";
+    case "growth":
+      return "comunidade";
+    case "advanced":
+      return "pastoral";
+    case "enterprise":
+      return "rede";
+    default:
+      return "free";
   }
 }

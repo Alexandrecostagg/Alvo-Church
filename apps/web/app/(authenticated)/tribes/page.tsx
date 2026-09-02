@@ -5,8 +5,11 @@ import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const TribesView = dynamic(
-  () => import("../../../src/features/tribes/tribes-view").then((mod) => mod.TribesView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/tribes/tribes-view").then(
+      (mod) => mod.TribesView,
+    ),
+  { ssr: false },
 );
 
 export default function TribesPage() {

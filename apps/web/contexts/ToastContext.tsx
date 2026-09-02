@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const timer = setTimeout(() => dismiss(id), 3000);
       timers.current.set(id, timer);
     },
-    [dismiss]
+    [dismiss],
   );
 
   // Cleanup on unmount

@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Edit,
   Loader2,
-  PlusCircle
+  PlusCircle,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
@@ -23,46 +23,59 @@ const mockStores: CommunityStore[] = [
     organizationId: "org_alvo_demo",
     ownerId: "user_admin_demo",
     name: "Doces & Travessuras",
-    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+    description:
+      "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
     category: "food",
     status: "approved",
     images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+    bannerImageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
     socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export function MyStoresView() {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } =
+    useAppAuth();
   const [stores, setStores] = useState<CommunityStore[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
 
   useEffect(() => {
     async function loadStores() {
       if (!firebaseReady || !tenantReady || !user) {
         // Fallback to mock stores when offline
         const ownerId = user?.uid || "user_admin_demo";
-        setStores(mockStores.map(s => ({ ...s, ownerId })));
+        setStores(mockStores.map((s) => ({ ...s, ownerId })));
         setLoading(false);
         return;
       }
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
-        const allStores = await fetchCommunityStores(firebaseConfig, context, 200);
-        
-        // Filter by owner
-        const myStores = allStores.filter(store => 
-          store.ownerId === user.uid
+        const allStores = await fetchCommunityStores(
+          firebaseConfig,
+          context,
+          200,
         );
-        setStores(myStores.length > 0 ? myStores : mockStores.map(s => ({ ...s, ownerId: user.uid })));
+
+        // Filter by owner
+        const myStores = allStores.filter(
+          (store) => store.ownerId === user.uid,
+        );
+        setStores(
+          myStores.length > 0
+            ? myStores
+            : mockStores.map((s) => ({ ...s, ownerId: user.uid })),
+        );
       } catch (error) {
         console.error("Error loading stores:", error);
-        setStores(mockStores.map(s => ({ ...s, ownerId: user.uid })));
+        setStores(mockStores.map((s) => ({ ...s, ownerId: user.uid })));
       } finally {
         setLoading(false);
       }
@@ -70,16 +83,16 @@ export function MyStoresView() {
     loadStores();
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady, user]);
 
-  const filteredStores = stores.filter(store => {
+  const filteredStores = stores.filter((store) => {
     if (filter === "all") return true;
     return store.status === filter;
   });
 
   const stats = {
     total: stores.length,
-    approved: stores.filter(s => s.status === "approved").length,
-    pending: stores.filter(s => s.status === "pending").length,
-    rejected: stores.filter(s => s.status === "rejected").length
+    approved: stores.filter((s) => s.status === "approved").length,
+    pending: stores.filter((s) => s.status === "pending").length,
+    rejected: stores.filter((s) => s.status === "rejected").length,
   };
 
   const getStatusBadge = (status: CommunityStore["status"]) => {
@@ -137,25 +150,25 @@ export function MyStoresView() {
 
       {/* Filters */}
       <section className="filters">
-        <button 
+        <button
           className={`filter-btn ${filter === "all" ? "active" : ""}`}
           onClick={() => setFilter("all")}
         >
           Todas
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === "approved" ? "active" : ""}`}
           onClick={() => setFilter("approved")}
         >
           Aprovadas
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === "pending" ? "active" : ""}`}
           onClick={() => setFilter("pending")}
         >
           Pendentes
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === "rejected" ? "active" : ""}`}
           onClick={() => setFilter("rejected")}
         >
@@ -174,8 +187,14 @@ export function MyStoresView() {
             <>
               <PlusCircle size={48} opacity={0.3} />
               <h3>Você ainda não tem lojas</h3>
-              <p>Crie sua primeira loja para começar a anunciar seus produtos e serviços!</p>
-              <Link href="/marketplace-community/new" className="btn-create-empty">
+              <p>
+                Crie sua primeira loja para começar a anunciar seus produtos e
+                serviços!
+              </p>
+              <Link
+                href="/marketplace-community/new"
+                className="btn-create-empty"
+              >
                 Criar Loja
               </Link>
             </>
@@ -189,7 +208,7 @@ export function MyStoresView() {
         </div>
       ) : (
         <section className="stores-list">
-          {filteredStores.map(store => {
+          {filteredStores.map((store) => {
             const statusInfo = getStatusBadge(store.status);
             const StatusIcon = statusInfo.icon;
 
@@ -209,9 +228,14 @@ export function MyStoresView() {
                   <div className="store-header">
                     <div>
                       <h3>{store.name}</h3>
-                      <p className="store-description">{store.description.substring(0, 100)}...</p>
+                      <p className="store-description">
+                        {store.description.substring(0, 100)}...
+                      </p>
                     </div>
-                    <div className="status-badge" style={{ background: statusInfo.color }}>
+                    <div
+                      className="status-badge"
+                      style={{ background: statusInfo.color }}
+                    >
                       <StatusIcon size={16} />
                       {statusInfo.label}
                     </div>
@@ -225,32 +249,38 @@ export function MyStoresView() {
                     {store.contact?.address?.city && (
                       <div className="meta-item">
                         <span className="label">Local:</span>
-                        <span className="value">{store.contact.address?.city}</span>
+                        <span className="value">
+                          {store.contact.address?.city}
+                        </span>
                       </div>
                     )}
                     <div className="meta-item">
                       <span className="label">Criada em:</span>
-                      <span className="value">{new Date(store.createdAt).toLocaleDateString('pt-BR')}</span>
+                      <span className="value">
+                        {new Date(store.createdAt).toLocaleDateString("pt-BR")}
+                      </span>
                     </div>
                   </div>
 
                   {store.status === "rejected" && store.rejectionReason && (
                     <div className="rejection-reason">
                       <AlertCircle size={14} />
-                      <span><strong>Motivo:</strong> {store.rejectionReason}</span>
+                      <span>
+                        <strong>Motivo:</strong> {store.rejectionReason}
+                      </span>
                     </div>
                   )}
                 </div>
 
                 <div className="store-actions">
-                  <Link 
+                  <Link
                     href={`/marketplace-community/${store.id}`}
                     className="btn-view"
                   >
                     <ArrowRight size={16} />
                     Ver
                   </Link>
-                  <Link 
+                  <Link
                     href={`/marketplace-community/${store.id}/edit`}
                     className="btn-edit"
                   >
@@ -355,10 +385,18 @@ export function MyStoresView() {
           transform: translateY(-2px);
         }
 
-        .stat-card:nth-child(1) { border-left: 4px solid #94a3b8; }
-        .stat-card:nth-child(2) { border-left: 4px solid #10b981; }
-        .stat-card:nth-child(3) { border-left: 4px solid #f59e0b; }
-        .stat-card:nth-child(4) { border-left: 4px solid #ef4444; }
+        .stat-card:nth-child(1) {
+          border-left: 4px solid #94a3b8;
+        }
+        .stat-card:nth-child(2) {
+          border-left: 4px solid #10b981;
+        }
+        .stat-card:nth-child(3) {
+          border-left: 4px solid #f59e0b;
+        }
+        .stat-card:nth-child(4) {
+          border-left: 4px solid #ef4444;
+        }
 
         .stat-value {
           font-size: 2.25rem;
@@ -424,7 +462,9 @@ export function MyStoresView() {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .empty-state {
@@ -513,7 +553,11 @@ export function MyStoresView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.2) 0%,
+            rgba(15, 23, 42, 0.4) 100%
+          );
         }
 
         .store-info {

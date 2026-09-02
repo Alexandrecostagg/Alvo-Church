@@ -22,7 +22,9 @@ type FirestoreValue =
   | { nullValue: null }
   | { timestampValue: string };
 
-function str(value: string): FirestoreValue { return { stringValue: value }; }
+function str(value: string): FirestoreValue {
+  return { stringValue: value };
+}
 function optStr(value: string | undefined | null, max: number): FirestoreValue {
   return value ? { stringValue: value.slice(0, max) } : { nullValue: null };
 }
@@ -30,17 +32,18 @@ function optStr(value: string | undefined | null, max: number): FirestoreValue {
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting por IP para evitar abuso do formulário público.
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || req.headers.get("cf-connecting-ip")
-      || "127.0.0.1";
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "127.0.0.1";
     if (!VISIT_RATE_LIMITER.tryGet(`visit:${clientIp}`)) {
       return NextResponse.json(
         { error: "Muitas requisições. Aguarde um momento e tente novamente." },
-        { status: 429, headers: { "Retry-After": "60" } }
+        { status: 429, headers: { "Retry-After": "60" } },
       );
     }
 
-    const body = await req.json() as {
+    const body = (await req.json()) as {
       orgSlug: string;
       name: string;
       phone: string;
@@ -52,38 +55,69 @@ export async function POST(req: NextRequest) {
       consent: boolean;
     };
 
-    const { orgSlug, name, phone, firstVisit, howHeard, consent, email, birthDate, neighborhood } = body;
+    const {
+      orgSlug,
+      name,
+      phone,
+      firstVisit,
+      howHeard,
+      consent,
+      email,
+      birthDate,
+      neighborhood,
+    } = body;
 
     if (!orgSlug || !name || !phone) {
-      return NextResponse.json({ error: "orgSlug, name e phone são obrigatórios." }, { status: 400 });
+      return NextResponse.json(
+        { error: "orgSlug, name e phone são obrigatórios." },
+        { status: 400 },
+      );
     }
 
-    if (typeof name !== "string" || name.trim().length < 2 || name.length > 120) {
+    if (
+      typeof name !== "string" ||
+      name.trim().length < 2 ||
+      name.length > 120
+    ) {
       return NextResponse.json({ error: "Nome inválido." }, { status: 400 });
     }
 
     const digits = String(phone).replace(/\D/g, "");
     if (digits.length < 10 || digits.length > 14) {
-      return NextResponse.json({ error: "Telefone inválido." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Telefone inválido." },
+        { status: 400 },
+      );
     }
 
     // Resolve orgSlug → organizationId (org_slugs tem leitura pública por doc)
-    const slugRes = await fetch(firestoreUrl(`org_slugs/${encodeURIComponent(orgSlug)}`), {
-      signal: AbortSignal.timeout(8000)
-    });
+    const slugRes = await fetch(
+      firestoreUrl(`org_slugs/${encodeURIComponent(orgSlug)}`),
+      {
+        signal: AbortSignal.timeout(8000),
+      },
+    );
     if (!slugRes.ok) {
-      return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organização não encontrada." },
+        { status: 404 },
+      );
     }
     const slugDoc = (await slugRes.json()) as {
       fields?: { organizationId?: { stringValue?: string } };
     };
     const organizationId = slugDoc.fields?.organizationId?.stringValue;
     if (!organizationId) {
-      return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organização não encontrada." },
+        { status: 404 },
+      );
     }
 
     const createRes = await fetch(
-      firestoreUrl(`organizations/${encodeURIComponent(organizationId)}/visitorIntakes`),
+      firestoreUrl(
+        `organizations/${encodeURIComponent(organizationId)}/visitorIntakes`,
+      ),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,13 +139,20 @@ export async function POST(req: NextRequest) {
             createdAt: { timestampValue: new Date().toISOString() },
           } satisfies Record<string, FirestoreValue>,
         }),
-      }
+      },
     );
 
     if (!createRes.ok) {
       const errText = await createRes.text();
-      console.error("[public/visit] firestore create failed:", createRes.status, errText);
-      return NextResponse.json({ error: "Não foi possível registrar a visita." }, { status: 502 });
+      console.error(
+        "[public/visit] firestore create failed:",
+        createRes.status,
+        errText,
+      );
+      return NextResponse.json(
+        { error: "Não foi possível registrar a visita." },
+        { status: 502 },
+      );
     }
 
     const created = (await createRes.json()) as { name?: string };

@@ -1,5 +1,8 @@
 import { Hono } from "hono";
-import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
+import type {
+  BrandAssetKind,
+  TenantBrandAssetUploadResponse,
+} from "@alvo/types";
 import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
 function safeStringCompare(a: string, b: string): boolean {
@@ -51,22 +54,22 @@ function jsonError(message: string, status = 400) {
   return new Response(JSON.stringify({ success: false, error: message }), {
     status,
     headers: {
-      "content-type": "application/json"
-    }
+      "content-type": "application/json",
+    },
   });
 }
 
 app.get("/", (c) => {
   return c.json({
     name: "Alvo Church Worker API",
-    status: "ok"
+    status: "ok",
   });
 });
 
 app.get("/health", (c) => {
   return c.json({
     status: "healthy",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -90,7 +93,10 @@ app.post("/tenant-assets/upload", async (c) => {
   const formData = await c.req.formData();
   const organizationId = String(formData.get("organizationId") ?? "");
   const assetKind = String(formData.get("assetKind") ?? "") as BrandAssetKind;
-  const childId = String(formData.get("childId") ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
+  const childId = String(formData.get("childId") ?? "").replace(
+    /[^a-zA-Z0-9_-]/g,
+    "",
+  );
   const file = formData.get("file");
 
   if (!organizationId || !assetKind || !(file instanceof File)) {
@@ -100,25 +106,27 @@ app.post("/tenant-assets/upload", async (c) => {
   const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
   // Fotos de criança (Segurança Kids) vivem sob um prefixo próprio, separado do
   // branding; as demais mantêm o caminho de branding.
-  const objectKey = assetKind === "kidsPhoto"
-    ? `organizations/${organizationId}/kids/${childId || "unknown"}/${Date.now()}-${fileName}`
-    : `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
+  const objectKey =
+    assetKind === "kidsPhoto"
+      ? `organizations/${organizationId}/kids/${childId || "unknown"}/${Date.now()}-${fileName}`
+      : `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
 
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
     httpMetadata: {
-      contentType: file.type || "application/octet-stream"
-    }
+      contentType: file.type || "application/octet-stream",
+    },
   });
 
   const publicBaseUrl =
-    c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ?? "https://assets.alvochurch.app";
+    c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ??
+    "https://assets.alvochurch.app";
 
   const payload: TenantBrandAssetUploadResponse = {
     success: true,
     assetKind,
     fileName,
     objectKey,
-    publicUrl: `${publicBaseUrl}/${objectKey}`
+    publicUrl: `${publicBaseUrl}/${objectKey}`,
   };
 
   return c.json(payload);
@@ -132,7 +140,10 @@ app.post("/wifi/intake", async (c) => {
     // 1. Autenticação via bearer token.
     const configuredToken = c.env.WIFI_INTAKE_BEARER_TOKEN;
     if (!configuredToken) {
-      return jsonError("WIFI_INTAKE_BEARER_TOKEN nao configurado no Worker.", 503);
+      return jsonError(
+        "WIFI_INTAKE_BEARER_TOKEN nao configurado no Worker.",
+        503,
+      );
     }
     const authorization = c.req.header("authorization");
     const expected = `Bearer ${configuredToken}`;
@@ -141,19 +152,30 @@ app.post("/wifi/intake", async (c) => {
     }
 
     // 2. Rate limiting por IP (5 requisições por minuto).
-    const clientIp = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "127.0.0.1";
+    const clientIp =
+      c.req.header("cf-connecting-ip") ||
+      c.req.header("x-forwarded-for") ||
+      "127.0.0.1";
     const ipKey = `wifi:${clientIp}`;
     const now = Date.now();
     const windowMs = 60_000;
     const maxRequests = 5;
 
     // Cleanup de entradas expiradas a cada chamada para evitar crescimento infinito.
-    const rateLimit = (c as any).env.__wifiRateLimit ?? ((c as any).env.__wifiRateLimit = new Map());
+    const rateLimit =
+      (c as any).env.__wifiRateLimit ??
+      ((c as any).env.__wifiRateLimit = new Map());
     const existing = rateLimit.get(ipKey);
     if (existing && existing.windowStart < now - windowMs) {
       rateLimit.delete(ipKey);
     } else if (existing && existing.count >= maxRequests) {
-      return c.json({ error: "Limite de requisições excedido. Tente novamente em instantes." }, { status: 429 });
+      return c.json(
+        {
+          error:
+            "Limite de requisições excedido. Tente novamente em instantes.",
+        },
+        { status: 429 },
+      );
     }
 
     const rateState = existing ?? { count: 0, windowStart: now };
@@ -161,7 +183,11 @@ app.post("/wifi/intake", async (c) => {
     rateLimit.set(ipKey, rateState);
 
     // 3. Binding a organização via SSID.
-    const ssid = String(c.req.header("cf-access-client-identity") ?? c.req.header("x-wifi-ssid") ?? "").trim();
+    const ssid = String(
+      c.req.header("cf-access-client-identity") ??
+        c.req.header("x-wifi-ssid") ??
+        "",
+    ).trim();
     let orgId = "";
     if (ssid) {
       let ssidMap: Record<string, string> = {};
@@ -173,7 +199,10 @@ app.post("/wifi/intake", async (c) => {
       }
       orgId = ssidMap[ssid] ?? "";
       if (!orgId) {
-        return jsonError(`SSID "${ssid}" não está mapeado para nenhuma organização.`, 403);
+        return jsonError(
+          `SSID "${ssid}" não está mapeado para nenhuma organização.`,
+          403,
+        );
       }
     }
 
@@ -184,7 +213,10 @@ app.post("/wifi/intake", async (c) => {
     const birthDate = String(body.birthDate ?? "").trim();
 
     if (!fullName || !whatsapp || !email || !birthDate) {
-      return jsonError("Nome, WhatsApp, E-mail e Data de Nascimento sao obrigatorios.", 422);
+      return jsonError(
+        "Nome, WhatsApp, E-mail e Data de Nascimento sao obrigatorios.",
+        422,
+      );
     }
 
     // Validação básica de dados.
@@ -195,15 +227,19 @@ app.post("/wifi/intake", async (c) => {
 
     return c.json({
       success: true,
-      message: "Perfil cadastrado e tráfego de internet autorizado com sucesso.",
+      message:
+        "Perfil cadastrado e tráfego de internet autorizado com sucesso.",
       clientIp,
       authorized: true,
       organizationId: orgId,
       ssid,
-      registeredAt: new Date().toISOString()
+      registeredAt: new Date().toISOString(),
     });
   } catch (err) {
-    return jsonError(err instanceof Error ? err.message : "Erro ao processar cadastro Wi-Fi.", 500);
+    return jsonError(
+      err instanceof Error ? err.message : "Erro ao processar cadastro Wi-Fi.",
+      500,
+    );
   }
 });
 
@@ -226,10 +262,12 @@ app.post("/events/:eventId/upload-proof", async (c) => {
   const objectKey = `events/${eventId}/proofs/${Date.now()}-${fileName}`;
 
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
-    httpMetadata: { contentType: file.type || "application/octet-stream" }
+    httpMetadata: { contentType: file.type || "application/octet-stream" },
   });
 
-  const publicBaseUrl = c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ?? "https://assets.alvochurch.app";
+  const publicBaseUrl =
+    c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ??
+    "https://assets.alvochurch.app";
   const publicUrl = `${publicBaseUrl}/${objectKey}`;
 
   return c.json({ success: true, objectKey, publicUrl, eventId, userId });
@@ -260,7 +298,10 @@ app.post("/notify/whatsapp", async (c) => {
   const from = c.env.TWILIO_WHATSAPP_FROM;
 
   if (!sid || !token || !from) {
-    return jsonError("Twilio credentials (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM) nao configuradas.", 503);
+    return jsonError(
+      "Twilio credentials (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM) nao configuradas.",
+      503,
+    );
   }
 
   if (!to || !message) {
@@ -276,7 +317,7 @@ app.post("/notify/whatsapp", async (c) => {
     const projectId = c.env.FIREBASE_PROJECT_ID ?? "";
     const queryRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations/${encodeURIComponent(organizationId)}/users?filter=fields.isActive.booleanValue==true`,
-      { signal: AbortSignal.timeout(8000) }
+      { signal: AbortSignal.timeout(8000) },
     );
     if (queryRes.ok) {
       const queryData = (await queryRes.json()) as {
@@ -289,12 +330,12 @@ app.post("/notify/whatsapp", async (c) => {
             if (!raw) return "";
             return `whatsapp:+${String(raw).replace(/\D/g, "")}`;
           })
-          .filter((p) => p.length > 0)
+          .filter((p) => p.length > 0),
       );
       if (!memberPhones.has(normalized)) {
         return jsonError(
           `Destinatário ${to} não é membro ativo da organização ${organizationId}.`,
-          403
+          403,
         );
       }
     }
@@ -311,14 +352,21 @@ app.post("/notify/whatsapp", async (c) => {
     method: "POST",
     headers: {
       Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded"
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     body: params.toString(),
-    signal: AbortSignal.timeout(15000)
-  }).catch((err) => ({ ok: false, status: 500, text: async () => String(err) }));
+    signal: AbortSignal.timeout(15000),
+  }).catch((err) => ({
+    ok: false,
+    status: 500,
+    text: async () => String(err),
+  }));
 
   if (!resp || !(resp as Response).ok) {
-    const text = resp && typeof (resp as Response).text === "function" ? await (resp as Response).text() : "unknown error";
+    const text =
+      resp && typeof (resp as Response).text === "function"
+        ? await (resp as Response).text()
+        : "unknown error";
     return jsonError(`Falha ao enviar via Twilio: ${text}`, 502);
   }
 
@@ -333,5 +381,5 @@ export default {
   // baixar documentos — substitui o cálculo pesado que rodava no navegador.
   scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
     ctx.waitUntil(writeDailyNetworkSnapshots(env));
-  }
+  },
 };

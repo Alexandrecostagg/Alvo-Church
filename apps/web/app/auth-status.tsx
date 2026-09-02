@@ -2,7 +2,7 @@
 
 import {
   createFirebaseWebRuntimeConfigFromEnv,
-  getMissingFirebaseWebRuntimeConfigFields
+  getMissingFirebaseWebRuntimeConfigFields,
 } from "@alvo/firebase";
 import { useAppAuth } from "./providers";
 
@@ -10,14 +10,18 @@ export function AuthStatusCard() {
   const { configured, firebaseReady, user } = useAppAuth();
   const firebaseConfig = createFirebaseWebRuntimeConfigFromEnv({
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
       process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+    NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   });
-  const missingFields = getMissingFirebaseWebRuntimeConfigFields(firebaseConfig);
+  const missingFields =
+    getMissingFirebaseWebRuntimeConfigFields(firebaseConfig);
 
   if (!configured) {
     return (
@@ -26,7 +30,7 @@ export function AuthStatusCard() {
           padding: 20,
           borderRadius: 20,
           background: "#fff7ec",
-          border: "1px solid rgba(196, 106, 45, 0.28)"
+          border: "1px solid rgba(196, 106, 45, 0.28)",
         }}
       >
         <strong>Firebase ainda nao configurado</strong>
@@ -36,7 +40,9 @@ export function AuthStatusCard() {
         </p>
         <p style={{ margin: "10px 0 0", lineHeight: 1.6 }}>
           Faltando agora:{" "}
-          <code>{missingFields.map(toEnvVariableName).join(", ") || "nenhuma"}</code>
+          <code>
+            {missingFields.map(toEnvVariableName).join(", ") || "nenhuma"}
+          </code>
         </p>
         <pre
           style={{
@@ -47,7 +53,7 @@ export function AuthStatusCard() {
             background: "rgba(255,255,255,0.72)",
             border: "1px solid rgba(196, 106, 45, 0.18)",
             fontSize: 12,
-            lineHeight: 1.55
+            lineHeight: 1.55,
           }}
         >
           {`NEXT_PUBLIC_FIREBASE_API_KEY=...
@@ -58,11 +64,9 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...`}
         </pre>
         <p style={{ margin: "10px 0 0", lineHeight: 1.6 }}>
-          No Firebase Console, registre o app web em
-          {" "}
-          <code>Configuracoes do projeto &gt; Seus aplicativos</code>
-          {" "}
-          para copiar o bloco <code>firebaseConfig</code>.
+          No Firebase Console, registre o app web em{" "}
+          <code>Configuracoes do projeto &gt; Seus aplicativos</code> para
+          copiar o bloco <code>firebaseConfig</code>.
         </p>
       </article>
     );
@@ -74,7 +78,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...`}
         padding: 20,
         borderRadius: 20,
         background: "#fffdf8",
-        border: "1px solid rgba(31, 41, 55, 0.12)"
+        border: "1px solid rgba(31, 41, 55, 0.12)",
       }}
     >
       <strong>Firebase Auth</strong>

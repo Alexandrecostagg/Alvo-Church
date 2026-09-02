@@ -16,7 +16,7 @@ import type {
   PartnerOrganization,
   Person,
   VisitorIntake,
-  VisitorJourney
+  VisitorJourney,
 } from "@alvo/types";
 import {
   createFirebaseWebRuntimeConfigFromEnv,
@@ -50,9 +50,12 @@ import {
   getPeopleCollectionPath,
   getVisitorIntakesCollectionPath,
   getVisitorJourneysCollectionPath,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
-import { cachedFetchPeople, cachedFetchGroups } from "../src/lib/org-data-cache";
+import {
+  cachedFetchPeople,
+  cachedFetchGroups,
+} from "../src/lib/org-data-cache";
 import {
   getBrandModeLabel,
   getAttendanceStatusLabel,
@@ -66,7 +69,7 @@ import {
   getPlanTierLabel,
   getRegistrationStatusLabel,
   isModuleEnabled,
-  getVisitorStageLabel
+  getVisitorStageLabel,
 } from "@alvo/domain";
 import { useAppAuth } from "./providers";
 
@@ -83,14 +86,20 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   const [groupMeetings, setGroupMeetings] = useState<GroupMeeting[]>([]);
   const [groupAttendance, setGroupAttendance] = useState<GroupAttendance[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
-  const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<
+    EventRegistration[]
+  >([]);
   const [eventCheckIns, setEventCheckIns] = useState<EventCheckIn[]>([]);
-  const [financeReports, setFinanceReports] = useState<FinancialTransparencyReport[]>([]);
+  const [financeReports, setFinanceReports] = useState<
+    FinancialTransparencyReport[]
+  >([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
   const [partners, setPartners] = useState<PartnerOrganization[]>([]);
   const [partnerBenefits, setPartnerBenefits] = useState<PartnerBenefit[]>([]);
-  const [benefitValidations, setBenefitValidations] = useState<MemberBenefitValidation[]>([]);
+  const [benefitValidations, setBenefitValidations] = useState<
+    MemberBenefitValidation[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,14 +109,15 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
           process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
           process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
           process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       }),
-    []
+    [],
   );
 
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
@@ -135,33 +145,36 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
           nextFamilies,
           nextPartners,
           nextPartnerBenefits,
-          nextBenefitValidations
-        ] =
-          await Promise.all([
-            fetchVisitorJourneys(firebaseConfig, { organizationId }),
-            fetchVisitorIntakes(firebaseConfig, { organizationId }),
-            fetchFollowUpTasks(firebaseConfig, { organizationId }),
-            cachedFetchGroups(firebaseConfig, { organizationId }),
-            fetchEvents(firebaseConfig, { organizationId }),
-            fetchFinancialTransparencyReports(firebaseConfig, { organizationId }),
-            cachedFetchPeople(firebaseConfig, { organizationId }),
-            fetchFamilies(firebaseConfig, { organizationId }),
-            fetchPartnerOrganizations(firebaseConfig, { organizationId }),
-            fetchPartnerBenefits(firebaseConfig, { organizationId }),
-            fetchMemberBenefitValidations(firebaseConfig, { organizationId })
-          ]);
+          nextBenefitValidations,
+        ] = await Promise.all([
+          fetchVisitorJourneys(firebaseConfig, { organizationId }),
+          fetchVisitorIntakes(firebaseConfig, { organizationId }),
+          fetchFollowUpTasks(firebaseConfig, { organizationId }),
+          cachedFetchGroups(firebaseConfig, { organizationId }),
+          fetchEvents(firebaseConfig, { organizationId }),
+          fetchFinancialTransparencyReports(firebaseConfig, { organizationId }),
+          cachedFetchPeople(firebaseConfig, { organizationId }),
+          fetchFamilies(firebaseConfig, { organizationId }),
+          fetchPartnerOrganizations(firebaseConfig, { organizationId }),
+          fetchPartnerBenefits(firebaseConfig, { organizationId }),
+          fetchMemberBenefitValidations(firebaseConfig, { organizationId }),
+        ]);
 
         const [nextGroupMeetings, nextEventRegistrations, nextEventCheckIns] =
           await Promise.all([
             fetchGroupMeetings(firebaseConfig, { organizationId }, nextGroups),
-            fetchEventRegistrations(firebaseConfig, { organizationId }, nextEvents),
-            fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents)
+            fetchEventRegistrations(
+              firebaseConfig,
+              { organizationId },
+              nextEvents,
+            ),
+            fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents),
           ]);
 
         const nextGroupAttendance = await fetchGroupAttendance(
           firebaseConfig,
           { organizationId },
-          nextGroupMeetings
+          nextGroupMeetings,
         );
 
         if (cancelled) {
@@ -191,7 +204,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         setError(
           nextError instanceof Error
             ? nextError.message
-            : "Nao foi possivel carregar os modulos reais do Firebase."
+            : "Nao foi possivel carregar os modulos reais do Firebase.",
         );
       } finally {
         if (!cancelled) {
@@ -212,26 +225,41 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
   }
 
   const settings = tenantRuntime?.settings ?? null;
-  const visitorsEnabled = settings ? isModuleEnabled(settings.features.modules, "visitors") : true;
-  const groupsEnabled = settings ? isModuleEnabled(settings.features.modules, "groups") : true;
-  const eventsEnabled = settings ? isModuleEnabled(settings.features.modules, "events") : true;
-  const financeEnabled = settings ? isModuleEnabled(settings.features.modules, "finance") : true;
+  const visitorsEnabled = settings
+    ? isModuleEnabled(settings.features.modules, "visitors")
+    : true;
+  const groupsEnabled = settings
+    ? isModuleEnabled(settings.features.modules, "groups")
+    : true;
+  const eventsEnabled = settings
+    ? isModuleEnabled(settings.features.modules, "events")
+    : true;
+  const financeEnabled = settings
+    ? isModuleEnabled(settings.features.modules, "finance")
+    : true;
   const memberCount = people.filter((person) =>
-    ["member", "leader", "volunteer"].includes(person.memberStatus)
+    ["member", "leader", "volunteer"].includes(person.memberStatus),
   ).length;
-  const visitorCount = people.filter((person) => person.memberStatus === "visitor").length;
-  const esdrasPassCount = people.filter((person) => person.partnerBenefitsEnabled).length;
+  const visitorCount = people.filter(
+    (person) => person.memberStatus === "visitor",
+  ).length;
+  const esdrasPassCount = people.filter(
+    (person) => person.partnerBenefitsEnabled,
+  ).length;
   const activeBenefitCount = partnerBenefits.filter(
-    (benefit) => benefit.status === "active"
+    (benefit) => benefit.status === "active",
   ).length;
 
   return (
     <section style={sectionStyle}>
       <div style={headerStyle}>
         <div>
-          <strong style={{ display: "block", fontSize: 24 }}>Operacao real do Firebase</strong>
+          <strong style={{ display: "block", fontSize: 24 }}>
+            Operacao real do Firebase
+          </strong>
           <p style={{ margin: "8px 0 0", lineHeight: 1.6 }}>
-            Modulos operacionais refletindo o contrato real do tenant autenticado.
+            Modulos operacionais refletindo o contrato real do tenant
+            autenticado.
           </p>
         </div>
         <div style={pillStyle}>
@@ -244,13 +272,16 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
       {settings ? (
         <div style={runtimeStyle}>
           <span>
-            Plano: <strong>{getPlanTierLabel(settings.subscription.planTier)}</strong>
+            Plano:{" "}
+            <strong>{getPlanTierLabel(settings.subscription.planTier)}</strong>
           </span>
           <span>
-            Marca: <strong>{getBrandModeLabel(settings.branding.brandMode)}</strong>
+            Marca:{" "}
+            <strong>{getBrandModeLabel(settings.branding.brandMode)}</strong>
           </span>
           <span>
-            Modulos ativos: <strong>{getEnabledModuleCount(settings.features.modules)}</strong>
+            Modulos ativos:{" "}
+            <strong>{getEnabledModuleCount(settings.features.modules)}</strong>
           </span>
         </div>
       ) : null}
@@ -259,14 +290,15 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         <article style={cardStyle}>
           <strong>Membros e familias</strong>
           <p style={metaStyle}>
-            {people.length} pessoa(s), {memberCount} membro(s), {visitorCount} visitante(s) e{" "}
-            {families.length} familia(s)
+            {people.length} pessoa(s), {memberCount} membro(s), {visitorCount}{" "}
+            visitante(s) e {families.length} familia(s)
           </p>
           <p style={pathStyle}>
             Pessoas: <code>{getPeopleCollectionPath({ organizationId })}</code>
           </p>
           <p style={pathStyle}>
-            Familias: <code>{getFamiliesCollectionPath({ organizationId })}</code>
+            Familias:{" "}
+            <code>{getFamiliesCollectionPath({ organizationId })}</code>
           </p>
           <div style={stackStyle}>
             {people.map((person) => (
@@ -274,7 +306,9 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
                 <strong>{getPersonFullName(person)}</strong>
                 <p style={itemTextStyle}>
                   {getMemberStatusLabel(person.memberStatus)} -{" "}
-                  {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade nao informada"}
+                  {person.birthDate
+                    ? `${calculateAge(person.birthDate)} anos`
+                    : "idade nao informada"}
                 </p>
                 <p style={miniPathStyle}>
                   {person.cpf ? `CPF ${maskCpf(person.cpf)} - ` : ""}
@@ -286,8 +320,8 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
               <div key={family.id} style={itemStyle}>
                 <strong>{createFamilyDisplayName(family)}</strong>
                 <p style={itemTextStyle}>
-                  {countFamilyPeople(people, family.id)} pessoa(s) vinculada(s) -{" "}
-                  {getIncomeRangeLabel(family.incomeRange)}
+                  {countFamilyPeople(people, family.id)} pessoa(s) vinculada(s)
+                  - {getIncomeRangeLabel(family.incomeRange)}
                 </p>
                 <p style={miniPathStyle}>{formatAddress(family.address)}</p>
               </div>
@@ -299,18 +333,22 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
           <article style={cardStyle}>
             <strong>Visitantes em jornada</strong>
             <p style={metaStyle}>
-              {visitorJourneys.length} jornada(s), {visitorIntakes.length} entrada(s) e{" "}
-              {followUpTasks.length} follow-up(s)
+              {visitorJourneys.length} jornada(s), {visitorIntakes.length}{" "}
+              entrada(s) e {followUpTasks.length} follow-up(s)
             </p>
             <p style={pathStyle}>
-              Collection: <code>{getVisitorJourneysCollectionPath({ organizationId })}</code>
+              Collection:{" "}
+              <code>
+                {getVisitorJourneysCollectionPath({ organizationId })}
+              </code>
             </p>
             <div style={stackStyle}>
               {visitorJourneys.map((journey) => (
                 <div key={journey.id} style={itemStyle}>
                   <strong>{journey.personId}</strong>
                   <p style={itemTextStyle}>
-                    {getVisitorStageLabel(journey.currentStage)} · {journey.originChannel}
+                    {getVisitorStageLabel(journey.currentStage)} ·{" "}
+                    {journey.originChannel}
                   </p>
                 </div>
               ))}
@@ -332,10 +370,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
               ))}
             </div>
             <p style={pathStyle}>
-              Tasks: <code>{getFollowUpTasksCollectionPath({ organizationId })}</code>
+              Tasks:{" "}
+              <code>{getFollowUpTasksCollectionPath({ organizationId })}</code>
             </p>
             <p style={pathStyle}>
-              Portaria: <code>{getVisitorIntakesCollectionPath({ organizationId })}</code>
+              Portaria:{" "}
+              <code>{getVisitorIntakesCollectionPath({ organizationId })}</code>
             </p>
           </article>
         ) : null}
@@ -343,21 +383,25 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
         <article style={cardStyle}>
           <strong>Esdras Pass e convênios</strong>
           <p style={metaStyle}>
-            {partners.length} parceiro(s), {activeBenefitCount} beneficio(s) ativo(s),{" "}
-            {esdrasPassCount} membro(s) habilitado(s) e {benefitValidations.length} validacao(oes)
+            {partners.length} parceiro(s), {activeBenefitCount} beneficio(s)
+            ativo(s), {esdrasPassCount} membro(s) habilitado(s) e{" "}
+            {benefitValidations.length} validacao(oes)
           </p>
           <p style={pathStyle}>
-            Parceiros: <code>{getPartnersCollectionPath({ organizationId })}</code>
+            Parceiros:{" "}
+            <code>{getPartnersCollectionPath({ organizationId })}</code>
           </p>
           <p style={pathStyle}>
-            Beneficios: <code>{getPartnerBenefitsCollectionPath({ organizationId })}</code>
+            Beneficios:{" "}
+            <code>{getPartnerBenefitsCollectionPath({ organizationId })}</code>
           </p>
           <div style={stackStyle}>
             {partners.map((partner) => (
               <div key={partner.id} style={itemStyle}>
                 <strong>{partner.name}</strong>
                 <p style={itemTextStyle}>
-                  {getPartnerBenefitCategoryLabel(partner.category)} - {partner.address?.city ?? "cidade nao informada"}
+                  {getPartnerBenefitCategoryLabel(partner.category)} -{" "}
+                  {partner.address?.city ?? "cidade nao informada"}
                 </p>
               </div>
             ))}
@@ -381,7 +425,10 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             ))}
           </div>
           <p style={pathStyle}>
-            Validacoes: <code>{getMemberBenefitValidationsCollectionPath({ organizationId })}</code>
+            Validacoes:{" "}
+            <code>
+              {getMemberBenefitValidationsCollectionPath({ organizationId })}
+            </code>
           </p>
         </article>
 
@@ -393,17 +440,24 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
               {groupAttendance.length} presenca(s)
             </p>
             <p style={pathStyle}>
-              Collection: <code>{getGroupsCollectionPath({ organizationId })}</code>
+              Collection:{" "}
+              <code>{getGroupsCollectionPath({ organizationId })}</code>
             </p>
             <div style={stackStyle}>
               {groups.map((group) => (
                 <div key={group.id} style={itemStyle}>
                   <strong>{group.name}</strong>
                   <p style={itemTextStyle}>
-                    {getGroupTypeLabel(group.type)} · {group.meetingTime ?? "sem horario"}
+                    {getGroupTypeLabel(group.type)} ·{" "}
+                    {group.meetingTime ?? "sem horario"}
                   </p>
                   <p style={miniPathStyle}>
-                    <code>{getGroupMeetingsCollectionPath({ organizationId }, group.id)}</code>
+                    <code>
+                      {getGroupMeetingsCollectionPath(
+                        { organizationId },
+                        group.id,
+                      )}
+                    </code>
                   </p>
                 </div>
               ))}
@@ -418,7 +472,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
                       {getGroupAttendanceCollectionPath(
                         { organizationId },
                         attendance.groupId,
-                        attendance.groupMeetingId
+                        attendance.groupMeetingId,
                       )}
                     </code>
                   </p>
@@ -432,11 +486,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
           <article style={cardStyle}>
             <strong>Eventos e inscricoes</strong>
             <p style={metaStyle}>
-              {events.length} evento(s), {eventRegistrations.length} inscricao(oes) e{" "}
-              {eventCheckIns.length} check-in(s)
+              {events.length} evento(s), {eventRegistrations.length}{" "}
+              inscricao(oes) e {eventCheckIns.length} check-in(s)
             </p>
             <p style={pathStyle}>
-              Collection: <code>{getEventsCollectionPath({ organizationId })}</code>
+              Collection:{" "}
+              <code>{getEventsCollectionPath({ organizationId })}</code>
             </p>
             <div style={stackStyle}>
               {events.map((event) => (
@@ -446,7 +501,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
                     {getEventTypeLabel(event.type)} · {event.locationType}
                   </p>
                   <p style={miniPathStyle}>
-                    <code>{getEventRegistrationsCollectionPath({ organizationId }, event.id)}</code>
+                    <code>
+                      {getEventRegistrationsCollectionPath(
+                        { organizationId },
+                        event.id,
+                      )}
+                    </code>
                   </p>
                 </div>
               ))}
@@ -464,7 +524,12 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
                   <strong>{checkIn.personId}</strong>
                   <p style={itemTextStyle}>Check-in registrado</p>
                   <p style={miniPathStyle}>
-                    <code>{getEventCheckInsCollectionPath({ organizationId }, checkIn.eventId)}</code>
+                    <code>
+                      {getEventCheckInsCollectionPath(
+                        { organizationId },
+                        checkIn.eventId,
+                      )}
+                    </code>
                   </p>
                 </div>
               ))}
@@ -479,7 +544,8 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
               {financeReports.length} demonstrativo(s) publicado(s)
             </p>
             <p style={pathStyle}>
-              Collection: <code>{getFinanceReportsCollectionPath({ organizationId })}</code>
+              Collection:{" "}
+              <code>{getFinanceReportsCollectionPath({ organizationId })}</code>
             </p>
             <div style={stackStyle}>
               {financeReports.map((report) => (
@@ -504,7 +570,10 @@ function calculateAge(birthDate: string) {
   let age = today.getFullYear() - birth.getFullYear();
   const monthDelta = today.getMonth() - birth.getMonth();
 
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
+  if (
+    monthDelta < 0 ||
+    (monthDelta === 0 && today.getDate() < birth.getDate())
+  ) {
     age -= 1;
   }
 
@@ -515,7 +584,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -524,7 +593,13 @@ function formatAddress(address: Person["address"] | Family["address"]) {
     return "endereco nao informado";
   }
 
-  const formatted = [address.street, address.number, address.district, address.city, address.state]
+  const formatted = [
+    address.street,
+    address.number,
+    address.district,
+    address.city,
+    address.state,
+  ]
     .filter(Boolean)
     .join(", ");
 
@@ -585,7 +660,7 @@ const sectionStyle = {
   padding: 24,
   borderRadius: 24,
   background: "#fffdf8",
-  border: "1px solid var(--alvo-line)"
+  border: "1px solid var(--alvo-line)",
 } as const;
 
 const headerStyle = {
@@ -593,7 +668,7 @@ const headerStyle = {
   gap: 16,
   justifyContent: "space-between",
   alignItems: "center",
-  flexWrap: "wrap"
+  flexWrap: "wrap",
 } as const;
 
 const pillStyle = {
@@ -602,14 +677,14 @@ const pillStyle = {
   background: "#eef7ef",
   color: "#166534",
   fontSize: 13,
-  fontWeight: 700
+  fontWeight: 700,
 } as const;
 
 const gridStyle = {
   marginTop: 20,
   display: "grid",
   gap: 16,
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))"
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
 } as const;
 
 const runtimeStyle = {
@@ -618,7 +693,7 @@ const runtimeStyle = {
   gap: 12,
   flexWrap: "wrap",
   fontSize: 14,
-  lineHeight: 1.6
+  lineHeight: 1.6,
 } as const;
 
 const cardStyle = {
@@ -626,48 +701,48 @@ const cardStyle = {
   padding: 24,
   borderRadius: 24,
   background: "rgba(255, 253, 248, 0.96)",
-  border: "1px solid var(--alvo-line)"
+  border: "1px solid var(--alvo-line)",
 } as const;
 
 const stackStyle = {
   display: "grid",
   gap: 10,
-  marginTop: 16
+  marginTop: 16,
 } as const;
 
 const itemStyle = {
   padding: 14,
   borderRadius: 16,
   background: "#f7f0e3",
-  minWidth: 0
+  minWidth: 0,
 } as const;
 
 const metaStyle = {
   margin: "10px 0 14px",
-  lineHeight: 1.6
+  lineHeight: 1.6,
 } as const;
 
 const pathStyle = {
   margin: 0,
   fontSize: 13,
   lineHeight: 1.7,
-  overflowWrap: "anywhere" as const
+  overflowWrap: "anywhere" as const,
 } as const;
 
 const miniPathStyle = {
   margin: "6px 0 0",
   fontSize: 12,
   lineHeight: 1.6,
-  overflowWrap: "anywhere" as const
+  overflowWrap: "anywhere" as const,
 } as const;
 
 const itemTextStyle = {
   margin: "6px 0 0",
-  fontSize: 14
+  fontSize: 14,
 } as const;
 
 const errorStyle = {
   margin: "14px 0 0",
   color: "#b42318",
-  lineHeight: 1.6
+  lineHeight: 1.6,
 } as const;

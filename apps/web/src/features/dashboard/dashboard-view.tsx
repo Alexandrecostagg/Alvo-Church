@@ -29,9 +29,15 @@ import {
   Trophy,
   UserPlus,
   UsersRound,
-  Waypoints
+  Waypoints,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import {
   calculateTribeQuestionnaireResult,
   canManagePeople,
@@ -54,7 +60,7 @@ import {
   getVisitorStageLabel,
   isModuleEnabled,
   shouldRecommendTribeReview,
-  tribeQuestionnaireV1
+  tribeQuestionnaireV1,
 } from "@alvo/domain";
 import { BrandLogo } from "../../../app/brand-logo";
 import { useAppAuth } from "../../../app/providers";
@@ -72,7 +78,7 @@ import {
   fetchVisitorJourneys,
   isFirebaseWebRuntimeConfigured,
   publishFinancialTransparencyReport,
-  updateFollowUpTaskStatus
+  updateFollowUpTaskStatus,
 } from "@alvo/firebase";
 import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
 import type {
@@ -85,11 +91,53 @@ import type {
   VisitorIntake,
   VisitorJourney,
   FinancialTransparencyReport,
-  EventCheckIn
+  EventCheckIn,
 } from "@alvo/types";
 
-import { organization, tenantSettings, currentUser, recentPeople, families, activeJourneys, followUps, activeGroups, upcomingMeetings, latestAttendance, publishedEvents, latestRegistrations, latestEventCheckIns, journeyProfiles, activeMissions, earnedBadges, tribeDefinitions, latestTribeAssessments, currentTribeProfiles, reviewRequests, behaviorSignals, tribeAnswerPreview, dashboard, questionnaireResult, personNames, familyPanorama, neighborhoodDistribution, familyInsightMetrics, memberPassPreview, weeklyMomentum, navItems, kpis, moduleHighlights, operationalShortcuts, visitorIntakeRecords, transparencySummary, transparencyEntries, partnerOrganizations, partnerBenefits, memberBenefitValidations, partnerBenefitPreview, actionFeed } from "../../lib/mock-data";
-
+import {
+  organization,
+  tenantSettings,
+  currentUser,
+  recentPeople,
+  families,
+  activeJourneys,
+  followUps,
+  activeGroups,
+  upcomingMeetings,
+  latestAttendance,
+  publishedEvents,
+  latestRegistrations,
+  latestEventCheckIns,
+  journeyProfiles,
+  activeMissions,
+  earnedBadges,
+  tribeDefinitions,
+  latestTribeAssessments,
+  currentTribeProfiles,
+  reviewRequests,
+  behaviorSignals,
+  tribeAnswerPreview,
+  dashboard,
+  questionnaireResult,
+  personNames,
+  familyPanorama,
+  neighborhoodDistribution,
+  familyInsightMetrics,
+  memberPassPreview,
+  weeklyMomentum,
+  navItems,
+  kpis,
+  moduleHighlights,
+  operationalShortcuts,
+  visitorIntakeRecords,
+  transparencySummary,
+  transparencyEntries,
+  partnerOrganizations,
+  partnerBenefits,
+  memberBenefitValidations,
+  partnerBenefitPreview,
+  actionFeed,
+} from "../../lib/mock-data";
 
 export function DashboardView() {
   const { configured, user, organizationId, firebaseConfig } = useAppAuth();
@@ -99,18 +147,24 @@ export function DashboardView() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [capturedVisitors, setCapturedVisitors] = useState<any[]>([...visitorIntakeRecords]);
+  const [capturedVisitors, setCapturedVisitors] = useState<any[]>([
+    ...visitorIntakeRecords,
+  ]);
   const [visitorDraft, setVisitorDraft] = useState({
     name: "",
     phone: "",
-    source: "WhatsApp"
+    source: "WhatsApp",
   });
-  const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<string[]>([]);
+  const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<
+    string[]
+  >([]);
   const [greetedVisitorIds, setGreetedVisitorIds] = useState<string[]>([]);
   const [receptionStatus, setReceptionStatus] = useState<string | null>(null);
-  const [publishedTransparencyMonth, setPublishedTransparencyMonth] = useState<string | null>(null);
+  const [publishedTransparencyMonth, setPublishedTransparencyMonth] = useState<
+    string | null
+  >(null);
   const [transparencyStatus, setTransparencyStatus] = useState<string | null>(
-    transparencySummary.publicationStatus
+    transparencySummary.publicationStatus,
   );
 
   const [realPeople, setRealPeople] = useState<Person[]>([]);
@@ -121,11 +175,19 @@ export function DashboardView() {
   const [realTasks, setRealTasks] = useState<FollowUpTask[]>([]);
   const [realIntakes, setRealIntakes] = useState<VisitorIntake[]>([]);
   const [realCheckIns, setRealCheckIns] = useState<EventCheckIn[]>([]);
-  const [realReports, setRealReports] = useState<FinancialTransparencyReport[]>([]);
-  const [syncMessage, setSyncMessage] = useState("Iniciando conexao pastoral...");
+  const [realReports, setRealReports] = useState<FinancialTransparencyReport[]>(
+    [],
+  );
+  const [syncMessage, setSyncMessage] = useState(
+    "Iniciando conexao pastoral...",
+  );
 
   useEffect(() => {
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setSyncMessage("Conecte-se para carregar dados reais.");
       return;
     }
@@ -135,7 +197,16 @@ export function DashboardView() {
     async function syncDashboard() {
       setSyncMessage("Sincronizando pulso da igreja...");
       try {
-        const [nextPeople, nextFamilies, nextGroups, nextEvents, nextJourneys, nextTasks, nextIntakes, nextReports] = await Promise.all([
+        const [
+          nextPeople,
+          nextFamilies,
+          nextGroups,
+          nextEvents,
+          nextJourneys,
+          nextTasks,
+          nextIntakes,
+          nextReports,
+        ] = await Promise.all([
           cachedFetchPeople(firebaseConfig, { organizationId }, 100),
           fetchFamilies(firebaseConfig, { organizationId }, 50),
           cachedFetchGroups(firebaseConfig, { organizationId }, 20),
@@ -143,7 +214,11 @@ export function DashboardView() {
           fetchVisitorJourneys(firebaseConfig, { organizationId }, 50),
           fetchFollowUpTasks(firebaseConfig, { organizationId }, 100),
           fetchVisitorIntakes(firebaseConfig, { organizationId }, 50),
-          fetchFinancialTransparencyReports(firebaseConfig, { organizationId }, 12)
+          fetchFinancialTransparencyReports(
+            firebaseConfig,
+            { organizationId },
+            12,
+          ),
         ]);
 
         if (cancelled) return;
@@ -157,10 +232,17 @@ export function DashboardView() {
         setRealIntakes(nextIntakes);
         setRealReports(nextReports);
         setCapturedVisitors(nextIntakes);
-        setSyncMessage(`Painel atualizado: ${nextPeople.length} pessoas e ${nextGroups.length} grupos.`);
+        setSyncMessage(
+          `Painel atualizado: ${nextPeople.length} pessoas e ${nextGroups.length} grupos.`,
+        );
 
         // Check-ins de eventos/cultos (presença real) — busca depois dos eventos.
-        const nextCheckIns = await fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents, 50).catch(() => []);
+        const nextCheckIns = await fetchEventCheckIns(
+          firebaseConfig,
+          { organizationId },
+          nextEvents,
+          50,
+        ).catch(() => []);
         if (!cancelled) setRealCheckIns(nextCheckIns);
       } catch (error) {
         if (!cancelled) {
@@ -170,14 +252,24 @@ export function DashboardView() {
     }
 
     void syncDashboard();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [configured, firebaseConfig, organizationId, user]);
 
   // "Semana da igreja" REAL: atividade por dia da semana (entradas de visitantes
   // + check-ins de eventos/cultos), agregando os registros reais buscados.
   const weeklyMomentumReal = useMemo(() => {
     const labels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-    const full = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+    const full = [
+      "domingo",
+      "segunda-feira",
+      "terça-feira",
+      "quarta-feira",
+      "quinta-feira",
+      "sexta-feira",
+      "sábado",
+    ];
     const counts = [0, 0, 0, 0, 0, 0, 0];
     const bump = (iso?: string) => {
       if (!iso) return;
@@ -190,121 +282,160 @@ export function DashboardView() {
     const max = Math.max(1, ...counts);
     const peakIndex = counts.indexOf(Math.max(...counts));
     return {
-      bars: labels.map((label, i) => ({ label, value: Math.round((counts[i] / max) * 100) })),
+      bars: labels.map((label, i) => ({
+        label,
+        value: Math.round((counts[i] / max) * 100),
+      })),
       total,
       peakLabel: full[peakIndex],
     };
   }, [realIntakes, realCheckIns]);
   const strongestSignal = getStrongestBehaviorSignal(
     dashboard.behaviorSignals,
-    dashboard.reviewRequests[0]?.personId ?? ""
+    dashboard.reviewRequests[0]?.personId ?? "",
   );
   const averageJourneyProgress = Math.round(
-    dashboard.journeyProfiles.reduce((sum, profile) => sum + profile.progressPercent, 0) /
-      Math.max(dashboard.journeyProfiles.length, 1)
+    dashboard.journeyProfiles.reduce(
+      (sum, profile) => sum + profile.progressPercent,
+      0,
+    ) / Math.max(dashboard.journeyProfiles.length, 1),
   );
   const openActionFeed = [
     ...actionFeed.filter((item) => !completedActionIds.includes(item.id)),
     ...(realTasks
-      .filter((task) => task.status === "open" && !completedActionIds.includes(task.id))
+      .filter(
+        (task) =>
+          task.status === "open" && !completedActionIds.includes(task.id),
+      )
       .map((task) => ({
         id: task.id,
         title: task.title,
         eyebrow: getFollowUpStatusLabel(task.status),
-        detail: (realPeople.length > 0 ? realPeople : recentPeople).find((p) => p.id === task.personId)?.firstName || "Pessoa",
+        detail:
+          (realPeople.length > 0 ? realPeople : recentPeople).find(
+            (p) => p.id === task.personId,
+          )?.firstName || "Pessoa",
         icon: CheckCircle2,
-        href: "/journeys"
-      })) as any[])
-  ].filter((item, index, self) => self.findIndex((t) => t.id === item.id) === index);
-  const peopleSource = (realPeople.length > 0 ? realPeople : recentPeople) as Person[];
+        href: "/journeys",
+      })) as any[]),
+  ].filter(
+    (item, index, self) => self.findIndex((t) => t.id === item.id) === index,
+  );
+  const peopleSource = (
+    realPeople.length > 0 ? realPeople : recentPeople
+  ) as Person[];
   const familiesSource = realFamilies.length > 0 ? realFamilies : families;
-  const groupsSource = (realGroups.length > 0 ? realGroups : activeGroups) as Group[];
-  const eventsSource = (realEvents.length > 0 ? realEvents : publishedEvents) as Event[];
-  const journeysSource = (realJourneys.length > 0 ? realJourneys : activeJourneys) as VisitorJourney[];
-  const tasksSource = (realTasks.length > 0 ? realTasks : followUps) as FollowUpTask[];
-  const openTasksSource = tasksSource.filter((task) => task.status !== "completed");
+  const groupsSource = (
+    realGroups.length > 0 ? realGroups : activeGroups
+  ) as Group[];
+  const eventsSource = (
+    realEvents.length > 0 ? realEvents : publishedEvents
+  ) as Event[];
+  const journeysSource = (
+    realJourneys.length > 0 ? realJourneys : activeJourneys
+  ) as VisitorJourney[];
+  const tasksSource = (
+    realTasks.length > 0 ? realTasks : followUps
+  ) as FollowUpTask[];
+  const openTasksSource = tasksSource.filter(
+    (task) => task.status !== "completed",
+  );
 
   const journeyBottlenecks = [
     {
       label: "Visitantes sem contato",
-      value: capturedVisitors.filter((visitor) => !preparedCommunicationIds.includes(visitor.id)).length,
+      value: capturedVisitors.filter(
+        (visitor) => !preparedCommunicationIds.includes(visitor.id),
+      ).length,
       detail: "precisam de boas-vindas ou primeiro contato",
-      href: "/journeys"
+      href: "/journeys",
     },
     {
       label: "Aspirantes sem familia",
       value: peopleSource.filter(
-        (person) => ["visitor", "congregant", "new_believer"].includes(person.memberStatus) && !person.primaryFamilyId
+        (person) =>
+          ["visitor", "congregant", "new_believer"].includes(
+            person.memberStatus,
+          ) && !person.primaryFamilyId,
       ).length,
       detail: "ainda nao viraram panorama familiar",
-      href: "/members"
+      href: "/members",
     },
     {
       label: "Membros sem celula",
       value: peopleSource.filter(
         (person) =>
           ["member", "leader", "volunteer"].includes(person.memberStatus) &&
-          !latestAttendance.some((attendance) => attendance.personId === person.id)
+          !latestAttendance.some(
+            (attendance) => attendance.personId === person.id,
+          ),
       ).length,
       detail: "membros ativos sem presenca recente em grupo",
-      href: "/journeys"
+      href: "/journeys",
     },
     {
       label: "Prontos para decisao",
-      value: dashboard.journeyProfiles.filter((profile) => profile.readinessLevel === "high").length,
+      value: dashboard.journeyProfiles.filter(
+        (profile) => profile.readinessLevel === "high",
+      ).length,
       detail: "jornadas pedindo proxima decisao pastoral",
-      href: "/journeys"
-    }
+      href: "/journeys",
+    },
   ];
-  const selectedPerson = peopleSource.find((person) => person.id === selectedPersonId);
+  const selectedPerson = peopleSource.find(
+    (person) => person.id === selectedPersonId,
+  );
   const selectedJourneyProfile = dashboard.journeyProfiles.find(
-    (profile) => profile.personId === selectedPersonId
+    (profile) => profile.personId === selectedPersonId,
   );
   const selectedTribeProfile = dashboard.currentTribeProfiles.find(
-    (profile) => profile.personId === selectedPersonId
+    (profile) => profile.personId === selectedPersonId,
   );
   const selectedFollowUps = tasksSource.filter(
-    (task) => task.personId === selectedPersonId
+    (task) => task.personId === selectedPersonId,
   );
   const selectedFamilySnapshot = selectedPerson?.primaryFamilyId
-    ? familyPanorama.find((familySnapshot) => familySnapshot.family.id === selectedPerson.primaryFamilyId)
+    ? familyPanorama.find(
+        (familySnapshot) =>
+          familySnapshot.family.id === selectedPerson.primaryFamilyId,
+      )
     : null;
 
   const dynamicKpis = [
     {
       label: "Pessoas",
       value: peopleSource.length,
-      detail: `${peopleSource.filter(p => p.memberStatus === 'member').length} membros ativos`,
+      detail: `${peopleSource.filter((p) => p.memberStatus === "member").length} membros ativos`,
       icon: UsersRound,
-      tone: "blue"
+      tone: "blue",
     },
     {
       label: "Grupos",
       value: groupsSource.length,
       detail: "celulas mapeadas",
       icon: Waypoints,
-      tone: "green"
+      tone: "green",
     },
     {
       label: "Cuidado",
-      value: tasksSource.filter(t => t.status === "open").length,
+      value: tasksSource.filter((t) => t.status === "open").length,
       detail: "tarefas pendentes",
       icon: HeartHandshake,
-      tone: "orange"
+      tone: "orange",
     },
     {
       label: "Jornadas",
       value: journeysSource.length,
       detail: "visitantes no funil",
       icon: MapIcon,
-      tone: "purple"
-    }
+      tone: "purple",
+    },
   ];
   const pendingCommunicationVisitors = capturedVisitors.filter(
-    (visitor) => !preparedCommunicationIds.includes(visitor.id)
+    (visitor) => !preparedCommunicationIds.includes(visitor.id),
   );
   const celebrationGreetingVisitors = capturedVisitors.filter(
-    (visitor) => !greetedVisitorIds.includes(visitor.id)
+    (visitor) => !greetedVisitorIds.includes(visitor.id),
   );
   const searchResults = useMemo(() => {
     const normalizedQuery = normalizeSearch(query);
@@ -317,50 +448,62 @@ export function DashboardView() {
       ...peopleSource
         .filter((person) =>
           normalizeSearch(
-            `${person.preferredName || person.firstName} ${person.lastName}`
-          ).includes(normalizedQuery)
+            `${person.preferredName || person.firstName} ${person.lastName}`,
+          ).includes(normalizedQuery),
         )
         .map((person) => ({
           id: person.id,
           type: "Pessoa",
           title: `${person.preferredName || person.firstName} ${person.lastName}`,
           detail: person.email,
-          href: `/members/${person.id}`
+          href: `/members/${person.id}`,
         })),
       ...capturedVisitors.map((visitor) => ({
         id: visitor.id,
         type: "Visitante",
         title: visitor.name,
         detail: `${visitor.source} - ${visitor.nextStep}`,
-        href: "/reception"
+        href: "/reception",
       })),
       ...groupsSource.map((group) => ({
         id: group.id,
         type: "Celula",
         title: group.name,
         detail: `${getGroupTypeLabel(group.type)} · ${group.meetingTime}`,
-        href: "/groups"
+        href: "/groups",
       })),
       ...eventsSource.map((event) => ({
         id: event.id,
         type: "Evento",
         title: event.name,
         detail: `${getEventTypeLabel(event.type)} · ${event.capacity} vagas`,
-        href: "/events"
+        href: "/events",
       })),
       ...openActionFeed.map((action) => ({
         id: action.id,
         type: "Acao",
         title: action.title,
         detail: `${action.eyebrow} · ${action.detail}`,
-        href: action.href
-      }))
+        href: action.href,
+      })),
     ].filter((item) =>
-      normalizeSearch(`${item.type} ${item.title} ${item.detail}`).includes(normalizedQuery)
+      normalizeSearch(`${item.type} ${item.title} ${item.detail}`).includes(
+        normalizedQuery,
+      ),
     );
-  }, [query, completedActionIds, openActionFeed, capturedVisitors, eventsSource, groupsSource, peopleSource]);
+  }, [
+    query,
+    completedActionIds,
+    openActionFeed,
+    capturedVisitors,
+    eventsSource,
+    groupsSource,
+    peopleSource,
+  ]);
   const primaryAction = openActionFeed[0] ?? null;
-  const primaryActionCompleted = primaryAction ? completedActionIds.includes(primaryAction.id) : false;
+  const primaryActionCompleted = primaryAction
+    ? completedActionIds.includes(primaryAction.id)
+    : false;
   const dynamicOperationalShortcuts = operationalShortcuts.map((shortcut) => {
     switch (shortcut.href) {
       case "/reception":
@@ -368,7 +511,10 @@ export function DashboardView() {
       case "/members":
         return { ...shortcut, meta: `${peopleSource.length} pessoa(s)` };
       case "/journeys":
-        return { ...shortcut, meta: `${openTasksSource.length} tarefa(s) abertas` };
+        return {
+          ...shortcut,
+          meta: `${openTasksSource.length} tarefa(s) abertas`,
+        };
       case "/groups":
         return { ...shortcut, meta: `${groupsSource.length} grupo(s)` };
       default:
@@ -381,79 +527,88 @@ export function DashboardView() {
       title: "Resumo pessoal e proximos passos",
       detail: `${openTasksSource.length} tarefa(s) de cuidado alimentam a fila mobile quando vinculadas ao usuario.`,
       href: "/journeys",
-      status: openTasksSource.length > 0 ? "Fonte ativa" : "Aguardando tarefas"
+      status: openTasksSource.length > 0 ? "Fonte ativa" : "Aguardando tarefas",
     },
     {
       label: "Agenda",
       title: "Eventos e celulas",
       detail: `${eventsSource.length} evento(s) e ${groupsSource.length} grupo(s) devem aparecer no celular conforme permissao.`,
       href: "/events",
-      status: eventsSource.length || groupsSource.length ? "Fonte ativa" : "Sem agenda"
+      status:
+        eventsSource.length || groupsSource.length
+          ? "Fonte ativa"
+          : "Sem agenda",
     },
     {
       label: "Jornada",
       title: "Missões, badges e integração",
       detail: `${journeysSource.length} jornada(s) de visitante hoje; proximo passo e ligar perfis gamificados do app.`,
       href: "/journeys",
-      status: journeysSource.length ? "Parcial" : "A estruturar"
+      status: journeysSource.length ? "Parcial" : "A estruturar",
     },
     {
       label: "Perfil",
       title: "Ficha, família, LGPD e Esdras Passe",
       detail: `${peopleSource.length} pessoa(s) e ${familiesSource.length} familia(s) formam a base segura do app.`,
       href: "/members",
-      status: peopleSource.length ? "Fonte ativa" : "Sem pessoas"
-    }
+      status: peopleSource.length ? "Fonte ativa" : "Sem pessoas",
+    },
   ];
   const careWorkflowSteps = [
     {
       label: "Capturar",
       title: "Recepção registra a pessoa",
-      description: "O visitante entra uma vez e ja nasce como pessoa, jornada e tarefa de cuidado.",
+      description:
+        "O visitante entra uma vez e ja nasce como pessoa, jornada e tarefa de cuidado.",
       href: "/reception",
       icon: ClipboardList,
-      metric: `${capturedVisitors.length} visitantes na fila`
+      metric: `${capturedVisitors.length} visitantes na fila`,
     },
     {
       label: "Entender",
       title: "Cadastro vira panorama familiar",
-      description: "Dados sensiveis ficam protegidos, mas lideres enxergam familia, bairro e contexto.",
+      description:
+        "Dados sensiveis ficam protegidos, mas lideres enxergam familia, bairro e contexto.",
       href: "#families",
       icon: UsersRound,
-      metric: `${familiesSource.length} familias mapeadas`
+      metric: `${familiesSource.length} familias mapeadas`,
     },
     {
       label: "Cuidar",
       title: "Jornada sugere o proximo passo",
-      description: "Follow-ups, missoes e sinais pastorais deixam claro quem precisa de atencao.",
+      description:
+        "Follow-ups, missoes e sinais pastorais deixam claro quem precisa de atencao.",
       href: "/journeys",
       icon: MapIcon,
-      metric: `${openActionFeed.length} acoes abertas`
+      metric: `${openActionFeed.length} acoes abertas`,
     },
     {
       label: "Integrar",
       title: "Grupos e eventos fecham o ciclo",
-      description: "Convites, presencas e check-ins mostram se a pessoa saiu da visita para comunidade.",
+      description:
+        "Convites, presencas e check-ins mostram se a pessoa saiu da visita para comunidade.",
       href: "/groups",
       icon: Waypoints,
-      metric: `${latestAttendance.length} presencas recentes`
+      metric: `${latestAttendance.length} presencas recentes`,
     },
     {
       label: "Fortalecer",
       title: "Servico, Esdras Passe e comunicacao ampliam valor",
-      description: "Membro serve com escala clara, se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
+      description:
+        "Membro serve com escala clara, se identifica fora da igreja e a equipe mantem contato sem expor dados privados.",
       href: "/serving",
       icon: Handshake,
-      metric: `${tenantSettings.features.modules.volunteers.enabled ? "Escalas ativas" : partnerBenefits.length + " beneficios"}`
+      metric: `${tenantSettings.features.modules.volunteers.enabled ? "Escalas ativas" : partnerBenefits.length + " beneficios"}`,
     },
     {
       label: "Prestar contas",
       title: "Gestao publica o essencial",
-      description: "Demonstrativos conectam confianca, arrecadacao e destino dos recursos.",
+      description:
+        "Demonstrativos conectam confianca, arrecadacao e destino dos recursos.",
       href: "#transparency",
       icon: ReceiptText,
-      metric: transparencySummary.month
-    }
+      metric: transparencySummary.month,
+    },
   ];
   const memberLifecycleStages = [
     {
@@ -470,8 +625,8 @@ export function DashboardView() {
       nextActions: [
         "Cumprimentar durante a celebracao",
         "Enviar mensagem de boas-vindas",
-        "Identificar quem convidou"
-      ]
+        "Identificar quem convidou",
+      ],
     },
     {
       label: "02",
@@ -487,8 +642,8 @@ export function DashboardView() {
       nextActions: [
         "Confirmar primeira visita",
         "Convidar para retorno",
-        "Encaminhar para classe ou celula"
-      ]
+        "Encaminhar para classe ou celula",
+      ],
     },
     {
       label: "03",
@@ -504,8 +659,8 @@ export function DashboardView() {
       nextActions: [
         "Coletar LGPD",
         "Vincular grupo familiar",
-        "Classificar status pastoral"
-      ]
+        "Classificar status pastoral",
+      ],
     },
     {
       label: "04",
@@ -521,8 +676,8 @@ export function DashboardView() {
       nextActions: [
         "Validar dados sensiveis",
         "Ativar Esdras Passe se fizer sentido",
-        "Definir lider de acompanhamento"
-      ]
+        "Definir lider de acompanhamento",
+      ],
     },
     {
       label: "05",
@@ -538,8 +693,8 @@ export function DashboardView() {
       nextActions: [
         "Convidar para grupo adequado",
         "Registrar presenca",
-        "Sinalizar cuidado pastoral"
-      ]
+        "Sinalizar cuidado pastoral",
+      ],
     },
     {
       label: "06",
@@ -555,9 +710,9 @@ export function DashboardView() {
       nextActions: [
         "Participar de eventos",
         "Servir em ministerios",
-        "Acompanhar prestacao de contas"
-      ]
-    }
+        "Acompanhar prestacao de contas",
+      ],
+    },
   ];
 
   function openPersonProfile(personId: string) {
@@ -587,19 +742,25 @@ export function DashboardView() {
       greeting: "Incluir nos cumprimentos da celebracao",
       communicationChannel: "WhatsApp",
       communicationStatus: "Pendente",
-      presentationStatus: "Na lista"
+      presentationStatus: "Na lista",
     };
 
     setCapturedVisitors((currentVisitors) => [
       localVisitor,
-      ...currentVisitors
+      ...currentVisitors,
     ]);
     setVisitorDraft({ name: "", phone: "", source: "WhatsApp" });
-    setReceptionStatus("Visitante capturado localmente. Preparando jornada e comunicacao.");
+    setReceptionStatus(
+      "Visitante capturado localmente. Preparando jornada e comunicacao.",
+    );
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setReceptionStatus(
-        "Visitante capturado localmente. Conecte o Firebase para criar pessoa, jornada e follow-ups."
+        "Visitante capturado localmente. Conecte o Firebase para criar pessoa, jornada e follow-ups.",
       );
       return;
     }
@@ -612,27 +773,34 @@ export function DashboardView() {
           capturedByUserId: user.uid,
           name,
           phone,
-          source: localVisitor.source
-        }
+          source: localVisitor.source,
+        },
       );
-      setReceptionStatus("Visitante salvo no Firestore com jornada e follow-ups criados.");
+      setReceptionStatus(
+        "Visitante salvo no Firestore com jornada e follow-ups criados.",
+      );
     } catch (error) {
       setReceptionStatus(
-        friendlyError(error, "Nao foi possivel salvar o visitante no Firestore.")
+        friendlyError(
+          error,
+          "Nao foi possivel salvar o visitante no Firestore.",
+        ),
       );
     }
   }
 
   function handlePrepareVisitorCommunication(visitorId: string) {
     setPreparedCommunicationIds((currentIds) =>
-      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
+      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId],
     );
-    setReceptionStatus("Mensagem preparada para a equipe de acolhimento revisar.");
+    setReceptionStatus(
+      "Mensagem preparada para a equipe de acolhimento revisar.",
+    );
   }
 
   function handleMarkGreetingComplete(visitorId: string) {
     setGreetedVisitorIds((currentIds) =>
-      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
+      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId],
     );
     setReceptionStatus("Cumprimento marcado como realizado na celebracao.");
   }
@@ -640,9 +808,13 @@ export function DashboardView() {
   async function handlePublishTransparencyReport() {
     setPublishedTransparencyMonth(transparencySummary.month);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setTransparencyStatus(
-        `Demonstrativo de ${transparencySummary.month} marcado localmente. Conecte o Firebase para publicar.`
+        `Demonstrativo de ${transparencySummary.month} marcado localmente. Conecte o Firebase para publicar.`,
       );
       return;
     }
@@ -653,30 +825,37 @@ export function DashboardView() {
         { organizationId },
         {
           balance: transparencySummary.balance,
-          entries: transparencyEntries.map(({ amount, category, label, note }) => ({
-            amount,
-            category,
-            label,
-            note
-          })),
+          entries: transparencyEntries.map(
+            ({ amount, category, label, note }) => ({
+              amount,
+              category,
+              label,
+              note,
+            }),
+          ),
           expenses: transparencySummary.expenses,
           income: transparencySummary.income,
           missions: transparencySummary.missions,
           month: transparencySummary.month,
-          publishedByUserId: user.uid
-        }
+          publishedByUserId: user.uid,
+        },
       );
-      setTransparencyStatus(`Demonstrativo de ${transparencySummary.month} publicado no Firestore.`);
+      setTransparencyStatus(
+        `Demonstrativo de ${transparencySummary.month} publicado no Firestore.`,
+      );
     } catch (error) {
       setTransparencyStatus(
-        friendlyError(error, "Nao foi possivel publicar o demonstrativo no Firestore.")
+        friendlyError(
+          error,
+          "Nao foi possivel publicar o demonstrativo no Firestore.",
+        ),
       );
     }
   }
 
   async function handleCompleteAction(actionId: string) {
     setCompletedActionIds((currentIds) =>
-      currentIds.includes(actionId) ? currentIds : [...currentIds, actionId]
+      currentIds.includes(actionId) ? currentIds : [...currentIds, actionId],
     );
     setActionSyncStatus("Acao concluida nesta sessao.");
 
@@ -684,9 +863,13 @@ export function DashboardView() {
       return;
     }
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       setActionSyncStatus(
-        "Acao concluida localmente. Conecte o Firebase para salvar no Firestore."
+        "Acao concluida localmente. Conecte o Firebase para salvar no Firestore.",
       );
       return;
     }
@@ -698,29 +881,38 @@ export function DashboardView() {
         {
           taskId: actionId,
           status: "completed",
-          completedByUserId: user.uid
-        }
+          completedByUserId: user.uid,
+        },
       );
       setActionSyncStatus("Follow-up salvo no Firestore.");
     } catch (error) {
-      setCompletedActionIds((currentIds) => currentIds.filter((id) => id !== actionId));
+      setCompletedActionIds((currentIds) =>
+        currentIds.filter((id) => id !== actionId),
+      );
       setActionSyncStatus(
-        friendlyError(error, "Nao foi possivel salvar o follow-up no Firestore.")
+        friendlyError(
+          error,
+          "Nao foi possivel salvar o follow-up no Firestore.",
+        ),
       );
     }
   }
 
   return (
     <>
-
       <section className="app-workspace animate-entrance" id="overview">
         <header className="dashboard-header-premium">
           <div className="header-main">
             <div className="welcome-section">
               <p className="eyebrow">Painel Operacional</p>
-              <h1>Bom dia, {user?.displayName || 'Pastor(a)'}.</h1>
+              <h1>Bom dia, {user?.displayName || "Pastor(a)"}.</h1>
               <div className="sync-status">
-                <Activity size={14} className={syncMessage.includes('Erro') ? 'text-red' : 'text-green'} />
+                <Activity
+                  size={14}
+                  className={
+                    syncMessage.includes("Erro") ? "text-red" : "text-green"
+                  }
+                />
                 <span>{syncMessage}</span>
               </div>
             </div>
@@ -737,8 +929,12 @@ export function DashboardView() {
                 {query && (
                   <div className="search-overlay-dropdown antigravity-float">
                     {searchResults.length > 0 ? (
-                      searchResults.slice(0, 8).map(result => (
-                        <Link key={`${result.type}-${result.id}`} href={result.href} className="search-result-row">
+                      searchResults.slice(0, 8).map((result) => (
+                        <Link
+                          key={`${result.type}-${result.id}`}
+                          href={result.href}
+                          className="search-result-row"
+                        >
                           <span className="type-tag">{result.type}</span>
                           <div className="result-info">
                             <strong>{result.title}</strong>
@@ -748,20 +944,24 @@ export function DashboardView() {
                         </Link>
                       ))
                     ) : (
-                      <div className="no-results">Nenhum resultado para "{query}"</div>
+                      <div className="no-results">
+                        Nenhum resultado para "{query}"
+                      </div>
                     )}
                   </div>
                 )}
               </div>
-              
+
               <div className="quick-access-tools">
-                <button 
-                  className="tool-button" 
+                <button
+                  className="tool-button"
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                   data-active={notificationsOpen}
                 >
                   <Bell size={20} />
-                  {dashboard.reviewRequests.length > 0 && <span className="urgent-indicator" />}
+                  {dashboard.reviewRequests.length > 0 && (
+                    <span className="urgent-indicator" />
+                  )}
                 </button>
                 <Link href="/members/new" className="action-button primary">
                   <UserPlus size={18} />
@@ -770,7 +970,7 @@ export function DashboardView() {
               </div>
             </div>
           </div>
-          
+
           {notificationsOpen && (
             <div className="notifications-dropdown-panel antigravity-float animate-entrance">
               <div className="panel-header">
@@ -778,8 +978,12 @@ export function DashboardView() {
                 <span className="soft-pill">{openActionFeed.length}</span>
               </div>
               <div className="panel-content">
-                {openActionFeed.map(item => (
-                  <Link key={item.id} href={item.href} className="notification-item">
+                {openActionFeed.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className="notification-item"
+                  >
                     <item.icon size={16} />
                     <div>
                       <strong>{item.title}</strong>
@@ -804,7 +1008,9 @@ export function DashboardView() {
           <article className="mission-board antigravity-float">
             <div className="mission-copy">
               <p className="eyebrow">Proxima melhor acao</p>
-              <h2>{primaryAction ? primaryAction.title : "Fila pastoral em dia."}</h2>
+              <h2>
+                {primaryAction ? primaryAction.title : "Fila pastoral em dia."}
+              </h2>
               <p>
                 {primaryAction
                   ? `${primaryAction.eyebrow} · ${primaryAction.detail}`
@@ -815,7 +1021,8 @@ export function DashboardView() {
                   className="primary-button"
                   disabled={!primaryAction}
                   onClick={() => {
-                    if (primaryAction) void handleCompleteAction(primaryAction.id);
+                    if (primaryAction)
+                      void handleCompleteAction(primaryAction.id);
                   }}
                 >
                   <CheckCircle2 size={18} />
@@ -839,7 +1046,10 @@ export function DashboardView() {
                 <Flame size={20} />
                 <span>7 dias de cuidado ativo</span>
               </div>
-              <div className="progress-ring" style={{ "--progress": "72%" } as CSSProperties}>
+              <div
+                className="progress-ring"
+                style={{ "--progress": "72%" } as CSSProperties}
+              >
                 <span>{averageJourneyProgress}%</span>
               </div>
               <p>Media das jornadas abertas</p>
@@ -896,7 +1106,9 @@ export function DashboardView() {
           <div className="bottleneck-strip-grid">
             {journeyBottlenecks.map((item) => (
               <Link
-                className={item.value ? "bottleneck-mini has-risk" : "bottleneck-mini"}
+                className={
+                  item.value ? "bottleneck-mini has-risk" : "bottleneck-mini"
+                }
                 href={item.href}
                 key={item.label}
               >
@@ -944,7 +1156,10 @@ export function DashboardView() {
           </div>
         </section>
 
-        <section className="workflow-panel" aria-label="Mapa da jornada operacional">
+        <section
+          className="workflow-panel"
+          aria-label="Mapa da jornada operacional"
+        >
           <div className="section-heading">
             <div>
               <p className="eyebrow">Como a Esdras conecta tudo</p>
@@ -964,7 +1179,9 @@ export function DashboardView() {
                   }
                 }}
               >
-                <span className="workflow-index">{String(index + 1).padStart(2, "0")}</span>
+                <span className="workflow-index">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <div className="workflow-icon">
                   <step.icon size={18} />
                 </div>
@@ -979,7 +1196,10 @@ export function DashboardView() {
           </div>
         </section>
 
-        <section className="lifecycle-panel" aria-label="Fluxo completo do convidado ao membro ativo">
+        <section
+          className="lifecycle-panel"
+          aria-label="Fluxo completo do convidado ao membro ativo"
+        >
           <div className="section-heading">
             <div>
               <p className="eyebrow">Jornada de vida</p>
@@ -989,7 +1209,10 @@ export function DashboardView() {
           </div>
           <div className="lifecycle-grid">
             {memberLifecycleStages.map((stage) => (
-              <article className={`lifecycle-card tone-${stage.tone}`} key={stage.label}>
+              <article
+                className={`lifecycle-card tone-${stage.tone}`}
+                key={stage.label}
+              >
                 <div className="lifecycle-card-header">
                   <span>{stage.label}</span>
                   <strong>{stage.title}</strong>
@@ -1027,7 +1250,10 @@ export function DashboardView() {
           </div>
         </section>
 
-        <section className="workflow-panel" aria-label="Contrato entre painel web e app mobile">
+        <section
+          className="workflow-panel"
+          aria-label="Contrato entre painel web e app mobile"
+        >
           <div className="section-heading">
             <div>
               <p className="eyebrow">Web + mobile</p>
@@ -1065,7 +1291,9 @@ export function DashboardView() {
                 <Link className="soft-pill" href="/members">
                   Ver base
                 </Link>
-                <span className="soft-pill">{canManagePeople(currentUser) ? "Admin" : "Leitura"}</span>
+                <span className="soft-pill">
+                  {canManagePeople(currentUser) ? "Admin" : "Leitura"}
+                </span>
               </div>
             </div>
             <div className="journey-list" id="journeys">
@@ -1080,15 +1308,20 @@ export function DashboardView() {
                   onClick={() => openPersonProfile(profile.personId)}
                   type="button"
                 >
-                  <div className="avatar">{getInitials(getPersonName(profile.personId))}</div>
+                  <div className="avatar">
+                    {getInitials(getPersonName(profile.personId))}
+                  </div>
                   <div>
                     <strong>{getPersonName(profile.personId)}</strong>
                     <p>
-                      {getJourneyKindLabel(profile.currentJourneyKind)} · prontidao{" "}
-                      {profile.readinessLevel}
+                      {getJourneyKindLabel(profile.currentJourneyKind)} ·
+                      prontidao {profile.readinessLevel}
                     </p>
                   </div>
-                  <div className="row-progress" aria-label={`${profile.progressPercent}%`}>
+                  <div
+                    className="row-progress"
+                    aria-label={`${profile.progressPercent}%`}
+                  >
                     <span style={{ width: `${profile.progressPercent}%` }} />
                   </div>
                   <b>{profile.progressPercent}%</b>
@@ -1109,25 +1342,27 @@ export function DashboardView() {
             <div className="family-metrics">
               {familyInsightMetrics.map((metric) => (
                 <div key={metric.label} className="family-metric">
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-              <p>{metric.detail}</p>
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                  <p>{metric.detail}</p>
+                </div>
+              ))}
+              <div className="family-metric">
+                <span>Parceiros ativos</span>
+                <strong>{partnerOrganizations.length}</strong>
+                <p>
+                  {partnerBenefits.length} beneficios publicados no Esdras Passe
+                </p>
+              </div>
             </div>
-          ))}
-          <div className="family-metric">
-            <span>Parceiros ativos</span>
-            <strong>{partnerOrganizations.length}</strong>
-            <p>{partnerBenefits.length} beneficios publicados no Esdras Passe</p>
-          </div>
-        </div>
 
             <div className="family-workbench">
               <div className="family-map-card">
                 <div>
                   <strong>Panorama por bairro</strong>
                   <p>
-                    Visao para lideres entenderem onde as familias estao, sem expor endereco
-                    completo em relatorios abertos.
+                    Visao para lideres entenderem onde as familias estao, sem
+                    expor endereco completo em relatorios abertos.
                   </p>
                 </div>
                 <div className="neighborhood-bars">
@@ -1135,7 +1370,9 @@ export function DashboardView() {
                     <div key={item.label}>
                       <span>{item.label}</span>
                       <div>
-                        <b style={{ width: `${Math.max(18, item.value * 28)}%` }} />
+                        <b
+                          style={{ width: `${Math.max(18, item.value * 28)}%` }}
+                        />
                       </div>
                       <strong>{item.value}</strong>
                     </div>
@@ -1149,18 +1386,21 @@ export function DashboardView() {
                     <div>
                       <strong>{familySnapshot.family.displayName}</strong>
                       <p>
-                        {familySnapshot.neighborhood} · {familySnapshot.members.length} membro(s) ·{" "}
+                        {familySnapshot.neighborhood} ·{" "}
+                        {familySnapshot.members.length} membro(s) ·{" "}
                         {getIncomeRangeLabel(familySnapshot.incomeRange)}
                       </p>
                     </div>
                     <div className="family-tags">
                       {familySnapshot.members.map((member) => (
-                        <span key={member.id}>{getPersonDisplayName(member)}</span>
+                        <span key={member.id}>
+                          {getPersonDisplayName(member)}
+                        </span>
                       ))}
                     </div>
                     <small>
-                      {familySnapshot.visitorLinks.length} visitante(s)/aspirante(s) conectados a
-                      acompanhamento.
+                      {familySnapshot.visitorLinks.length}{" "}
+                      visitante(s)/aspirante(s) conectados a acompanhamento.
                     </small>
                   </div>
                 ))}
@@ -1177,22 +1417,26 @@ export function DashboardView() {
               <span className="soft-pill">{openActionFeed.length}</span>
             </div>
             <div className="feed-list" id="actions">
-              {openActionFeed.length ? openActionFeed.map((item) => (
-                <div key={item.id} className="feed-item">
-                  <item.icon size={17} />
-                  <div>
-                    <strong>{item.title}</strong>
-                    <p>{item.eyebrow} · {item.detail}</p>
+              {openActionFeed.length ? (
+                openActionFeed.map((item) => (
+                  <div key={item.id} className="feed-item">
+                    <item.icon size={17} />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>
+                        {item.eyebrow} · {item.detail}
+                      </p>
+                    </div>
+                    <button
+                      aria-label={`Concluir ${item.title}`}
+                      className="feed-action"
+                      onClick={() => void handleCompleteAction(item.id)}
+                    >
+                      <CheckCircle2 size={16} />
+                    </button>
                   </div>
-                  <button
-                    aria-label={`Concluir ${item.title}`}
-                    className="feed-action"
-                    onClick={() => void handleCompleteAction(item.id)}
-                  >
-                    <CheckCircle2 size={16} />
-                  </button>
-                </div>
-              )) : (
+                ))
+              ) : (
                 <div className="empty-state">
                   <CheckCircle2 size={20} />
                   <strong>Fila limpa</strong>
@@ -1233,7 +1477,9 @@ export function DashboardView() {
                     <p>{module.description}</p>
                     <small>{module.action}</small>
                   </div>
-                  <span className={module.enabled ? "status-dot on" : "status-dot"} />
+                  <span
+                    className={module.enabled ? "status-dot on" : "status-dot"}
+                  />
                 </a>
               ))}
             </div>
@@ -1252,8 +1498,8 @@ export function DashboardView() {
                 <span>Validacao externa</span>
                 <strong>QR seguro</strong>
                 <p>
-                  Parceiros validam beneficio ativo sem receber CPF, renda, endereco ou historico
-                  pastoral.
+                  Parceiros validam beneficio ativo sem receber CPF, renda,
+                  endereco ou historico pastoral.
                 </p>
               </div>
               <ShieldCheck size={28} />
@@ -1262,12 +1508,16 @@ export function DashboardView() {
               {partnerBenefitPreview.map((benefit) => (
                 <div key={benefit.id}>
                   <strong>{benefit.title}</strong>
-                  <code>{benefit.partner?.name ?? "Parceiro nao vinculado"}</code>
+                  <code>
+                    {benefit.partner?.name ?? "Parceiro nao vinculado"}
+                  </code>
                   <span className="pass-status on">
-                    {getPartnerBenefitCategoryLabel(benefit.category)} · {benefit.discountLabel}
+                    {getPartnerBenefitCategoryLabel(benefit.category)} ·{" "}
+                    {benefit.discountLabel}
                   </span>
                   <p>
-                    {benefit.description} {benefit.validations.length} validacao(oes) recente(s).
+                    {benefit.description} {benefit.validations.length}{" "}
+                    validacao(oes) recente(s).
                   </p>
                   <small>{benefit.privacyNotes}</small>
                 </div>
@@ -1276,7 +1526,9 @@ export function DashboardView() {
                 <div key={pass.id}>
                   <strong>{pass.name}</strong>
                   <code>{pass.code}</code>
-                  <span className={pass.active ? "pass-status on" : "pass-status"}>
+                  <span
+                    className={pass.active ? "pass-status on" : "pass-status"}
+                  >
                     {pass.active ? "Ativo" : "Consentimento pendente"}
                   </span>
                   <p>{pass.partnerScope}</p>
@@ -1298,7 +1550,9 @@ export function DashboardView() {
                 <div key={group.id} className="ops-card">
                   <Waypoints size={18} />
                   <strong>{group.name}</strong>
-                  <p>{getGroupTypeLabel(group.type)} · {group.meetingTime}</p>
+                  <p>
+                    {getGroupTypeLabel(group.type)} · {group.meetingTime}
+                  </p>
                 </div>
               ))}
               {eventsSource.slice(0, 4).map((event) => (
@@ -1309,7 +1563,9 @@ export function DashboardView() {
                 >
                   <CalendarDays size={18} />
                   <strong>{event.name}</strong>
-                  <p>{getEventTypeLabel(event.type)} · {event.capacity} vagas</p>
+                  <p>
+                    {getEventTypeLabel(event.type)} · {event.capacity} vagas
+                  </p>
                 </div>
               ))}
             </div>
@@ -1321,7 +1577,9 @@ export function DashboardView() {
                 <p className="eyebrow">Recepção inteligente</p>
                 <h2>Entrada de visitantes</h2>
               </div>
-              <span className="soft-pill">{capturedVisitors.length} visitantes</span>
+              <span className="soft-pill">
+                {capturedVisitors.length} visitantes
+              </span>
             </div>
             <div className="reception-grid">
               <form className="visitor-form" onSubmit={handleVisitorCapture}>
@@ -1331,7 +1589,10 @@ export function DashboardView() {
                     aria-label="Nome do visitante"
                     name="visitorName"
                     onChange={(event) =>
-                      setVisitorDraft((draft) => ({ ...draft, name: event.target.value }))
+                      setVisitorDraft((draft) => ({
+                        ...draft,
+                        name: event.target.value,
+                      }))
                     }
                     placeholder="Ex: Joao Pereira"
                     value={visitorDraft.name}
@@ -1343,7 +1604,10 @@ export function DashboardView() {
                     aria-label="WhatsApp ou telefone"
                     name="visitorPhone"
                     onChange={(event) =>
-                      setVisitorDraft((draft) => ({ ...draft, phone: event.target.value }))
+                      setVisitorDraft((draft) => ({
+                        ...draft,
+                        phone: event.target.value,
+                      }))
                     }
                     placeholder="(00) 90000-0000"
                     value={visitorDraft.phone}
@@ -1355,7 +1619,10 @@ export function DashboardView() {
                     aria-label="Origem do visitante"
                     name="visitorSource"
                     onChange={(event) =>
-                      setVisitorDraft((draft) => ({ ...draft, source: event.target.value }))
+                      setVisitorDraft((draft) => ({
+                        ...draft,
+                        source: event.target.value,
+                      }))
                     }
                     value={visitorDraft.source}
                   >
@@ -1369,14 +1636,18 @@ export function DashboardView() {
                   <UserPlus size={17} />
                   Criar jornada
                 </button>
-                {receptionStatus ? <p className="form-status">{receptionStatus}</p> : null}
+                {receptionStatus ? (
+                  <p className="form-status">{receptionStatus}</p>
+                ) : null}
               </form>
 
               <div className="visitor-automation">
                 <div className="automation-card">
                   <QrCode size={20} />
                   <strong>Check-in rapido</strong>
-                  <p>Ficha simples para portaria, QR Code ou tablet na entrada.</p>
+                  <p>
+                    Ficha simples para portaria, QR Code ou tablet na entrada.
+                  </p>
                 </div>
                 <div className="automation-card">
                   <Smartphone size={20} />
@@ -1386,7 +1657,10 @@ export function DashboardView() {
                 <div className="automation-card">
                   <Megaphone size={20} />
                   <strong>Cumprimentos no culto</strong>
-                  <p>Lista segura para apresentacao e acolhimento durante a celebracao.</p>
+                  <p>
+                    Lista segura para apresentacao e acolhimento durante a
+                    celebracao.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1396,7 +1670,9 @@ export function DashboardView() {
                   <div className="avatar">{getInitials(visitor.name)}</div>
                   <div>
                     <strong>{visitor.name}</strong>
-                    <p>{visitor.source} - {visitor.nextStep}</p>
+                    <p>
+                      {visitor.source} - {visitor.nextStep}
+                    </p>
                     <small>{visitor.greeting}</small>
                   </div>
                   <span>{visitor.status}</span>
@@ -1412,17 +1688,28 @@ export function DashboardView() {
                   <span>{pendingCommunicationVisitors.length}</span>
                 </div>
                 {capturedVisitors.slice(0, 4).map((visitor) => {
-                  const prepared = preparedCommunicationIds.includes(visitor.id);
+                  const prepared = preparedCommunicationIds.includes(
+                    visitor.id,
+                  );
 
                   return (
-                    <div className="queue-item" key={`communication-${visitor.id}`}>
+                    <div
+                      className="queue-item"
+                      key={`communication-${visitor.id}`}
+                    >
                       <div>
                         <strong>{visitor.name}</strong>
-                        <p>{visitor.communicationChannel} - {visitor.nextStep}</p>
+                        <p>
+                          {visitor.communicationChannel} - {visitor.nextStep}
+                        </p>
                       </div>
                       <button
-                        className={prepared ? "queue-action is-done" : "queue-action"}
-                        onClick={() => handlePrepareVisitorCommunication(visitor.id)}
+                        className={
+                          prepared ? "queue-action is-done" : "queue-action"
+                        }
+                        onClick={() =>
+                          handlePrepareVisitorCommunication(visitor.id)
+                        }
                         type="button"
                       >
                         <CheckCircle2 size={16} />
@@ -1449,7 +1736,9 @@ export function DashboardView() {
                         <p>{visitor.greeting}</p>
                       </div>
                       <button
-                        className={greeted ? "queue-action is-done" : "queue-action"}
+                        className={
+                          greeted ? "queue-action is-done" : "queue-action"
+                        }
                         onClick={() => handleMarkGreetingComplete(visitor.id)}
                         type="button"
                       >
@@ -1529,12 +1818,17 @@ export function DashboardView() {
               <div className="tribe-score">
                 <Target size={24} />
                 <span>Tribo principal sugerida</span>
-                <strong>{getTribeDisplayLabel(questionnaireResult.primaryTribeCode)}</strong>
+                <strong>
+                  {getTribeDisplayLabel(questionnaireResult.primaryTribeCode)}
+                </strong>
                 <p>
                   Confianca {questionnaireResult.confidenceLevel}; secundaria{" "}
                   {questionnaireResult.secondaryTribeCode
-                    ? getTribeDisplayLabel(questionnaireResult.secondaryTribeCode)
-                    : "sem sugestao"}.
+                    ? getTribeDisplayLabel(
+                        questionnaireResult.secondaryTribeCode,
+                      )
+                    : "sem sugestao"}
+                  .
                 </p>
               </div>
               <div className="tribe-members">
@@ -1544,7 +1838,9 @@ export function DashboardView() {
                       <strong>{getPersonName(profile.personId)}</strong>
                       <p>
                         {profile.currentPrimaryTribeCode
-                          ? getTribeDisplayLabel(profile.currentPrimaryTribeCode)
+                          ? getTribeDisplayLabel(
+                              profile.currentPrimaryTribeCode,
+                            )
                           : "Sem tribo"}{" "}
                         · {getTribeValidationLabel(profile.validationStatus)}
                       </p>
@@ -1552,7 +1848,9 @@ export function DashboardView() {
                     <span>{profile.fitScore}</span>
                     <small>
                       {shouldRecommendTribeReview(profile)
-                        ? getRecommendedReviewTypeLabel(getRecommendedReviewType(profile))
+                        ? getRecommendedReviewTypeLabel(
+                            getRecommendedReviewType(profile),
+                          )
                         : "estavel"}
                     </small>
                   </div>
@@ -1570,13 +1868,14 @@ export function DashboardView() {
             </div>
           </article>
         </section>
-
       </section>
 
       {selectedPerson ? (
         <aside className="person-drawer" aria-label="Detalhes da pessoa">
           <div className="drawer-header">
-            <div className="avatar large">{getInitials(getPersonDisplayName(selectedPerson))}</div>
+            <div className="avatar large">
+              {getInitials(getPersonDisplayName(selectedPerson))}
+            </div>
             <div>
               <p className="eyebrow">Perfil pastoral</p>
               <h2>{getPersonDisplayName(selectedPerson)}</h2>
@@ -1601,7 +1900,9 @@ export function DashboardView() {
               <span>Tribo</span>
               <strong>
                 {selectedTribeProfile?.currentPrimaryTribeCode
-                  ? getTribeDisplayLabel(selectedTribeProfile.currentPrimaryTribeCode)
+                  ? getTribeDisplayLabel(
+                      selectedTribeProfile.currentPrimaryTribeCode,
+                    )
                   : "Sem tribo"}
               </strong>
             </div>
@@ -1609,7 +1910,9 @@ export function DashboardView() {
               <span>Jornada</span>
               <strong>
                 {selectedJourneyProfile
-                  ? getJourneyKindLabel(selectedJourneyProfile.currentJourneyKind)
+                  ? getJourneyKindLabel(
+                      selectedJourneyProfile.currentJourneyKind,
+                    )
                   : "Sem jornada"}
               </strong>
             </div>
@@ -1619,32 +1922,53 @@ export function DashboardView() {
             </div>
             <div>
               <span>Idade</span>
-              <strong>{selectedPerson.birthDate ? `${calculateAge(selectedPerson.birthDate)} anos` : "n/a"}</strong>
+              <strong>
+                {selectedPerson.birthDate
+                  ? `${calculateAge(selectedPerson.birthDate)} anos`
+                  : "n/a"}
+              </strong>
             </div>
             <div>
               <span>Familia</span>
-              <strong>{selectedFamilySnapshot?.family.displayName ?? "Sem grupo familiar"}</strong>
+              <strong>
+                {selectedFamilySnapshot?.family.displayName ??
+                  "Sem grupo familiar"}
+              </strong>
             </div>
             <div>
               <span>Bairro</span>
-              <strong>{selectedPerson.address?.district ?? selectedFamilySnapshot?.neighborhood ?? "n/a"}</strong>
+              <strong>
+                {selectedPerson.address?.district ??
+                  selectedFamilySnapshot?.neighborhood ??
+                  "n/a"}
+              </strong>
             </div>
             <div>
               <span>Faixa de renda</span>
-              <strong>{getIncomeRangeLabel(selectedPerson.householdIncomeRange ?? selectedFamilySnapshot?.incomeRange)}</strong>
+              <strong>
+                {getIncomeRangeLabel(
+                  selectedPerson.householdIncomeRange ??
+                    selectedFamilySnapshot?.incomeRange,
+                )}
+              </strong>
             </div>
           </div>
 
           <div className="drawer-section sensitive-section">
             <h3>Dados cadastrais protegidos</h3>
             <p>
-              CPF {selectedPerson.cpf ? maskCpf(selectedPerson.cpf) : "nao informado"} ·{" "}
-              {selectedPerson.occupation ?? "ocupacao nao informada"} ·{" "}
+              CPF{" "}
+              {selectedPerson.cpf
+                ? maskCpf(selectedPerson.cpf)
+                : "nao informado"}{" "}
+              · {selectedPerson.occupation ?? "ocupacao nao informada"} ·{" "}
               {getEducationLevelLabel(selectedPerson.educationLevel)}
             </p>
             <p>
               Consentimento LGPD:{" "}
-              <strong>{selectedPerson.consentLgpdAt ? "registrado" : "pendente"}</strong>
+              <strong>
+                {selectedPerson.consentLgpdAt ? "registrado" : "pendente"}
+              </strong>
             </p>
           </div>
 
@@ -1657,8 +1981,8 @@ export function DashboardView() {
                 : "aguardando consentimento"}
             </p>
             <small>
-              Parceiros devem validar apenas status do beneficio, nunca CPF, endereco, renda ou
-              historico pastoral.
+              Parceiros devem validar apenas status do beneficio, nunca CPF,
+              endereco, renda ou historico pastoral.
             </small>
           </div>
 
@@ -1669,7 +1993,11 @@ export function DashboardView() {
                 <strong>{selectedJourneyProfile.progressPercent}%</strong>
               </div>
               <div className="row-progress">
-                <span style={{ width: `${selectedJourneyProfile.progressPercent}%` }} />
+                <span
+                  style={{
+                    width: `${selectedJourneyProfile.progressPercent}%`,
+                  }}
+                />
               </div>
             </div>
           ) : null}
@@ -1696,7 +2024,9 @@ export function DashboardView() {
                 </button>
               ))
             ) : (
-              <p className="drawer-empty">Nenhum follow-up aberto para esta pessoa.</p>
+              <p className="drawer-empty">
+                Nenhum follow-up aberto para esta pessoa.
+              </p>
             )}
           </div>
         </aside>
@@ -1726,7 +2056,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -1738,9 +2068,13 @@ function normalizeSearch(value: string) {
 }
 
 function getPersonDisplayName(person: Person | (typeof recentPeople)[number]) {
-  const preferredName = "preferredName" in person ? person.preferredName : undefined;
+  const preferredName =
+    "preferredName" in person ? person.preferredName : undefined;
 
-  return preferredName ?? `${person.firstName} ${"lastName" in person ? (person as any).lastName : ""}`.trim();
+  return (
+    preferredName ??
+    `${person.firstName} ${"lastName" in person ? (person as any).lastName : ""}`.trim()
+  );
 }
 
 function calculateAge(birthDate: string) {
@@ -1749,7 +2083,8 @@ function calculateAge(birthDate: string) {
   const age = today.getFullYear() - birth.getFullYear();
   const hadBirthdayThisYear =
     today.getMonth() > birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
 
   return hadBirthdayThisYear ? age : age - 1;
 }

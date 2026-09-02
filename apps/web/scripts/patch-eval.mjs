@@ -39,7 +39,9 @@ for (const filePath of files) {
     const matches = content.match(regex) || [];
     if (matches.length > 0) {
       const idx = content.search(regex);
-      const ctx = content.slice(Math.max(0, idx - 30), idx + 80).replace(/\n/g, " ");
+      const ctx = content
+        .slice(Math.max(0, idx - 30), idx + 80)
+        .replace(/\n/g, " ");
       console.log(`  [${description}] ${matches.length} hit(s) — ...${ctx}...`);
       content = content.replace(regex, replacement);
       filePatchCount += matches.length;
@@ -50,14 +52,14 @@ for (const filePath of files) {
   patch(
     "inquire eval",
     /eval\("quire"\.replace\([^)]+\)\)\(moduleName\)/g,
-    "null"
+    "null",
   );
 
   // 2. lodash global-object: Function("return this")() → globalThis
   patch(
     "Function(return this)",
     /Function\(["']return this["']\)\(\)/g,
-    "globalThis"
+    "globalThis",
   );
 
   // 3. protobufjs codegen: Function.apply(null,X).apply(null,Y)
@@ -68,7 +70,7 @@ for (const filePath of files) {
   patch(
     "protobufjs codegen apply",
     /Function\.apply\(null,(\w+)\)\.apply\(null,(\w+)\)/g,
-    "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return function(_m,w){return w}}})()"
+    "(()=>{try{return Function.apply(null,$1).apply(null,$2)}catch(_){return function(_m,w){return w}}})()",
   );
 
   // 4. protobufjs codegen: return Function(X)()
@@ -76,14 +78,14 @@ for (const filePath of files) {
   patch(
     "protobufjs codegen call",
     /\breturn Function\((\w+)\)\(\)/g,
-    "try{return Function($1)()}catch(_){return function(_m,w){return w}}"
+    "try{return Function($1)()}catch(_){return function(_m,w){return w}}",
   );
 
   // 5. new Function(X) without immediate call — wrap constructor
   patch(
     "new Function(str)",
     /\bnew Function\((\w+)\)/g,
-    "(()=>{try{return new Function($1)}catch(_){return function(){}}})()"
+    "(()=>{try{return new Function($1)}catch(_){return function(){}}})()",
   );
 
   if (filePatchCount > 0) {
@@ -95,7 +97,11 @@ for (const filePath of files) {
 }
 
 if (grandTotal === 0) {
-  console.log("patch-eval: no patterns found in any file — already patched or build structure changed");
+  console.log(
+    "patch-eval: no patterns found in any file — already patched or build structure changed",
+  );
 } else {
-  console.log(`patch-eval: total ${grandTotal} replacement(s) across all files`);
+  console.log(
+    `patch-eval: total ${grandTotal} replacement(s) across all files`,
+  );
 }

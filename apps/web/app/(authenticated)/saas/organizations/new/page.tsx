@@ -3,8 +3,11 @@
 import dynamic from "next/dynamic";
 
 const OrganizationNewView = dynamic(
-  () => import("../../../../../src/features/saas/organization-new-view").then((mod) => mod.OrganizationNewView),
-  { ssr: false }
+  () =>
+    import("../../../../../src/features/saas/organization-new-view").then(
+      (mod) => mod.OrganizationNewView,
+    ),
+  { ssr: false },
 );
 
 export default function NewContractingOrganizationPage() {

@@ -4,8 +4,11 @@ import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../../contexts/ModuleGuard";
 
 const AcademyView = dynamic(
-  () => import("../../../../src/features/learning/academy-view").then((mod) => mod.AcademyView),
-  { ssr: false }
+  () =>
+    import("../../../../src/features/learning/academy-view").then(
+      (mod) => mod.AcademyView,
+    ),
+  { ssr: false },
 );
 
 export default function Page() {

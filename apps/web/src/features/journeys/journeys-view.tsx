@@ -19,7 +19,7 @@ import {
   Sparkles,
   Award,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,10 +34,16 @@ import {
   isFirebaseWebRuntimeConfigured,
   updateFollowUpTaskStatus,
   updatePersonMemberStatus,
-  updateVisitorJourneyStage
+  updateVisitorJourneyStage,
 } from "@alvo/firebase";
 import { cachedFetchPeople, cachedFetchGroups } from "../../lib/org-data-cache";
-import type { FollowUpTask, Group, GroupMember, Person, VisitorJourney } from "@alvo/types";
+import type {
+  FollowUpTask,
+  Group,
+  GroupMember,
+  Person,
+  VisitorJourney,
+} from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { loadLocalMemberStore } from "../../lib/local-member-store";
 
@@ -47,29 +53,29 @@ const journeyLanes = [
     title: "Visitantes",
     description: "Recém-chegados precisando de acolhimento inicial.",
     icon: ClipboardList,
-    color: "#3b82f6"
+    color: "#3b82f6",
   },
   {
     key: "congregant",
     title: "Aspirantes",
     description: "Frequentadores em transição para aliança pastoral.",
     icon: MessageSquareText,
-    color: "#f59e0b"
+    color: "#f59e0b",
   },
   {
     key: "member",
     title: "Membros",
     description: "Aliançados ativos precisando de acompanhamento.",
     icon: UserCheck,
-    color: "#10b981"
+    color: "#10b981",
   },
   {
     key: "cell",
     title: "Em Célula",
     description: "Engajados e ativos em pequenos grupos semanais.",
     icon: Waypoints,
-    color: "#8b5cf6"
-  }
+    color: "#8b5cf6",
+  },
 ] as const;
 
 const memberStatusOptions: Array<{
@@ -81,7 +87,7 @@ const memberStatusOptions: Array<{
   { label: "Novo convertido", value: "new_believer" },
   { label: "Membro", value: "member" },
   { label: "Líder", value: "leader" },
-  { label: "Voluntário", value: "volunteer" }
+  { label: "Voluntário", value: "volunteer" },
 ];
 
 const taskTemplates: Array<{
@@ -92,28 +98,28 @@ const taskTemplates: Array<{
   {
     label: "Boas-vindas",
     title: "Enviar mensagem de boas-vindas",
-    type: "welcome_message"
+    type: "welcome_message",
   },
   {
     label: "Primeiro contato",
     title: "Fazer primeiro contato pastoral",
-    type: "first_contact"
+    type: "first_contact",
   },
   {
     label: "Convidar para célula",
     title: "Convidar para uma célula",
-    type: "invite_to_group"
+    type: "invite_to_group",
   },
   {
     label: "Classe de integração",
     title: "Convidar para classe de integração",
-    type: "invite_to_class"
+    type: "invite_to_class",
   },
   {
     label: "Contato pastoral",
     title: "Agendar contato pastoral",
-    type: "pastoral_contact"
-  }
+    type: "pastoral_contact",
+  },
 ];
 
 const journeyFilters = [
@@ -121,7 +127,7 @@ const journeyFilters = [
   { label: "Precisa contato", value: "needs_contact" },
   { label: "Sem célula", value: "without_group" },
   { label: "Pronto para membresia", value: "ready_membership" },
-  { label: "Com tarefas abertas", value: "open_tasks" }
+  { label: "Com tarefas abertas", value: "open_tasks" },
 ] as const;
 
 type JourneyFilter = (typeof journeyFilters)[number]["value"];
@@ -214,8 +220,18 @@ type CarePlanStep =
 type CareSignalLevel = "urgent" | "attention" | "stable";
 
 export function JourneysView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
-  const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? "nossa igreja";
+  const {
+    configured,
+    firebaseReady,
+    user,
+    organizationId,
+    firebaseConfig,
+    tenantRuntime,
+  } = useAppAuth();
+  const orgName =
+    tenantRuntime?.organization?.displayName ??
+    tenantRuntime?.organization?.name ??
+    "nossa igreja";
   const [people, setPeople] = useState<Person[]>([]);
   const [journeys, setJourneys] = useState<VisitorJourney[]>([]);
   const [tasks, setTasks] = useState<FollowUpTask[]>([]);
@@ -225,14 +241,21 @@ export function JourneysView() {
   const [status, setStatus] = useState("Sincronizando jornadas contínuas...");
   const [query, setQuery] = useState("");
   const [focusFilter, setFocusFilter] = useState<JourneyFilter>("all");
-  const [copiedScriptForPersonId, setCopiedScriptForPersonId] = useState<string | null>(null);
+  const [copiedScriptForPersonId, setCopiedScriptForPersonId] = useState<
+    string | null
+  >(null);
 
   // Copiloto de WhatsApp: Mensagem ativa editável
   const [whatsappMessageDraft, setWhatsappMessageDraft] = useState("");
   const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
 
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !firebaseReady ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       // Sem sessão: mostra só o que houver em cadastro local (sem mock que engana).
       const localStore = loadLocalMemberStore();
       setStatus("Entre na sua conta para carregar as jornadas.");
@@ -251,14 +274,19 @@ export function JourneysView() {
       setStatus("Sincronizando pessoas, jornadas, tarefas e células...");
 
       try {
-        const [nextPeople, nextJourneys, nextTasks, nextGroups] = await Promise.all([
-          cachedFetchPeople(firebaseConfig, { organizationId }, 120),
-          fetchVisitorJourneys(firebaseConfig, { organizationId }, 80),
-          fetchFollowUpTasks(firebaseConfig, { organizationId }, 120),
-          cachedFetchGroups(firebaseConfig, { organizationId }, 40)
-        ]);
+        const [nextPeople, nextJourneys, nextTasks, nextGroups] =
+          await Promise.all([
+            cachedFetchPeople(firebaseConfig, { organizationId }, 120),
+            fetchVisitorJourneys(firebaseConfig, { organizationId }, 80),
+            fetchFollowUpTasks(firebaseConfig, { organizationId }, 120),
+            cachedFetchGroups(firebaseConfig, { organizationId }, 40),
+          ]);
         const nextGroupMembers = nextGroups.length
-          ? await fetchGroupMembers(firebaseConfig, { organizationId }, nextGroups)
+          ? await fetchGroupMembers(
+              firebaseConfig,
+              { organizationId },
+              nextGroups,
+            )
           : [];
 
         if (cancelled) return;
@@ -272,7 +300,9 @@ export function JourneysView() {
         setTasks(nextTasks);
         setGroups(nextGroups);
         setGroupMembers(nextGroupMembers);
-        setSelectedPersonId((currentId) => currentId ?? finalPeople[0]?.id ?? null);
+        setSelectedPersonId(
+          (currentId) => currentId ?? finalPeople[0]?.id ?? null,
+        );
         setStatus(`${finalPeople.length} pessoa(s) na jornada de integração.`);
       } catch (error) {
         if (!cancelled) {
@@ -288,22 +318,28 @@ export function JourneysView() {
     };
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
-  const selectedPerson = people.find((person) => person.id === selectedPersonId) ?? null;
+  const selectedPerson =
+    people.find((person) => person.id === selectedPersonId) ?? null;
   const selectedJourney = selectedPerson
-    ? journeys.find((journey) => journey.personId === selectedPerson.id) ?? null
+    ? (journeys.find((journey) => journey.personId === selectedPerson.id) ??
+      null)
     : null;
   const selectedTasks = selectedPerson
     ? tasks.filter((task) => task.personId === selectedPerson.id)
     : [];
   const selectedGroupMember = selectedPerson
-    ? groupMembers.find((member) => member.personId === selectedPerson.id) ?? null
+    ? (groupMembers.find((member) => member.personId === selectedPerson.id) ??
+      null)
     : null;
   const selectedGroup = selectedGroupMember
-    ? groups.find((group) => group.id === selectedGroupMember.groupId) ?? null
+    ? (groups.find((group) => group.id === selectedGroupMember.groupId) ?? null)
     : null;
   const openTasks = tasks.filter((task) => task.status !== "completed");
   const priorityTasks = [...openTasks]
-    .sort((firstTask, secondTask) => getTaskDueRank(firstTask) - getTaskDueRank(secondTask))
+    .sort(
+      (firstTask, secondTask) =>
+        getTaskDueRank(firstTask) - getTaskDueRank(secondTask),
+    )
     .slice(0, 4);
   const visitorsWithoutContact = people.filter(
     (person) =>
@@ -311,31 +347,31 @@ export function JourneysView() {
       !tasks.some(
         (task) =>
           task.personId === person.id &&
-          ["welcome_message", "first_contact"].includes(task.type)
-      )
+          ["welcome_message", "first_contact"].includes(task.type),
+      ),
   );
   const aspirantsWithoutCell = people.filter(
     (person) =>
       ["visitor", "congregant", "new_believer"].includes(person.memberStatus) &&
-      !groupMembers.some((member) => member.personId === person.id)
+      !groupMembers.some((member) => member.personId === person.id),
   );
   const membersWithoutCell = people.filter(
     (person) =>
       ["member", "leader", "volunteer"].includes(person.memberStatus) &&
-      !groupMembers.some((member) => member.personId === person.id)
+      !groupMembers.some((member) => member.personId === person.id),
   );
   const readyForMembership = journeys.filter(
-    (journey) => journey.currentStage === "ready_for_membership"
+    (journey) => journey.currentStage === "ready_for_membership",
   );
   const peopleWithOpenTasks = people.filter((person) =>
-    openTasks.some((task) => task.personId === person.id)
+    openTasks.some((task) => task.personId === person.id),
   );
   const normalizedQuery = normalizeSearch(query);
-  
+
   const filteredPeople = people.filter((person) => {
     const matchesQuery = normalizedQuery
       ? normalizeSearch(
-          `${getFullName(person)} ${person.email ?? ""} ${person.mobilePhone ?? ""} ${person.whatsappPhone ?? ""}`
+          `${getFullName(person)} ${person.email ?? ""} ${person.mobilePhone ?? ""} ${person.whatsappPhone ?? ""}`,
         ).includes(normalizedQuery)
       : true;
 
@@ -344,7 +380,7 @@ export function JourneysView() {
     return matchesJourneyFilter(focusFilter, person, {
       groupMembers,
       journeys,
-      tasks
+      tasks,
     });
   });
 
@@ -353,27 +389,41 @@ export function JourneysView() {
     people: filteredPeople
       .filter((person) => getLaneKey(person, groupMembers) === lane.key)
       .sort((firstPerson, secondPerson) => {
-        const firstSignal = getCareSignal(firstPerson, { groupMembers, journeys, tasks });
-        const secondSignal = getCareSignal(secondPerson, { groupMembers, journeys, tasks });
+        const firstSignal = getCareSignal(firstPerson, {
+          groupMembers,
+          journeys,
+          tasks,
+        });
+        const secondSignal = getCareSignal(secondPerson, {
+          groupMembers,
+          journeys,
+          tasks,
+        });
 
         return (
           secondSignal.score - firstSignal.score ||
           getFullName(firstPerson).localeCompare(getFullName(secondPerson))
         );
-      })
+      }),
   }));
 
   const suggestedGroup =
-    groups.find((group) => group.type === "cell" && group.status === "active") ?? groups[0] ?? null;
-  const selectedOpenTasks = selectedTasks.filter((task) => task.status !== "completed");
-  
+    groups.find(
+      (group) => group.type === "cell" && group.status === "active",
+    ) ??
+    groups[0] ??
+    null;
+  const selectedOpenTasks = selectedTasks.filter(
+    (task) => task.status !== "completed",
+  );
+
   const selectedRecommendation = selectedPerson
     ? getJourneyRecommendation({
         group: selectedGroup,
         journey: selectedJourney,
         person: selectedPerson,
         suggestedGroup,
-        tasks: selectedTasks
+        tasks: selectedTasks,
       })
     : null;
 
@@ -382,7 +432,7 @@ export function JourneysView() {
         group: selectedGroup,
         journey: selectedJourney,
         person: selectedPerson,
-        tasks: selectedTasks
+        tasks: selectedTasks,
       })
     : [];
 
@@ -391,7 +441,7 @@ export function JourneysView() {
         group: selectedGroup,
         journey: selectedJourney,
         person: selectedPerson,
-        tasks: selectedTasks
+        tasks: selectedTasks,
       })
     : null;
 
@@ -402,7 +452,7 @@ export function JourneysView() {
         person: selectedPerson,
         readiness: selectedReadiness,
         suggestedGroup,
-        tasks: selectedTasks
+        tasks: selectedTasks,
       })
     : [];
 
@@ -413,29 +463,33 @@ export function JourneysView() {
   // Lista de templates reativos para o Copiloto de Mensagens
   const messageTemplates = useMemo(() => {
     if (!selectedPerson) return [];
-    const firstName = selectedPerson.preferredName || selectedPerson.firstName || "amigo(a)";
-    const cellName = selectedGroup?.name ?? suggestedGroup?.name ?? "nossa célula";
+    const firstName =
+      selectedPerson.preferredName || selectedPerson.firstName || "amigo(a)";
+    const cellName =
+      selectedGroup?.name ?? suggestedGroup?.name ?? "nossa célula";
 
     return [
       {
         title: "Acolhimento Inicial",
-        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração da ${orgName}! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`
+        body: `Olá, ${firstName}! Que alegria enorme ter você conosco na celebração da ${orgName}! Queríamos te saudar de forma bem especial e saber se você se sentiu bem acolhido(a). Algum pedido de oração especial em que possamos te apoiar?`,
       },
       {
         title: "Convite para Célula",
-        body: `Oi, ${firstName}! Vendo sua caminhada, queríamos te fazer um convite super especial: participar de um encontro na célula ${cellName} esta semana. É um ambiente perfeito para criar laços e comunhão! O que acha de fazermos uma visita juntos?`
+        body: `Oi, ${firstName}! Vendo sua caminhada, queríamos te fazer um convite super especial: participar de um encontro na célula ${cellName} esta semana. É um ambiente perfeito para criar laços e comunhão! O que acha de fazermos uma visita juntos?`,
       },
       {
         title: "Acompanhamento de Líder",
-        body: `Olá, ${firstName}! Tudo bem? Passando para saber como foi sua semana. Estamos preparando nossos próximos passos e reuniões da equipe, e sua presença é fundamental para o fortalecimento da nossa igreja. Deus te abençoe!`
-      }
+        body: `Olá, ${firstName}! Tudo bem? Passando para saber como foi sua semana. Estamos preparando nossos próximos passos e reuniões da equipe, e sua presença é fundamental para o fortalecimento da nossa igreja. Deus te abençoe!`,
+      },
     ];
   }, [selectedPerson, selectedGroup, suggestedGroup, orgName]);
 
   // Atualiza o rascunho de WhatsApp quando o membro ou o template é selecionado
   useEffect(() => {
     if (messageTemplates.length > 0) {
-      setWhatsappMessageDraft(messageTemplates[selectedTemplateIndex]?.body ?? "");
+      setWhatsappMessageDraft(
+        messageTemplates[selectedTemplateIndex]?.body ?? "",
+      );
     }
   }, [selectedPerson, selectedTemplateIndex, messageTemplates]);
 
@@ -451,20 +505,32 @@ export function JourneysView() {
     return `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessageDraft)}`;
   }, [selectedPerson, whatsappMessageDraft]);
 
-  async function handleStatusChange(person: Person, memberStatus: Person["memberStatus"]) {
+  async function handleStatusChange(
+    person: Person,
+    memberStatus: Person["memberStatus"],
+  ) {
     setPeople((currentPeople) =>
-      currentPeople.map((item) => (item.id === person.id ? { ...item, memberStatus } : item))
+      currentPeople.map((item) =>
+        item.id === person.id ? { ...item, memberStatus } : item,
+      ),
     );
-    setStatus(`${getFullName(person)} movido para ${getMemberStatusLabel(memberStatus)}.`);
+    setStatus(
+      `${getFullName(person)} movido para ${getMemberStatusLabel(memberStatus)}.`,
+    );
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
 
     try {
-      await updatePersonMemberStatus(firebaseConfig, { organizationId }, {
-        memberStatus,
-        personId: person.id,
-        updatedByUserId: user.uid
-      });
+      await updatePersonMemberStatus(
+        firebaseConfig,
+        { organizationId },
+        {
+          memberStatus,
+          personId: person.id,
+          updatedByUserId: user.uid,
+        },
+      );
       setStatus("Status pastoral atualizado no Firestore.");
     } catch (error) {
       setStatus("Erro ao persistir o status no Firebase.");
@@ -481,24 +547,31 @@ export function JourneysView() {
       title: template.title,
       type: template.type,
       status: "open",
-      dueAt: new Date().toISOString()
+      dueAt: new Date().toISOString(),
     };
     setTasks((currentTasks) => [localTask, ...currentTasks]);
     setStatus(`${template.label} criado para ${getFullName(person)}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
 
     try {
-      const savedTask = await createJourneyFollowUpTask(firebaseConfig, { organizationId }, {
-        assignedToUserId: user.uid,
-        dueAt: localTask.dueAt,
-        personId: person.id,
-        title: template.title,
-        type: template.type,
-        visitorJourneyId: selectedJourney?.id
-      });
+      const savedTask = await createJourneyFollowUpTask(
+        firebaseConfig,
+        { organizationId },
+        {
+          assignedToUserId: user.uid,
+          dueAt: localTask.dueAt,
+          personId: person.id,
+          title: template.title,
+          type: template.type,
+          visitorJourneyId: selectedJourney?.id,
+        },
+      );
       setTasks((currentTasks) =>
-        currentTasks.map((task) => (task.id === localTask.id ? savedTask : task))
+        currentTasks.map((task) =>
+          task.id === localTask.id ? savedTask : task,
+        ),
       );
       setStatus("Tarefa gravada com sucesso no Firestore.");
     } catch (error) {
@@ -516,21 +589,30 @@ export function JourneysView() {
     setJourneys((currentJourneys) =>
       currentJourneys.map((journey) =>
         journey.id === selectedJourney.id
-          ? { ...journey, currentStage: nextStage, status: nextStage === "completed" ? "completed" : "active" }
-          : journey
-      )
+          ? {
+              ...journey,
+              currentStage: nextStage,
+              status: nextStage === "completed" ? "completed" : "active",
+            }
+          : journey,
+      ),
     );
     setStatus(`Jornada avançada para ${getJourneyStageLabel(nextStage)}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
 
     try {
-      await updateVisitorJourneyStage(firebaseConfig, { organizationId }, {
-        journeyId: selectedJourney.id,
-        stage: nextStage,
-        status: nextStage === "completed" ? "completed" : "active",
-        updatedByUserId: user.uid
-      });
+      await updateVisitorJourneyStage(
+        firebaseConfig,
+        { organizationId },
+        {
+          journeyId: selectedJourney.id,
+          stage: nextStage,
+          status: nextStage === "completed" ? "completed" : "active",
+          updatedByUserId: user.uid,
+        },
+      );
       setStatus("Etapa da jornada atualizada no Firestore.");
     } catch (error) {
       setStatus("Erro ao salvar progresso da jornada.");
@@ -544,25 +626,32 @@ export function JourneysView() {
       groupId: group.id,
       personId: person.id,
       roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member",
-      joinedAt: new Date().toISOString()
+      joinedAt: new Date().toISOString(),
     };
     setGroupMembers((currentMembers) => [
       localMember,
-      ...currentMembers.filter((member) => member.id !== localMember.id)
+      ...currentMembers.filter((member) => member.id !== localMember.id),
     ]);
     setStatus(`${getFullName(person)} conectado à célula ${group.name}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
 
     try {
-      const savedMember = await assignPersonToGroup(firebaseConfig, { organizationId }, {
-        assignedByUserId: user.uid,
-        groupId: group.id,
-        personId: person.id,
-        roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member"
-      });
+      const savedMember = await assignPersonToGroup(
+        firebaseConfig,
+        { organizationId },
+        {
+          assignedByUserId: user.uid,
+          groupId: group.id,
+          personId: person.id,
+          roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member",
+        },
+      );
       setGroupMembers((currentMembers) =>
-        currentMembers.map((member) => (member.id === localMember.id ? savedMember : member))
+        currentMembers.map((member) =>
+          member.id === localMember.id ? savedMember : member,
+        ),
       );
       setStatus("Membro da célula vinculado no Firestore.");
     } catch (error) {
@@ -570,20 +659,30 @@ export function JourneysView() {
     }
   }
 
-  async function handleTaskStatusChange(task: FollowUpTask, nextStatus: FollowUpTask["status"]) {
+  async function handleTaskStatusChange(
+    task: FollowUpTask,
+    nextStatus: FollowUpTask["status"],
+  ) {
     setTasks((currentTasks) =>
-      currentTasks.map((item) => (item.id === task.id ? { ...item, status: nextStatus } : item))
+      currentTasks.map((item) =>
+        item.id === task.id ? { ...item, status: nextStatus } : item,
+      ),
     );
     setStatus(`${task.title} marcado como ${getTaskStatusLabel(nextStatus)}.`);
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig))
+      return;
 
     try {
-      await updateFollowUpTaskStatus(firebaseConfig, { organizationId }, {
-        completedByUserId: user.uid,
-        status: nextStatus,
-        taskId: task.id
-      });
+      await updateFollowUpTaskStatus(
+        firebaseConfig,
+        { organizationId },
+        {
+          completedByUserId: user.uid,
+          status: nextStatus,
+          taskId: task.id,
+        },
+      );
       setStatus("Status da tarefa gravado no Firestore.");
     } catch (error) {
       setStatus("Erro ao atualizar status da tarefa.");
@@ -653,10 +752,12 @@ export function JourneysView() {
         ["--alvo-blue" as string]: "#2f6f8f",
         ["--alvo-blue-soft" as string]: "rgba(47, 111, 143, 0.10)",
         ["--alvo-green" as string]: "#10b981",
-        ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)"
+        ["--alvo-green-soft" as string]: "rgba(16, 185, 129, 0.08)",
       }}
     >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .journeys-page .back-link {
           background: #ffffff !important;
           border: 1px solid var(--alvo-line) !important;
@@ -875,14 +976,17 @@ export function JourneysView() {
             padding: 22px !important;
           }
         }
-      `}} />
-      
+      `,
+        }}
+      />
+
       {/* Cabeçalho padrão */}
       <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Jornadas de Integração</h1>
           <p className="page-subtitle">
-            Gerencie gargalos ativos, acompanhe a evolução de visitantes para a aliança de membresia e monitore a inserção em células.
+            Gerencie gargalos ativos, acompanhe a evolução de visitantes para a
+            aliança de membresia e monitore a inserção em células.
           </p>
         </div>
       </header>
@@ -890,35 +994,64 @@ export function JourneysView() {
       {/* KPIs — gargalos de cuidado (design system padrão) */}
       <div className="stats-row">
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}><AlertTriangle size={20} /></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}
+          >
+            <AlertTriangle size={20} />
+          </div>
           <div className="stat-body">
             <span className="stat-label">Alertas críticos</span>
-            <span className="stat-value">{visitorsWithoutContact.length + aspirantsWithoutCell.length + membersWithoutCell.length}</span>
+            <span className="stat-value">
+              {visitorsWithoutContact.length +
+                aspirantsWithoutCell.length +
+                membersWithoutCell.length}
+            </span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(59,130,246,0.12)", color: "#2563eb" }}><ClipboardList size={20} /></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(59,130,246,0.12)", color: "#2563eb" }}
+          >
+            <ClipboardList size={20} />
+          </div>
           <div className="stat-body">
             <span className="stat-label">Sem primeiro contato</span>
             <span className="stat-value">{visitorsWithoutContact.length}</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}><MessageSquareText size={20} /></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}
+          >
+            <MessageSquareText size={20} />
+          </div>
           <div className="stat-body">
             <span className="stat-label">Aspirantes sem célula</span>
             <span className="stat-value">{aspirantsWithoutCell.length}</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(139,92,246,0.12)", color: "#7c3aed" }}><UsersRound size={20} /></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(139,92,246,0.12)", color: "#7c3aed" }}
+          >
+            <UsersRound size={20} />
+          </div>
           <div className="stat-body">
             <span className="stat-label">Membros sem célula</span>
             <span className="stat-value">{membersWithoutCell.length}</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(16,185,129,0.12)", color: "#059669" }}><Award size={20} /></div>
+          <div
+            className="stat-icon"
+            style={{ background: "rgba(16,185,129,0.12)", color: "#059669" }}
+          >
+            <Award size={20} />
+          </div>
           <div className="stat-body">
             <span className="stat-label">Decisões de membresia</span>
             <span className="stat-value">{readyForMembership.length}</span>
@@ -928,39 +1061,69 @@ export function JourneysView() {
 
       {/* Triagem Pastoral Kanban Swimlanes */}
       <section className="journey-command-panel" style={{ marginTop: "3rem" }}>
-        
         {/* Chips de Filtro Rápido */}
-        <div className="journey-filter-bar" style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+        <div
+          className="journey-filter-bar"
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            marginBottom: "2rem",
+            flexWrap: "wrap",
+          }}
+        >
           {journeyFilters.map((filter) => (
             <button
-              className={focusFilter === filter.value ? "journey-filter-chip is-active" : "journey-filter-chip"}
+              className={
+                focusFilter === filter.value
+                  ? "journey-filter-chip is-active"
+                  : "journey-filter-chip"
+              }
               key={filter.value}
               onClick={() => setFocusFilter(filter.value)}
               type="button"
               style={{
-                backgroundColor: focusFilter === filter.value ? "#eef6fb" : "#ffffff",
-                border: focusFilter === filter.value ? "1px solid rgba(47, 111, 143, 0.28)" : "1px solid var(--alvo-line)",
+                backgroundColor:
+                  focusFilter === filter.value ? "#eef6fb" : "#ffffff",
+                border:
+                  focusFilter === filter.value
+                    ? "1px solid rgba(47, 111, 143, 0.28)"
+                    : "1px solid var(--alvo-line)",
                 padding: "10px 18px",
                 borderRadius: 14,
-                color: focusFilter === filter.value ? "#255a75" : "var(--alvo-ink)",
+                color:
+                  focusFilter === filter.value ? "#255a75" : "var(--alvo-ink)",
                 cursor: "pointer",
                 fontWeight: 800,
                 fontSize: "0.85rem",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                transition: "all 0.2s"
+                transition: "all 0.2s",
               }}
             >
               <span>{filter.label}</span>
-              <strong style={{ backgroundColor: focusFilter === filter.value ? "rgba(47, 111, 143, 0.12)" : "#f8fafc", color: focusFilter === filter.value ? "#255a75" : "var(--alvo-ink)", padding: "2px 8px", borderRadius: 8, fontSize: "0.75rem" }}>
+              <strong
+                style={{
+                  backgroundColor:
+                    focusFilter === filter.value
+                      ? "rgba(47, 111, 143, 0.12)"
+                      : "#f8fafc",
+                  color:
+                    focusFilter === filter.value
+                      ? "#255a75"
+                      : "var(--alvo-ink)",
+                  padding: "2px 8px",
+                  borderRadius: 8,
+                  fontSize: "0.75rem",
+                }}
+              >
                 {getFilterCount(filter.value, {
                   aspirantsWithoutCell,
                   membersWithoutCell,
                   people,
                   peopleWithOpenTasks,
                   readyForMembership,
-                  visitorsWithoutContact
+                  visitorsWithoutContact,
                 })}
               </strong>
             </button>
@@ -968,24 +1131,57 @@ export function JourneysView() {
         </div>
 
         {/* Toolbar de Busca */}
-        <div className="directory-toolbar" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "1rem", backgroundColor: "rgba(30, 41, 59, 0.15)", padding: "1.25rem", borderRadius: 24, border: "1px solid rgba(255,255,255,0.06)" }}>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
+        <div
+          className="directory-toolbar"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr 1fr",
+            gap: "1rem",
+            backgroundColor: "rgba(30, 41, 59, 0.15)",
+            padding: "1.25rem",
+            borderRadius: 24,
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <label
+            style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}
+          >
             Buscar Pessoa
             <input
               aria-label="Buscar pessoa em jornadas"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Nome, e-mail ou telefone..."
               value={query}
-              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "white", marginTop: 6, outline: "none" }}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                backgroundColor: "#0f172a",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                color: "white",
+                marginTop: 6,
+                outline: "none",
+              }}
             />
           </label>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
+          <label
+            style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}
+          >
             Célula Sugerida
             <select
               aria-label="Célula sugerida"
               onChange={() => undefined}
               value={suggestedGroup?.id ?? ""}
-              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "white", marginTop: 6, outline: "none" }}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                backgroundColor: "#0f172a",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                color: "white",
+                marginTop: 6,
+                outline: "none",
+              }}
             >
               {suggestedGroup ? (
                 <option value={suggestedGroup.id}>{suggestedGroup.name}</option>
@@ -994,57 +1190,138 @@ export function JourneysView() {
               )}
             </select>
           </label>
-          <label style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}>
+          <label
+            style={{ color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700 }}
+          >
             Status de Sincronia
-            <input 
-              readOnly 
-              value={status} 
-              style={{ width: "100%", padding: "10px 14px", backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.04)", borderRadius: 12, color: "#94a3b8", marginTop: 6, outline: "none" }} 
+            <input
+              readOnly
+              value={status}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                backgroundColor: "#0f172a",
+                border: "1px solid rgba(255,255,255,0.04)",
+                borderRadius: 12,
+                color: "#94a3b8",
+                marginTop: 6,
+                outline: "none",
+              }}
             />
           </label>
         </div>
 
         {/* Kanban Board columns */}
-        <div className="journey-lanes" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "1.25rem", marginTop: "2rem" }}>
+        <div
+          className="journey-lanes"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: "1.25rem",
+            marginTop: "2rem",
+          }}
+        >
           {lanes.map((lane) => (
-            <article 
-              className="journey-lane" 
-              key={lane.key} 
-              style={{ 
-                backgroundColor: "rgba(30, 41, 59, 0.15)", 
-                border: "1px solid rgba(255,255,255,0.06)", 
-                borderRadius: 24, 
+            <article
+              className="journey-lane"
+              key={lane.key}
+              style={{
+                backgroundColor: "rgba(30, 41, 59, 0.15)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 24,
                 padding: "1.25rem",
-                borderTop: `4px solid ${lane.color}`
+                borderTop: `4px solid ${lane.color}`,
               }}
             >
-              <div className="journey-lane-heading" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem" }}>
-                <div style={{ color: lane.color }}><lane.icon size={20} /></div>
-                <div style={{ flex: 1 }}>
-                  <strong className="journey-lane-title" style={{ color: "var(--alvo-ink)", display: "block", fontSize: "1rem", fontWeight: 800 }}>{lane.title}</strong>
-                  <span lang="pt-BR" className="journey-lane-description" style={{ color: "var(--alvo-ink-soft)", fontSize: "0.725rem", display: "block", lineHeight: "1rem", marginTop: 2 }}>{lane.description}</span>
+              <div
+                className="journey-lane-heading"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <div style={{ color: lane.color }}>
+                  <lane.icon size={20} />
                 </div>
-                <span className="journey-lane-count" style={{ background: "#f8fafc", color: "var(--alvo-ink)", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+                <div style={{ flex: 1 }}>
+                  <strong
+                    className="journey-lane-title"
+                    style={{
+                      color: "var(--alvo-ink)",
+                      display: "block",
+                      fontSize: "1rem",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {lane.title}
+                  </strong>
+                  <span
+                    lang="pt-BR"
+                    className="journey-lane-description"
+                    style={{
+                      color: "var(--alvo-ink-soft)",
+                      fontSize: "0.725rem",
+                      display: "block",
+                      lineHeight: "1rem",
+                      marginTop: 2,
+                    }}
+                  >
+                    {lane.description}
+                  </span>
+                </div>
+                <span
+                  className="journey-lane-count"
+                  style={{
+                    background: "#f8fafc",
+                    color: "var(--alvo-ink)",
+                    padding: "2px 8px",
+                    borderRadius: 8,
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                  }}
+                >
                   {lane.people.length}
                 </span>
               </div>
 
-              <div className="journey-person-list" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", minHeight: 180 }}>
+              <div
+                className="journey-person-list"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                  minHeight: 180,
+                }}
+              >
                 {lane.people.length ? (
                   lane.people.map((person) => {
                     const isSelected = selectedPersonId === person.id;
                     const personOpenTasks = tasks.filter(
-                      (task) => task.personId === person.id && task.status !== "completed"
+                      (task) =>
+                        task.personId === person.id &&
+                        task.status !== "completed",
                     );
-                    const groupMember = groupMembers.find((member) => member.personId === person.id);
+                    const groupMember = groupMembers.find(
+                      (member) => member.personId === person.id,
+                    );
                     const group = groupMember
                       ? groups.find((item) => item.id === groupMember.groupId)
                       : null;
-                    const signal = getCareSignal(person, { groupMembers, journeys, tasks });
+                    const signal = getCareSignal(person, {
+                      groupMembers,
+                      journeys,
+                      tasks,
+                    });
 
                     return (
                       <button
-                        className={isSelected ? "journey-person-card is-selected" : "journey-person-card"}
+                        className={
+                          isSelected
+                            ? "journey-person-card is-selected"
+                            : "journey-person-card"
+                        }
                         key={person.id}
                         onClick={() => {
                           setSelectedPersonId(person.id);
@@ -1054,46 +1331,102 @@ export function JourneysView() {
                         style={{
                           width: "100%",
                           textAlign: "left",
-                          backgroundColor: isSelected ? "var(--alvo-accent-soft)" : "#ffffff",
-                          border: isSelected ? "1px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
+                          backgroundColor: isSelected
+                            ? "var(--alvo-accent-soft)"
+                            : "#ffffff",
+                          border: isSelected
+                            ? "1px solid var(--alvo-accent)"
+                            : "1px solid var(--alvo-line)",
                           borderRadius: 16,
                           padding: "1rem",
                           cursor: "pointer",
                           transition: "all 0.2s ease",
                           display: "flex",
-                          gap: 12
+                          gap: 12,
                         }}
                       >
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: lane.color, display: "flex", alignItems: "center", color: "white", fontWeight: 700, fontSize: "0.85rem", justifyContent: "center" }}>
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: "50%",
+                            backgroundColor: lane.color,
+                            display: "flex",
+                            alignItems: "center",
+                            color: "white",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            justifyContent: "center",
+                          }}
+                        >
                           {getInitials(getFullName(person))}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <span
                             style={{
                               fontSize: "0.65rem",
-                              fontWeight: 900, 
-                              textTransform: "uppercase", 
-                              color: signal.level === "urgent" ? "#ef4444" : signal.level === "attention" ? "#f59e0b" : "#10b981",
-                              backgroundColor: signal.level === "urgent" ? "rgba(239,68,68,0.15)" : signal.level === "attention" ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.15)",
+                              fontWeight: 900,
+                              textTransform: "uppercase",
+                              color:
+                                signal.level === "urgent"
+                                  ? "#ef4444"
+                                  : signal.level === "attention"
+                                    ? "#f59e0b"
+                                    : "#10b981",
+                              backgroundColor:
+                                signal.level === "urgent"
+                                  ? "rgba(239,68,68,0.15)"
+                                  : signal.level === "attention"
+                                    ? "rgba(245,158,11,0.15)"
+                                    : "rgba(16,185,129,0.15)",
                               padding: "2px 6px",
                               borderRadius: 6,
                               display: "inline-block",
-                              marginBottom: 4
+                              marginBottom: 4,
                             }}
                           >
                             {signal.label}
                           </span>
-                          <strong style={{ color: "white", display: "block", fontSize: "0.85rem", whiteSpace: "normal", overflowWrap: "anywhere" }}>{getFullName(person)}</strong>
-                          <small style={{ color: "#64748b", fontSize: "0.7rem", display: "block", marginTop: 4, whiteSpace: "normal", overflowWrap: "anywhere" }}>
-                            {personOpenTasks.length} tarefa(s) · {group ? group.name : "sem célula"}
+                          <strong
+                            style={{
+                              color: "white",
+                              display: "block",
+                              fontSize: "0.85rem",
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {getFullName(person)}
+                          </strong>
+                          <small
+                            style={{
+                              color: "#64748b",
+                              fontSize: "0.7rem",
+                              display: "block",
+                              marginTop: 4,
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {personOpenTasks.length} tarefa(s) ·{" "}
+                            {group ? group.name : "sem célula"}
                           </small>
                         </div>
                       </button>
                     );
                   })
                 ) : (
-                  <div style={{ textAlign: "center", padding: "2rem", border: "1px dashed rgba(255,255,255,0.05)", borderRadius: 16 }}>
-                    <span style={{ color: "#64748b", fontSize: "0.75rem" }}>Fila vazia</span>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "2rem",
+                      border: "1px dashed rgba(255,255,255,0.05)",
+                      borderRadius: 16,
+                    }}
+                  >
+                    <span style={{ color: "#64748b", fontSize: "0.75rem" }}>
+                      Fila vazia
+                    </span>
                   </div>
                 )}
               </div>
@@ -1103,89 +1436,244 @@ export function JourneysView() {
       </section>
 
       {/* Painel Detalhado de Cuidado e Copiloto de WhatsApp */}
-      <section className="journey-detail-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem", marginTop: "3rem" }}>
-        
+      <section
+        className="journey-detail-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr",
+          gap: "2rem",
+          marginTop: "3rem",
+        }}
+      >
         {/* Painel Central do Membro Selecionado */}
-        <article className="journey-detail-card" style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2.5rem" }}>
-          
+        <article
+          className="journey-detail-card"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--alvo-line)",
+            borderRadius: 24,
+            padding: "2.5rem",
+          }}
+        >
           {selectedPerson ? (
             <>
               {/* Header do Membro */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderBottom: "1px solid var(--alvo-line)",
+                  paddingBottom: "1.5rem",
+                  marginBottom: "2rem",
+                }}
+              >
                 <div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Membro em Foco</span>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--alvo-ink)", marginTop: 4, letterSpacing: "-0.03em" }}>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--alvo-blue)",
+                      textTransform: "uppercase",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Membro em Foco
+                  </span>
+                  <h2
+                    style={{
+                      fontSize: "1.1rem",
+                      fontWeight: 700,
+                      color: "var(--alvo-ink)",
+                      marginTop: 4,
+                      letterSpacing: "-0.03em",
+                    }}
+                  >
                     {getFullName(selectedPerson)}
                   </h2>
                 </div>
-                <Link className="soft-pill" href={`/members/${selectedPerson.id}`} style={{ backgroundColor: "var(--alvo-blue-soft)", color: "var(--alvo-blue)", padding: "8px 16px", borderRadius: 12, fontWeight: 700, fontSize: "0.85rem", textDecoration: "none" }}>
+                <Link
+                  className="soft-pill"
+                  href={`/members/${selectedPerson.id}`}
+                  style={{
+                    backgroundColor: "var(--alvo-blue-soft)",
+                    color: "var(--alvo-blue)",
+                    padding: "8px 16px",
+                    borderRadius: 12,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                  }}
+                >
                   Abrir Ficha Completa
                 </Link>
               </div>
 
               {/* Termômetro de Engajamento Pastoral */}
               {selectedCareSignal && (
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center", 
-                  backgroundColor: selectedCareSignal.level === "urgent" ? "rgba(239,68,68,0.08)" : selectedCareSignal.level === "attention" ? "rgba(245,158,11,0.08)" : "rgba(16,185,129,0.08)",
-                  border: selectedCareSignal.level === "urgent" ? "1px solid rgba(239,68,68,0.2)" : selectedCareSignal.level === "attention" ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(16,185,129,0.2)",
-                  padding: "1.25rem",
-                  borderRadius: 20,
-                  marginBottom: "2rem"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ 
-                       width: 40, 
-                       height: 40, 
-                       borderRadius: 10, 
-                       backgroundColor: selectedCareSignal.level === "urgent" ? "#ef4444" : selectedCareSignal.level === "attention" ? "#f59e0b" : "#10b981",
-                       display: "flex",
-                       alignItems: "center",
-                       justifyContent: "center",
-                       color: "white"
-                    }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    backgroundColor:
+                      selectedCareSignal.level === "urgent"
+                        ? "rgba(239,68,68,0.08)"
+                        : selectedCareSignal.level === "attention"
+                          ? "rgba(245,158,11,0.08)"
+                          : "rgba(16,185,129,0.08)",
+                    border:
+                      selectedCareSignal.level === "urgent"
+                        ? "1px solid rgba(239,68,68,0.2)"
+                        : selectedCareSignal.level === "attention"
+                          ? "1px solid rgba(245,158,11,0.2)"
+                          : "1px solid rgba(16,185,129,0.2)",
+                    padding: "1.25rem",
+                    borderRadius: 20,
+                    marginBottom: "2rem",
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 12 }}
+                  >
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        backgroundColor:
+                          selectedCareSignal.level === "urgent"
+                            ? "#ef4444"
+                            : selectedCareSignal.level === "attention"
+                              ? "#f59e0b"
+                              : "#10b981",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                      }}
+                    >
                       <Flame size={20} />
                     </div>
                     <div>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Termômetro Pastoral (Urgência)</span>
-                      <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 2 }}>
-                        Status: {selectedCareSignal.label} · <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: "0.85rem" }}>{selectedCareSignal.summary}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                        Termômetro Pastoral (Urgência)
+                      </span>
+                      <h4
+                        style={{
+                          color: "white",
+                          fontWeight: 800,
+                          fontSize: "1rem",
+                          marginTop: 2,
+                        }}
+                      >
+                        Status: {selectedCareSignal.label} ·{" "}
+                        <span
+                          style={{
+                            color: "#94a3b8",
+                            fontWeight: 400,
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {selectedCareSignal.summary}
+                        </span>
                       </h4>
                     </div>
                   </div>
-                  <strong style={{ fontSize: "1.25rem", color: "white", fontFamily: "monospace" }}>{selectedCareSignal.score} pts</strong>
+                  <strong
+                    style={{
+                      fontSize: "1.25rem",
+                      color: "white",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {selectedCareSignal.score} pts
+                  </strong>
                 </div>
               )}
 
               {/* 💬 COPILOTO DE WHATSAPP (Live Script Editor) */}
-              <div style={{ background: "#f8fafc", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid var(--alvo-line)",
+                  borderRadius: 20,
+                  padding: "1.5rem",
+                  marginBottom: "2.5rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1.25rem",
+                  }}
+                >
                   <div>
-                    <span style={{ fontSize: "0.7rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Copiloto de Mensagens</span>
-                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", marginTop: 2 }}>Disparar Acolhimento Reativo</h3>
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "var(--alvo-blue)",
+                        textTransform: "uppercase",
+                        fontWeight: 800,
+                      }}
+                    >
+                      Copiloto de Mensagens
+                    </span>
+                    <h3
+                      style={{
+                        fontSize: "1.1rem",
+                        fontWeight: 800,
+                        color: "var(--alvo-ink)",
+                        marginTop: 2,
+                      }}
+                    >
+                      Disparar Acolhimento Reativo
+                    </h3>
                   </div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>
-                    WhatsApp: <strong>{selectedPerson.whatsappPhone || selectedPerson.mobilePhone || "Não informado"}</strong>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--alvo-ink-soft)",
+                    }}
+                  >
+                    WhatsApp:{" "}
+                    <strong>
+                      {selectedPerson.whatsappPhone ||
+                        selectedPerson.mobilePhone ||
+                        "Não informado"}
+                    </strong>
                   </span>
                 </div>
 
                 {/* Editor reativo da mensagem */}
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    marginBottom: "1rem",
+                    flexWrap: "wrap",
+                  }}
+                >
                   {messageTemplates.map((template, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedTemplateIndex(idx)}
                       style={{
-                        backgroundColor: selectedTemplateIndex === idx ? "var(--alvo-blue)" : "rgba(0,0,0,0.05)",
+                        backgroundColor:
+                          selectedTemplateIndex === idx
+                            ? "var(--alvo-blue)"
+                            : "rgba(0,0,0,0.05)",
                         border: "none",
                         borderRadius: 8,
                         padding: "6px 12px",
-                        color: selectedTemplateIndex === idx ? "white" : "var(--alvo-ink)",
+                        color:
+                          selectedTemplateIndex === idx
+                            ? "white"
+                            : "var(--alvo-ink)",
                         fontSize: "0.75rem",
                         fontWeight: 700,
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                     >
                       {template.title}
@@ -1208,13 +1696,20 @@ export function JourneysView() {
                     fontSize: "0.85rem",
                     lineHeight: "1.25rem",
                     resize: "none",
-                    outline: "none"
+                    outline: "none",
                   }}
                   placeholder="Escreva a mensagem de acolhimento aqui..."
                 />
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1rem" }}>
-                  <button 
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "0.75rem",
+                    marginTop: "1rem",
+                  }}
+                >
+                  <button
                     onClick={handleCopyCareScript}
                     style={{
                       background: "#ffffff",
@@ -1224,10 +1719,12 @@ export function JourneysView() {
                       color: "var(--alvo-ink)",
                       fontSize: "0.8rem",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
-                    {copiedScriptForPersonId === selectedPerson.id ? "Copiado!" : "Copiar Roteiro"}
+                    {copiedScriptForPersonId === selectedPerson.id
+                      ? "Copiado!"
+                      : "Copiar Roteiro"}
                   </button>
                   {selectedWhatsappHref ? (
                     <a
@@ -1244,14 +1741,24 @@ export function JourneysView() {
                         textDecoration: "none",
                         display: "flex",
                         alignItems: "center",
-                        gap: 6
+                        gap: 6,
                       }}
                     >
                       <Send size={14} />
                       Disparar WhatsApp
                     </a>
                   ) : (
-                    <button disabled style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "#64748b", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: "0.8rem" }}>
+                    <button
+                      disabled
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        color: "#64748b",
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "8px 16px",
+                        fontSize: "0.8rem",
+                      }}
+                    >
                       Sem Telefone Cadastrado
                     </button>
                   )}
@@ -1259,32 +1766,96 @@ export function JourneysView() {
               </div>
 
               {/* Linha do Tempo e Prontidão de Membresia */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2.5rem" }}>
-                
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1.5rem",
+                  marginBottom: "2.5rem",
+                }}
+              >
                 {/* Linha do Tempo */}
-                <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem" }}>
-                  <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Evolução de Estágio</span>
-                  <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 4, marginBottom: "1rem" }}>Passos Concluídos</h4>
-                  
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--alvo-line)",
+                    borderRadius: 20,
+                    padding: "1.5rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--alvo-blue)",
+                      textTransform: "uppercase",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Evolução de Estágio
+                  </span>
+                  <h4
+                    style={{
+                      color: "white",
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      marginTop: 4,
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    Passos Concluídos
+                  </h4>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                    }}
+                  >
                     {selectedTimeline.map((step, idx) => (
-                      <div key={step.label} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: "0.8rem" }}>
-                        <div style={{ 
-                          width: 18, 
-                          height: 18, 
-                          borderRadius: "50%", 
-                          backgroundColor: step.state === "done" ? "#10b981" : step.state === "active" ? "var(--alvo-blue)" : "rgba(0,0,0,0.08)",
+                      <div
+                        key={step.label}
+                        style={{
                           display: "flex",
+                          gap: 10,
                           alignItems: "center",
-                          justifyContent: "center",
-                          color: "white",
-                          fontSize: "0.65rem",
-                          fontWeight: 800
-                        }}>
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            backgroundColor:
+                              step.state === "done"
+                                ? "#10b981"
+                                : step.state === "active"
+                                  ? "var(--alvo-blue)"
+                                  : "rgba(0,0,0,0.08)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                          }}
+                        >
                           {step.state === "done" ? "✓" : idx + 1}
                         </div>
-                        <span style={{ color: step.state === "done" ? "var(--alvo-ink)" : "var(--alvo-ink-soft)", fontWeight: step.state === "done" ? 700 : 400 }}>
-                          {step.label} · <small style={{ color: "#64748b" }}>{step.detail}</small>
+                        <span
+                          style={{
+                            color:
+                              step.state === "done"
+                                ? "var(--alvo-ink)"
+                                : "var(--alvo-ink-soft)",
+                            fontWeight: step.state === "done" ? 700 : 400,
+                          }}
+                        >
+                          {step.label} ·{" "}
+                          <small style={{ color: "#64748b" }}>
+                            {step.detail}
+                          </small>
                         </span>
                       </div>
                     ))}
@@ -1293,26 +1864,113 @@ export function JourneysView() {
 
                 {/* Prontidão para Membresia Checklist */}
                 {selectedReadiness && (
-                  <div style={{ 
-                    backgroundColor: selectedReadiness.percent === 100 ? "rgba(16,185,129,0.05)" : "var(--glass-bg)", 
-                    border: selectedReadiness.percent === 100 ? "1.5px solid #10b981" : "1px solid var(--alvo-line)", 
-                    borderRadius: 20, 
-                    padding: "1.5rem" 
-                  }}>
-                    <span style={{ fontSize: "0.75rem", color: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Prontidão de Membresia</span>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-                      <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}>Cópia da Ficha</h4>
-                      <strong style={{ color: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)" }}>{selectedReadiness.percent}%</strong>
+                  <div
+                    style={{
+                      backgroundColor:
+                        selectedReadiness.percent === 100
+                          ? "rgba(16,185,129,0.05)"
+                          : "var(--glass-bg)",
+                      border:
+                        selectedReadiness.percent === 100
+                          ? "1.5px solid #10b981"
+                          : "1px solid var(--alvo-line)",
+                      borderRadius: 20,
+                      padding: "1.5rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color:
+                          selectedReadiness.percent === 100
+                            ? "#10b981"
+                            : "var(--alvo-blue)",
+                        textTransform: "uppercase",
+                        fontWeight: 800,
+                      }}
+                    >
+                      Prontidão de Membresia
+                    </span>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: 4,
+                      }}
+                    >
+                      <h4
+                        style={{
+                          color: "white",
+                          fontWeight: 800,
+                          fontSize: "1rem",
+                        }}
+                      >
+                        Cópia da Ficha
+                      </h4>
+                      <strong
+                        style={{
+                          color:
+                            selectedReadiness.percent === 100
+                              ? "#10b981"
+                              : "var(--alvo-blue)",
+                        }}
+                      >
+                        {selectedReadiness.percent}%
+                      </strong>
                     </div>
                     {/* Meter */}
-                    <div style={{ width: "100%", height: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden", marginTop: 10, marginBottom: 12 }}>
-                      <div style={{ width: `${selectedReadiness.percent}%`, height: "100%", backgroundColor: selectedReadiness.percent === 100 ? "#10b981" : "var(--alvo-blue)" }} />
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 6,
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                        borderRadius: 3,
+                        overflow: "hidden",
+                        marginTop: 10,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${selectedReadiness.percent}%`,
+                          height: "100%",
+                          backgroundColor:
+                            selectedReadiness.percent === 100
+                              ? "#10b981"
+                              : "var(--alvo-blue)",
+                        }}
+                      />
                     </div>
 
-                    <div style={{ maxHeight: 90, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div
+                      style={{
+                        maxHeight: 90,
+                        overflowY: "auto",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
                       {selectedReadiness.items.map((item) => (
-                        <div key={item.label} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.7rem", color: item.done ? "var(--alvo-ink)" : "var(--alvo-ink-soft)" }}>
-                          <CheckCircle2 size={12} style={{ color: item.done ? "#10b981" : "var(--alvo-line)" }} />
+                        <div
+                          key={item.label}
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            alignItems: "center",
+                            fontSize: "0.7rem",
+                            color: item.done
+                              ? "var(--alvo-ink)"
+                              : "var(--alvo-ink-soft)",
+                          }}
+                        >
+                          <CheckCircle2
+                            size={12}
+                            style={{
+                              color: item.done ? "#10b981" : "var(--alvo-line)",
+                            }}
+                          />
                           <span>{item.label}</span>
                         </div>
                       ))}
@@ -1322,40 +1980,122 @@ export function JourneysView() {
               </div>
 
               {/* Plano Recomendado & Próximos Passos */}
-              <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 20, padding: "1.5rem", marginBottom: "2.5rem" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Ações Sugeridas</span>
-                <h4 style={{ color: "white", fontWeight: 800, fontSize: "1rem", marginTop: 4, marginBottom: "1rem" }}>Próximas Intervenções Recomendadas</h4>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--alvo-line)",
+                  borderRadius: 20,
+                  padding: "1.5rem",
+                  marginBottom: "2.5rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--alvo-blue)",
+                    textTransform: "uppercase",
+                    fontWeight: 800,
+                  }}
+                >
+                  Ações Sugeridas
+                </span>
+                <h4
+                  style={{
+                    color: "white",
+                    fontWeight: 800,
+                    fontSize: "1rem",
+                    marginTop: 4,
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Próximas Intervenções Recomendadas
+                </h4>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
+                >
                   {selectedCarePlan.map((step, idx) => (
-                    <div 
-                      key={`${step.title}-${idx}`} 
-                      style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between", 
-                        alignItems: "center", 
-                        backgroundColor: "#f8fafc", 
-                        padding: "10px 16px", 
+                    <div
+                      key={`${step.title}-${idx}`}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        backgroundColor: "#f8fafc",
+                        padding: "10px 16px",
                         borderRadius: 12,
-                        border: "1px solid var(--alvo-line)"
+                        border: "1px solid var(--alvo-line)",
                       }}
                     >
-                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        <span style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", color: "#94a3b8", fontSize: "0.75rem", fontWeight: 700, justifyContent: "center" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            display: "flex",
+                            alignItems: "center",
+                            color: "#94a3b8",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            justifyContent: "center",
+                          }}
+                        >
                           {idx + 1}
                         </span>
                         <div>
-                          <strong style={{ color: "white", fontSize: "0.85rem", display: "block" }}>{step.title}</strong>
-                          <span style={{ color: "#64748b", fontSize: "0.75rem" }}>{step.detail}</span>
+                          <strong
+                            style={{
+                              color: "white",
+                              fontSize: "0.85rem",
+                              display: "block",
+                            }}
+                          >
+                            {step.title}
+                          </strong>
+                          <span
+                            style={{ color: "#64748b", fontSize: "0.75rem" }}
+                          >
+                            {step.detail}
+                          </span>
                         </div>
                       </div>
 
                       {step.actionKind === "link" ? (
-                        <Link className="ghost-button compact" href={step.href} style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: 8, textDecoration: "none", color: "var(--alvo-ink)", border: "1px solid var(--alvo-line)" }}>
+                        <Link
+                          className="ghost-button compact"
+                          href={step.href}
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.75rem",
+                            borderRadius: 8,
+                            textDecoration: "none",
+                            color: "var(--alvo-ink)",
+                            border: "1px solid var(--alvo-line)",
+                          }}
+                        >
                           {step.actionLabel}
                         </Link>
                       ) : step.actionKind === "none" ? (
-                        <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>{step.actionLabel}</span>
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--alvo-ink-soft)",
+                          }}
+                        >
+                          {step.actionLabel}
+                        </span>
                       ) : (
                         <button
                           onClick={() => void handleCarePlanAction(step)}
@@ -1367,7 +2107,7 @@ export function JourneysView() {
                             borderRadius: 8,
                             fontSize: "0.75rem",
                             fontWeight: 700,
-                            cursor: "pointer"
+                            cursor: "pointer",
                           }}
                         >
                           {step.actionLabel}
@@ -1379,47 +2119,79 @@ export function JourneysView() {
               </div>
 
               {/* Botões Operacionais de Integração Direta */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.5rem" }}>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Mudar Status</strong>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "1rem",
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                  paddingTop: "1.5rem",
+                }}
+              >
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  <strong
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--alvo-ink-soft)",
+                    }}
+                  >
+                    Mudar Status
+                  </strong>
                   <select
                     aria-label="Mudar status pastoral"
                     onChange={(event) =>
                       void handleStatusChange(
                         selectedPerson,
-                        event.target.value as Person["memberStatus"]
+                        event.target.value as Person["memberStatus"],
                       )
                     }
                     value={selectedPerson.memberStatus}
-                    style={{ padding: "8px", backgroundColor: "#ffffff", border: "1px solid var(--alvo-line)", borderRadius: 8, color: "var(--alvo-ink)", fontSize: "0.75rem", outline: "none" }}
+                    style={{
+                      padding: "8px",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid var(--alvo-line)",
+                      borderRadius: 8,
+                      color: "var(--alvo-ink)",
+                      fontSize: "0.75rem",
+                      outline: "none",
+                    }}
                   >
                     {memberStatusOptions.map((option) => (
-                      <option key={option.value} value={option.value} style={{ color: "var(--alvo-ink)" }}>
+                      <option
+                        key={option.value}
+                        value={option.value}
+                        style={{ color: "var(--alvo-ink)" }}
+                      >
                         {option.label}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Avançar Jornada</strong>
-                  <button 
-                    onClick={() => void handleAdvanceJourney()} 
-                    style={{ 
-                      backgroundColor: "var(--alvo-blue)", 
-                      color: "white", 
-                      border: "none", 
-                      borderRadius: 8, 
-                      padding: "8px 12px", 
-                      fontSize: "0.75rem", 
-                      fontWeight: 700, 
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Avançar Jornada
+                  </strong>
+                  <button
+                    onClick={() => void handleAdvanceJourney()}
+                    style={{
+                      backgroundColor: "var(--alvo-blue)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
                       justifyContent: "center",
-                      transition: "all 0.2s"
+                      transition: "all 0.2s",
                     }}
                     className="hover-glow"
                   >
@@ -1428,23 +2200,34 @@ export function JourneysView() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>Lançar Cuidado Rápido</strong>
-                  <button 
-                    onClick={() => void handleCreateTask(selectedPerson, taskTemplates[4])}
-                    style={{ 
-                      backgroundColor: "#ffffff", 
-                      color: "var(--alvo-ink)", 
-                      border: "1px solid var(--alvo-line)", 
-                      borderRadius: 8, 
-                      padding: "8px 12px", 
-                      fontSize: "0.75rem", 
-                      fontWeight: 700, 
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  <strong
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--alvo-ink-soft)",
+                    }}
+                  >
+                    Lançar Cuidado Rápido
+                  </strong>
+                  <button
+                    onClick={() =>
+                      void handleCreateTask(selectedPerson, taskTemplates[4])
+                    }
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "var(--alvo-ink)",
+                      border: "1px solid var(--alvo-line)",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
-                      justifyContent: "center"
+                      justifyContent: "center",
                     }}
                   >
                     <Plus size={12} />
@@ -1452,91 +2235,172 @@ export function JourneysView() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Vincular a Célula</strong>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  <strong style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Vincular a Célula
+                  </strong>
                   {suggestedGroup ? (
-                    <button 
-                      onClick={() => void handleAssignGroup(selectedPerson, suggestedGroup)}
-                      style={{ 
-                        backgroundColor: "rgba(16,185,129,0.1)", 
-                        color: "#10b981", 
-                        border: "1px solid rgba(16,185,129,0.2)", 
-                        borderRadius: 8, 
-                        padding: "8px 12px", 
-                        fontSize: "0.75rem", 
-                        fontWeight: 700, 
+                    <button
+                      onClick={() =>
+                        void handleAssignGroup(selectedPerson, suggestedGroup)
+                      }
+                      style={{
+                        backgroundColor: "rgba(16,185,129,0.1)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16,185,129,0.2)",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         gap: 6,
-                        justifyContent: "center"
+                        justifyContent: "center",
                       }}
                     >
                       <Waypoints size={12} />
                       Célula {suggestedGroup.name.slice(0, 8)}...
                     </button>
                   ) : (
-                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Sem Células</span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                      Sem Células
+                    </span>
                   )}
                 </div>
-
               </div>
-
             </>
           ) : (
             <div style={{ textAlign: "center", padding: "4rem" }}>
-              <UsersRound size={40} style={{ color: "#64748b", margin: "0 auto 1rem" }} />
-              <strong style={{ color: "white" }}>Nenhum Membro Selecionado</strong>
-              <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: 8 }}>
-                Escolha qualquer pessoa no funil Kanban acima para iniciar a triagem pastoral.
+              <UsersRound
+                size={40}
+                style={{ color: "#64748b", margin: "0 auto 1rem" }}
+              />
+              <strong style={{ color: "white" }}>
+                Nenhum Membro Selecionado
+              </strong>
+              <p
+                style={{ color: "#64748b", fontSize: "0.85rem", marginTop: 8 }}
+              >
+                Escolha qualquer pessoa no funil Kanban acima para iniciar a
+                triagem pastoral.
               </p>
             </div>
           )}
-
         </article>
 
         {/* LADO DIREITO: TAREFAS DE JORNADA ABERTAS & WHATSAPP PHONE PREVIEW */}
-        <aside style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-          
+        <aside
+          style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
+        >
           {/* ACOMPANHAMENTO TASKS */}
-          <div style={{ background: "var(--glass-bg)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "2rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <div
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--alvo-line)",
+              borderRadius: 24,
+              padding: "2rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1.5rem",
+              }}
+            >
               <div>
-                <span style={{ fontSize: "0.75rem", color: "var(--alvo-blue)", textTransform: "uppercase", fontWeight: 800 }}>Pendências</span>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "white", marginTop: 2 }}>Tarefas de Acompanhamento</h3>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--alvo-blue)",
+                    textTransform: "uppercase",
+                    fontWeight: 800,
+                  }}
+                >
+                  Pendências
+                </span>
+                <h3
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 800,
+                    color: "white",
+                    marginTop: 2,
+                  }}
+                >
+                  Tarefas de Acompanhamento
+                </h3>
               </div>
-              <span style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "white", padding: "2px 8px", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700 }}>
+              <span
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  padding: "2px 8px",
+                  borderRadius: 8,
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                }}
+              >
                 {selectedOpenTasks.length}
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            >
               {selectedOpenTasks.length ? (
                 selectedOpenTasks.map((task) => (
-                  <div 
-                    key={task.id} 
-                    style={{ 
-                      backgroundColor: "rgba(255, 255, 255, 0.02)", 
-                      padding: "1rem", 
-                      borderRadius: 16, 
-                      border: "1px solid var(--alvo-line)" 
+                  <div
+                    key={task.id}
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.02)",
+                      padding: "1rem",
+                      borderRadius: 16,
+                      border: "1px solid var(--alvo-line)",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 12,
+                      }}
+                    >
                       <div>
-                        <strong style={{ color: "white", fontSize: "0.85rem", display: "block" }}>{task.title}</strong>
-                        <span style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 2, display: "block" }}>
+                        <strong
+                          style={{
+                            color: "white",
+                            fontSize: "0.85rem",
+                            display: "block",
+                          }}
+                        >
+                          {task.title}
+                        </strong>
+                        <span
+                          style={{
+                            color: "#64748b",
+                            fontSize: "0.7rem",
+                            marginTop: 2,
+                            display: "block",
+                          }}
+                        >
                           Canal: {getTaskTypeLabel(task.type)}
                         </span>
                       </div>
-                      <span style={{ 
-                        fontSize: "0.65rem", 
-                        backgroundColor: "var(--alvo-blue-soft)", 
-                        color: "var(--alvo-blue)", 
-                        padding: "2px 6px", 
-                        borderRadius: 6,
-                        fontWeight: 700 
-                      }}>
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          backgroundColor: "var(--alvo-blue-soft)",
+                          color: "var(--alvo-blue)",
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                          fontWeight: 700,
+                        }}
+                      >
                         Aguardando
                       </span>
                     </div>
@@ -1544,7 +2408,9 @@ export function JourneysView() {
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       {task.status === "open" ? (
                         <button
-                          onClick={() => void handleTaskStatusChange(task, "in_progress")}
+                          onClick={() =>
+                            void handleTaskStatusChange(task, "in_progress")
+                          }
                           style={{
                             flex: 1,
                             backgroundColor: "rgba(255,255,255,0.05)",
@@ -1554,14 +2420,16 @@ export function JourneysView() {
                             padding: "6px",
                             fontSize: "0.75rem",
                             fontWeight: 700,
-                            cursor: "pointer"
+                            cursor: "pointer",
                           }}
                         >
                           Iniciar
                         </button>
                       ) : null}
                       <button
-                        onClick={() => void handleTaskStatusChange(task, "completed")}
+                        onClick={() =>
+                          void handleTaskStatusChange(task, "completed")
+                        }
                         style={{
                           flex: 1,
                           backgroundColor: "#10b981",
@@ -1571,7 +2439,7 @@ export function JourneysView() {
                           padding: "6px",
                           fontSize: "0.75rem",
                           fontWeight: 800,
-                          cursor: "pointer"
+                          cursor: "pointer",
                         }}
                       >
                         ✓ Concluir
@@ -1580,10 +2448,34 @@ export function JourneysView() {
                   </div>
                 ))
               ) : (
-                <div style={{ textAlign: "center", padding: "3rem", border: "1px dashed rgba(255,255,255,0.05)", borderRadius: 16 }}>
-                  <Clock size={24} style={{ color: "#64748b", margin: "0 auto 10px" }} />
-                  <strong style={{ color: "white", fontSize: "0.8rem", display: "block" }}>Tudo em Dia!</strong>
-                  <p style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 4 }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "3rem",
+                    border: "1px dashed rgba(255,255,255,0.05)",
+                    borderRadius: 16,
+                  }}
+                >
+                  <Clock
+                    size={24}
+                    style={{ color: "#64748b", margin: "0 auto 10px" }}
+                  />
+                  <strong
+                    style={{
+                      color: "white",
+                      fontSize: "0.8rem",
+                      display: "block",
+                    }}
+                  >
+                    Tudo em Dia!
+                  </strong>
+                  <p
+                    style={{
+                      color: "#64748b",
+                      fontSize: "0.7rem",
+                      marginTop: 4,
+                    }}
+                  >
                     Nenhum follow-up pendente para esta pessoa no momento.
                   </p>
                 </div>
@@ -1604,15 +2496,44 @@ export function JourneysView() {
                     <span>🔋 100%</span>
                   </div>
                 </div>
-                
+
                 {/* Chat Header */}
                 <div className="phone-chat-header">
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--alvo-blue)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "0.75rem", fontWeight: 700 }}>
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: "var(--alvo-blue)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                    }}
+                  >
                     {getInitials(getFullName(selectedPerson))}
                   </div>
                   <div style={{ flex: 1, marginLeft: 8 }}>
-                    <strong style={{ display: "block", color: "white", fontSize: "0.75rem" }}>{getFullName(selectedPerson)}</strong>
-                    <span style={{ fontSize: "0.6", color: "#10b981", display: "block" }}>online</span>
+                    <strong
+                      style={{
+                        display: "block",
+                        color: "white",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      {getFullName(selectedPerson)}
+                    </strong>
+                    <span
+                      style={{
+                        fontSize: "0.6",
+                        color: "#10b981",
+                        display: "block",
+                      }}
+                    >
+                      online
+                    </span>
                   </div>
                   <span style={{ fontSize: "0.8rem" }}>📞 ⚙️</span>
                 </div>
@@ -1621,7 +2542,8 @@ export function JourneysView() {
                 <div className="phone-chat-body">
                   <div className="chat-day-separator">HOJE</div>
                   <div className="chat-bubble-received">
-                    Olá! Fui no culto no último domingo, gostei muito da recepção... 😊
+                    Olá! Fui no culto no último domingo, gostei muito da
+                    recepção... 😊
                     <span className="chat-bubble-time">10:45</span>
                   </div>
                   {whatsappMessageDraft && (
@@ -1641,14 +2563,17 @@ export function JourneysView() {
               </div>
             </div>
           )}
-
         </aside>
-
       </section>
 
       <style jsx global>{`
         body:has(.journeys-page) {
-          background: linear-gradient(135deg, #f8fafc 0%, #eef6fb 46%, #f7fbf8 100%) !important;
+          background: linear-gradient(
+            135deg,
+            #f8fafc 0%,
+            #eef6fb 46%,
+            #f7fbf8 100%
+          ) !important;
         }
       `}</style>
 
@@ -1739,24 +2664,38 @@ export function JourneysView() {
         }
 
         @keyframes pulse-green {
-          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-          70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+          0% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+          }
         }
 
         @keyframes pulse-amber {
-          0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-          70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+          0% {
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+          }
         }
 
         /* Simulated Smartphone Preview */
         .whatsapp-phone-mockup {
           background: #1e293b;
-          border: 8px solid rgba(255,255,255,0.08);
+          border: 8px solid rgba(255, 255, 255, 0.08);
           border-radius: 36px;
           padding: 6px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(6, 182, 212, 0.05);
+          box-shadow:
+            0 20px 40px rgba(0, 0, 0, 0.5),
+            0 0 20px rgba(6, 182, 212, 0.05);
           width: 100%;
           max-width: 320px;
           margin: 0 auto;
@@ -1794,7 +2733,7 @@ export function JourneysView() {
           display: flex;
           justify-content: space-between;
           font-size: 0.65rem;
-          color: rgba(255,255,255,0.6);
+          color: rgba(255, 255, 255, 0.6);
           font-weight: 700;
           background: #0b0f19;
           z-index: 5;
@@ -1802,7 +2741,7 @@ export function JourneysView() {
 
         .phone-chat-header {
           background: #1e293b;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           padding: 8px 12px;
           display: flex;
           align-items: center;
@@ -1813,7 +2752,10 @@ export function JourneysView() {
         .phone-chat-body {
           flex: 1;
           padding: 12px;
-          background-image: radial-gradient(rgba(6, 182, 212, 0.02) 1px, transparent 0);
+          background-image: radial-gradient(
+            rgba(6, 182, 212, 0.02) 1px,
+            transparent 0
+          );
           background-size: 10px 10px;
           display: flex;
           flex-direction: column;
@@ -1840,7 +2782,7 @@ export function JourneysView() {
           line-height: 1.2;
           max-width: 85%;
           align-self: flex-start;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .chat-bubble-sent {
@@ -1853,14 +2795,14 @@ export function JourneysView() {
           line-height: 1.2;
           max-width: 85%;
           align-self: flex-end;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
         }
 
         .chat-bubble-time {
           display: block;
           text-align: right;
           font-size: 0.5rem;
-          color: rgba(255,255,255,0.6);
+          color: rgba(255, 255, 255, 0.6);
           margin-top: 3px;
         }
 
@@ -1870,13 +2812,13 @@ export function JourneysView() {
           display: flex;
           align-items: center;
           gap: 8px;
-          border-top: 1px solid rgba(255,255,255,0.05);
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .phone-chat-input-field {
           flex: 1;
-          background: rgba(0,0,0,0.2);
-          border: 1px solid rgba(255,255,255,0.05);
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.05);
           border-radius: 14px;
           padding: 4px 10px;
           font-size: 0.65rem;
@@ -1904,7 +2846,7 @@ function BottleneckCard({
   detail,
   label,
   value,
-  color
+  color,
 }: {
   detail: string;
   label: string;
@@ -1912,34 +2854,59 @@ function BottleneckCard({
   color: string;
 }) {
   return (
-    <article 
-      style={{ 
-        backgroundColor: "#ffffff", 
-        border: "1px solid var(--alvo-line)", 
-        borderRadius: 20, 
+    <article
+      style={{
+        backgroundColor: "#ffffff",
+        border: "1px solid var(--alvo-line)",
+        borderRadius: 20,
         padding: "1.25rem",
         borderLeft: `4px solid ${color}`,
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.03)"
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.03)",
       }}
     >
-      <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>{label}</span>
-      <strong style={{ display: "block", fontSize: "2rem", color: "var(--alvo-ink)", marginTop: 4 }}>{value}</strong>
-      <p style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", marginTop: 4 }}>{detail}</p>
+      <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>
+        {label}
+      </span>
+      <strong
+        style={{
+          display: "block",
+          fontSize: "2rem",
+          color: "var(--alvo-ink)",
+          marginTop: 4,
+        }}
+      >
+        {value}
+      </strong>
+      <p
+        style={{
+          fontSize: "0.7rem",
+          color: "var(--alvo-ink-soft)",
+          marginTop: 4,
+        }}
+      >
+        {detail}
+      </p>
     </article>
   );
 }
 
 function getLaneKey(person: Person, groupMembers: readonly GroupMember[]) {
-  const isInGroup = groupMembers.some((member) => member.personId === person.id);
+  const isInGroup = groupMembers.some(
+    (member) => member.personId === person.id,
+  );
 
   if (isInGroup) return "cell";
   if (person.memberStatus === "visitor") return "visitor";
-  if (["congregant", "new_believer"].includes(person.memberStatus)) return "congregant";
+  if (["congregant", "new_believer"].includes(person.memberStatus))
+    return "congregant";
 
   return "member";
 }
 
-function mergeById<T extends { id: string }>(base: readonly T[], incoming: readonly T[]) {
+function mergeById<T extends { id: string }>(
+  base: readonly T[],
+  incoming: readonly T[],
+) {
   const map = new Map(base.map((item) => [item.id, item]));
   incoming.forEach((item) => map.set(item.id, item));
   return Array.from(map.values());
@@ -1952,14 +2919,18 @@ function matchesJourneyFilter(
     groupMembers: readonly GroupMember[];
     journeys: readonly VisitorJourney[];
     tasks: readonly FollowUpTask[];
-  }
+  },
 ) {
-  const personTasks = context.tasks.filter((task) => task.personId === person.id);
+  const personTasks = context.tasks.filter(
+    (task) => task.personId === person.id,
+  );
   const hasOpenTask = personTasks.some((task) => task.status !== "completed");
   const hasFirstContact = personTasks.some((task) =>
-    ["welcome_message", "first_contact"].includes(task.type)
+    ["welcome_message", "first_contact"].includes(task.type),
   );
-  const hasGroup = context.groupMembers.some((member) => member.personId === person.id);
+  const hasGroup = context.groupMembers.some(
+    (member) => member.personId === person.id,
+  );
   const journey = context.journeys.find((item) => item.personId === person.id);
 
   switch (filter) {
@@ -1985,7 +2956,7 @@ function getFilterCount(
     peopleWithOpenTasks: readonly Person[];
     readyForMembership: readonly VisitorJourney[];
     visitorsWithoutContact: readonly Person[];
-  }
+  },
 ) {
   switch (filter) {
     case "all":
@@ -1993,7 +2964,9 @@ function getFilterCount(
     case "needs_contact":
       return counts.visitorsWithoutContact.length;
     case "without_group":
-      return counts.aspirantsWithoutCell.length + counts.membersWithoutCell.length;
+      return (
+        counts.aspirantsWithoutCell.length + counts.membersWithoutCell.length
+      );
     case "ready_membership":
       return counts.readyForMembership.length;
     case "open_tasks":
@@ -2013,14 +2986,16 @@ function getCareSignal(
     groupMembers: readonly GroupMember[];
     journeys: readonly VisitorJourney[];
     tasks: readonly FollowUpTask[];
-  }
+  },
 ): {
   label: string;
   level: CareSignalLevel;
   score: number;
   summary: string;
 } {
-  const personTasks = context.tasks.filter((task) => task.personId === person.id);
+  const personTasks = context.tasks.filter(
+    (task) => task.personId === person.id,
+  );
   const openTasks = personTasks.filter((task) => task.status !== "completed");
   const hasOverdueTask = openTasks.some((task) => {
     if (!task.dueAt) return false;
@@ -2028,9 +3003,11 @@ function getCareSignal(
     return !Number.isNaN(dueTime) && dueTime < Date.now();
   });
   const hasFirstContact = personTasks.some((task) =>
-    ["welcome_message", "first_contact"].includes(task.type)
+    ["welcome_message", "first_contact"].includes(task.type),
   );
-  const hasGroup = context.groupMembers.some((member) => member.personId === person.id);
+  const hasGroup = context.groupMembers.some(
+    (member) => member.personId === person.id,
+  );
   const journey = context.journeys.find((item) => item.personId === person.id);
   const reasons: string[] = [];
   let score = 0;
@@ -2051,7 +3028,9 @@ function getCareSignal(
   }
 
   if (!hasGroup) {
-    score += ["member", "leader", "volunteer"].includes(person.memberStatus) ? 35 : 28;
+    score += ["member", "leader", "volunteer"].includes(person.memberStatus)
+      ? 35
+      : 28;
     reasons.push("Fora de célula");
   }
 
@@ -2065,7 +3044,7 @@ function getCareSignal(
       label: "Frio / Crítico",
       level: "urgent",
       score,
-      summary: reasons.join(", ")
+      summary: reasons.join(", "),
     };
   }
 
@@ -2074,7 +3053,7 @@ function getCareSignal(
       label: "Morno / Acompanhar",
       level: "attention",
       score,
-      summary: reasons.join(", ")
+      summary: reasons.join(", "),
     };
   }
 
@@ -2082,7 +3061,7 @@ function getCareSignal(
     label: "Aquecido / Estável",
     level: "stable",
     score,
-    summary: reasons.length ? reasons.join(", ") : "Sem gargalo crítico"
+    summary: reasons.length ? reasons.join(", ") : "Sem gargalo crítico",
   };
 }
 
@@ -2091,7 +3070,7 @@ function getJourneyRecommendation({
   journey,
   person,
   suggestedGroup,
-  tasks
+  tasks,
 }: {
   group: Group | null;
   journey: VisitorJourney | null;
@@ -2100,7 +3079,7 @@ function getJourneyRecommendation({
   tasks: readonly FollowUpTask[];
 }): JourneyRecommendation {
   const hasWelcome = tasks.some((task) =>
-    ["welcome_message", "first_contact"].includes(task.type)
+    ["welcome_message", "first_contact"].includes(task.type),
   );
   const hasGroupInvite = tasks.some((task) => task.type === "invite_to_group");
   const hasClassInvite = tasks.some((task) => task.type === "invite_to_class");
@@ -2108,39 +3087,47 @@ function getJourneyRecommendation({
   if (!journey && person.memberStatus === "visitor") {
     return {
       actionLabel: "Abrir portaria",
-      detail: "Essa pessoa parece visitante, mas ainda não tem uma jornada de recepção vinculada.",
+      detail:
+        "Essa pessoa parece visitante, mas ainda não tem uma jornada de recepção vinculada.",
       href: "/reception",
       kind: "link",
-      title: "Registrar chegada antes de cuidar"
+      title: "Registrar chegada antes de cuidar",
     };
   }
 
   if (!hasWelcome) {
     return {
       actionLabel: "Criar boas-vindas",
-      detail: "Primeiro contato reduz perda no funil. Crie uma tarefa simples para WhatsApp.",
+      detail:
+        "Primeiro contato reduz perda no funil. Crie uma tarefa simples para WhatsApp.",
       kind: "task",
       template: taskTemplates[0],
-      title: "Começar com acolhimento"
+      title: "Começar com acolhimento",
     };
   }
 
-  if (journey && getJourneyStageRank(journey.currentStage) < getJourneyStageRank("invited_to_group")) {
+  if (
+    journey &&
+    getJourneyStageRank(journey.currentStage) <
+      getJourneyStageRank("invited_to_group")
+  ) {
     return {
       actionLabel: "Avançar etapa",
-      detail: "A pessoa já recebeu cuidado inicial. Agora vale registrar o convite para célula.",
+      detail:
+        "A pessoa já recebeu cuidado inicial. Agora vale registrar o convite para célula.",
       kind: "advance",
-      title: "Mover para integração"
+      title: "Mover para integração",
     };
   }
 
   if (!group && suggestedGroup) {
     return {
       actionLabel: `Vincular a ${suggestedGroup.name}`,
-      detail: "Sem pequena comunidade, a jornada fica solta. Vincule a uma célula para criar pertencimento.",
+      detail:
+        "Sem pequena comunidade, a jornada fica solta. Vincule a uma célula para criar pertencimento.",
       group: suggestedGroup,
       kind: "group",
-      title: "Conectar a uma célula"
+      title: "Conectar a uma célula",
     };
   }
 
@@ -2150,17 +3137,21 @@ function getJourneyRecommendation({
       detail: "Ainda não existe convite para célula registrado.",
       kind: "task",
       template: taskTemplates[2],
-      title: "Preparar convite para comunidade"
+      title: "Preparar convite para comunidade",
     };
   }
 
-  if (!hasClassInvite && ["visitor", "congregant", "new_believer"].includes(person.memberStatus)) {
+  if (
+    !hasClassInvite &&
+    ["visitor", "congregant", "new_believer"].includes(person.memberStatus)
+  ) {
     return {
       actionLabel: "Criar convite para classe",
-      detail: "A classe de integração ajuda a explicar a visão antes da membresia.",
+      detail:
+        "A classe de integração ajuda a explicar a visão antes da membresia.",
       kind: "task",
       template: taskTemplates[3],
-      title: "Levar para classe de integração"
+      title: "Levar para classe de integração",
     };
   }
 
@@ -2176,7 +3167,7 @@ function getJourneyRecommendation({
         detail: "A jornada está pronta, mas ainda faltam dados no cadastro.",
         href: `/members/${person.id}`,
         kind: "link",
-        title: "Completar ficha antes da membresia"
+        title: "Completar ficha antes da membresia",
       };
     }
 
@@ -2185,15 +3176,16 @@ function getJourneyRecommendation({
       detail: "A jornada indica prontidão para confirmar a membresia formal.",
       kind: "status",
       status: "member",
-      title: "Decidir membresia"
+      title: "Decidir membresia",
     };
   }
 
   return {
     actionLabel: "Acompanhar",
-    detail: "Nenhum gargalo crítico apareceu agora. Continue acompanhando relacionamento.",
+    detail:
+      "Nenhum gargalo crítico apareceu agora. Continue acompanhando relacionamento.",
     kind: "observe",
-    title: "Fluxo em acompanhamento"
+    title: "Fluxo em acompanhamento",
   };
 }
 
@@ -2201,7 +3193,7 @@ function getJourneyTimeline({
   group,
   journey,
   person,
-  tasks
+  tasks,
 }: {
   group: Group | null;
   journey: VisitorJourney | null;
@@ -2209,43 +3201,53 @@ function getJourneyTimeline({
   tasks: readonly FollowUpTask[];
 }) {
   const hasWelcome = tasks.some((task) =>
-    ["welcome_message", "first_contact"].includes(task.type)
+    ["welcome_message", "first_contact"].includes(task.type),
   );
   const invitedToGroup =
     Boolean(group) ||
     tasks.some((task) => task.type === "invite_to_group") ||
-    (journey ? getJourneyStageRank(journey.currentStage) >= getJourneyStageRank("invited_to_group") : false);
+    (journey
+      ? getJourneyStageRank(journey.currentStage) >=
+        getJourneyStageRank("invited_to_group")
+      : false);
   const inClass =
     tasks.some((task) => task.type === "invite_to_class") ||
-    (journey ? getJourneyStageRank(journey.currentStage) >= getJourneyStageRank("attending_class") : false);
-  const isMember = ["member", "leader", "volunteer"].includes(person.memberStatus);
+    (journey
+      ? getJourneyStageRank(journey.currentStage) >=
+        getJourneyStageRank("attending_class")
+      : false);
+  const isMember = ["member", "leader", "volunteer"].includes(
+    person.memberStatus,
+  );
 
   return [
     {
-      detail: journey ? getJourneyStageLabel(journey.currentStage) : "Sem registro",
+      detail: journey
+        ? getJourneyStageLabel(journey.currentStage)
+        : "Sem registro",
       label: "Chegada",
-      state: journey ? "done" : "active"
+      state: journey ? "done" : "active",
     },
     {
       detail: hasWelcome ? "Contato feito" : "Pendente",
       label: "Contato",
-      state: hasWelcome ? "done" : "active"
+      state: hasWelcome ? "done" : "active",
     },
     {
-      detail: invitedToGroup ? group?.name ?? "Convidado" : "Pendente",
+      detail: invitedToGroup ? (group?.name ?? "Convidado") : "Pendente",
       label: "Comunidade",
-      state: invitedToGroup ? "done" : hasWelcome ? "active" : "pending"
+      state: invitedToGroup ? "done" : hasWelcome ? "active" : "pending",
     },
     {
       detail: inClass ? "Classe iniciada" : "Pendente",
       label: "Integração",
-      state: inClass ? "done" : invitedToGroup ? "active" : "pending"
+      state: inClass ? "done" : invitedToGroup ? "active" : "pending",
     },
     {
       detail: isMember ? "Efetivado" : "Pendente",
       label: "Membresia",
-      state: isMember ? "done" : inClass ? "active" : "pending"
-    }
+      state: isMember ? "done" : inClass ? "active" : "pending",
+    },
   ] as const;
 }
 
@@ -2256,7 +3258,7 @@ function getJourneyStageRank(stage: VisitorJourney["currentStage"]) {
     invited_to_group: 3,
     attending_class: 4,
     ready_for_membership: 5,
-    completed: 6
+    completed: 6,
   };
 
   return order[stage];
@@ -2266,7 +3268,7 @@ function getMembershipReadiness({
   group,
   journey,
   person,
-  tasks
+  tasks,
 }: {
   group: Group | null;
   journey: VisitorJourney | null;
@@ -2276,51 +3278,55 @@ function getMembershipReadiness({
   const hasPhone = Boolean(person.whatsappPhone || person.mobilePhone);
   const hasAddress = Boolean(
     person.address?.street &&
-      person.address?.number &&
-      person.address?.city &&
-      person.address?.state
+    person.address?.number &&
+    person.address?.city &&
+    person.address?.state,
   );
   const hasFamily = Boolean(person.primaryFamilyId);
   const hasConsent = Boolean(person.consentLgpdAt);
   const hasFirstCare = tasks.some((task) =>
-    ["welcome_message", "first_contact", "pastoral_contact"].includes(task.type)
+    ["welcome_message", "first_contact", "pastoral_contact"].includes(
+      task.type,
+    ),
   );
   const journeyReady = Boolean(
     journey &&
-      getJourneyStageRank(journey.currentStage) >= getJourneyStageRank("welcomed")
+    getJourneyStageRank(journey.currentStage) >=
+      getJourneyStageRank("welcomed"),
   );
 
   const items = [
     {
       detail: hasPhone ? "Telefone ok" : "Falta telefone",
       done: hasPhone,
-      label: "Contato"
+      label: "Contato",
     },
     {
       detail: hasAddress ? "Endereço ok" : "Falta endereço",
       done: hasAddress,
-      label: "Endereço"
+      label: "Endereço",
     },
     {
       detail: hasFamily ? "Família vinculada" : "Sem família",
       done: hasFamily,
-      label: "Família"
+      label: "Família",
     },
     {
       detail: hasConsent ? "Termo assinado" : "Sem LGPD",
       done: hasConsent,
-      label: "LGPD"
+      label: "LGPD",
     },
     {
       detail: group ? `Conectado` : "Sem célula",
       done: Boolean(group),
-      label: "Comunidade"
+      label: "Comunidade",
     },
     {
-      detail: hasFirstCare && journeyReady ? "Cuidado feito" : "Cuidado pendente",
+      detail:
+        hasFirstCare && journeyReady ? "Cuidado feito" : "Cuidado pendente",
       done: hasFirstCare && journeyReady,
-      label: "Cuidado Inicial"
-    }
+      label: "Cuidado Inicial",
+    },
   ];
   const completed = items.filter((item) => item.done).length;
 
@@ -2328,7 +3334,7 @@ function getMembershipReadiness({
     completed,
     items,
     percent: Math.round((completed / items.length) * 100),
-    total: items.length
+    total: items.length,
   };
 }
 
@@ -2338,7 +3344,7 @@ function getCarePlan({
   person,
   readiness,
   suggestedGroup,
-  tasks
+  tasks,
 }: {
   group: Group | null;
   journey: VisitorJourney | null;
@@ -2349,11 +3355,15 @@ function getCarePlan({
 }): CarePlanStep[] {
   const steps: CarePlanStep[] = [];
   const hasWelcome = tasks.some((task) =>
-    ["welcome_message", "first_contact"].includes(task.type)
+    ["welcome_message", "first_contact"].includes(task.type),
   );
   const hasClassInvite = tasks.some((task) => task.type === "invite_to_class");
-  const hasPastoralContact = tasks.some((task) => task.type === "pastoral_contact");
-  const isMember = ["member", "leader", "volunteer"].includes(person.memberStatus);
+  const hasPastoralContact = tasks.some(
+    (task) => task.type === "pastoral_contact",
+  );
+  const isMember = ["member", "leader", "volunteer"].includes(
+    person.memberStatus,
+  );
   const hasProfileGaps = Boolean(readiness?.items.some((item) => !item.done));
 
   if (!journey && person.memberStatus === "visitor") {
@@ -2362,7 +3372,7 @@ function getCarePlan({
       actionLabel: "Abrir Portaria",
       detail: "Crie a jornada registrando a chegada na recepção.",
       href: "/reception",
-      title: "Registrar Chegada"
+      title: "Registrar Chegada",
     });
   }
 
@@ -2372,16 +3382,20 @@ function getCarePlan({
       actionLabel: "Criar Tarefa",
       detail: "Garanta que a equipe faça o primeiro contato pastoral.",
       template: taskTemplates[0],
-      title: "Primeiro Acolhimento"
+      title: "Primeiro Acolhimento",
     });
   }
 
-  if (journey && getJourneyStageRank(journey.currentStage) < getJourneyStageRank("invited_to_group")) {
+  if (
+    journey &&
+    getJourneyStageRank(journey.currentStage) <
+      getJourneyStageRank("invited_to_group")
+  ) {
     steps.push({
       actionKind: "advance",
       actionLabel: "Avançar Etapa",
       detail: "Após o contato inicial, mova para etapa de integração.",
-      title: "Atualizar Etapa da Jornada"
+      title: "Atualizar Etapa da Jornada",
     });
   }
 
@@ -2391,17 +3405,20 @@ function getCarePlan({
       actionLabel: "Vincular Célula",
       detail: `Sugestão: Conectar à célula ${suggestedGroup.name}.`,
       group: suggestedGroup,
-      title: "Conectar à Célula"
+      title: "Conectar à Célula",
     });
   }
 
-  if (!hasClassInvite && ["visitor", "congregant", "new_believer"].includes(person.memberStatus)) {
+  if (
+    !hasClassInvite &&
+    ["visitor", "congregant", "new_believer"].includes(person.memberStatus)
+  ) {
     steps.push({
       actionKind: "task",
       actionLabel: "Criar Convite",
       detail: "Convide para classe de integração Academia Esdras.",
       template: taskTemplates[3],
-      title: "Classe de Integração"
+      title: "Classe de Integração",
     });
   }
 
@@ -2411,7 +3428,7 @@ function getCarePlan({
       actionLabel: "Agendar",
       detail: "Agende uma conversa pastoral de aliança antes da membresia.",
       template: taskTemplates[4],
-      title: "Conversa Pastoral"
+      title: "Conversa Pastoral",
     });
   }
 
@@ -2421,17 +3438,22 @@ function getCarePlan({
       actionLabel: "Completar Ficha",
       detail: "Feche os dados pendentes no cadastro sensível.",
       href: `/members/${person.id}`,
-      title: "Completar Cadastro"
+      title: "Completar Cadastro",
     });
   }
 
-  if (!isMember && readiness?.percent === 100 && journey?.currentStage === "ready_for_membership") {
+  if (
+    !isMember &&
+    readiness?.percent === 100 &&
+    journey?.currentStage === "ready_for_membership"
+  ) {
     steps.push({
       actionKind: "status",
       actionLabel: "Efetivar Membro",
-      detail: "Ficha concluída e jornada completa. Efetivar como membro formal.",
+      detail:
+        "Ficha concluída e jornada completa. Efetivar como membro formal.",
       status: "member",
-      title: "Efetivar Membro"
+      title: "Efetivar Membro",
     });
   }
 
@@ -2442,7 +3464,7 @@ function getCarePlan({
       detail: group
         ? `Acompanhe frequência e comunhão na célula ${group.name}.`
         : "Manter acompanhamento de presença e cuidado regular.",
-      title: "Manter Relacionamento"
+      title: "Manter Relacionamento",
     });
   }
 
@@ -2510,7 +3532,9 @@ function getJourneyStageLabel(stage: VisitorJourney["currentStage"]) {
   }
 }
 
-function getNextJourneyStage(stage: VisitorJourney["currentStage"]): VisitorJourney["currentStage"] {
+function getNextJourneyStage(
+  stage: VisitorJourney["currentStage"],
+): VisitorJourney["currentStage"] {
   switch (stage) {
     case "new_visitor":
       return "welcomed";

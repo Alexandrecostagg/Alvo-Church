@@ -60,7 +60,11 @@ export class RateLimiter {
   /**
    * Retorna os metadados do rate limit atual para headers (Retry-After, etc.).
    */
-  getStatus(key: string): { remaining: number; resetAt: number; limit: number } {
+  getStatus(key: string): {
+    remaining: number;
+    resetAt: number;
+    limit: number;
+  } {
     const now = Date.now();
     const existing = this.store.get(key);
     if (!existing) {

@@ -8,7 +8,12 @@ export function friendlyError(error: unknown, fallback: string): string {
     if (msg.includes("permission") || msg.includes("insufficient")) {
       return "Você não tem permissão para esta ação. Fale com o administrador da sua igreja.";
     }
-    if (msg.includes("network") || msg.includes("offline") || msg.includes("failed to fetch") || msg.includes("unavailable")) {
+    if (
+      msg.includes("network") ||
+      msg.includes("offline") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("unavailable")
+    ) {
       return "Sem conexão com o servidor. Verifique sua internet e tente novamente.";
     }
     if (msg.includes("quota") || msg.includes("resource-exhausted")) {

@@ -18,17 +18,32 @@ import {
   Heart,
   Star,
   AlertCircle,
-  Navigation
+  Navigation,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchCommunityStoreById, fetchCommunityOffers, saveMarketplacePromotion } from "@alvo/firebase";
-import type { CommunityStore, CommunityOffer, TenantContext, PostalAddress } from "@alvo/types";
+import {
+  fetchCommunityStoreById,
+  fetchCommunityOffers,
+  saveMarketplacePromotion,
+} from "@alvo/firebase";
+import type {
+  CommunityStore,
+  CommunityOffer,
+  TenantContext,
+  PostalAddress,
+} from "@alvo/types";
 
 // Monta a URL do Google Maps a partir do endereço da loja — abre o app de mapas
 // no celular / o site no desktop, mostrando o estabelecimento.
 function buildMapsUrl(address: PostalAddress): string {
-  const parts = [address.street, address.number, address.district, address.city, address.state, address.postalCode]
-    .filter(Boolean);
+  const parts = [
+    address.street,
+    address.number,
+    address.district,
+    address.city,
+    address.state,
+    address.postalCode,
+  ].filter(Boolean);
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
 }
 
@@ -37,19 +52,26 @@ const mockStore: CommunityStore = {
   organizationId: "org_alvo_demo",
   ownerId: "user_admin_demo",
   name: "Doces & Travessuras",
-  description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+  description:
+    "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
   category: "food",
   status: "approved",
   images: [],
-  bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+  bannerImageUrl:
+    "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
   contact: {
     email: "doces@esdras.app",
     phone: "(91) 99999-9991",
-    address: { street: "Av. Gentil Bittencourt", number: "123", city: "Belém", state: "PA" }
+    address: {
+      street: "Av. Gentil Bittencourt",
+      number: "123",
+      city: "Belém",
+      state: "PA",
+    },
   },
   socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
   createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
+  updatedAt: new Date().toISOString(),
 };
 
 const mockOffers: CommunityOffer[] = [
@@ -58,17 +80,20 @@ const mockOffers: CommunityOffer[] = [
     organizationId: "org_alvo_demo",
     storeId: "store_1",
     title: "15% de desconto em bolos inteiros",
-    description: "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Esdras Passe.",
+    description:
+      "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Esdras Passe.",
     type: "percentage",
     discountPercentage: 15,
     status: "active",
-    images: ["https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop"],
+    images: [
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop",
+    ],
     validFrom: new Date().toISOString(),
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    createdBy: "user_admin_demo"
-  }
+    createdBy: "user_admin_demo",
+  },
 ];
 
 interface StoreDetailViewProps {
@@ -76,8 +101,20 @@ interface StoreDetailViewProps {
 }
 
 export function StoreDetailView({ storeId }: StoreDetailViewProps) {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user, hasAnyRole } = useAppAuth();
-  const isAdmin = hasAnyRole(["super_admin", "church_admin", "pastor", "secretary"]);
+  const {
+    firebaseConfig,
+    organizationId,
+    firebaseReady,
+    tenantReady,
+    user,
+    hasAnyRole,
+  } = useAppAuth();
+  const isAdmin = hasAnyRole([
+    "super_admin",
+    "church_admin",
+    "pastor",
+    "secretary",
+  ]);
   const [store, setStore] = useState<CommunityStore | null>(null);
   const [offers, setOffers] = useState<CommunityOffer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,16 +130,22 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
     if (!store || !organizationId || !promoTitle.trim()) return;
     setPromoSaving(true);
     try {
-      await saveMarketplacePromotion(firebaseConfig, { organizationId }, {
-        storeId: store.id,
-        storeName: store.name,
-        title: promoTitle.trim(),
-        description: promoDesc.trim(),
-        validUntil: promoValidUntil || undefined,
-        status: "active",
-        createdBy: user?.uid ?? "",
-      });
-      setPromoTitle(""); setPromoDesc(""); setPromoValidUntil("");
+      await saveMarketplacePromotion(
+        firebaseConfig,
+        { organizationId },
+        {
+          storeId: store.id,
+          storeName: store.name,
+          title: promoTitle.trim(),
+          description: promoDesc.trim(),
+          validUntil: promoValidUntil || undefined,
+          status: "active",
+          createdBy: user?.uid ?? "",
+        },
+      );
+      setPromoTitle("");
+      setPromoDesc("");
+      setPromoValidUntil("");
       setPromoSaved(true);
       setTimeout(() => setPromoSaved(false), 3500);
     } catch (e) {
@@ -123,12 +166,25 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
-        const storeData = await fetchCommunityStoreById(firebaseConfig, context, storeId);
+        const storeData = await fetchCommunityStoreById(
+          firebaseConfig,
+          context,
+          storeId,
+        );
         setStore(storeData || mockStore);
-        
+
         if (storeData && storeData.status === "approved") {
-          const offersData = await fetchCommunityOffers(firebaseConfig, context, storeId, 50);
-          setOffers(offersData.length > 0 ? offersData.filter(o => o.status === "active") : mockOffers);
+          const offersData = await fetchCommunityOffers(
+            firebaseConfig,
+            context,
+            storeId,
+            50,
+          );
+          setOffers(
+            offersData.length > 0
+              ? offersData.filter((o) => o.status === "active")
+              : mockOffers,
+          );
         } else {
           setOffers(mockOffers);
         }
@@ -149,7 +205,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
     food: { label: "Alimentação", icon: "🍽️", color: "#f59e0b" },
     education: { label: "Educação", icon: "📚", color: "#3b82f6" },
     services: { label: "Serviços", icon: "🔧", color: "#10b981" },
-    community: { label: "Comunidade", icon: "🤝", color: "#8b5cf6" }
+    community: { label: "Comunidade", icon: "🤝", color: "#8b5cf6" },
   };
 
   if (loading) {
@@ -175,7 +231,9 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
     );
   }
 
-  const catInfo = categories[store.category as keyof typeof categories] || categories.community;
+  const catInfo =
+    categories[store.category as keyof typeof categories] ||
+    categories.community;
 
   return (
     <main className="store-detail-container">
@@ -186,13 +244,17 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
       {/* Hero Section */}
       <section className="store-hero">
         {store.bannerImageUrl ? (
-          <img src={store.bannerImageUrl} alt={store.name} className="hero-image" />
+          <img
+            src={store.bannerImageUrl}
+            alt={store.name}
+            className="hero-image"
+          />
         ) : (
           <div className="hero-placeholder">
             <ImageIcon size={48} opacity={0.2} />
           </div>
         )}
-        
+
         <div className="hero-overlay">
           <div className="hero-content">
             <div className="store-category" style={{ color: catInfo.color }}>
@@ -200,9 +262,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             </div>
             <h1>{store.name}</h1>
             {store.status === "approved" && (
-              <div className="verification-badge">
-                ✓ Loja Verificada
-              </div>
+              <div className="verification-badge">✓ Loja Verificada</div>
             )}
           </div>
 
@@ -223,9 +283,12 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           {/* Contact Card */}
           <div className="contact-card">
             <h3>Informações de Contato</h3>
-            
+
             {store.contact?.email && (
-              <a href={`mailto:${store.contact.email}`} className="contact-item">
+              <a
+                href={`mailto:${store.contact.email}`}
+                className="contact-item"
+              >
                 <Mail size={18} />
                 <div>
                   <div className="contact-label">Email</div>
@@ -256,11 +319,23 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                 <div>
                   <div className="contact-label">Localização</div>
                   <div className="contact-value">
-                    {store.contact.address.street && `${store.contact.address.street}, ${store.contact.address.number}`}
+                    {store.contact.address.street &&
+                      `${store.contact.address.street}, ${store.contact.address.number}`}
                     {store.contact.address.city && <br />}
-                    {store.contact.address.city && `${store.contact.address.city}, ${store.contact.address.state}`}
+                    {store.contact.address.city &&
+                      `${store.contact.address.city}, ${store.contact.address.state}`}
                   </div>
-                  <div style={{ marginTop: 6, color: "#2563eb", fontWeight: 700, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      color: "#2563eb",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
                     Como chegar <Navigation size={13} />
                   </div>
                 </div>
@@ -269,9 +344,9 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
 
             <div className="contact-socials">
               {store.socialLinks?.whatsapp && (
-                <a 
-                  href={`https://wa.me/${store.socialLinks.whatsapp.replace(/\D/g, '')}`} 
-                  target="_blank" 
+                <a
+                  href={`https://wa.me/${store.socialLinks.whatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="social-btn"
                   title="WhatsApp"
@@ -280,7 +355,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                 </a>
               )}
               {store.socialLinks?.instagram && (
-                <a 
+                <a
                   href={`https://instagram.com/${store.socialLinks.instagram}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -291,7 +366,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                 </a>
               )}
               {store.socialLinks?.website && (
-                <a 
+                <a
                   href={store.socialLinks.website}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -317,7 +392,8 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             <section className="store-section">
               <h2>📣 Publicar promoção</h2>
               <p className="store-description" style={{ marginBottom: 14 }}>
-                Ao publicar, os membros recebem um aviso no app (feed de promoções).
+                Ao publicar, os membros recebem um aviso no app (feed de
+                promoções).
               </p>
               <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
                 <input
@@ -325,34 +401,71 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                   placeholder="Título (ex: 20% em toda a padaria neste sábado)"
                   value={promoTitle}
                   onChange={(e) => setPromoTitle(e.target.value)}
-                  style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14 }}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(15,23,42,0.15)",
+                    fontSize: 14,
+                  }}
                 />
                 <textarea
                   placeholder="Detalhes da promoção (opcional)"
                   value={promoDesc}
                   onChange={(e) => setPromoDesc(e.target.value)}
                   rows={3}
-                  style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14, resize: "vertical" }}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(15,23,42,0.15)",
+                    fontSize: 14,
+                    resize: "vertical",
+                  }}
                 />
-                <label style={{ fontSize: 13, color: "#475569", display: "grid", gap: 6 }}>
+                <label
+                  style={{
+                    fontSize: 13,
+                    color: "#475569",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
                   Válido até (opcional)
                   <input
                     type="date"
                     value={promoValidUntil}
                     onChange={(e) => setPromoValidUntil(e.target.value)}
-                    style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(15,23,42,0.15)", fontSize: 14, width: "fit-content" }}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(15,23,42,0.15)",
+                      fontSize: 14,
+                      width: "fit-content",
+                    }}
                   />
                 </label>
                 <button
                   onClick={handlePublishPromotion}
                   disabled={promoSaving || !promoTitle.trim()}
                   style={{
-                    justifySelf: "start", minHeight: 44, padding: "0 20px", borderRadius: 10, border: "none",
-                    background: promoSaved ? "#16a34a" : "#ea580c", color: "#fff", fontWeight: 800, fontSize: 15,
-                    cursor: promoSaving || !promoTitle.trim() ? "default" : "pointer", opacity: !promoTitle.trim() ? 0.6 : 1
+                    justifySelf: "start",
+                    minHeight: 44,
+                    padding: "0 20px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: promoSaved ? "#16a34a" : "#ea580c",
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: 15,
+                    cursor:
+                      promoSaving || !promoTitle.trim() ? "default" : "pointer",
+                    opacity: !promoTitle.trim() ? 0.6 : 1,
                   }}
                 >
-                  {promoSaving ? "Publicando…" : promoSaved ? "✓ Publicada — membros avisados" : "Publicar promoção"}
+                  {promoSaving
+                    ? "Publicando…"
+                    : promoSaved
+                      ? "✓ Publicada — membros avisados"
+                      : "Publicar promoção"}
                 </button>
               </div>
             </section>
@@ -363,10 +476,14 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
             <section className="store-section">
               <h2>Promoções Ativas</h2>
               <div className="offers-grid">
-                {offers.map(offer => (
+                {offers.map((offer) => (
                   <div key={offer.id} className="offer-card">
                     {offer.images[0] && (
-                      <img src={offer.images[0]} alt={offer.title} className="offer-image" />
+                      <img
+                        src={offer.images[0]}
+                        alt={offer.title}
+                        className="offer-image"
+                      />
                     )}
                     <div className="offer-content">
                       <h4>{offer.title}</h4>
@@ -383,15 +500,16 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
                           </span>
                         )}
                         {offer.type === "freebie" && (
-                          <span className="discount-badge free">
-                            BRINDE
-                          </span>
+                          <span className="discount-badge free">BRINDE</span>
                         )}
                       </div>
                       {offer.validUntil && (
                         <div className="offer-validity">
                           <Calendar size={14} />
-                          Válido até {new Date(offer.validUntil).toLocaleDateString('pt-BR')}
+                          Válido até{" "}
+                          {new Date(offer.validUntil).toLocaleDateString(
+                            "pt-BR",
+                          )}
                         </div>
                       )}
                     </div>
@@ -508,7 +626,11 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.2) 0%,
+            rgba(15, 23, 42, 0.4) 100%
+          );
         }
 
         .hero-overlay {
@@ -517,7 +639,11 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: linear-gradient(180deg, transparent 0%, rgba(11, 15, 25, 0.9) 100%);
+          background: linear-gradient(
+            180deg,
+            transparent 0%,
+            rgba(11, 15, 25, 0.9) 100%
+          );
           display: flex;
           align-items: flex-end;
           justify-content: space-between;

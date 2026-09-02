@@ -1,6 +1,6 @@
 export async function initializeFirebase() {
   return {
-    message: 'firebase initialized (stub)'
+    message: "firebase initialized (stub)",
   };
 }
 
@@ -47,14 +47,16 @@ export function createFirebaseConfig(projectId: string): FirebaseAppConfig {
     apiKey: "",
     authDomain: `${projectId}.firebaseapp.com`,
     projectId,
-    storageBucket: `${projectId}.firebasestorage.app`
+    storageBucket: `${projectId}.firebasestorage.app`,
   };
 }
 
-export function createFirebaseEnvironment(projectId = "alvo-church"): FirebaseEnvironment {
+export function createFirebaseEnvironment(
+  projectId = "alvo-church",
+): FirebaseEnvironment {
   return {
     projectId,
     authDomain: `${projectId}.firebaseapp.com`,
-    storageBucket: `${projectId}.firebasestorage.app`
+    storageBucket: `${projectId}.firebasestorage.app`,
   };
 }

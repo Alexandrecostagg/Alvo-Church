@@ -7,17 +7,20 @@ import {
   createFirebaseWebRuntimeConfigFromEnv,
   fetchFamilies,
   fetchPeople,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
 import type { Family, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { loadLocalMemberStore } from "../../lib/local-member-store";
 
 export function MembersView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } =
+    useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
-  const [status, setStatus] = useState("Entre no painel para consultar a base real.");
+  const [status, setStatus] = useState(
+    "Entre no painel para consultar a base real.",
+  );
   const [query, setQuery] = useState(() => getInitialQuery());
   const [memberStatusFilter, setMemberStatusFilter] = useState("all");
   const [passFilter, setPassFilter] = useState("all");
@@ -30,7 +33,9 @@ export function MembersView() {
       if (localStore.people.length || localStore.families.length) {
         setPeople((current) => mergeById(current, localStore.people));
         setFamilies((current) => mergeById(current, localStore.families));
-        setStatus(`${localStore.people.length} cadastro(s) local(is) carregado(s) neste navegador.`);
+        setStatus(
+          `${localStore.people.length} cadastro(s) local(is) carregado(s) neste navegador.`,
+        );
       }
     }
 
@@ -38,12 +43,20 @@ export function MembersView() {
     window.addEventListener("alvo-local-members-updated", loadLocalMembers);
 
     return () => {
-      window.removeEventListener("alvo-local-members-updated", loadLocalMembers);
+      window.removeEventListener(
+        "alvo-local-members-updated",
+        loadLocalMembers,
+      );
     };
   }, []);
 
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !firebaseReady ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       return;
     }
 
@@ -55,7 +68,7 @@ export function MembersView() {
       try {
         const [nextPeople, nextFamilies] = await Promise.all([
           fetchPeople(firebaseConfig, { organizationId }, 40),
-          fetchFamilies(firebaseConfig, { organizationId }, 20)
+          fetchFamilies(firebaseConfig, { organizationId }, 20),
         ]);
 
         if (cancelled) {
@@ -66,7 +79,7 @@ export function MembersView() {
         setPeople(mergeById(nextPeople, localStore.people));
         setFamilies(mergeById(nextFamilies, localStore.families));
         setStatus(
-          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) sincronizadas no Firestore.`
+          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) sincronizadas no Firestore.`,
         );
       } catch (error) {
         if (!cancelled) {
@@ -83,13 +96,15 @@ export function MembersView() {
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   const members = people.filter((person) =>
-    ["member", "leader", "volunteer"].includes(person.memberStatus)
+    ["member", "leader", "volunteer"].includes(person.memberStatus),
   );
   const visitors = people.filter((person) => person.memberStatus === "visitor");
-  const esdrasPassEnabled = people.filter((person) => person.partnerBenefitsEnabled);
+  const esdrasPassEnabled = people.filter(
+    (person) => person.partnerBenefitsEnabled,
+  );
   const ungroupedPeople = people.filter((person) => !person.primaryFamilyId);
   const peopleWithProtectedData = people.filter(
-    (person) => person.cpf || person.birthDate || person.householdIncomeRange
+    (person) => person.cpf || person.birthDate || person.householdIncomeRange,
   );
   const filteredPeople = people.filter((person) => {
     const normalizedQuery = normalizeSearch(deferredQuery);
@@ -97,11 +112,12 @@ export function MembersView() {
       ? normalizeSearch(
           `${getFullName(person)} ${person.email ?? ""} ${person.mobilePhone ?? ""} ${
             person.whatsappPhone ?? ""
-          } ${person.cpf ?? ""} ${formatAddress(person.address)}`
+          } ${person.cpf ?? ""} ${formatAddress(person.address)}`,
         ).includes(normalizedQuery)
       : true;
     const matchesStatus =
-      memberStatusFilter === "all" || person.memberStatus === memberStatusFilter;
+      memberStatusFilter === "all" ||
+      person.memberStatus === memberStatusFilter;
     const matchesPass =
       passFilter === "all" ||
       (passFilter === "enabled" && person.partnerBenefitsEnabled) ||
@@ -113,27 +129,31 @@ export function MembersView() {
     {
       label: "01",
       title: "Cadastrar pessoa",
-      detail: "Comece pelo membro, visitante ou aspirante com dados essenciais.",
-      href: "/members/new"
+      detail:
+        "Comece pelo membro, visitante ou aspirante com dados essenciais.",
+      href: "/members/new",
     },
     {
       label: "02",
       title: "Vincular família",
-      detail: "Organize casa, responsáveis, renda declarada e endereço protegido.",
-      href: "/members/new"
+      detail:
+        "Organize casa, responsáveis, renda declarada e endereço protegido.",
+      href: "/members/new",
     },
     {
       label: "03",
       title: "Ativar cuidado",
-      detail: "Use status pastoral para alimentar jornadas, grupos e comunicação.",
-      href: "/#journeys"
+      detail:
+        "Use status pastoral para alimentar jornadas, grupos e comunicação.",
+      href: "/#journeys",
     },
     {
       label: "04",
       title: "Liberar Esdras Passe",
-      detail: "Habilite benefícios externos sem expor CPF, renda ou histórico pastoral.",
-      href: "/members/new"
-    }
+      detail:
+        "Habilite benefícios externos sem expor CPF, renda ou histórico pastoral.",
+      href: "/members/new",
+    },
   ];
 
   return (
@@ -145,8 +165,8 @@ export function MembersView() {
         <p className="eyebrow">Base pastoral</p>
         <h1>Membros, famílias e aspirantes</h1>
         <p>
-          Visão operacional para líderes acompanharem pessoas, casas, visitantes em
-          transição e elegibilidade para Esdras Passe.
+          Visão operacional para líderes acompanharem pessoas, casas, visitantes
+          em transição e elegibilidade para Esdras Passe.
         </p>
         <div className="directory-actions">
           <Link className="primary-button" href="/members/new">
@@ -170,7 +190,11 @@ export function MembersView() {
           </div>
           <div className="member-flow-lane">
             {directoryFlowSteps.map((step) => (
-              <Link className="member-flow-step" href={step.href} key={step.label}>
+              <Link
+                className="member-flow-step"
+                href={step.href}
+                key={step.label}
+              >
                 <div className="member-flow-step-head">
                   <span>{step.label}</span>
                   <strong>{step.title}</strong>
@@ -238,7 +262,10 @@ export function MembersView() {
               {filteredPeople.length} de {people.length}
             </span>
           </div>
-          <div className="directory-toolbar" aria-label="Filtros da base de membros">
+          <div
+            className="directory-toolbar"
+            aria-label="Filtros da base de membros"
+          >
             <label>
               Buscar
               <input
@@ -280,19 +307,34 @@ export function MembersView() {
           <div className="directory-list">
             {filteredPeople.length ? (
               filteredPeople.map((person) => (
-                <Link key={person.id} className="directory-row" href={`/members/${person.id}`}>
-                  <div className="avatar">{getInitials(getFullName(person))}</div>
+                <Link
+                  key={person.id}
+                  className="directory-row"
+                  href={`/members/${person.id}`}
+                >
+                  <div className="avatar">
+                    {getInitials(getFullName(person))}
+                  </div>
                   <div>
                     <strong>{getFullName(person)}</strong>
                     <p>
-                      {getMemberStatusLabel(person.memberStatus)} - {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade não informada"}
+                      {getMemberStatusLabel(person.memberStatus)} -{" "}
+                      {person.birthDate
+                        ? `${calculateAge(person.birthDate)} anos`
+                        : "idade não informada"}
                     </p>
                     <small>
                       {person.cpf ? `CPF ${maskCpf(person.cpf)} - ` : ""}
                       {formatAddress(person.address)}
                     </small>
                   </div>
-                  <span className={person.partnerBenefitsEnabled ? "pass-status on" : "pass-status"}>
+                  <span
+                    className={
+                      person.partnerBenefitsEnabled
+                        ? "pass-status on"
+                        : "pass-status"
+                    }
+                  >
                     {person.partnerBenefitsEnabled ? "Esdras Passe" : "Interno"}
                   </span>
                   <small className="row-action">Abrir ficha</small>
@@ -300,7 +342,11 @@ export function MembersView() {
               ))
             ) : (
               <div className="empty-state">
-                <strong>{people.length ? "Nenhum resultado" : "Nenhum membro carregado"}</strong>
+                <strong>
+                  {people.length
+                    ? "Nenhum resultado"
+                    : "Nenhum membro carregado"}
+                </strong>
                 <p>
                   {people.length
                     ? "Ajuste os filtros para encontrar outra pessoa."
@@ -339,7 +385,10 @@ export function MembersView() {
             ) : (
               <div className="empty-state">
                 <strong>Nenhuma família</strong>
-                <p>Crie uma família no cadastro de membro para popular esta visão.</p>
+                <p>
+                  Crie uma família no cadastro de membro para popular esta
+                  visão.
+                </p>
                 <Link className="ghost-button" href="/members/new">
                   Vincular família
                 </Link>
@@ -387,7 +436,10 @@ function calculateAge(birthDate: string) {
   let age = today.getFullYear() - birth.getFullYear();
   const monthDelta = today.getMonth() - birth.getMonth();
 
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
+  if (
+    monthDelta < 0 ||
+    (monthDelta === 0 && today.getDate() < birth.getDate())
+  ) {
     age -= 1;
   }
 
@@ -399,9 +451,17 @@ function formatAddress(address: Person["address"] | Family["address"]) {
     return "endereço não informado";
   }
 
-  return [address.street, address.number, address.district, address.city, address.state]
-    .filter(Boolean)
-    .join(", ") || "endereco nao informado";
+  return (
+    [
+      address.street,
+      address.number,
+      address.district,
+      address.city,
+      address.state,
+    ]
+      .filter(Boolean)
+      .join(", ") || "endereco nao informado"
+  );
 }
 
 function maskCpf(cpf: string) {
@@ -418,7 +478,10 @@ function countFamilyPeople(people: readonly Person[], familyId: string) {
   return people.filter((person) => person.primaryFamilyId === familyId).length;
 }
 
-function mergeById<T extends { id: string }>(base: readonly T[], incoming: readonly T[]) {
+function mergeById<T extends { id: string }>(
+  base: readonly T[],
+  incoming: readonly T[],
+) {
   const map = new Map(base.map((item) => [item.id, item]));
   incoming.forEach((item) => map.set(item.id, item));
   return Array.from(map.values());
