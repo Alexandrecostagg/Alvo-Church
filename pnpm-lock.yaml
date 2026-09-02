@@ -154,9 +154,6 @@ importers:
 
   apps/worker-api:
     dependencies:
-      '@alvo/ai':
-        specifier: workspace:*
-        version: link:../../packages/ai
       '@alvo/domain':
         specifier: workspace:*
         version: link:../../packages/domain
