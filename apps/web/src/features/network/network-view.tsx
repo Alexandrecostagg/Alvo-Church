@@ -74,7 +74,7 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
   const [saving, setSaving] = useState(false);
   const { firebaseConfig } = useAppAuth();
 
-  const code = useMemo(() => Math.random().toString(36).slice(2, 8).toUpperCase(), []);
+  const code = useMemo(() => window.crypto.getRandomValues(new Uint32Array(1))[0].toString(36).padStart(6, '0').slice(-6).toUpperCase(), []);
 
   async function handleCreate() {
     if (!name.trim()) return;
