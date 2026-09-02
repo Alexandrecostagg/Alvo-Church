@@ -1501,7 +1501,7 @@ export interface BannerCopyContent {
   hashtags: string;
 }
 
-// Um banner gerado e salvo no histórico. Guarda TODOS os inputs para
+// Um banner gerado e salvo no histórico. Guarda todos os inputs para
 // reabrir/regenerar em alta resolução (o fundo do Pollinations é determinístico
 // pelo seed), mais um thumbnail JPEG compacto para o preview do histórico e a
 // foto do pregador já reduzida (quando houver), para o re-render ficar fiel.
