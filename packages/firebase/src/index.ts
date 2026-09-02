@@ -24,6 +24,7 @@ export {
   onSnapshot,
   orderBy,
   limit,
+  writeBatch,
 } from "firebase/firestore";
 
 export interface FirebaseAppConfig {
