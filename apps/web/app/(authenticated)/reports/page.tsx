@@ -15,3 +15,4 @@ export default function ReportsPage() {
     </RoleGuard>
   );
 }
+export const runtime = 'edge';

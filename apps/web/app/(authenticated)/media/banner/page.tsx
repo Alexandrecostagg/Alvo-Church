@@ -10,3 +10,4 @@ const BannerGenerator = dynamic(
 export default function BannerPage() {
   return <BannerGenerator />;
 }
+export const runtime = 'edge';

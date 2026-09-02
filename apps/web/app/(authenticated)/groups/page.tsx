@@ -15,3 +15,4 @@ export default function GroupsPage() {
     </ModuleGuard>
   );
 }
+export const runtime = 'edge';

@@ -18,3 +18,4 @@ export default function EventsPage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

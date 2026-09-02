@@ -10,3 +10,4 @@ const NotificationsView = dynamic(
 export default function NotificationsPage() {
   return <NotificationsView />;
 }
+export const runtime = 'edge';

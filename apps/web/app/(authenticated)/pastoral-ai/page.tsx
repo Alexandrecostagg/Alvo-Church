@@ -21,3 +21,4 @@ export default function PastoralAiPage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

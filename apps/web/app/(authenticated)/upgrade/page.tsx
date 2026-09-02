@@ -118,3 +118,4 @@ const backLinkStyle = {
   fontSize: 14,
   textDecoration: "none",
 } as const;
+export const runtime = 'edge';

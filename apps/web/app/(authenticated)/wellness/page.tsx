@@ -10,3 +10,4 @@ const WellnessView = dynamic(
 export default function WellnessPage() {
   return <WellnessView />;
 }
+export const runtime = 'edge';

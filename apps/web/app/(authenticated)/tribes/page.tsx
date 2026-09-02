@@ -18,3 +18,4 @@ export default function TribesPage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

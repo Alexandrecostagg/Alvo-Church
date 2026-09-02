@@ -15,3 +15,4 @@ export default function JourneysPage() {
     </ModuleGuard>
   );
 }
+export const runtime = 'edge';

@@ -10,3 +10,4 @@ const MemberNewView = dynamic(
 export default function NewMemberPage() {
   return <MemberNewView />;
 }
+export const runtime = 'edge';

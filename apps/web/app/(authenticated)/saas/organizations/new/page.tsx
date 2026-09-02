@@ -10,3 +10,4 @@ const OrganizationNewView = dynamic(
 export default function NewContractingOrganizationPage() {
   return <OrganizationNewView />;
 }
+export const runtime = 'edge';

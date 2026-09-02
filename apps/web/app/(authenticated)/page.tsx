@@ -10,3 +10,4 @@ const DashboardView = dynamic(
 export default function HomePage() {
   return <DashboardView />;
 }
+export const runtime = 'edge';

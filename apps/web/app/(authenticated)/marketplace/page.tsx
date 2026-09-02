@@ -18,3 +18,4 @@ export default function MarketplacePage() {
     </PlanGuard>
   );
 }
+export const runtime = 'edge';

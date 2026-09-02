@@ -10,3 +10,4 @@ const KidsSecurityView = dynamic(
 export default function KidsSecurityPage() {
   return <KidsSecurityView />;
 }
+export const runtime = 'edge';

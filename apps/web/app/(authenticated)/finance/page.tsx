@@ -21,3 +21,4 @@ export default function FinancePage() {
     </RoleGuard>
   );
 }
+export const runtime = 'edge';
