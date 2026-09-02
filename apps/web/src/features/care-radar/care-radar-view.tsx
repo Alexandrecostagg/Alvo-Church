@@ -199,12 +199,14 @@ export function CareRadarView() {
       meetingsByGroup.set(m.groupId, list);
     });
 
+    meetingsByGroup.forEach((list) => {
+      list.sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+    });
+
     const results: InsightItem[] = [];
 
     groupMembers.forEach((member) => {
-      const meetings = (meetingsByGroup.get(member.groupId) ?? [])
-        .slice()
-        .sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+      const meetings = meetingsByGroup.get(member.groupId) ?? [];
       if (!meetings.length) return;
 
       const presentMeeting = meetings.find((meeting) =>
