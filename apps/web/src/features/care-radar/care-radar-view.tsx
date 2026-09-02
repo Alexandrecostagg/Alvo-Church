@@ -94,10 +94,16 @@ export function CareRadarView() {
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [groupMeetings, setGroupMeetings] = useState<GroupMeeting[]>([]);
   const [groupAttendance, setGroupAttendance] = useState<GroupAttendance[]>([]);
-  const [serviceAssignments, setServiceAssignments] = useState<ServiceAssignment[]>([]);
-  const [churchAttendance, setChurchAttendance] = useState<ChurchAttendance[]>([]);
+  const [serviceAssignments, setServiceAssignments] = useState<
+    ServiceAssignment[]
+  >([]);
+  const [churchAttendance, setChurchAttendance] = useState<ChurchAttendance[]>(
+    [],
+  );
   const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>([]);
-  const [newBelieverNoJourney, setNewBelieverNoJourney] = useState<Person[]>([]);
+  const [newBelieverNoJourney, setNewBelieverNoJourney] = useState<Person[]>(
+    [],
+  );
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showCheckIn, setShowCheckIn] = useState(false);
@@ -113,13 +119,14 @@ export function CareRadarView() {
     const ctx = { organizationId };
 
     try {
-      const [peopleList, groupsList, assignments, attendance, prayers] = await Promise.all([
-        cachedFetchPeople(firebaseConfig, ctx, 500),
-        cachedFetchGroups(firebaseConfig, ctx, 100),
-        fetchServiceAssignments(firebaseConfig, ctx, 400),
-        fetchChurchAttendance(firebaseConfig, ctx, 2000),
-        fetchPrayerRequests(firebaseConfig, ctx, 300),
-      ]);
+      const [peopleList, groupsList, assignments, attendance, prayers] =
+        await Promise.all([
+          cachedFetchPeople(firebaseConfig, ctx, 500),
+          cachedFetchGroups(firebaseConfig, ctx, 100),
+          fetchServiceAssignments(firebaseConfig, ctx, 400),
+          fetchChurchAttendance(firebaseConfig, ctx, 2000),
+          fetchPrayerRequests(firebaseConfig, ctx, 300),
+        ]);
 
       const [members, meetings] = await Promise.all([
         fetchGroupMembers(firebaseConfig, ctx, groupsList, 80),
@@ -140,15 +147,19 @@ export function CareRadarView() {
       setPrayerRequests(prayers);
 
       // New believers: fetch journey profile per person (small set, single-doc gets).
-      const believers = peopleList.filter((p) => p.memberStatus === "new_believer");
+      const believers = peopleList.filter(
+        (p) => p.memberStatus === "new_believer",
+      );
       const profiles = await Promise.all(
-        believers.map((p) => fetchMemberJourneyProfile(firebaseConfig, ctx, p.id))
+        believers.map((p) =>
+          fetchMemberJourneyProfile(firebaseConfig, ctx, p.id),
+        ),
       );
       setNewBelieverNoJourney(
         believers.filter((_, idx) => {
           const profile = profiles[idx];
           return !profile || (profile.progressPercent ?? 0) === 0;
-        })
+        }),
       );
     } catch (e) {
       setError(friendlyError(e, "Erro ao carregar dados pastorais"));
@@ -162,9 +173,7 @@ export function CareRadarView() {
   }, [load]);
 
   const personById = useMemo(() => {
-    const map = new Map<string, Person>();
-    people.forEach((p) => map.set(p.id, p));
-    return map;
+    return new Map(people.map((p) => [p.id, p]));
   }, [people]);
 
   // ── Q1: sumiu da igreja (sem check-in de culto nos últimos 45 dias) ──────
@@ -173,19 +182,33 @@ export function CareRadarView() {
     const lastSeen = new Map<string, string>();
     churchAttendance.forEach((rec) => {
       const current = lastSeen.get(rec.personId);
-      if (!current || rec.serviceDate > current) lastSeen.set(rec.personId, rec.serviceDate);
+      if (!current || rec.serviceDate > current)
+        lastSeen.set(rec.personId, rec.serviceDate);
     });
 
     return people
-      .filter((p) => p.status === "active" && ["member", "congregant", "leader", "volunteer"].includes(p.memberStatus))
+      .filter(
+        (p) =>
+          p.status === "active" &&
+          ["member", "congregant", "leader", "volunteer"].includes(
+            p.memberStatus,
+          ),
+      )
       .map((p) => {
         const last = lastSeen.get(p.id);
         const days = last ? daysSince(last) : null;
         if (days !== null && days < 45) return null;
         const name = getFullName(p);
-        const detail = last ? `Sem culto há ${days} dias (última vez em ${last})` : "Nunca registrado em um culto";
+        const detail = last
+          ? `Sem culto há ${days} dias (última vez em ${last})`
+          : "Nunca registrado em um culto";
         const message = `Ola, ${getFirstName(name)}! Sentimos sua falta nos cultos. Esta tudo bem por ai? Queremos caminhar perto de voce.`;
-        return { personId: p.id, personName: name, detail, whatsappHref: getWhatsappHref(p, message) };
+        return {
+          personId: p.id,
+          personName: name,
+          detail,
+          whatsappHref: getWhatsappHref(p, message),
+        };
       })
       .filter((x): x is InsightItem => x !== null);
   }, [people, churchAttendance]);
@@ -212,8 +235,9 @@ export function CareRadarView() {
           (a) =>
             a.groupMeetingId === meeting.id &&
             a.personId === member.personId &&
-            (a.attendanceStatus === "present" || a.attendanceStatus === "first_time_guest")
-        )
+            (a.attendanceStatus === "present" ||
+              a.attendanceStatus === "first_time_guest"),
+        ),
       );
 
       const referenceDate = presentMeeting?.scheduledStartAt ?? member.joinedAt;
@@ -228,7 +252,12 @@ export function CareRadarView() {
         : `${days} dias desde que entrou em ${group?.name ?? "célula"}, sem registro de presença`;
       const message = `Ola, ${getFirstName(name)}! Sentimos sua falta na celula ${group?.name ?? ""}. Esta tudo bem por ai?`;
 
-      results.push({ personId: member.personId, personName: name, detail, whatsappHref: getWhatsappHref(person, message) });
+      results.push({
+        personId: member.personId,
+        personName: name,
+        detail,
+        whatsappHref: getWhatsappHref(person, message),
+      });
     });
 
     return results;
@@ -260,16 +289,32 @@ export function CareRadarView() {
       const person = personById.get(personId);
       const name = person ? getFullName(person) : personId;
       const detail = `Serve em ${teams.size} ministérios ao mesmo tempo`;
-      results.push({ personId, personName: name, detail, whatsappHref: getWhatsappHref(person, `Ola ${getFirstName(name)}! Vimos que voce serve em varios ministerios — queremos agradecer e cuidar de voce tambem.`) });
+      results.push({
+        personId,
+        personName: name,
+        detail,
+        whatsappHref: getWhatsappHref(
+          person,
+          `Ola ${getFirstName(name)}! Vimos que voce serve em varios ministerios — queremos agradecer e cuidar de voce tambem.`,
+        ),
+      });
     });
     return results.sort((a, b) => b.detail.localeCompare(a.detail));
   }, [serviceAssignments, personById]);
 
-  const toggle = (key: string) => setExpanded((cur) => (cur === key ? null : key));
+  const toggle = (key: string) =>
+    setExpanded((cur) => (cur === key ? null : key));
 
   if (loading) {
     return (
-      <div style={{ padding: "4rem", display: "flex", justifyContent: "center", color: "var(--color-text-secondary)" }}>
+      <div
+        style={{
+          padding: "4rem",
+          display: "flex",
+          justifyContent: "center",
+          color: "var(--color-text-secondary)",
+        }}
+      >
         <Loader2 size={24} className="spin" />
       </div>
     );
@@ -278,28 +323,66 @@ export function CareRadarView() {
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: 920, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 0.4 }}>
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#534AB7",
+            margin: "0 0 4px",
+            textTransform: "uppercase",
+            letterSpacing: 0.4,
+          }}
+        >
           Radar Pastoral
         </p>
-        <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 6px", color: "var(--color-text-primary)" }}>
+        <h1
+          style={{
+            fontSize: 26,
+            fontWeight: 800,
+            margin: "0 0 6px",
+            color: "var(--color-text-primary)",
+          }}
+        >
           Quem precisa de cuidado agora
         </h1>
-        <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0 }}>
-          Cruzamos presença, células, escalas, oração e discipulado para levantar as pessoas que ninguém percebeu ainda.
+        <p
+          style={{
+            fontSize: 14,
+            color: "var(--color-text-secondary)",
+            margin: 0,
+          }}
+        >
+          Cruzamos presença, células, escalas, oração e discipulado para
+          levantar as pessoas que ninguém percebeu ainda.
         </p>
       </div>
 
       {error && (
-        <div style={{ padding: 14, borderRadius: 10, background: "#FCEBEB", color: "#A32D2D", marginBottom: 16, fontSize: 13 }}>
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 10,
+            background: "#FCEBEB",
+            color: "#A32D2D",
+            marginBottom: 16,
+            fontSize: 13,
+          }}
+        >
           {error}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button onClick={() => setShowCheckIn((s) => !s)} style={actionBtnStyle}>
+        <button
+          onClick={() => setShowCheckIn((s) => !s)}
+          style={actionBtnStyle}
+        >
           <Calendar size={15} /> Registrar presença no culto
         </button>
-        <button onClick={() => setShowPrayerForm((s) => !s)} style={actionBtnStyle}>
+        <button
+          onClick={() => setShowPrayerForm((s) => !s)}
+          style={actionBtnStyle}
+        >
           <Plus size={15} /> Registrar pedido de oração
         </button>
       </div>
@@ -340,7 +423,11 @@ export function CareRadarView() {
         expandedKey="church"
         expanded={expanded === "church"}
         onToggle={() => toggle("church")}
-        emptyLabel={churchAttendance.length === 0 ? "Ainda não há registros de presença em culto — registre para ativar este radar." : "Ninguém sumiu recentemente. 🎉"}
+        emptyLabel={
+          churchAttendance.length === 0
+            ? "Ainda não há registros de presença em culto — registre para ativar este radar."
+            : "Ninguém sumiu recentemente. 🎉"
+        }
         items={missingFromChurch}
       />
 
@@ -369,37 +456,71 @@ export function CareRadarView() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={countBadgeStyle(openPrayerRequests.length)}>{openPrayerRequests.length}</span>
-            {expanded === "prayer" ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <span style={countBadgeStyle(openPrayerRequests.length)}>
+              {openPrayerRequests.length}
+            </span>
+            {expanded === "prayer" ? (
+              <ChevronUp size={16} />
+            ) : (
+              <ChevronDown size={16} />
+            )}
           </div>
         </button>
         {expanded === "prayer" && (
           <div style={cardBodyStyle}>
             {openPrayerRequests.length === 0 ? (
-              <p style={emptyStyle}>{prayerRequests.length === 0 ? "Nenhum pedido de oração registrado ainda." : "Todos os pedidos foram acompanhados. 🎉"}</p>
+              <p style={emptyStyle}>
+                {prayerRequests.length === 0
+                  ? "Nenhum pedido de oração registrado ainda."
+                  : "Todos os pedidos foram acompanhados. 🎉"}
+              </p>
             ) : (
               openPrayerRequests.map((r) => {
-                const person = r.personId ? personById.get(r.personId) : undefined;
-                const wa = getWhatsappHref(person ?? ({ mobilePhone: r.phone } as Person), `Ola ${getFirstName(r.personName)}! Vi seu pedido de oracao e quero orar com voce.`);
+                const person = r.personId
+                  ? personById.get(r.personId)
+                  : undefined;
+                const wa = getWhatsappHref(
+                  person ?? ({ mobilePhone: r.phone } as Person),
+                  `Ola ${getFirstName(r.personName)}! Vi seu pedido de oracao e quero orar com voce.`,
+                );
                 return (
                   <div key={r.id} style={itemRowStyle}>
                     <div style={{ flex: 1 }}>
                       <p style={itemNameStyle}>
                         {r.personName}
-                        {r.isPublic && <span style={publicBadgeStyle}>Mural · {r.prayerCount ?? 0} orações</span>}
+                        {r.isPublic && (
+                          <span style={publicBadgeStyle}>
+                            Mural · {r.prayerCount ?? 0} orações
+                          </span>
+                        )}
                       </p>
-                      <p style={itemDetailStyle}>"{r.message}" · há {r.days} dia{r.days === 1 ? "" : "s"}</p>
+                      <p style={itemDetailStyle}>
+                        "{r.message}" · há {r.days} dia{r.days === 1 ? "" : "s"}
+                      </p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       {wa && (
-                        <a href={wa} target="_blank" rel="noreferrer" style={waBtnStyle}>
+                        <a
+                          href={wa}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={waBtnStyle}
+                        >
                           <MessageCircle size={13} /> Falar
                         </a>
                       )}
                       <button
                         style={resolveBtnStyle}
                         onClick={async () => {
-                          await updatePrayerRequestStatus(firebaseConfig, { organizationId }, { requestId: r.id, status: "resolved", respondedByUserId: user?.uid });
+                          await updatePrayerRequestStatus(
+                            firebaseConfig,
+                            { organizationId },
+                            {
+                              requestId: r.id,
+                              status: "resolved",
+                              respondedByUserId: user?.uid,
+                            },
+                          );
                           void load();
                         }}
                       >
@@ -434,31 +555,53 @@ export function CareRadarView() {
               <Sparkles size={18} color="#6B21A8" />
             </div>
             <div style={{ textAlign: "left" }}>
-              <p style={cardTitleStyle}>Aceitou Jesus e nunca foi discipulado</p>
-              <p style={cardSubtitleStyle}>Novos convertidos sem jornada de discipulado iniciada</p>
+              <p style={cardTitleStyle}>
+                Aceitou Jesus e nunca foi discipulado
+              </p>
+              <p style={cardSubtitleStyle}>
+                Novos convertidos sem jornada de discipulado iniciada
+              </p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={countBadgeStyle(newBelieverNoJourney.length)}>{newBelieverNoJourney.length}</span>
-            {expanded === "disciple" ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <span style={countBadgeStyle(newBelieverNoJourney.length)}>
+              {newBelieverNoJourney.length}
+            </span>
+            {expanded === "disciple" ? (
+              <ChevronUp size={16} />
+            ) : (
+              <ChevronDown size={16} />
+            )}
           </div>
         </button>
         {expanded === "disciple" && (
           <div style={cardBodyStyle}>
             {newBelieverNoJourney.length === 0 ? (
-              <p style={emptyStyle}>Nenhum novo convertido pendente de discipulado. 🎉</p>
+              <p style={emptyStyle}>
+                Nenhum novo convertido pendente de discipulado. 🎉
+              </p>
             ) : (
               newBelieverNoJourney.map((p) => {
                 const name = getFullName(p);
-                const wa = getWhatsappHref(p, `Ola ${getFirstName(name)}! Que alegria saber da sua decisao por Jesus. Vamos comecar seu discipulado?`);
+                const wa = getWhatsappHref(
+                  p,
+                  `Ola ${getFirstName(name)}! Que alegria saber da sua decisao por Jesus. Vamos comecar seu discipulado?`,
+                );
                 return (
                   <div key={p.id} style={itemRowStyle}>
                     <div style={{ flex: 1 }}>
                       <p style={itemNameStyle}>{name}</p>
-                      <p style={itemDetailStyle}>Marcado como novo convertido, sem jornada de discipulado</p>
+                      <p style={itemDetailStyle}>
+                        Marcado como novo convertido, sem jornada de discipulado
+                      </p>
                     </div>
                     {wa && (
-                      <a href={wa} target="_blank" rel="noreferrer" style={waBtnStyle}>
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={waBtnStyle}
+                      >
                         <MessageCircle size={13} /> Falar
                       </a>
                     )}
@@ -524,7 +667,12 @@ function InsightCard({
                   <p style={itemDetailStyle}>{item.detail}</p>
                 </div>
                 {item.whatsappHref && (
-                  <a href={item.whatsappHref} target="_blank" rel="noreferrer" style={waBtnStyle}>
+                  <a
+                    href={item.whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={waBtnStyle}
+                  >
                     <MessageCircle size={13} /> Falar
                   </a>
                 )}
@@ -564,7 +712,9 @@ function ChurchCheckInPanel({
     const q = query.trim().toLowerCase();
     const active = people.filter((p) => p.status === "active");
     if (!q) return active.slice(0, 60);
-    return active.filter((p) => getFullName(p).toLowerCase().includes(q)).slice(0, 60);
+    return active
+      .filter((p) => getFullName(p).toLowerCase().includes(q))
+      .slice(0, 60);
   }, [people, query]);
 
   const toggle = (id: string) => {
@@ -580,12 +730,16 @@ function ChurchCheckInPanel({
     if (!selected.size) return;
     setSaving(true);
     try {
-      await recordChurchAttendance(firebaseConfig, { organizationId }, {
-        personIds: Array.from(selected),
-        serviceDate,
-        serviceLabel,
-        registeredByUserId: userId,
-      });
+      await recordChurchAttendance(
+        firebaseConfig,
+        { organizationId },
+        {
+          personIds: Array.from(selected),
+          serviceDate,
+          serviceLabel,
+          registeredByUserId: userId,
+        },
+      );
       onDone();
     } finally {
       setSaving(false);
@@ -594,25 +748,82 @@ function ChurchCheckInPanel({
 
   return (
     <div style={panelStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>Registrar presença no culto</p>
-        <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
+          Registrar presença no culto
+        </p>
+        <button onClick={onClose} style={closeBtnStyle}>
+          <X size={16} />
+        </button>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} style={inputStyle} />
-        <input type="text" value={serviceLabel} onChange={(e) => setServiceLabel(e.target.value)} placeholder="Ex: Culto Domingo Manhã" style={{ ...inputStyle, flex: 1 }} />
+        <input
+          type="date"
+          value={serviceDate}
+          onChange={(e) => setServiceDate(e.target.value)}
+          style={inputStyle}
+        />
+        <input
+          type="text"
+          value={serviceLabel}
+          onChange={(e) => setServiceLabel(e.target.value)}
+          placeholder="Ex: Culto Domingo Manhã"
+          style={{ ...inputStyle, flex: 1 }}
+        />
       </div>
-      <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar pessoa..." style={{ ...inputStyle, width: "100%", marginBottom: 10 }} />
-      <div style={{ maxHeight: 260, overflowY: "auto", border: "1px solid var(--color-border-tertiary)", borderRadius: 8, marginBottom: 12 }}>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar pessoa..."
+        style={{ ...inputStyle, width: "100%", marginBottom: 10 }}
+      />
+      <div
+        style={{
+          maxHeight: 260,
+          overflowY: "auto",
+          border: "1px solid var(--color-border-tertiary)",
+          borderRadius: 8,
+          marginBottom: 12,
+        }}
+      >
         {filtered.map((p) => (
           <label key={p.id} style={checkRowStyle}>
-            <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
+            <input
+              type="checkbox"
+              checked={selected.has(p.id)}
+              onChange={() => toggle(p.id)}
+            />
             <span>{getFullName(p)}</span>
           </label>
         ))}
-        {filtered.length === 0 && <p style={{ padding: 12, fontSize: 13, color: "var(--color-text-secondary)" }}>Nenhuma pessoa encontrada.</p>}
+        {filtered.length === 0 && (
+          <p
+            style={{
+              padding: 12,
+              fontSize: 13,
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            Nenhuma pessoa encontrada.
+          </p>
+        )}
       </div>
-      <button onClick={save} disabled={saving || !selected.size} style={{ ...primaryBtnStyle, opacity: saving || !selected.size ? 0.6 : 1 }}>
+      <button
+        onClick={save}
+        disabled={saving || !selected.size}
+        style={{
+          ...primaryBtnStyle,
+          opacity: saving || !selected.size ? 0.6 : 1,
+        }}
+      >
         {saving ? "Salvando..." : `Confirmar presença (${selected.size})`}
       </button>
     </div>
@@ -640,16 +851,22 @@ function PrayerRequestPanel({
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    const name = personId ? getFullName(people.find((p) => p.id === personId)!) : personName.trim();
+    const name = personId
+      ? getFullName(people.find((p) => p.id === personId)!)
+      : personName.trim();
     if (!name || !message.trim()) return;
     setSaving(true);
     try {
-      await addPrayerRequest(firebaseConfig, { organizationId }, {
-        personId: personId || undefined,
-        personName: name,
-        message: message.trim(),
-        source: "reception",
-      });
+      await addPrayerRequest(
+        firebaseConfig,
+        { organizationId },
+        {
+          personId: personId || undefined,
+          personName: name,
+          message: message.trim(),
+          source: "reception",
+        },
+      );
       onDone();
     } finally {
       setSaving(false);
@@ -658,9 +875,20 @@ function PrayerRequestPanel({
 
   return (
     <div style={panelStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>Registrar pedido de oração</p>
-        <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
+          Registrar pedido de oração
+        </p>
+        <button onClick={onClose} style={closeBtnStyle}>
+          <X size={16} />
+        </button>
       </div>
       <select
         value={personId}
@@ -669,7 +897,9 @@ function PrayerRequestPanel({
       >
         <option value="">Pessoa não cadastrada (digite o nome abaixo)</option>
         {people.map((p) => (
-          <option key={p.id} value={p.id}>{getFullName(p)}</option>
+          <option key={p.id} value={p.id}>
+            {getFullName(p)}
+          </option>
         ))}
       </select>
       {!personId && (
@@ -686,9 +916,20 @@ function PrayerRequestPanel({
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Motivo do pedido de oração..."
         rows={3}
-        style={{ ...inputStyle, width: "100%", marginBottom: 12, resize: "vertical" }}
+        style={{
+          ...inputStyle,
+          width: "100%",
+          marginBottom: 12,
+          resize: "vertical",
+        }}
       />
-      <button onClick={save} disabled={saving || (!personId && !personName.trim()) || !message.trim()} style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}>
+      <button
+        onClick={save}
+        disabled={
+          saving || (!personId && !personName.trim()) || !message.trim()
+        }
+        style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}
+      >
         {saving ? "Salvando..." : "Registrar pedido"}
       </button>
     </div>
@@ -787,8 +1028,17 @@ const iconBoxStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
-const cardTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, margin: "0 0 2px", color: "var(--color-text-primary)" };
-const cardSubtitleStyle: React.CSSProperties = { fontSize: 12, color: "var(--color-text-secondary)", margin: 0 };
+const cardTitleStyle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  margin: "0 0 2px",
+  color: "var(--color-text-primary)",
+};
+const cardSubtitleStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--color-text-secondary)",
+  margin: 0,
+};
 
 function countBadgeStyle(count: number): React.CSSProperties {
   return {
@@ -820,9 +1070,24 @@ const itemRowStyle: React.CSSProperties = {
   borderBottom: "0.5px solid var(--color-border-tertiary)",
 };
 
-const itemNameStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, margin: "0 0 2px", color: "var(--color-text-primary)" };
-const itemDetailStyle: React.CSSProperties = { fontSize: 12, color: "var(--color-text-secondary)", margin: 0 };
-const emptyStyle: React.CSSProperties = { padding: "24px 18px", fontSize: 13, color: "var(--color-text-secondary)", textAlign: "center", margin: 0 };
+const itemNameStyle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  margin: "0 0 2px",
+  color: "var(--color-text-primary)",
+};
+const itemDetailStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--color-text-secondary)",
+  margin: 0,
+};
+const emptyStyle: React.CSSProperties = {
+  padding: "24px 18px",
+  fontSize: 13,
+  color: "var(--color-text-secondary)",
+  textAlign: "center",
+  margin: 0,
+};
 
 const waBtnStyle: React.CSSProperties = {
   display: "flex",
