@@ -213,8 +213,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [configured, firebaseConfig, firebaseReady, organizationId, orgResolved, user]);
 
-  const hasRole = useMemo(() => (role: AppRole) => roles.includes(role), [roles]);
-  const hasAnyRole = useMemo(() => (required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
+  const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
+  const hasAnyRole = useCallback((required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
 
   const switchOrganization = useCallback((orgId: string) => {
     localStorage.setItem(LS_ORG_KEY, orgId);
@@ -247,7 +247,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [configured, firebaseConfig]);
 
   // Memoizado: sem isso, cada render de AppProviders criava um objeto novo
-  // e re-renderizava TODO consumidor de useAppAuth (praticamente o app
+  // e re-renderizava todo consumidor de useAppAuth (praticamente o app
   // inteiro), mesmo quando nada relevante mudou.
   const contextValue = useMemo<AuthContextValue>(
     () => ({
