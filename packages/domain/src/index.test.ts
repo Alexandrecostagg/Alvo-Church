@@ -4,22 +4,22 @@ import type { Organization, AuthUser } from '@alvo/types';
 
 describe('createDashboardSnapshot', () => {
   it('creates a snapshot with zero totals', () => {
-    const mockOrg: Organization = {
+    const mockOrg = {
       id: 'org-1',
       name: 'Test Org',
       slug: 'test-org',
       brandColor: '#000000',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    } as Organization;
+    } as unknown as Organization;
 
-    const mockUser: AuthUser = {
+    const mockUser = {
       id: 'user-1',
       uid: 'firebase-uid',
       email: 'test@example.com',
       roles: ['church_admin'],
       status: 'active',
-    } as AuthUser;
+    } as unknown as AuthUser;
 
     const result = createDashboardSnapshot({
       organization: mockOrg,

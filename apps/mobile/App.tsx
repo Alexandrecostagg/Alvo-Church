@@ -478,7 +478,7 @@ function PromocoesScreen({ primary, promotions, onBack }: {
 // (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
 // que a Escola EAD do web usa.
 function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
-  primary: string; orgId?: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
+  primary: string; orgId: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
 }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -833,7 +833,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
 function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos }: {
   primary: string; events: Event[]; groups: Group[]; dataReady: boolean;
-  user: FirebaseAuthUser; orgId?: string;
+  user: FirebaseAuthUser; orgId: string;
   onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void; onOpenCursos: () => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -937,7 +937,7 @@ function JourneySection({ primary, user, orgId }: { primary: string; user: Fireb
     let cancelled = false;
     async function load() {
       try {
-        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId }, user.uid);
+        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId! }, user.uid);
         if (!cancelled) setProfile(p);
       } catch {
         if (!cancelled) setProfile(null);
@@ -1044,7 +1044,7 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId?: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
+function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
   const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false); const [prayerSending, setPrayerSending] = useState(false);
@@ -1201,7 +1201,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
 // ─── Perfil Tab ───────────────────────────────────────────────────────────────
 
 function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil }: {
-  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null; orgId?: string;
+  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null; orgId: string;
   primary: string; pushToken: string | null; onSignOut: () => void;
   onOpenEscala: () => void; onOpenMusica: () => void; onOpenMeuPerfil: () => void;
 }) {
@@ -1292,7 +1292,7 @@ const WEEKDAYS = [
   { value: "dom", label: "Dom" },
 ];
 
-function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [interests, setInterests] = useState<string[]>([]);
   const [serving, setServing] = useState<string>("");
   const [availability, setAvailability] = useState<string[]>([]);
@@ -1479,7 +1479,7 @@ const mpStyles = StyleSheet.create({
 // ─── Doações Screen ───────────────────────────────────────────────────────────
 
 function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
-  primary: string; orgName: string; orgId?: string; user: FirebaseAuthUser; onBack: () => void;
+  primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
 }) {
   const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
@@ -1750,7 +1750,7 @@ function newKidsToken() {
 // Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho
 // (gera o crachá digital com QR no celular dele, com foto e consentimento) e o
 // voluntário escalado escaneia o QR na retirada para validar e dar baixa.
-function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [canOperate, setCanOperate] = useState(false);
   const [mode, setMode] = useState<"guardian" | "volunteer">("guardian");
@@ -2007,7 +2007,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
 // ─── Escala Screen ────────────────────────────────────────────────────────────
 
-function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [slots, setSlots] = useState<EscalaSlot[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -2238,7 +2238,7 @@ function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: stri
 
 // ─── Inscrição Screen ─────────────────────────────────────────────────────────
 
-function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [method, setMethod] = useState<"pix" | "cartao" | "free">(event.isPaid ? "pix" : "free");
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -2419,7 +2419,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
 type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
 
-function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
