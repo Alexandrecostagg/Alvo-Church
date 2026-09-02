@@ -2209,7 +2209,7 @@ export async function fetchMentoringSessions(
   leaderId: string
 ) {
   const firestore = getFirebaseFirestore(config);
-  // Filtro por líder no servidor — antes baixava as sessões de TODOS os
+  // Filtro por líder no servidor — antes baixava as sessões de todos os
   // líderes da organização para filtrar em JS.
   const sessionsQuery = query(
     collection(firestore, getMentoringSessionsCollectionPath(context)),
