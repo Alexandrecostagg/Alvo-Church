@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
-import { buildPixPayload } from "@alvo/domain";
+import { generatePixPayload } from "@alvo/domain";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
 
 // Gera um PIX BR Code (EMV, estático) real a partir da chave PIX que a
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const payload = buildPixPayload({
+  const payload = generatePixPayload({
     key: pixKey,
     receiverName,
     amount,
