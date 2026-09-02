@@ -13,7 +13,8 @@
     "seed:capacitacao": "tsx scripts/seed-capacitacao.ts",
     "seed:catalogo-final": "tsx scripts/seed-catalogo-final.ts",
     "dev:emulator": "firebase emulators:start",
-    "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts"
+    "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
@@ -21,7 +22,8 @@
     "firebase-tools": "^15.16.0",
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {
