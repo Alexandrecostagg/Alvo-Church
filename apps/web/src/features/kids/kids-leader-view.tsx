@@ -75,7 +75,9 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
 function genPickupCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = "";
-  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  const randomValues = new Uint32Array(4);
+  crypto.getRandomValues(randomValues);
+  for (let i = 0; i < 4; i++) s += chars[randomValues[i] % chars.length];
   return `KD-${s}`;
 }
 
@@ -282,12 +284,12 @@ export function KidsLeaderView() {
     if (!newKidDraft.name || !newKidDraft.parentName) return;
 
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const token = `kids_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const token = `kids_${crypto.randomUUID().replace(/-/g, '')}`;
     const pickupCode = genPickupCode();
     const authorizedPickupNames = newKidDraft.authorizedNames
       .split(",").map(n => n.trim()).filter(Boolean);
     const checkIn: KidsCheckIn = {
-      id: `kc_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+      id: `kc_${crypto.randomUUID().replace(/-/g, '')}`,
       organizationId,
       childId: `quick_${token}`,
       parentId: user?.uid ?? "",
