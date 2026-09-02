@@ -8,10 +8,10 @@
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "format": "prettier --check ."
+    "format": "prettier --check .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@alvo/types": "workspace:*"
   }
 }
-

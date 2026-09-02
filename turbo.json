@@ -26,7 +26,11 @@
     },
     "format": {
       "cache": false
+    },
+    "test": {
+      "dependsOn": [
+        "^test"
+      ]
     }
   }
 }
-

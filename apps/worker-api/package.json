@@ -9,7 +9,7 @@
     "format": "prettier --check ."
   },
   "dependencies": {
-    "@alvo/ai": "workspace:*",
+
     "@alvo/domain": "workspace:*",
     "@alvo/types": "workspace:*",
     "hono": "^4.7.4"
