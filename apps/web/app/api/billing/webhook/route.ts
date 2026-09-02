@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { NextRequest, NextResponse } from "next/server";
 import { adminPatchDocument } from "../../_lib/firestore-admin";
 import { safeStringCompare } from "../../_lib/safe-compare";

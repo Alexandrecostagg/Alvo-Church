@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { NextRequest, NextResponse } from "next/server";
 import { callChatWithFallback } from "@alvo/ai";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
