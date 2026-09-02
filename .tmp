@@ -728,7 +728,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
   const orgName = tenantRuntime?.organization?.displayName ?? tenantRuntime?.organization?.name ?? linkedOrg?.displayName ?? linkedOrg?.name ?? "Minha Igreja";
   const firstName = user.displayName?.split(" ")[0] ?? "Membro";
-  const orgId: string = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "";
+  const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "";
   const brandLogo = tenantRuntime?.settings?.branding?.logoLightUrl ?? tenantRuntime?.settings?.branding?.logoDarkUrl ?? tenantRuntime?.settings?.branding?.iconUrl ?? undefined;
 
   useEffect(() => {
