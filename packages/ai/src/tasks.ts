@@ -16,7 +16,7 @@ export interface CellScriptInput {
 
 export async function generateCellScript(
   keys: AiKeys,
-  input: CellScriptInput
+  input: CellScriptInput,
 ): Promise<AiResponse> {
   const duration = input.duration ?? 90;
   const messages = [
@@ -37,11 +37,14 @@ O roteiro deve ter exatamente estas seções:
 4. APLICAÇÃO (${Math.round(duration * 0.25)} min) — como aplicar na semana
 5. ORAÇÃO E COMUNHÃO (${Math.round(duration * 0.2)} min) — partilha de pedidos e encerramento
 
-Seja específico e prático. O líder deve conseguir conduzir sem improviso.`
-    }
+Seja específico e prático. O líder deve conseguir conduzir sem improviso.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 1500, temperature: 0.75 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 1500,
+    temperature: 0.75,
+  });
 }
 
 // ─── 2. Dinâmica do Encontro ───────────────────────────────────────────────
@@ -54,7 +57,7 @@ export interface CellDynamicInput {
 
 export async function generateCellDynamic(
   keys: AiKeys,
-  input: CellDynamicInput
+  input: CellDynamicInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -74,11 +77,14 @@ PASSO A PASSO: (numere cada etapa)
 COMO CONECTAR COM O TEMA:
 DICA PARA O LÍDER:
 
-Seja criativo, prático e adequado para um ambiente cristão.`
-    }
+Seja criativo, prático e adequado para um ambiente cristão.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 800, temperature: 0.85 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 800,
+    temperature: 0.85,
+  });
 }
 
 // ─── 3. Resumo Pós-Encontro ────────────────────────────────────────────────
@@ -96,7 +102,7 @@ export interface CellMeetingSummaryInput {
 
 export async function generateCellMeetingSummary(
   keys: AiKeys,
-  input: CellMeetingSummaryInput
+  input: CellMeetingSummaryInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -119,11 +125,14 @@ O relatório deve ter:
 - Próximos passos sugeridos
 - Pedidos de oração para o pastor acompanhar
 
-Seja objetivo. Máximo 200 palavras.`
-    }
+Seja objetivo. Máximo 200 palavras.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 600, temperature: 0.5 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 600,
+    temperature: 0.5,
+  });
 }
 
 // ─── 4. Sugestão de Mensagem para Membro Ausente ──────────────────────────
@@ -137,7 +146,7 @@ export interface AbsenceMessageInput {
 
 export async function generateAbsenceMessage(
   keys: AiKeys,
-  input: AbsenceMessageInput
+  input: AbsenceMessageInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -157,24 +166,27 @@ A mensagem deve:
 - Ter entre 3-5 linhas
 - Ser natural, como de um amigo, não corporativa
 
-Gere apenas o texto da mensagem, sem explicações adicionais.`
-    }
+Gere apenas o texto da mensagem, sem explicações adicionais.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 300, temperature: 0.8 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 300,
+    temperature: 0.8,
+  });
 }
 
 // ─── 4b. Resposta a Pedido de Cuidado/Oração ──────────────────────────────
 
 export interface CareReplyInput {
   personName: string;
-  request: string;              // o pedido/mensagem que a pessoa enviou
-  category?: string;            // ex.: "oração", "aconselhamento", "visita"
+  request: string; // o pedido/mensagem que a pessoa enviou
+  category?: string; // ex.: "oração", "aconselhamento", "visita"
 }
 
 export async function generateCareReply(
   keys: AiKeys,
-  input: CareReplyInput
+  input: CareReplyInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -193,11 +205,14 @@ A resposta deve:
 - Ter entre 3-5 linhas, tom de amigo/pastor, não corporativo
 - Não prometer o que não foi dito; nunca inventar dados
 
-Gere apenas o texto da mensagem, sem explicações.`
-    }
+Gere apenas o texto da mensagem, sem explicações.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 300, temperature: 0.8 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 300,
+    temperature: 0.8,
+  });
 }
 
 // ─── 5. Sugestão de Ação Pastoral (Score baixo) ───────────────────────────
@@ -212,7 +227,7 @@ export interface PastoralSuggestionInput {
 
 export async function generatePastoralSuggestion(
   keys: AiKeys,
-  input: PastoralSuggestionInput
+  input: PastoralSuggestionInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -230,11 +245,14 @@ Responda com:
 DIAGNÓSTICO: (1 linha — o que o score indica)
 AÇÃO SUGERIDA: (seja específico: ligação, visita, mensagem, célula especial?)
 URGÊNCIA: (alta / média / baixa)
-ABORDAGEM: (2-3 linhas sobre como o pastor deve conduzir o contato)`
-    }
+ABORDAGEM: (2-3 linhas sobre como o pastor deve conduzir o contato)`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 500, temperature: 0.6 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 500,
+    temperature: 0.6,
+  });
 }
 
 // ─── 6. Classificação de Tribo ─────────────────────────────────────────────
@@ -250,7 +268,7 @@ export interface TribeClassifyInput {
 
 export async function classifyTribe(
   keys: AiKeys,
-  input: TribeClassifyInput
+  input: TribeClassifyInput,
 ): Promise<AiResponse> {
   const messages = [
     { role: "system" as const, content: SYSTEM_BASE },
@@ -282,9 +300,12 @@ ${input.notes ? `Observações: ${input.notes}` : ""}
 Responda SOMENTE com JSON válido, sem markdown, neste formato exato:
 {"primary":"CODIGO","secondary":"CODIGO","reason":"1 frase explicando"}
 
-"secondary" pode ser null se não houver segunda vocação clara. Use apenas os códigos listados.`
-    }
+"secondary" pode ser null se não houver segunda vocação clara. Use apenas os códigos listados.`,
+    },
   ];
 
-  return callChatWithFallback(keys, messages, { maxTokens: 200, temperature: 0.2 });
+  return callChatWithFallback(keys, messages, {
+    maxTokens: 200,
+    temperature: 0.2,
+  });
 }

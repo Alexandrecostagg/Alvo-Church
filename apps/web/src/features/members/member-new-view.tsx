@@ -41,7 +41,8 @@ export function MemberNewView() {
   const { configured, user, organizationId, firebaseConfig } = useAppAuth();
   const { plan } = usePlan();
   const [status, setStatus] = useState<string | null>(null);
-  const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
+  const [lastSavedMember, setLastSavedMember] =
+    useState<SavedMemberSummary | null>(null);
 
   // Uncontrolled to Controlled input states for dynamic Esdras Passe & address prefill
   const [firstName, setFirstName] = useState("");
@@ -58,7 +59,7 @@ export function MemberNewView() {
     complement: "",
     district: "",
     city: "Belém",
-    state: "PA"
+    state: "PA",
   });
 
   function resetFormState(formElement: HTMLFormElement) {
@@ -75,14 +76,14 @@ export function MemberNewView() {
       complement: "",
       district: "",
       city: "Belém",
-      state: "PA"
+      state: "PA",
     });
   }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawCep = e.target.value;
     const cleanCep = rawCep.replace(/\D/g, "");
-    setAddress(prev => ({ ...prev, postalCode: rawCep }));
+    setAddress((prev) => ({ ...prev, postalCode: rawCep }));
 
     if (cleanCep.length === 8) {
       try {
@@ -91,12 +92,12 @@ export function MemberNewView() {
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
         const data = await res.json();
         if (!data.erro) {
-          setAddress(prev => ({
+          setAddress((prev) => ({
             ...prev,
             street: data.logradouro || "",
             district: data.bairro || "",
             city: data.localidade || "",
-            state: data.uf || ""
+            state: data.uf || "",
           }));
           setStatus("✓ Endereço preenchido com sucesso.");
         } else {
@@ -127,10 +128,12 @@ export function MemberNewView() {
     // Verificação de limite de membros por plano
     const maxMembers = PLAN_LIMITS[plan].maxMembers;
     if (isFinite(maxMembers) && configured) {
-      const currentCount = await countOrgMembers(firebaseConfig, { organizationId });
+      const currentCount = await countOrgMembers(firebaseConfig, {
+        organizationId,
+      });
       if (currentCount >= maxMembers) {
         setStatus(
-          `⚠️ Limite de ${maxMembers} membros do plano ${plan === "free" ? "Gratuito" : "Comunidade"} atingido. Faça upgrade em Configurações → Plano.`
+          `⚠️ Limite de ${maxMembers} membros do plano ${plan === "free" ? "Gratuito" : "Comunidade"} atingido. Faça upgrade em Configurações → Plano.`,
         );
         setLastSavedMember(null);
         return;
@@ -172,7 +175,7 @@ export function MemberNewView() {
             displayName: familyName,
             status: "active",
             address,
-            notes: getFormValue(form, "familyNotes") || undefined
+            notes: getFormValue(form, "familyNotes") || undefined,
           }
         : undefined;
     const familyMember: FamilyMember | undefined =
@@ -182,23 +185,30 @@ export function MemberNewView() {
             organizationId,
             familyId,
             personId,
-            relationshipType: getFormValue(form, "relationshipType") as FamilyMember["relationshipType"],
+            relationshipType: getFormValue(
+              form,
+              "relationshipType",
+            ) as FamilyMember["relationshipType"],
             isPrimaryContact: Boolean(form.get("isPrimaryContact")),
             isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
-            isLegalGuardian: Boolean(form.get("isLegalGuardian"))
+            isLegalGuardian: Boolean(form.get("isLegalGuardian")),
           }
         : undefined;
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
       saveLocalMemberProfile({ family, familyMember, person });
       setStatus(
-        `✓ ${fullName} salvo neste navegador. Configure o Firebase para sincronizar na nuvem.`
+        `✓ ${fullName} salvo neste navegador. Configure o Firebase para sincronizar na nuvem.`,
       );
       setLastSavedMember({
         familyId,
         fullName,
         memberCardCode: person.memberCardCode,
-        personId
+        personId,
       });
       resetFormState(formElement);
       return;
@@ -207,22 +217,26 @@ export function MemberNewView() {
     try {
       if (family && familyMember) {
         await saveFamilyProfile(firebaseConfig, { organizationId }, family);
-        await saveFamilyMemberProfile(firebaseConfig, { organizationId }, familyMember);
+        await saveFamilyMemberProfile(
+          firebaseConfig,
+          { organizationId },
+          familyMember,
+        );
       }
 
       await savePersonProfile(firebaseConfig, { organizationId }, person);
       setStatus(
         familyId
           ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.`
-          : `✓ ${fullName} salvo com sucesso.`
+          : `✓ ${fullName} salvo com sucesso.`,
       );
       setLastSavedMember({
         familyId,
         fullName,
         memberCardCode: person.memberCardCode,
-        personId
+        personId,
       });
-      
+
       resetFormState(formElement);
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível salvar o membro."));
@@ -252,13 +266,20 @@ export function MemberNewView() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "visitor": return "Visitante";
-      case "congregant": return "Congregado";
-      case "new_believer": return "Novo Convertido";
-      case "member": return "Membro Ativo";
-      case "leader": return "Líder / Pastor";
-      case "volunteer": return "Voluntário";
-      default: return "Membro";
+      case "visitor":
+        return "Visitante";
+      case "congregant":
+        return "Congregado";
+      case "new_believer":
+        return "Novo Convertido";
+      case "member":
+        return "Membro Ativo";
+      case "leader":
+        return "Líder / Pastor";
+      case "volunteer":
+        return "Voluntário";
+      default:
+        return "Membro";
     }
   };
 
@@ -272,7 +293,8 @@ export function MemberNewView() {
         <h1>Cadastro de Novo Membro</h1>
         <p>
           Preencha os dados administrativos do membro. Informações pessoais como
-          dons ministeriais e disponibilidade serão completadas pelo próprio membro no app.
+          dons ministeriais e disponibilidade serão completadas pelo próprio
+          membro no app.
         </p>
       </section>
 
@@ -281,13 +303,15 @@ export function MemberNewView() {
         <form className="form-card" onSubmit={handleSubmit}>
           {/* Identificação */}
           <fieldset>
-            <legend><User size={18} /> Identificação Básica</legend>
+            <legend>
+              <User size={18} /> Identificação Básica
+            </legend>
             <div className="input-group">
               <label>
                 Nome *
-                <input 
-                  name="firstName" 
-                  required 
+                <input
+                  name="firstName"
+                  required
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Ex: Alexandre"
@@ -295,9 +319,9 @@ export function MemberNewView() {
               </label>
               <label>
                 Sobrenome *
-                <input 
-                  name="lastName" 
-                  required 
+                <input
+                  name="lastName"
+                  required
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Ex: Costa"
@@ -307,7 +331,10 @@ export function MemberNewView() {
             <div className="input-group">
               <label>
                 Nome preferido
-                <input name="preferredName" placeholder="Como gosta de ser chamado" />
+                <input
+                  name="preferredName"
+                  placeholder="Como gosta de ser chamado"
+                />
               </label>
               <label>
                 Data de nascimento
@@ -333,11 +360,17 @@ export function MemberNewView() {
 
           {/* Endereço & CEP API */}
           <fieldset>
-            <legend><MapPin size={18} /> Endereço & Contato</legend>
+            <legend>
+              <MapPin size={18} /> Endereço & Contato
+            </legend>
             <div className="input-group">
               <label>
                 E-mail
-                <input name="email" type="email" placeholder="email@exemplo.com" />
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="email@exemplo.com"
+                />
               </label>
               <label>
                 Celular
@@ -352,73 +385,95 @@ export function MemberNewView() {
               <label className="cep-label-wrapper">
                 CEP (Autobusca)
                 <div className="cep-input-container">
-                  <input 
-                    name="postalCode" 
-                    placeholder="00000-000" 
+                  <input
+                    name="postalCode"
+                    placeholder="00000-000"
                     value={address.postalCode}
                     onChange={handleCepChange}
                   />
-                  {loadingCep && <Loader2 size={16} className="spinner cep-spinner" />}
+                  {loadingCep && (
+                    <Loader2 size={16} className="spinner cep-spinner" />
+                  )}
                 </div>
               </label>
             </div>
             <div className="input-group-triple">
               <label className="span-2">
                 Rua
-                <input 
-                  name="street" 
+                <input
+                  name="street"
                   value={address.street}
-                  onChange={(e) => setAddress(prev => ({ ...prev, street: e.target.value }))}
+                  onChange={(e) =>
+                    setAddress((prev) => ({ ...prev, street: e.target.value }))
+                  }
                 />
               </label>
               <label>
                 Número
-                <input 
-                  name="number" 
+                <input
+                  name="number"
                   value={address.number}
-                  onChange={(e) => setAddress(prev => ({ ...prev, number: e.target.value }))}
+                  onChange={(e) =>
+                    setAddress((prev) => ({ ...prev, number: e.target.value }))
+                  }
                 />
               </label>
             </div>
             <div className="input-group-triple">
               <label>
                 Complemento
-                <input 
-                  name="complement" 
+                <input
+                  name="complement"
                   value={address.complement}
-                  onChange={(e) => setAddress(prev => ({ ...prev, complement: e.target.value }))}
+                  onChange={(e) =>
+                    setAddress((prev) => ({
+                      ...prev,
+                      complement: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label>
                 Bairro
-                <input 
-                  name="district" 
+                <input
+                  name="district"
                   value={address.district}
-                  onChange={(e) => setAddress(prev => ({ ...prev, district: e.target.value }))}
+                  onChange={(e) =>
+                    setAddress((prev) => ({
+                      ...prev,
+                      district: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label>
                 Cidade
-                <input 
-                  name="city" 
+                <input
+                  name="city"
                   value={address.city}
-                  onChange={(e) => setAddress(prev => ({ ...prev, city: e.target.value }))}
+                  onChange={(e) =>
+                    setAddress((prev) => ({ ...prev, city: e.target.value }))
+                  }
                 />
               </label>
             </div>
             <label className="half-width">
               Estado
-              <input 
-                name="state" 
+              <input
+                name="state"
                 value={address.state}
-                onChange={(e) => setAddress(prev => ({ ...prev, state: e.target.value }))}
+                onChange={(e) =>
+                  setAddress((prev) => ({ ...prev, state: e.target.value }))
+                }
               />
             </label>
           </fieldset>
 
           {/* Contexto Pastoral */}
           <fieldset>
-            <legend><Building size={18} /> Contexto Pastoral & Família</legend>
+            <legend>
+              <Building size={18} /> Contexto Pastoral & Família
+            </legend>
             <div className="input-group">
               <label>
                 Status Eclesiástico
@@ -469,30 +524,40 @@ export function MemberNewView() {
             </div>
             <label className="wide">
               Observações da Família
-              <textarea name="familyNotes" rows={3} placeholder="Notas adicionais sobre a dinâmica familiar..." />
+              <textarea
+                name="familyNotes"
+                rows={3}
+                placeholder="Notas adicionais sobre a dinâmica familiar..."
+              />
             </label>
           </fieldset>
 
           {/* Privacidade & Esdras Passe */}
           <fieldset>
-            <legend><HeartHandshake size={18} /> Privacidade & Esdras Passe</legend>
+            <legend>
+              <HeartHandshake size={18} /> Privacidade & Esdras Passe
+            </legend>
             <label className="check-row highlight-checkbox">
-              <input 
-                name="lgpdConsent" 
-                type="checkbox" 
+              <input
+                name="lgpdConsent"
+                type="checkbox"
                 checked={lgpdConsent}
                 onChange={(e) => setLgpdConsent(e.target.checked)}
               />
-              <span className="checkbox-text">Registrar Consentimento LGPD ativo</span>
+              <span className="checkbox-text">
+                Registrar Consentimento LGPD ativo
+              </span>
             </label>
             <label className="check-row highlight-checkbox">
-              <input 
-                name="partnerBenefitsEnabled" 
-                type="checkbox" 
+              <input
+                name="partnerBenefitsEnabled"
+                type="checkbox"
                 checked={partnerBenefitsEnabled}
                 onChange={(e) => setPartnerBenefitsEnabled(e.target.checked)}
               />
-              <span className="checkbox-text">Habilitar identificação Esdras Passe externa</span>
+              <span className="checkbox-text">
+                Habilitar identificação Esdras Passe externa
+              </span>
             </label>
           </fieldset>
 
@@ -509,22 +574,38 @@ export function MemberNewView() {
           {/* Card Preview Container */}
           <div className="pass-preview-wrapper">
             <h3 className="preview-title">Visualização do Esdras Passe</h3>
-            <div className="digital-card" style={{ '--card-glow': getStatusColor(memberStatus) } as any}>
+            <div
+              className="digital-card"
+              style={{ "--card-glow": getStatusColor(memberStatus) } as any}
+            >
               <div className="card-mesh"></div>
               <div className="card-header">
                 <span className="card-logo">⚡ ESDRAS</span>
                 <span className="chip-badge">PASS</span>
               </div>
-              
+
               <div className="card-body">
                 <div className="avatar-preview">
-                  {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : <User size={24} />}
+                  {firstName && lastName ? (
+                    `${firstName[0]}${lastName[0]}`.toUpperCase()
+                  ) : (
+                    <User size={24} />
+                  )}
                 </div>
                 <div className="member-details">
                   <span className="member-name">
-                    {firstName || lastName ? `${firstName} ${lastName}` : "Nome do Portador"}
+                    {firstName || lastName
+                      ? `${firstName} ${lastName}`
+                      : "Nome do Portador"}
                   </span>
-                  <span className="member-status-badge" style={{ background: `${getStatusColor(memberStatus)}20`, color: getStatusColor(memberStatus), border: `1px solid ${getStatusColor(memberStatus)}40` }}>
+                  <span
+                    className="member-status-badge"
+                    style={{
+                      background: `${getStatusColor(memberStatus)}20`,
+                      color: getStatusColor(memberStatus),
+                      border: `1px solid ${getStatusColor(memberStatus)}40`,
+                    }}
+                  >
                     {getStatusLabel(memberStatus)}
                   </span>
                 </div>
@@ -533,7 +614,11 @@ export function MemberNewView() {
               <div className="card-footer">
                 <div className="card-code-section">
                   <span className="code-label">CÓDIGO DE BENEFÍCIO</span>
-                  <span className="code-value">{partnerBenefitsEnabled ? provisionalCardCode : "BENEFÍCIO DESATIVADO"}</span>
+                  <span className="code-value">
+                    {partnerBenefitsEnabled
+                      ? provisionalCardCode
+                      : "BENEFÍCIO DESATIVADO"}
+                  </span>
                 </div>
                 <div className="card-qr">
                   {partnerBenefitsEnabled ? (
@@ -570,10 +655,17 @@ export function MemberNewView() {
             <h4>Garantia de Privacidade Plataforma Esdras</h4>
             <div className="lgpd-terms-box">
               <p>
-                <strong>Dados Protegidos:</strong> Os dados residenciais, financeiros (faixa de renda), de identificação civil (CPF) e históricos pastorais do membro permanecem estritamente blindados em nossos servidores internos sob conformidade legal.
+                <strong>Dados Protegidos:</strong> Os dados residenciais,
+                financeiros (faixa de renda), de identificação civil (CPF) e
+                históricos pastorais do membro permanecem estritamente blindados
+                em nossos servidores internos sob conformidade legal.
               </p>
               <p>
-                <strong>Identificação Esdras Passe:</strong> Lojas parceiras parceiras da comunidade têm autorização apenas para verificar a elegibilidade de desconto usando o código de benefício digital do Esdras Passe, sem qualquer visibilidade sobre informações pessoais ou pastorais.
+                <strong>Identificação Esdras Passe:</strong> Lojas parceiras
+                parceiras da comunidade têm autorização apenas para verificar a
+                elegibilidade de desconto usando o código de benefício digital
+                do Esdras Passe, sem qualquer visibilidade sobre informações
+                pessoais ou pastorais.
               </p>
             </div>
           </div>
@@ -589,7 +681,9 @@ export function MemberNewView() {
                 </div>
               </div>
               <p className="confirmation-summary">
-                Cadastro inserido na base disponível. Com Firebase ativo, os dados ficam sincronizados no Firestore; sem Firebase, ficam salvos neste navegador para teste operacional.
+                Cadastro inserido na base disponível. Com Firebase ativo, os
+                dados ficam sincronizados no Firestore; sem Firebase, ficam
+                salvos neste navegador para teste operacional.
               </p>
               <dl className="info-dl">
                 <div>
@@ -598,12 +692,15 @@ export function MemberNewView() {
                 </div>
                 <div>
                   <dt>Família vinculada</dt>
-                  <dd>{lastSavedMember.familyId ?? "Nenhum vínculo familiar"}</dd>
+                  <dd>
+                    {lastSavedMember.familyId ?? "Nenhum vínculo familiar"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Esdras Passe</dt>
                   <dd className="esdras-pass-pill">
-                    {lastSavedMember.memberCardCode ?? "Identificação externa inativa"}
+                    {lastSavedMember.memberCardCode ??
+                      "Identificação externa inativa"}
                   </dd>
                 </div>
               </dl>
@@ -754,7 +851,9 @@ export function MemberNewView() {
           color: #94a3b8;
         }
 
-        input, select, textarea {
+        input,
+        select,
+        textarea {
           width: 100%;
           padding: 0.875rem 1.25rem;
           border-radius: 0.75rem;
@@ -767,7 +866,9 @@ export function MemberNewView() {
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        input:focus, select:focus, textarea:focus {
+        input:focus,
+        select:focus,
+        textarea:focus {
           border-color: #f97316;
           box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
         }
@@ -793,7 +894,9 @@ export function MemberNewView() {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .checkbox-block {
@@ -894,12 +997,18 @@ export function MemberNewView() {
         /* Digital Esdras Passe Card Design */
         .digital-card {
           position: relative;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.7) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.4) 0%,
+            rgba(15, 23, 42, 0.7) 100%
+          );
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 1.5rem;
           padding: 2rem;
           overflow: hidden;
-          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 20px var(--card-glow);
+          box-shadow:
+            0 15px 35px rgba(0, 0, 0, 0.3),
+            0 0 20px var(--card-glow);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           aspect-ratio: 1.58 / 1;
           display: flex;
@@ -908,13 +1017,17 @@ export function MemberNewView() {
         }
 
         .digital-card::before {
-          content: '';
+          content: "";
           position: absolute;
           top: -20%;
           left: -20%;
           width: 60%;
           height: 60%;
-          background: radial-gradient(circle, var(--card-glow) 0%, transparent 70%);
+          background: radial-gradient(
+            circle,
+            var(--card-glow) 0%,
+            transparent 70%
+          );
           opacity: 0.15;
           pointer-events: none;
         }
@@ -922,7 +1035,10 @@ export function MemberNewView() {
         .card-mesh {
           position: absolute;
           inset: 0;
-          background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 0);
+          background-image: radial-gradient(
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 0
+          );
           background-size: 12px 12px;
           pointer-events: none;
         }
@@ -1030,7 +1146,7 @@ export function MemberNewView() {
 
         .qr-active {
           color: white;
-          filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+          filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
         }
 
         .qr-disabled {
@@ -1113,7 +1229,11 @@ export function MemberNewView() {
 
         /* Confirmation receipt styles */
         .save-confirmation-glass {
-          background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(30, 41, 59, 0.25) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(249, 115, 22, 0.08) 0%,
+            rgba(30, 41, 59, 0.25) 100%
+          );
           border: 1px solid rgba(249, 115, 22, 0.25);
           border-radius: 1.5rem;
           padding: 2rem;
@@ -1213,8 +1333,16 @@ export function MemberNewView() {
           margin: 0 auto;
           padding: 32px clamp(20px, 3vw, 44px) 56px;
           background:
-            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
-            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            radial-gradient(
+              circle at 8% 0%,
+              rgba(37, 99, 235, 0.08),
+              transparent 28%
+            ),
+            radial-gradient(
+              circle at 92% 0%,
+              rgba(22, 163, 74, 0.1),
+              transparent 24%
+            ),
             linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
           color: #111827;
         }
@@ -1223,18 +1351,18 @@ export function MemberNewView() {
           max-width: none;
           margin: 0 0 24px;
           padding-bottom: 24px;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.1);
         }
 
         .member-new-page .back-link {
           min-height: 46px;
           margin-bottom: 24px;
           padding: 0 18px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #ffffff;
           color: #334155;
-          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.5);
         }
 
         .member-new-page .eyebrow {
@@ -1268,7 +1396,7 @@ export function MemberNewView() {
         .member-new-page .form-card,
         .member-new-page .preview-panel > div,
         .member-new-page .save-confirmation-glass {
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           background: rgba(255, 255, 255, 0.96);
           border-radius: 16px;
           box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
@@ -1308,7 +1436,7 @@ export function MemberNewView() {
         .member-new-page select,
         .member-new-page textarea {
           min-height: 48px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #f8fafc;
           color: #111827;
@@ -1329,7 +1457,7 @@ export function MemberNewView() {
         }
 
         .member-new-page .highlight-checkbox {
-          border-color: rgba(15, 23, 42, 0.10);
+          border-color: rgba(15, 23, 42, 0.1);
           background: #f8fafc;
           border-radius: 14px;
         }
@@ -1349,7 +1477,7 @@ export function MemberNewView() {
           border-radius: 10px;
           background: #ea580c;
           color: #ffffff;
-          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.7);
         }
 
         .member-new-page .preview-panel {
@@ -1372,7 +1500,11 @@ export function MemberNewView() {
         .member-new-page .digital-card {
           border: 1px solid rgba(15, 23, 42, 0.12);
           background:
-            radial-gradient(circle at 0% 0%, rgba(234, 88, 12, 0.22), transparent 32%),
+            radial-gradient(
+              circle at 0% 0%,
+              rgba(234, 88, 12, 0.22),
+              transparent 32%
+            ),
             linear-gradient(135deg, #111827 0%, #243043 100%);
           box-shadow: 0 18px 44px -28px rgba(15, 23, 42, 0.75);
         }
@@ -1409,7 +1541,7 @@ export function MemberNewView() {
 
         .member-new-page .confirmation-actions .ghost-button {
           min-height: 44px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           background: #ffffff;
           color: #334155;
         }
@@ -1438,7 +1570,7 @@ export function MemberNewView() {
           align-items: center;
           gap: 8px;
           padding: 10px 14px;
-          border: 1px solid rgba(15,23,42,0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #f8fafc;
           font-size: 13px;
@@ -1450,7 +1582,7 @@ export function MemberNewView() {
 
         .check-pill:has(input:checked) {
           border-color: #ea580c;
-          background: rgba(234,88,12,0.06);
+          background: rgba(234, 88, 12, 0.06);
           color: #c2410c;
           font-weight: 700;
         }
@@ -1469,7 +1601,7 @@ export function MemberNewView() {
           align-items: center;
           gap: 6px;
           padding: 10px 14px;
-          border: 1px solid rgba(15,23,42,0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #f8fafc;
           font-size: 13px;
@@ -1483,7 +1615,7 @@ export function MemberNewView() {
 
         .day-pill:has(input:checked) {
           border-color: #ea580c;
-          background: rgba(234,88,12,0.06);
+          background: rgba(234, 88, 12, 0.06);
           color: #c2410c;
         }
 
@@ -1540,7 +1672,8 @@ export function MemberNewView() {
           .form-card {
             padding: 1.5rem;
           }
-          .input-group, .input-group-triple {
+          .input-group,
+          .input-group-triple {
             grid-template-columns: 1fr;
             gap: 1rem;
           }

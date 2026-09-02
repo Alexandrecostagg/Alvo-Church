@@ -11,13 +11,13 @@ const firebaseEnvKeys = [
   "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
   "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
   "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID"
+  "NEXT_PUBLIC_FIREBASE_APP_ID",
 ] as const;
 const workspaceEnv = readDotEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const nextConfig: NextConfig = {
   experimental: {
-    cpus: 1
+    cpus: 1,
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     }
 
     return acc;
-  }, {})
+  }, {}),
 };
 
 export default nextConfig;

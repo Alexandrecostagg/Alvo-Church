@@ -11,26 +11,30 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { saveCommunityStore } from "@alvo/firebase";
 import type { CommunityStore, TenantContext } from "@alvo/types";
 
-export function StoreFormView({ initialStore }: { initialStore?: CommunityStore }) {
+export function StoreFormView({
+  initialStore,
+}: {
+  initialStore?: CommunityStore;
+}) {
   const router = useRouter();
   const { firebaseConfig, organizationId, user } = useAppAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(
-    initialStore?.bannerImageUrl || null
+    initialStore?.bannerImageUrl || null,
   );
 
   const [formData, setFormData] = useState({
     name: initialStore?.name || "",
     description: initialStore?.description || "",
-    category: initialStore?.category || "community" as const,
+    category: initialStore?.category || ("community" as const),
     contactEmail: initialStore?.contact?.email || "",
     contactPhone: initialStore?.contact?.phone || "",
     addressStreet: initialStore?.contact?.address?.street || "",
@@ -42,7 +46,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
     socialWhatsapp: initialStore?.socialLinks?.whatsapp || "",
     socialInstagram: initialStore?.socialLinks?.instagram || "",
     socialWebsite: initialStore?.socialLinks?.website || "",
-    socialFacebook: initialStore?.socialLinks?.facebook || ""
+    socialFacebook: initialStore?.socialLinks?.facebook || "",
   });
 
   const categories = [
@@ -50,12 +54,16 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
     { id: "food", label: "Alimentação", icon: "🍽️" },
     { id: "education", label: "Educação", icon: "📚" },
     { id: "services", label: "Serviços", icon: "🔧" },
-    { id: "community", label: "Comunidade", icon: "🤝" }
+    { id: "community", label: "Comunidade", icon: "🤝" },
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError(null);
   };
 
@@ -76,7 +84,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       setError("Você deve estar logado para criar uma loja");
       return;
@@ -98,7 +106,9 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
       const now = new Date().toISOString();
       const store: CommunityStore = {
-        id: initialStore?.id || `store_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id:
+          initialStore?.id ||
+          `store_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         organizationId,
         ownerId: initialStore?.ownerId || user.uid,
         name: formData.name,
@@ -118,21 +128,21 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
             city: formData.addressCity || undefined,
             state: formData.addressState || undefined,
             postalCode: formData.addressPostalCode || undefined,
-            countryCode: "BR"
-          }
+            countryCode: "BR",
+          },
         },
         socialLinks: {
           whatsapp: formData.socialWhatsapp || undefined,
           instagram: formData.socialInstagram || undefined,
           website: formData.socialWebsite || undefined,
-          facebook: formData.socialFacebook || undefined
+          facebook: formData.socialFacebook || undefined,
         },
         createdAt: initialStore?.createdAt || now,
         updatedAt: now,
         approvedAt: initialStore?.approvedAt,
         rejectionReason: initialStore?.rejectionReason,
         suspensionReason: initialStore?.suspensionReason,
-        moderatedBy: initialStore?.moderatedBy
+        moderatedBy: initialStore?.moderatedBy,
       };
 
       const context: TenantContext = { organizationId };
@@ -156,14 +166,21 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
   return (
     <main className="store-form-container">
-      <Link href={initialStore ? `/marketplace-community/${initialStore.id}` : "/marketplace-community"} className="back-link">
+      <Link
+        href={
+          initialStore
+            ? `/marketplace-community/${initialStore.id}`
+            : "/marketplace-community"
+        }
+        className="back-link"
+      >
         <ArrowLeft size={18} /> {initialStore ? "Voltar" : "Cancelar"}
       </Link>
 
       <div className="form-header">
         <h1>{initialStore ? "Editar Loja" : "Criar Nova Loja"}</h1>
         <p className="form-subtitle">
-          {initialStore 
+          {initialStore
             ? "Atualize as informações da sua loja"
             : "Preencha os dados abaixo para criar sua loja e começar a anunciar seus produtos e serviços"}
         </p>
@@ -173,11 +190,13 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         {/* Banner Upload */}
         <section className="form-section">
           <h2>Banner da Loja</h2>
-          <p className="section-help">Imagem que aparecerá no topo da sua página (recomendado: 1200x400px)</p>
-          
+          <p className="section-help">
+            Imagem que aparecerá no topo da sua página (recomendado: 1200x400px)
+          </p>
+
           <div className="banner-upload">
-            <input 
-              type="file" 
+            <input
+              type="file"
               id="banner-input"
               accept="image/*"
               onChange={handleBannerUpload}
@@ -186,12 +205,14 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
             {bannerPreview ? (
               <div className="banner-preview">
                 <img src={bannerPreview} alt="Banner preview" />
-                <button 
+                <button
                   type="button"
                   onClick={() => {
                     setBannerPreview(null);
-                    const input = document.getElementById('banner-input') as HTMLInputElement;
-                    if (input) input.value = '';
+                    const input = document.getElementById(
+                      "banner-input",
+                    ) as HTMLInputElement;
+                    if (input) input.value = "";
                   }}
                   className="btn-remove-banner"
                 >
@@ -199,7 +220,10 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
                 </button>
               </div>
             ) : (
-              <label htmlFor="banner-input" className="banner-upload-placeholder">
+              <label
+                htmlFor="banner-input"
+                className="banner-upload-placeholder"
+              >
                 <Upload size={32} />
                 <span>Clique para fazer upload do banner</span>
                 <small>Aceita PNG, JPG ou GIF (máx. 5MB)</small>
@@ -211,10 +235,10 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         {/* Basic Info */}
         <section className="form-section">
           <h2>Informações Básicas</h2>
-          
+
           <div className="form-group">
             <label htmlFor="name">Nome da Loja *</label>
-            <input 
+            <input
               type="text"
               id="name"
               name="name"
@@ -227,14 +251,14 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
           <div className="form-group">
             <label htmlFor="category">Categoria *</label>
-            <select 
+            <select
               id="category"
               name="category"
               value={formData.category}
               onChange={handleInputChange}
               required
             >
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.icon} {cat.label}
                 </option>
@@ -244,7 +268,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
           <div className="form-group">
             <label htmlFor="description">Descrição *</label>
-            <textarea 
+            <textarea
               id="description"
               name="description"
               value={formData.description}
@@ -260,11 +284,11 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         {/* Contact Info */}
         <section className="form-section">
           <h2>Informações de Contato</h2>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="contactEmail">Email</label>
-              <input 
+              <input
                 type="email"
                 id="contactEmail"
                 name="contactEmail"
@@ -276,7 +300,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="contactPhone">Telefone</label>
-              <input 
+              <input
                 type="tel"
                 id="contactPhone"
                 name="contactPhone"
@@ -291,11 +315,11 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         {/* Address */}
         <section className="form-section">
           <h2>Endereço</h2>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="addressStreet">Rua</label>
-              <input 
+              <input
                 type="text"
                 id="addressStreet"
                 name="addressStreet"
@@ -307,7 +331,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="addressNumber">Número</label>
-              <input 
+              <input
                 type="text"
                 id="addressNumber"
                 name="addressNumber"
@@ -321,7 +345,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="addressDistrict">Bairro</label>
-              <input 
+              <input
                 type="text"
                 id="addressDistrict"
                 name="addressDistrict"
@@ -333,7 +357,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="addressPostalCode">CEP</label>
-              <input 
+              <input
                 type="text"
                 id="addressPostalCode"
                 name="addressPostalCode"
@@ -347,7 +371,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="addressCity">Cidade</label>
-              <input 
+              <input
                 type="text"
                 id="addressCity"
                 name="addressCity"
@@ -359,7 +383,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="addressState">Estado</label>
-              <input 
+              <input
                 type="text"
                 id="addressState"
                 name="addressState"
@@ -375,12 +399,14 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         {/* Social Media */}
         <section className="form-section">
           <h2>Redes Sociais</h2>
-          <p className="section-help">Adicione seus perfis para que clientes possam entrar em contato</p>
-          
+          <p className="section-help">
+            Adicione seus perfis para que clientes possam entrar em contato
+          </p>
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="socialWhatsapp">WhatsApp</label>
-              <input 
+              <input
                 type="tel"
                 id="socialWhatsapp"
                 name="socialWhatsapp"
@@ -392,7 +418,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="socialInstagram">Instagram</label>
-              <input 
+              <input
                 type="text"
                 id="socialInstagram"
                 name="socialInstagram"
@@ -406,7 +432,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="socialWebsite">Website</label>
-              <input 
+              <input
                 type="url"
                 id="socialWebsite"
                 name="socialWebsite"
@@ -418,7 +444,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
 
             <div className="form-group">
               <label htmlFor="socialFacebook">Facebook</label>
-              <input 
+              <input
                 type="text"
                 id="socialFacebook"
                 name="socialFacebook"
@@ -450,13 +476,17 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
           <Link href="/marketplace-community" className="btn-cancel">
             Cancelar
           </Link>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="btn-submit"
             disabled={saving || success}
           >
             {saving && <Loader2 size={18} className="spinner" />}
-            {success ? "✓ Salvo" : initialStore ? "Atualizar Loja" : "Criar Loja"}
+            {success
+              ? "✓ Salvo"
+              : initialStore
+                ? "Atualizar Loja"
+                : "Criar Loja"}
           </button>
         </div>
       </form>
@@ -772,7 +802,9 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         @media (max-width: 768px) {

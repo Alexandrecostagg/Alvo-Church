@@ -4,8 +4,11 @@ import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
 
 const GroupsWithThemeView = dynamic(
-  () => import("../../../src/features/groups/groups-with-theme-view").then((mod) => mod.GroupsWithThemeView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/groups/groups-with-theme-view").then(
+      (mod) => mod.GroupsWithThemeView,
+    ),
+  { ssr: false },
 );
 
 export default function GroupsPage() {

@@ -42,9 +42,7 @@ export function buildPixPayload({
   const descField = description ? tlv("02", description.slice(0, 72)) : "";
   const merchantAccountInfo = tlv("26", gui + keyField + descField);
 
-  const amountField = amount != null
-    ? tlv("54", amount.toFixed(2))
-    : "";
+  const amountField = amount != null ? tlv("54", amount.toFixed(2)) : "";
 
   const nameClean = receiverName
     .normalize("NFD")
@@ -63,17 +61,17 @@ export function buildPixPayload({
   const addDataField = tlv("62", tlv("05", txId.slice(0, 25)));
 
   const payload =
-    tlv("00", "01") +          // Payload format indicator
-    tlv("01", "12") +          // Point of initiation: static (12) or dynamic (11)
+    tlv("00", "01") + // Payload format indicator
+    tlv("01", "12") + // Point of initiation: static (12) or dynamic (11)
     merchantAccountInfo +
-    tlv("52", "0000") +        // Merchant category code
-    tlv("53", "986") +         // Currency: BRL
+    tlv("52", "0000") + // Merchant category code
+    tlv("53", "986") + // Currency: BRL
     amountField +
-    tlv("58", "BR") +          // Country
-    tlv("59", nameClean) +     // Merchant name
-    tlv("60", cityClean) +     // Merchant city
+    tlv("58", "BR") + // Country
+    tlv("59", nameClean) + // Merchant name
+    tlv("60", cityClean) + // Merchant city
     addDataField +
-    "6304";                    // CRC placeholder
+    "6304"; // CRC placeholder
 
   return payload + crc16(payload);
 }

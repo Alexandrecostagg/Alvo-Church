@@ -27,8 +27,13 @@ import { useAppAuth } from "../../../app/providers";
 // (necessário porque <img>/Image não envia headers Authorization). O object URL
 // é do MESMO domínio, então desenhá-lo no canvas não "tainta" (toDataURL segue
 // funcionando para baixar/salvar).
-async function fetchBgAsObjectUrl(url: string, idToken: string): Promise<string> {
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
+async function fetchBgAsObjectUrl(
+  url: string,
+  idToken: string,
+): Promise<string> {
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
   if (!res.ok) throw new Error("Erro ao gerar imagem de fundo");
   return URL.createObjectURL(await res.blob());
 }
@@ -53,7 +58,7 @@ interface BrandKit {
 }
 
 const CANVAS_SIZES = {
-  feed:  { w: 1080, h: 1080 },
+  feed: { w: 1080, h: 1080 },
   story: { w: 1080, h: 1920 },
 };
 
@@ -69,16 +74,16 @@ const TIPOS = [
 
 const ESTILOS = [
   { value: "impactante", label: "Impactante" },
-  { value: "acolhedor",  label: "Acolhedor"  },
-  { value: "reverente",  label: "Reverente"  },
+  { value: "acolhedor", label: "Acolhedor" },
+  { value: "reverente", label: "Reverente" },
   { value: "celebracao", label: "Celebração" },
 ];
 
 const TEMPLATES: { id: TemplateId; label: string; hint: string }[] = [
-  { id: "classico",    label: "Clássico",     hint: "Título grande + faixa" },
-  { id: "minimalista", label: "Minimalista",  hint: "Centralizado, limpo" },
-  { id: "foto",        label: "Foto em destaque", hint: "Pregador/cantor" },
-  { id: "versiculo",   label: "Versículo",    hint: "Palavra em foco" },
+  { id: "classico", label: "Clássico", hint: "Título grande + faixa" },
+  { id: "minimalista", label: "Minimalista", hint: "Centralizado, limpo" },
+  { id: "foto", label: "Foto em destaque", hint: "Pregador/cantor" },
+  { id: "versiculo", label: "Versículo", hint: "Palavra em foco" },
 ];
 
 const SANS = `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
@@ -98,7 +103,11 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 
 function hexToRgba(hex: string, alpha: number): string {
   let h = (hex || "").replace("#", "").trim();
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
   const n = Number.parseInt(h, 16);
   if (h.length !== 6 || Number.isNaN(n)) return `rgba(124,58,237,${alpha})`;
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
@@ -107,7 +116,11 @@ function hexToRgba(hex: string, alpha: number): string {
 // Ajusta o tracking (letter-spacing) do contexto. A propriedade é recente e
 // pode não estar na typings do DOM — daí o cast; navegadores antigos ignoram.
 function setTracking(ctx: CanvasRenderingContext2D, px: number) {
-  try { (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`; } catch { /* noop */ }
+  try {
+    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`;
+  } catch {
+    /* noop */
+  }
 }
 
 function shadowOn(ctx: CanvasRenderingContext2D, blur = 16, oy = 2) {
@@ -121,7 +134,14 @@ function shadowOff(ctx: CanvasRenderingContext2D) {
   ctx.shadowOffsetY = 0;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -135,10 +155,14 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 function drawCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
-  dx: number, dy: number, dw: number, dh: number
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number,
 ) {
   const s = Math.max(dw / img.width, dh / img.height);
-  const w = img.width * s, h = img.height * s;
+  const w = img.width * s,
+    h = img.height * s;
   ctx.save();
   ctx.beginPath();
   ctx.rect(dx, dy, dw, dh);
@@ -147,7 +171,12 @@ function drawCover(
   ctx.restore();
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number, bg: HTMLImageElement | null) {
+function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  bg: HTMLImageElement | null,
+) {
   if (bg) {
     drawCover(ctx, bg, 0, 0, w, h);
   } else {
@@ -159,7 +188,11 @@ function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number, bg:
   }
 }
 
-function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+function wrapLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] {
   const words = (text || "").split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = "";
@@ -181,19 +214,26 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
 function drawLines(
   ctx: CanvasRenderingContext2D,
   lines: string[],
-  x: number, y: number, lineHeight: number,
-  align: CanvasTextAlign = "left"
+  x: number,
+  y: number,
+  lineHeight: number,
+  align: CanvasTextAlign = "left",
 ): number {
   ctx.textAlign = align;
-  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], x, y + i * lineHeight);
+  for (let i = 0; i < lines.length; i++)
+    ctx.fillText(lines[i], x, y + i * lineHeight);
   return y + Math.max(0, lines.length - 1) * lineHeight;
 }
 
 // Reduz o corpo da fonte até o título caber em no máximo `maxLines`.
 function fitTitle(
   ctx: CanvasRenderingContext2D,
-  text: string, maxWidth: number, maxLines: number,
-  start: number, min: number, weight: number
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+  start: number,
+  min: number,
+  weight: number,
 ): { size: number; lines: string[] } {
   for (let size = start; size > min; size -= 2) {
     ctx.font = `${weight} ${size}px ${SANS}`;
@@ -208,8 +248,11 @@ function fitTitle(
 // canvas), usamos sempre o NOME em texto — 100% seguro para exportar.
 function drawBrandName(
   ctx: CanvasRenderingContext2D,
-  x: number, baselineY: number, isStory: boolean,
-  churchName: string, align: CanvasTextAlign
+  x: number,
+  baselineY: number,
+  isStory: boolean,
+  churchName: string,
+  align: CanvasTextAlign,
 ) {
   // Discreto de propósito: a igreja assina o banner, não é a manchete. O
   // protagonismo é do evento/pregador.
@@ -227,7 +270,11 @@ function drawBrandName(
 
 function drawCirclePhoto(
   ctx: CanvasRenderingContext2D,
-  photo: HTMLImageElement, cx: number, cy: number, r: number, ring: string
+  photo: HTMLImageElement,
+  cx: number,
+  cy: number,
+  r: number,
+  ring: string,
 ) {
   ctx.save();
   ctx.beginPath();
@@ -235,7 +282,8 @@ function drawCirclePhoto(
   ctx.closePath();
   ctx.clip();
   const s = Math.max((2 * r) / photo.width, (2 * r) / photo.height);
-  const w = photo.width * s, h = photo.height * s;
+  const w = photo.width * s,
+    h = photo.height * s;
   ctx.drawImage(photo, cx - w / 2, cy - h / 2, w, h);
   ctx.restore();
   ctx.beginPath();
@@ -249,14 +297,24 @@ function drawCirclePhoto(
 
 interface DrawArgs {
   ctx: CanvasRenderingContext2D;
-  w: number; h: number; isStory: boolean;
-  copy: BannerCopy; form: FormState;
+  w: number;
+  h: number;
+  isStory: boolean;
+  copy: BannerCopy;
+  form: FormState;
   photo: HTMLImageElement | null;
   bg: HTMLImageElement | null;
   brand: BrandKit;
 }
 
-function drawTag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, isStory: boolean, color: string) {
+function drawTag(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  isStory: boolean,
+  color: string,
+) {
   const fs = isStory ? 30 : 24;
   const h = isStory ? 54 : 44;
   const pad = isStory ? 22 : 18;
@@ -287,13 +345,21 @@ function drawBottomStrip(a: DrawArgs, stripH: number) {
     ctx.font = `700 ${bSize}px ${SANS}`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "left";
-    ctx.fillText(form.pregador, mx, h - stripH / 2 - (form.data ? bSize * 0.5 : 0));
+    ctx.fillText(
+      form.pregador,
+      mx,
+      h - stripH / 2 - (form.data ? bSize * 0.5 : 0),
+    );
   }
   if (form.data) {
     ctx.font = `400 ${bSize - 9}px ${SANS}`;
     ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.textAlign = "left";
-    ctx.fillText(form.data, mx, h - stripH / 2 + (form.pregador ? bSize * 0.55 : 0));
+    ctx.fillText(
+      form.data,
+      mx,
+      h - stripH / 2 + (form.pregador ? bSize * 0.55 : 0),
+    );
   }
   if (copy.hashtags) {
     ctx.font = `600 ${isStory ? 26 : 20}px ${SANS}`;
@@ -324,15 +390,29 @@ function templateClassico(a: DrawArgs) {
 
   if (photo) {
     const r = isStory ? 200 : 155;
-    drawCirclePhoto(ctx, photo, w - r - 56, isStory ? h * 0.25 : h * 0.29, r, hexToRgba(brand.primary, 0.95));
+    drawCirclePhoto(
+      ctx,
+      photo,
+      w - r - 56,
+      isStory ? h * 0.25 : h * 0.29,
+      r,
+      hexToRgba(brand.primary, 0.95),
+    );
   }
 
   const stripH = isStory ? 120 : 96;
 
   // Mede tudo primeiro para ancorar o bloco logo acima da faixa. Título grande
   // e dominante (estilo cartaz).
-  const { size: titleSize, lines: titleLines } =
-    fitTitle(ctx, (copy.titulo || form.tema).toUpperCase(), maxW, isStory ? 4 : 3, isStory ? 128 : 100, isStory ? 62 : 50, 800);
+  const { size: titleSize, lines: titleLines } = fitTitle(
+    ctx,
+    (copy.titulo || form.tema).toUpperCase(),
+    maxW,
+    isStory ? 4 : 3,
+    isStory ? 128 : 100,
+    isStory ? 62 : 50,
+    800,
+  );
   const titleLH = titleSize * 1.03;
 
   const subSize = isStory ? 42 : 32;
@@ -342,14 +422,20 @@ function templateClassico(a: DrawArgs) {
 
   const verseSize = isStory ? 34 : 26;
   ctx.font = `italic ${verseSize}px ${SERIF}`;
-  const verseLines = copy.versiculo ? wrapLines(ctx, `“${copy.versiculo}”`, maxW) : [];
+  const verseLines = copy.versiculo
+    ? wrapLines(ctx, `“${copy.versiculo}”`, maxW)
+    : [];
   const verseLH = verseSize * 1.4;
 
   const tagH = isStory ? 54 : 44;
-  const gap1 = isStory ? 30 : 22, gap2 = isStory ? 26 : 18, gap3 = isStory ? 20 : 14;
+  const gap1 = isStory ? 30 : 22,
+    gap2 = isStory ? 26 : 18,
+    gap3 = isStory ? 20 : 14;
   const titleH = titleLines.length * titleLH;
   const subH = subLines.length * subLH;
-  const verseBlockH = verseLines.length ? verseLines.length * verseLH + gap3 + (verseSize + 10) : 0;
+  const verseBlockH = verseLines.length
+    ? verseLines.length * verseLH + gap3 + (verseSize + 10)
+    : 0;
   const totalH = tagH + gap1 + titleH + gap2 + subH + verseBlockH;
 
   let y = h - stripH - (isStory ? 60 : 44) - totalH;
@@ -399,14 +485,28 @@ function templateMinimalista(a: DrawArgs) {
   // legível sem apagar a imagem.
   ctx.fillStyle = "rgba(9,7,20,0.4)";
   ctx.fillRect(0, 0, w, h);
-  const vign = ctx.createRadialGradient(cx, h * 0.5, h * 0.1, cx, h * 0.5, h * 0.72);
+  const vign = ctx.createRadialGradient(
+    cx,
+    h * 0.5,
+    h * 0.1,
+    cx,
+    h * 0.5,
+    h * 0.72,
+  );
   vign.addColorStop(0, "rgba(9,7,20,0.34)");
   vign.addColorStop(1, "rgba(9,7,20,0)");
   ctx.fillStyle = vign;
   ctx.fillRect(0, 0, w, h);
 
   // Marca no topo + régua fina.
-  drawBrandName(ctx, cx, isStory ? 150 : 110, isStory, brand.churchName, "center");
+  drawBrandName(
+    ctx,
+    cx,
+    isStory ? 150 : 110,
+    isStory,
+    brand.churchName,
+    "center",
+  );
   ctx.fillStyle = hexToRgba(brand.primary, 0.95);
   ctx.fillRect(cx - 34, (isStory ? 150 : 110) + 22, 68, 4);
 
@@ -419,14 +519,28 @@ function templateMinimalista(a: DrawArgs) {
   setTracking(ctx, 0);
 
   // Título centralizado (herói).
-  const { size: titleSize, lines: titleLines } =
-    fitTitle(ctx, copy.titulo || form.tema, maxW, isStory ? 4 : 3, isStory ? 100 : 78, isStory ? 56 : 44, 800);
+  const { size: titleSize, lines: titleLines } = fitTitle(
+    ctx,
+    copy.titulo || form.tema,
+    maxW,
+    isStory ? 4 : 3,
+    isStory ? 100 : 78,
+    isStory ? 56 : 44,
+    800,
+  );
   const titleLH = titleSize * 1.08;
   ctx.fillStyle = "#fff";
   ctx.font = `800 ${titleSize}px ${SANS}`;
   shadowOn(ctx, 16, 2);
   const titleTop = h * 0.44;
-  drawLines(ctx, titleLines, cx, titleTop + titleSize * 0.82, titleLH, "center");
+  drawLines(
+    ctx,
+    titleLines,
+    cx,
+    titleTop + titleSize * 0.82,
+    titleLH,
+    "center",
+  );
   shadowOff(ctx);
   let y = titleTop + titleLines.length * titleLH + (isStory ? 20 : 14);
 
@@ -484,7 +598,12 @@ function templateFoto(a: DrawArgs) {
     drawCover(ctx, bg, 0, 0, w, heroH);
   }
   // Fade da foto para o escuro embaixo.
-  const fade = ctx.createLinearGradient(0, heroH - (isStory ? 260 : 200), 0, heroH + 4);
+  const fade = ctx.createLinearGradient(
+    0,
+    heroH - (isStory ? 260 : 200),
+    0,
+    heroH + 4,
+  );
   fade.addColorStop(0, "rgba(8,6,22,0)");
   fade.addColorStop(1, "rgba(8,6,22,1)");
   ctx.fillStyle = fade;
@@ -499,11 +618,25 @@ function templateFoto(a: DrawArgs) {
   drawBrandName(ctx, mx, isStory ? 92 : 68, isStory, brand.churchName, "left");
 
   let y = heroH + (isStory ? 40 : 30);
-  const tagH = drawTag(ctx, form.tipo.toUpperCase(), mx, y, isStory, brand.primary);
+  const tagH = drawTag(
+    ctx,
+    form.tipo.toUpperCase(),
+    mx,
+    y,
+    isStory,
+    brand.primary,
+  );
   y += tagH + (isStory ? 30 : 22);
 
-  const { size: titleSize, lines: titleLines } =
-    fitTitle(ctx, (copy.titulo || form.tema).toUpperCase(), maxW, 3, isStory ? 92 : 74, isStory ? 54 : 44, 800);
+  const { size: titleSize, lines: titleLines } = fitTitle(
+    ctx,
+    (copy.titulo || form.tema).toUpperCase(),
+    maxW,
+    3,
+    isStory ? 92 : 74,
+    isStory ? 54 : 44,
+    800,
+  );
   const titleLH = titleSize * 1.05;
   ctx.fillStyle = "#fff";
   ctx.font = `800 ${titleSize}px ${SANS}`;
@@ -543,7 +676,14 @@ function templateVersiculo(a: DrawArgs) {
   ctx.fillStyle = "rgba(7,5,18,0.46)";
   ctx.fillRect(0, 0, w, h);
   const cx0 = w / 2;
-  const vg = ctx.createRadialGradient(cx0, h * 0.46, h * 0.12, cx0, h * 0.46, h * 0.7);
+  const vg = ctx.createRadialGradient(
+    cx0,
+    h * 0.46,
+    h * 0.12,
+    cx0,
+    h * 0.46,
+    h * 0.7,
+  );
   vg.addColorStop(0, "rgba(7,5,18,0.34)");
   vg.addColorStop(1, "rgba(7,5,18,0)");
   ctx.fillStyle = vg;
@@ -552,7 +692,14 @@ function templateVersiculo(a: DrawArgs) {
   const cx = w / 2;
   const maxW = w * 0.84;
 
-  drawBrandName(ctx, cx, isStory ? 150 : 112, isStory, brand.churchName, "center");
+  drawBrandName(
+    ctx,
+    cx,
+    isStory ? 150 : 112,
+    isStory,
+    brand.churchName,
+    "center",
+  );
 
   // Kicker: tema/tipo.
   ctx.font = `700 ${isStory ? 28 : 22}px ${SANS}`;
@@ -589,8 +736,18 @@ function templateVersiculo(a: DrawArgs) {
   const refW = ctx.measureText(refText).width;
   ctx.fillStyle = hexToRgba(brand.primary, 0.8);
   const ruleY = y - (isStory ? 12 : 9);
-  ctx.fillRect(cx - refW / 2 - (isStory ? 70 : 54), ruleY, isStory ? 48 : 38, 3);
-  ctx.fillRect(cx + refW / 2 + (isStory ? 22 : 16), ruleY, isStory ? 48 : 38, 3);
+  ctx.fillRect(
+    cx - refW / 2 - (isStory ? 70 : 54),
+    ruleY,
+    isStory ? 48 : 38,
+    3,
+  );
+  ctx.fillRect(
+    cx + refW / 2 + (isStory ? 22 : 16),
+    ruleY,
+    isStory ? 48 : 38,
+    3,
+  );
 
   // Rodapé: pregador em destaque + data secundária.
   ctx.textAlign = "center";
@@ -619,25 +776,35 @@ const TEMPLATE_FNS: Record<TemplateId, (a: DrawArgs) => void> = {
 
 // ─── Thumbnail / foto helpers (para o histórico) ────────────────────────────
 
-function canvasToThumbnail(canvas: HTMLCanvasElement, maxDim = 440, quality = 0.62): string {
+function canvasToThumbnail(
+  canvas: HTMLCanvasElement,
+  maxDim = 440,
+  quality = 0.62,
+): string {
   const scale = Math.min(1, maxDim / Math.max(canvas.width, canvas.height));
   const tw = Math.round(canvas.width * scale);
   const th = Math.round(canvas.height * scale);
   const off = document.createElement("canvas");
-  off.width = tw; off.height = th;
+  off.width = tw;
+  off.height = th;
   const octx = off.getContext("2d");
   if (!octx) return canvas.toDataURL("image/jpeg", quality);
   octx.drawImage(canvas, 0, 0, tw, th);
   return off.toDataURL("image/jpeg", quality);
 }
 
-async function downscalePhoto(dataUrl: string, maxDim = 512, quality = 0.72): Promise<string> {
+async function downscalePhoto(
+  dataUrl: string,
+  maxDim = 512,
+  quality = 0.72,
+): Promise<string> {
   const img = await loadImage(dataUrl);
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
   const tw = Math.round(img.width * scale);
   const th = Math.round(img.height * scale);
   const off = document.createElement("canvas");
-  off.width = tw; off.height = th;
+  off.width = tw;
+  off.height = th;
   const octx = off.getContext("2d");
   if (!octx) return dataUrl;
   octx.drawImage(img, 0, 0, tw, th);
@@ -648,8 +815,9 @@ async function downscalePhoto(dataUrl: string, maxDim = 512, quality = 0.72): Pr
 // imagemPrompt temático. Sempre luminoso/vibrante (nunca "dark moody").
 const STYLE_MOOD: Record<string, string> = {
   impactante: "bold dramatic cinematic lighting, high contrast, epic, powerful",
-  acolhedor:  "warm soft golden hour light, welcoming glow, gentle, cozy",
-  reverente:  "serene sacred atmosphere, soft volumetric god rays, peaceful, ethereal",
+  acolhedor: "warm soft golden hour light, welcoming glow, gentle, cozy",
+  reverente:
+    "serene sacred atmosphere, soft volumetric god rays, peaceful, ethereal",
   celebracao: "vibrant festive energy, colorful bokeh lights, joyful, dynamic",
 };
 
@@ -658,14 +826,22 @@ function fallbackBgPrompt(form: FormState): string {
   return `professional cinematic poster background for a church event about "${form.tema}", ${mood}, rich vivid colors, volumetric light, luminous, highly detailed, no text, no letters, no words`;
 }
 
-function buildBgUrl(prompt: string, formato: FormState["formato"], seed: number): string {
+function buildBgUrl(
+  prompt: string,
+  formato: FormState["formato"],
+  seed: number,
+): string {
   const h = formato === "story" ? 1920 : 1080;
   return `/api/media/bg-proxy?prompt=${encodeURIComponent(prompt)}&w=1080&h=${h}&seed=${seed}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BannerGenerator({ churchName: churchNameProp }: { churchName?: string }) {
+export function BannerGenerator({
+  churchName: churchNameProp,
+}: {
+  churchName?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { user, tenantRuntime, organizationId, firebaseConfig } = useAppAuth();
 
@@ -675,7 +851,12 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     const org = tenantRuntime?.organization;
     const b = tenantRuntime?.settings?.branding;
     return {
-      churchName: org?.displayName || org?.publicName || org?.name || churchNameProp || "Minha Igreja",
+      churchName:
+        org?.displayName ||
+        org?.publicName ||
+        org?.name ||
+        churchNameProp ||
+        "Minha Igreja",
       primary: b?.primaryColor || "#7c3aed",
     };
   }, [tenantRuntime, churchNameProp]);
@@ -692,7 +873,9 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
 
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [copy, setCopy] = useState<BannerCopy | null>(null);
-  const [status, setStatus] = useState<"idle" | "generating-copy" | "generating-bg" | "drawing" | "done" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "generating-copy" | "generating-bg" | "drawing" | "done" | "error"
+  >("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 9999));
 
@@ -715,9 +898,18 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
   // Carrega a foto do pregador no ref sempre que muda (para o desenho síncrono).
   useEffect(() => {
     let cancelled = false;
-    if (!photoDataUrl) { photoImgRef.current = null; return; }
-    loadImage(photoDataUrl).then((img) => { if (!cancelled) photoImgRef.current = img; }).catch(() => {});
-    return () => { cancelled = true; };
+    if (!photoDataUrl) {
+      photoImgRef.current = null;
+      return;
+    }
+    loadImage(photoDataUrl)
+      .then((img) => {
+        if (!cancelled) photoImgRef.current = img;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [photoDataUrl]);
 
   // Carrega o histórico ao montar.
@@ -725,108 +917,156 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     if (!configured || !organizationId) return;
     let cancelled = false;
     fetchBannerHistory(firebaseConfig, { organizationId })
-      .then((list) => { if (!cancelled) setHistory(list); })
+      .then((list) => {
+        if (!cancelled) setHistory(list);
+      })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [configured, organizationId, firebaseConfig]);
 
   // Libera o object URL do fundo ao desmontar.
-  useEffect(() => () => { if (bgObjectUrlRef.current) URL.revokeObjectURL(bgObjectUrlRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (bgObjectUrlRef.current) URL.revokeObjectURL(bgObjectUrlRef.current);
+    },
+    [],
+  );
 
   // Desenho síncrono a partir dos refs + args (evita closures obsoletas).
-  const renderCanvas = useCallback((formArg: FormState, copyArg: BannerCopy) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const { w, h } = CANVAS_SIZES[formArg.formato];
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, w, h);
-    ctx.textBaseline = "alphabetic";
-    const args: DrawArgs = {
-      ctx, w, h, isStory: formArg.formato === "story",
-      copy: copyArg, form: formArg,
-      photo: photoImgRef.current, bg: bgImgRef.current, brand,
-    };
-    (TEMPLATE_FNS[formArg.template] ?? templateClassico)(args);
-  }, [brand]);
+  const renderCanvas = useCallback(
+    (formArg: FormState, copyArg: BannerCopy) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const { w, h } = CANVAS_SIZES[formArg.formato];
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, w, h);
+      ctx.textBaseline = "alphabetic";
+      const args: DrawArgs = {
+        ctx,
+        w,
+        h,
+        isStory: formArg.formato === "story",
+        copy: copyArg,
+        form: formArg,
+        photo: photoImgRef.current,
+        bg: bgImgRef.current,
+        brand,
+      };
+      (TEMPLATE_FNS[formArg.template] ?? templateClassico)(args);
+    },
+    [brand],
+  );
 
   // Persiste no histórico (novo ou atualizando a entrada corrente).
-  const persistHistory = useCallback(async (
-    formArg: FormState, copyArg: BannerCopy, seedVal: number, isNew: boolean, bgPrompt: string
-  ) => {
-    if (!configured || !organizationId) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let thumb: string;
-    try { thumb = canvasToThumbnail(canvas); } catch { return; }
-    let photo: string | undefined;
-    if (photoDataUrl) { try { photo = await downscalePhoto(photoDataUrl); } catch { photo = undefined; } }
+  const persistHistory = useCallback(
+    async (
+      formArg: FormState,
+      copyArg: BannerCopy,
+      seedVal: number,
+      isNew: boolean,
+      bgPrompt: string,
+    ) => {
+      if (!configured || !organizationId) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      let thumb: string;
+      try {
+        thumb = canvasToThumbnail(canvas);
+      } catch {
+        return;
+      }
+      let photo: string | undefined;
+      if (photoDataUrl) {
+        try {
+          photo = await downscalePhoto(photoDataUrl);
+        } catch {
+          photo = undefined;
+        }
+      }
 
-    const id = isNew || !currentEntryIdRef.current
-      ? (crypto.randomUUID?.() ?? `bn_${Date.now()}_${Math.floor(Math.random() * 1e6)}`)
-      : currentEntryIdRef.current;
-    currentEntryIdRef.current = id;
+      const id =
+        isNew || !currentEntryIdRef.current
+          ? (crypto.randomUUID?.() ??
+            `bn_${Date.now()}_${Math.floor(Math.random() * 1e6)}`)
+          : currentEntryIdRef.current;
+      currentEntryIdRef.current = id;
 
-    const entry: BannerHistoryEntry = {
-      id,
-      organizationId,
-      createdAt: new Date().toISOString(),
-      createdByUserId: user?.uid,
-      template: formArg.template,
-      formato: formArg.formato,
-      tipo: formArg.tipo,
-      tema: formArg.tema,
-      pregador: formArg.pregador || undefined,
-      data: formArg.data || undefined,
-      estilo: formArg.estilo,
-      seed: seedVal,
-      bgPrompt,
-      copy: {
-        titulo: copyArg.titulo,
-        subtitulo: copyArg.subtitulo,
-        versiculo: copyArg.versiculo,
-        versiculoRef: copyArg.versiculoRef,
-        hashtags: copyArg.hashtags,
-      },
-      thumbnailDataUrl: thumb,
-      photoDataUrl: photo,
-    };
+      const entry: BannerHistoryEntry = {
+        id,
+        organizationId,
+        createdAt: new Date().toISOString(),
+        createdByUserId: user?.uid,
+        template: formArg.template,
+        formato: formArg.formato,
+        tipo: formArg.tipo,
+        tema: formArg.tema,
+        pregador: formArg.pregador || undefined,
+        data: formArg.data || undefined,
+        estilo: formArg.estilo,
+        seed: seedVal,
+        bgPrompt,
+        copy: {
+          titulo: copyArg.titulo,
+          subtitulo: copyArg.subtitulo,
+          versiculo: copyArg.versiculo,
+          versiculoRef: copyArg.versiculoRef,
+          hashtags: copyArg.hashtags,
+        },
+        thumbnailDataUrl: thumb,
+        photoDataUrl: photo,
+      };
 
-    try {
-      await saveBannerHistoryEntry(firebaseConfig, { organizationId }, entry);
-      setHistory((prev) => [entry, ...prev.filter((e) => e.id !== id)].slice(0, 24));
-    } catch (e) {
-      setHistoryError(friendlyError(e, "Não foi possível salvar no histórico"));
-    }
-  }, [configured, organizationId, firebaseConfig, photoDataUrl, user]);
+      try {
+        await saveBannerHistoryEntry(firebaseConfig, { organizationId }, entry);
+        setHistory((prev) =>
+          [entry, ...prev.filter((e) => e.id !== id)].slice(0, 24),
+        );
+      } catch (e) {
+        setHistoryError(
+          friendlyError(e, "Não foi possível salvar no histórico"),
+        );
+      }
+    },
+    [configured, organizationId, firebaseConfig, photoDataUrl, user],
+  );
 
   // Carrega o fundo (determinístico pelo seed + prompt) e desenha. NUNCA
   // derruba a composição: o Pollinations é instável (5xx/timeout esporádico),
   // então tentamos 2x e, se falhar, desenhamos com o gradiente de fallback.
   // Retorna true se o fundo de IA carregou; false se caiu no gradiente.
-  const composeWithBg = useCallback(async (
-    formArg: FormState, copyArg: BannerCopy, seedVal: number, bgPrompt: string
-  ): Promise<boolean> => {
-    if (!user) throw new Error("Faça login para gerar banners");
-    const idToken = await user.getIdToken();
-    const url = buildBgUrl(bgPrompt, formArg.formato, seedVal);
-    let img: HTMLImageElement | null = null;
-    for (let attempt = 0; attempt < 2 && !img; attempt++) {
-      try {
-        const obj = await fetchBgAsObjectUrl(url, idToken);
-        if (bgObjectUrlRef.current) URL.revokeObjectURL(bgObjectUrlRef.current);
-        bgObjectUrlRef.current = obj;
-        img = await loadImage(obj);
-      } catch {
-        img = null; // tenta de novo; na 2ª falha cai pro gradiente
+  const composeWithBg = useCallback(
+    async (
+      formArg: FormState,
+      copyArg: BannerCopy,
+      seedVal: number,
+      bgPrompt: string,
+    ): Promise<boolean> => {
+      if (!user) throw new Error("Faça login para gerar banners");
+      const idToken = await user.getIdToken();
+      const url = buildBgUrl(bgPrompt, formArg.formato, seedVal);
+      let img: HTMLImageElement | null = null;
+      for (let attempt = 0; attempt < 2 && !img; attempt++) {
+        try {
+          const obj = await fetchBgAsObjectUrl(url, idToken);
+          if (bgObjectUrlRef.current)
+            URL.revokeObjectURL(bgObjectUrlRef.current);
+          bgObjectUrlRef.current = obj;
+          img = await loadImage(obj);
+        } catch {
+          img = null; // tenta de novo; na 2ª falha cai pro gradiente
+        }
       }
-    }
-    bgImgRef.current = img;
-    renderCanvas(formArg, copyArg);
-    return img !== null;
-  }, [user, renderCanvas]);
+      bgImgRef.current = img;
+      renderCanvas(formArg, copyArg);
+      return img !== null;
+    },
+    [user, renderCanvas],
+  );
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -838,7 +1078,11 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
 
   const generate = useCallback(async () => {
     if (!form.tema.trim()) return;
-    if (!user) { setStatus("error"); setErrorMsg("Faça login para gerar banners"); return; }
+    if (!user) {
+      setStatus("error");
+      setErrorMsg("Faça login para gerar banners");
+      return;
+    }
     const idToken = await user.getIdToken();
     const useSeed = Math.floor(Math.random() * 9999);
     setSeed(useSeed);
@@ -851,9 +1095,16 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     try {
       const res = await fetch("/api/media/banner-copy", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
-          tipo: form.tipo, tema: form.tema, pregador: form.pregador, data: form.data, estilo: form.estilo,
+          tipo: form.tipo,
+          tema: form.tema,
+          pregador: form.pregador,
+          data: form.data,
+          estilo: form.estilo,
         }),
       });
       const data = await res.json();
@@ -902,56 +1153,80 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
   }, [copy, user, form, composeWithBg, persistHistory]);
 
   // Troca de template (ao vivo, sem regerar copy/fundo).
-  const setTemplate = useCallback((template: TemplateId) => {
-    setForm((s) => ({ ...s, template }));
-    if (status === "done" && copy && bgImgRef.current) {
-      const next = { ...form, template };
-      renderCanvas(next, copy);
-      persistHistory(next, copy, seed, false, bgPromptRef.current || fallbackBgPrompt(next));
-    }
-  }, [status, copy, form, seed, renderCanvas, persistHistory]);
+  const setTemplate = useCallback(
+    (template: TemplateId) => {
+      setForm((s) => ({ ...s, template }));
+      if (status === "done" && copy && bgImgRef.current) {
+        const next = { ...form, template };
+        renderCanvas(next, copy);
+        persistHistory(
+          next,
+          copy,
+          seed,
+          false,
+          bgPromptRef.current || fallbackBgPrompt(next),
+        );
+      }
+    },
+    [status, copy, form, seed, renderCanvas, persistHistory],
+  );
 
-  const openFromHistory = useCallback(async (entry: BannerHistoryEntry) => {
-    const nextForm: FormState = {
-      tipo: entry.tipo,
-      tema: entry.tema,
-      pregador: entry.pregador ?? "",
-      data: entry.data ?? "",
-      estilo: entry.estilo,
-      formato: entry.formato,
-      template: (entry.template as TemplateId) ?? "classico",
-    };
-    const nextCopy: BannerCopy = entry.copy;
-    setForm(nextForm);
-    setCopy(nextCopy);
-    setSeed(entry.seed);
-    setPhotoDataUrl(entry.photoDataUrl ?? null);
-    photoImgRef.current = entry.photoDataUrl ? await loadImage(entry.photoDataUrl).catch(() => null) : null;
-    currentEntryIdRef.current = entry.id;
-    bgPromptRef.current = entry.bgPrompt || fallbackBgPrompt(nextForm);
-    setErrorMsg("");
-    setStatus("generating-bg");
-    try {
-      const bgOk = await composeWithBg(nextForm, nextCopy, entry.seed, bgPromptRef.current);
-      setBgWarning(!bgOk);
-      setStatus("done");
-    } catch (e) {
-      setStatus("error");
-      setErrorMsg(friendlyError(e, "Erro ao reabrir banner"));
-    }
-  }, [composeWithBg]);
+  const openFromHistory = useCallback(
+    async (entry: BannerHistoryEntry) => {
+      const nextForm: FormState = {
+        tipo: entry.tipo,
+        tema: entry.tema,
+        pregador: entry.pregador ?? "",
+        data: entry.data ?? "",
+        estilo: entry.estilo,
+        formato: entry.formato,
+        template: (entry.template as TemplateId) ?? "classico",
+      };
+      const nextCopy: BannerCopy = entry.copy;
+      setForm(nextForm);
+      setCopy(nextCopy);
+      setSeed(entry.seed);
+      setPhotoDataUrl(entry.photoDataUrl ?? null);
+      photoImgRef.current = entry.photoDataUrl
+        ? await loadImage(entry.photoDataUrl).catch(() => null)
+        : null;
+      currentEntryIdRef.current = entry.id;
+      bgPromptRef.current = entry.bgPrompt || fallbackBgPrompt(nextForm);
+      setErrorMsg("");
+      setStatus("generating-bg");
+      try {
+        const bgOk = await composeWithBg(
+          nextForm,
+          nextCopy,
+          entry.seed,
+          bgPromptRef.current,
+        );
+        setBgWarning(!bgOk);
+        setStatus("done");
+      } catch (e) {
+        setStatus("error");
+        setErrorMsg(friendlyError(e, "Erro ao reabrir banner"));
+      }
+    },
+    [composeWithBg],
+  );
 
-  const removeFromHistory = useCallback(async (id: string) => {
-    if (!configured || !organizationId) return;
-    const prev = history;
-    setHistory((h) => h.filter((e) => e.id !== id));
-    try {
-      await deleteBannerHistoryEntry(firebaseConfig, { organizationId }, id);
-    } catch (e) {
-      setHistory(prev); // reverte se falhar (ex.: sem permissão de admin)
-      setHistoryError(friendlyError(e, "Só administradores podem excluir do histórico"));
-    }
-  }, [configured, organizationId, firebaseConfig, history]);
+  const removeFromHistory = useCallback(
+    async (id: string) => {
+      if (!configured || !organizationId) return;
+      const prev = history;
+      setHistory((h) => h.filter((e) => e.id !== id));
+      try {
+        await deleteBannerHistoryEntry(firebaseConfig, { organizationId }, id);
+      } catch (e) {
+        setHistory(prev); // reverte se falhar (ex.: sem permissão de admin)
+        setHistoryError(
+          friendlyError(e, "Só administradores podem excluir do histórico"),
+        );
+      }
+    },
+    [configured, organizationId, firebaseConfig, history],
+  );
 
   const download = () => {
     const canvas = canvasRef.current;
@@ -969,19 +1244,27 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
       if (!blob) return;
       const file = new File([blob], "banner.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: copy?.titulo ?? "Banner" });
+        await navigator.share({
+          files: [file],
+          title: copy?.titulo ?? "Banner",
+        });
       } else {
-        const text = encodeURIComponent(`${copy?.titulo ?? ""}\n${copy?.subtitulo ?? ""}\n${copy?.hashtags ?? ""}`);
+        const text = encodeURIComponent(
+          `${copy?.titulo ?? ""}\n${copy?.subtitulo ?? ""}\n${copy?.hashtags ?? ""}`,
+        );
         window.open(`https://wa.me/?text=${text}`, "_blank");
       }
     }, "image/png");
   };
 
-  const isLoading = ["generating-copy", "generating-bg", "drawing"].includes(status);
+  const isLoading = ["generating-copy", "generating-bg", "drawing"].includes(
+    status,
+  );
 
-  const previewSize = form.formato === "story"
-    ? { width: 270, height: 480 }
-    : { width: 400, height: 400 };
+  const previewSize =
+    form.formato === "story"
+      ? { width: 270, height: 480 }
+      : { width: 400, height: 400 };
 
   return (
     <div className="banner-gen-root">
@@ -989,7 +1272,8 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
       <div className="banner-gen-form">
         <h2 className="banner-gen-title">Gerador de Banner</h2>
         <p className="banner-gen-desc">
-          Crie banners de <strong>{brand.churchName}</strong> para redes sociais em segundos — texto e arte gerados por IA.
+          Crie banners de <strong>{brand.churchName}</strong> para redes sociais
+          em segundos — texto e arte gerados por IA.
         </p>
 
         <div className="banner-field">
@@ -1027,13 +1311,20 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
 
         <div className="banner-field">
           <label>Tipo de evento</label>
-          <select value={form.tipo} onChange={(e) => setForm((s) => ({ ...s, tipo: e.target.value }))}>
-            {TIPOS.map((t) => <option key={t}>{t}</option>)}
+          <select
+            value={form.tipo}
+            onChange={(e) => setForm((s) => ({ ...s, tipo: e.target.value }))}
+          >
+            {TIPOS.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
         </div>
 
         <div className="banner-field">
-          <label>Tema / Mensagem <span className="required">*</span></label>
+          <label>
+            Tema / Mensagem <span className="required">*</span>
+          </label>
           <input
             type="text"
             placeholder="Ex: A fé que move montanhas"
@@ -1048,7 +1339,9 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
             type="text"
             placeholder="Nome completo"
             value={form.pregador}
-            onChange={(e) => setForm((s) => ({ ...s, pregador: e.target.value }))}
+            onChange={(e) =>
+              setForm((s) => ({ ...s, pregador: e.target.value }))
+            }
           />
         </div>
 
@@ -1084,7 +1377,10 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
             <div className="banner-photo-preview">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photoDataUrl} alt="Foto" />
-              <button className="banner-photo-remove" onClick={() => setPhotoDataUrl(null)}>
+              <button
+                className="banner-photo-remove"
+                onClick={() => setPhotoDataUrl(null)}
+              >
                 <X size={14} />
               </button>
             </div>
@@ -1092,7 +1388,12 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
             <label className="banner-photo-upload">
               <ImagePlus size={18} />
               <span>Clique para adicionar foto</span>
-              <input type="file" accept="image/*" onChange={handlePhotoChange} hidden />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                hidden
+              />
             </label>
           )}
         </div>
@@ -1103,25 +1404,30 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
           disabled={isLoading || !form.tema.trim()}
         >
           {isLoading ? (
-            <><Loader2 size={16} className="spin" /> {
-              status === "generating-copy" ? "Gerando texto..." :
-              status === "generating-bg"   ? "Gerando imagem..." :
-              "Compondo banner..."
-            }</>
+            <>
+              <Loader2 size={16} className="spin" />{" "}
+              {status === "generating-copy"
+                ? "Gerando texto..."
+                : status === "generating-bg"
+                  ? "Gerando imagem..."
+                  : "Compondo banner..."}
+            </>
           ) : (
-            <><Sparkles size={16} /> Gerar Banner</>
+            <>
+              <Sparkles size={16} /> Gerar Banner
+            </>
           )}
         </button>
 
-        {status === "error" && (
-          <p className="banner-error">{errorMsg}</p>
-        )}
+        {status === "error" && <p className="banner-error">{errorMsg}</p>}
 
         {copy && (
           <div className="banner-copy-preview">
             <p className="copy-title">{copy.titulo}</p>
             <p className="copy-sub">{copy.subtitulo}</p>
-            <p className="copy-verse">&ldquo;{copy.versiculo}&rdquo; — {copy.versiculoRef}</p>
+            <p className="copy-verse">
+              &ldquo;{copy.versiculo}&rdquo; — {copy.versiculoRef}
+            </p>
             <p className="copy-tags">{copy.hashtags}</p>
           </div>
         )}
@@ -1146,11 +1452,13 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
           {isLoading && (
             <div className="banner-canvas-placeholder">
               <Loader2 size={36} className="spin" strokeWidth={1.5} />
-              <p>{
-                status === "generating-copy" ? "Gerando texto com IA..." :
-                status === "generating-bg"   ? "Gerando arte (pode levar 20s)..." :
-                "Compondo..."
-              }</p>
+              <p>
+                {status === "generating-copy"
+                  ? "Gerando texto com IA..."
+                  : status === "generating-bg"
+                    ? "Gerando arte (pode levar 20s)..."
+                    : "Compondo..."}
+              </p>
             </div>
           )}
         </div>
@@ -1159,18 +1467,26 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
           <>
             {bgWarning && (
               <p className="banner-bg-warning">
-                O gerador de arte (Pollinations) não respondeu — usei um fundo gradiente.
-                Clique em <strong>Novo fundo</strong> para tentar de novo.
+                O gerador de arte (Pollinations) não respondeu — usei um fundo
+                gradiente. Clique em <strong>Novo fundo</strong> para tentar de
+                novo.
               </p>
             )}
             <div className="banner-actions">
-              <button className="banner-action-btn secondary" onClick={regenerateBg} title="Gerar novo fundo">
+              <button
+                className="banner-action-btn secondary"
+                onClick={regenerateBg}
+                title="Gerar novo fundo"
+              >
                 <RefreshCw size={16} /> Novo fundo
               </button>
               <button className="banner-action-btn primary" onClick={download}>
                 <Download size={16} /> Baixar PNG
               </button>
-              <button className="banner-action-btn whatsapp" onClick={shareWhatsApp}>
+              <button
+                className="banner-action-btn whatsapp"
+                onClick={shareWhatsApp}
+              >
                 <Share2 size={16} /> WhatsApp
               </button>
             </div>
@@ -1178,7 +1494,8 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
         )}
 
         <p className="banner-credit">
-          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>IA (DeepSeek)</strong> · sem custo
+          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por{" "}
+          <strong>IA (DeepSeek)</strong> · sem custo
         </p>
       </div>
 
@@ -1201,18 +1518,33 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
                   title="Reabrir este banner"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={entry.thumbnailDataUrl} alt={entry.copy.titulo || entry.tema} />
-                  <span className="banner-history-badge">{entry.formato === "story" ? "Story" : "Feed"}</span>
+                  <img
+                    src={entry.thumbnailDataUrl}
+                    alt={entry.copy.titulo || entry.tema}
+                  />
+                  <span className="banner-history-badge">
+                    {entry.formato === "story" ? "Story" : "Feed"}
+                  </span>
                 </button>
                 <div className="banner-history-meta">
-                  <p className="banner-history-title">{entry.copy.titulo || entry.tema}</p>
+                  <p className="banner-history-title">
+                    {entry.copy.titulo || entry.tema}
+                  </p>
                   <p className="banner-history-sub">{entry.tipo}</p>
                 </div>
                 <div className="banner-history-actions">
-                  <button type="button" onClick={() => openFromHistory(entry)} title="Reabrir">
+                  <button
+                    type="button"
+                    onClick={() => openFromHistory(entry)}
+                    title="Reabrir"
+                  >
                     <RefreshCw size={14} />
                   </button>
-                  <button type="button" onClick={() => removeFromHistory(entry.id)} title="Excluir">
+                  <button
+                    type="button"
+                    onClick={() => removeFromHistory(entry.id)}
+                    title="Excluir"
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>

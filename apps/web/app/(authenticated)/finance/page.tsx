@@ -6,8 +6,11 @@ import { RoleGuard } from "../../../src/components/role-guard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const FinanceView = dynamic(
-  () => import("../../../src/features/finance/finance-view").then((mod) => mod.FinanceView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/finance/finance-view").then(
+      (mod) => mod.FinanceView,
+    ),
+  { ssr: false },
 );
 
 export default function FinancePage() {

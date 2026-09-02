@@ -44,7 +44,7 @@ export function StarfieldBackground() {
           vx: (Math.random() - 0.5) * 0.15,
           vy: (Math.random() - 0.5) * 0.15,
           alpha: Math.random(),
-          alphaSpeed: 0.005 + Math.random() * 0.01
+          alphaSpeed: 0.005 + Math.random() * 0.01,
         });
       }
     };
@@ -164,7 +164,7 @@ export function StarfieldBackground() {
         height: "100vh",
         pointerEvents: "none",
         zIndex: -1,
-        display: "block"
+        display: "block",
       }}
     />
   );

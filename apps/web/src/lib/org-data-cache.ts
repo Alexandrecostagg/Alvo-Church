@@ -1,6 +1,10 @@
 "use client";
 
-import { fetchPeople, fetchGroups, type FirebaseWebRuntimeConfig } from "@alvo/firebase";
+import {
+  fetchPeople,
+  fetchGroups,
+  type FirebaseWebRuntimeConfig,
+} from "@alvo/firebase";
 import type { TenantContext } from "@alvo/types";
 
 // Cache de curta duração para as coleções mais rebuscadas do app (people e
@@ -34,21 +38,27 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const peopleCache = new Map<string, CacheEntry<Awaited<ReturnType<typeof fetchPeople>>[number]>>();
-const groupsCache = new Map<string, CacheEntry<Awaited<ReturnType<typeof fetchGroups>>[number]>>();
+const peopleCache = new Map<
+  string,
+  CacheEntry<Awaited<ReturnType<typeof fetchPeople>>[number]>
+>();
+const groupsCache = new Map<
+  string,
+  CacheEntry<Awaited<ReturnType<typeof fetchGroups>>[number]>
+>();
 
 function readThrough<T>(
   cache: Map<string, CacheEntry<T>>,
   organizationId: string,
   maxItems: number,
-  loader: (limit: number) => Promise<T[]>
+  loader: (limit: number) => Promise<T[]>,
 ): Promise<T[]> {
   const entry = cache.get(organizationId);
   const now = Date.now();
 
   if (entry && entry.expiresAt > now && entry.limit >= maxItems) {
     return entry.promise.then((items) =>
-      items.length > maxItems ? items.slice(0, maxItems) : items
+      items.length > maxItems ? items.slice(0, maxItems) : items,
     );
   }
 
@@ -56,7 +66,11 @@ function readThrough<T>(
   // pede 100 depois de outra que pediu 2000 não rebaixa o cache.
   const effectiveLimit = Math.max(maxItems, entry?.limit ?? 0);
   const promise = loader(effectiveLimit);
-  const next: CacheEntry<T> = { limit: effectiveLimit, promise, expiresAt: now + TTL_MS };
+  const next: CacheEntry<T> = {
+    limit: effectiveLimit,
+    promise,
+    expiresAt: now + TTL_MS,
+  };
   cache.set(organizationId, next);
 
   // Uma falha não pode ficar cacheada — remove a entrada pra próxima
@@ -65,17 +79,19 @@ function readThrough<T>(
     if (cache.get(organizationId) === next) cache.delete(organizationId);
   });
 
-  return promise.then((items) => (items.length > maxItems ? items.slice(0, maxItems) : items));
+  return promise.then((items) =>
+    items.length > maxItems ? items.slice(0, maxItems) : items,
+  );
 }
 
 /** Versão cacheada de fetchPeople — mesma assinatura e mesmo resultado. */
 export function cachedFetchPeople(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  maxItems = 8
+  maxItems = 8,
 ) {
   return readThrough(peopleCache, context.organizationId, maxItems, (limit) =>
-    fetchPeople(config, context, limit)
+    fetchPeople(config, context, limit),
   );
 }
 
@@ -83,10 +99,10 @@ export function cachedFetchPeople(
 export function cachedFetchGroups(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  maxItems = 8
+  maxItems = 8,
 ) {
   return readThrough(groupsCache, context.organizationId, maxItems, (limit) =>
-    fetchGroups(config, context, limit)
+    fetchGroups(config, context, limit),
   );
 }
 

@@ -72,9 +72,7 @@ export function TestimonialsClient() {
         {TESTIMONIALS.map((t) => (
           <div key={t.name} className="lp-testimonial-card">
             <div className="lp-testimonial-metric">
-              <span className="lp-testimonial-metric-value">
-                {t.metric}
-              </span>
+              <span className="lp-testimonial-metric-value">{t.metric}</span>
             </div>
             <p className="lp-testimonial-text">"{t.text}"</p>
             <div className="lp-testimonial-author">

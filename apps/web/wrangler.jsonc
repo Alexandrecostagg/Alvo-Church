@@ -2,18 +2,15 @@
   "name": "alvo-church-web",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-01",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "global_fetch_strictly_public"
-  ],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
-    "directory": ".open-next/assets"
+    "directory": ".open-next/assets",
   },
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",
-      "id": "60605570c4774907b4f4d5b6395dd4c4"
-    }
+      "id": "60605570c4774907b4f4d5b6395dd4c4",
+    },
   ],
   "observability": {
     "enabled": false,
@@ -22,13 +19,13 @@
       "enabled": true,
       "head_sampling_rate": 1,
       "persist": true,
-      "invocation_logs": true
+      "invocation_logs": true,
     },
     "traces": {
       "enabled": false,
       "persist": true,
-      "head_sampling_rate": 1
-    }
+      "head_sampling_rate": 1,
+    },
   },
   "vars": {
     "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
@@ -42,6 +39,6 @@
     // Valores de PRODUÇÃO — o deploy sobrescreve o que estiver no dashboard
     // da Cloudflare, então estas vars precisam viver aqui no arquivo.
     "ASAAS_API_BASE_URL": "https://api.asaas.com/v3",
-    "WORKER_API_BASE_URL": "https://alvo-church-worker-api.alexandrecostagg.workers.dev"
-  }
+    "WORKER_API_BASE_URL": "https://alvo-church-worker-api.alexandrecostagg.workers.dev",
+  },
 }

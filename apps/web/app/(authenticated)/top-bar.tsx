@@ -6,36 +6,108 @@ import { useAppAuth } from "../providers";
 import { OrgSwitcher } from "../../src/components/org-switcher";
 import { PlatformAdminLink } from "../../src/components/platform-admin-link";
 import {
-  LayoutDashboard, ClipboardList, Bot, Landmark, UserCircle,
-  UsersRound, UserPlus, Store, MessageSquareText, HeartHandshake,
-  Tent, Waypoints, Map as MapIcon, GraduationCap, CalendarRange,
-  Handshake, Music, ShieldCheck, Building2, Settings,
+  LayoutDashboard,
+  ClipboardList,
+  Bot,
+  Landmark,
+  UserCircle,
+  UsersRound,
+  UserPlus,
+  Store,
+  MessageSquareText,
+  HeartHandshake,
+  Tent,
+  Waypoints,
+  Map as MapIcon,
+  GraduationCap,
+  CalendarRange,
+  Handshake,
+  Music,
+  ShieldCheck,
+  Building2,
+  Settings,
 } from "lucide-react";
 
 type ModuleInfo = { label: string; icon: React.ElementType };
 
 const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p === "/", label: "Dashboard", icon: LayoutDashboard },
-  { match: (p) => p.startsWith("/reception"), label: "Recepção", icon: ClipboardList },
-  { match: (p) => p.startsWith("/pastoral-ai"), label: "Cuidado Pastoral", icon: Bot },
+  {
+    match: (p) => p.startsWith("/reception"),
+    label: "Recepção",
+    icon: ClipboardList,
+  },
+  {
+    match: (p) => p.startsWith("/pastoral-ai"),
+    label: "Cuidado Pastoral",
+    icon: Bot,
+  },
   { match: (p) => p.startsWith("/finance"), label: "Finanças", icon: Landmark },
   { match: (p) => p.startsWith("/me"), label: "Meu Perfil", icon: UserCircle },
-  { match: (p) => p.startsWith("/members/new"), label: "Novo Membro", icon: UserPlus },
-  { match: (p) => p.startsWith("/members"), label: "Pessoas", icon: UsersRound },
-  { match: (p) => p.startsWith("/marketplace"), label: "Marketplace", icon: Store },
-  { match: (p) => p.startsWith("/communication"), label: "Comunicação", icon: MessageSquareText },
-  { match: (p) => p.startsWith("/giving"), label: "Doações", icon: HeartHandshake },
+  {
+    match: (p) => p.startsWith("/members/new"),
+    label: "Novo Membro",
+    icon: UserPlus,
+  },
+  {
+    match: (p) => p.startsWith("/members"),
+    label: "Pessoas",
+    icon: UsersRound,
+  },
+  {
+    match: (p) => p.startsWith("/marketplace"),
+    label: "Marketplace",
+    icon: Store,
+  },
+  {
+    match: (p) => p.startsWith("/communication"),
+    label: "Comunicação",
+    icon: MessageSquareText,
+  },
+  {
+    match: (p) => p.startsWith("/giving"),
+    label: "Doações",
+    icon: HeartHandshake,
+  },
   { match: (p) => p.startsWith("/tribes"), label: "Tribos", icon: Tent },
   { match: (p) => p.startsWith("/groups"), label: "Células", icon: Waypoints },
   { match: (p) => p.startsWith("/journeys"), label: "Jornadas", icon: MapIcon },
-  { match: (p) => p.startsWith("/learning"), label: "Escola EAD", icon: GraduationCap },
-  { match: (p) => p.startsWith("/events"), label: "Eventos", icon: CalendarRange },
-  { match: (p) => p.startsWith("/serving/worship"), label: "Louvor & Cifras", icon: Music },
+  {
+    match: (p) => p.startsWith("/learning"),
+    label: "Escola EAD",
+    icon: GraduationCap,
+  },
+  {
+    match: (p) => p.startsWith("/events"),
+    label: "Eventos",
+    icon: CalendarRange,
+  },
+  {
+    match: (p) => p.startsWith("/serving/worship"),
+    label: "Louvor & Cifras",
+    icon: Music,
+  },
   { match: (p) => p.startsWith("/serving"), label: "Escalas", icon: Handshake },
-  { match: (p) => p.startsWith("/kids"), label: "Segurança Kids", icon: ShieldCheck },
-  { match: (p) => p.startsWith("/saas"), label: "Organizações", icon: Building2 },
-  { match: (p) => p.startsWith("/settings"), label: "Configurações", icon: Settings },
-  { match: (p) => p.startsWith("/platform-admin"), label: "Painel Esdras", icon: ShieldCheck },
+  {
+    match: (p) => p.startsWith("/kids"),
+    label: "Segurança Kids",
+    icon: ShieldCheck,
+  },
+  {
+    match: (p) => p.startsWith("/saas"),
+    label: "Organizações",
+    icon: Building2,
+  },
+  {
+    match: (p) => p.startsWith("/settings"),
+    label: "Configurações",
+    icon: Settings,
+  },
+  {
+    match: (p) => p.startsWith("/platform-admin"),
+    label: "Painel Esdras",
+    icon: ShieldCheck,
+  },
 ];
 
 export function TopBar() {
@@ -43,7 +115,10 @@ export function TopBar() {
   const router = useRouter();
   const { user, signOut } = useAppAuth();
 
-  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? { label: "Esdras", icon: LayoutDashboard };
+  const current = MODULE_MAP.find((m) => m.match(pathname)) ?? {
+    label: "Esdras",
+    icon: LayoutDashboard,
+  };
   const Icon = current.icon;
 
   return (
@@ -52,23 +127,65 @@ export function TopBar() {
         <Icon size={18} strokeWidth={2} />
         <span>{current.label}</span>
       </div>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <div
+        style={{
+          marginLeft: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexShrink: 0,
+        }}
+      >
         <PlatformAdminLink />
         <OrgSwitcher />
         {user ? (
           <button
             onClick={() => signOut()}
             title={`Sair (${user.email ?? user.uid})`}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13, color: "#374151", flexShrink: 0 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "none",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: 13,
+              color: "#374151",
+              flexShrink: 0,
+            }}
           >
             <User size={14} />
-            <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email ?? "Usuário"}</span>
+            <span
+              style={{
+                maxWidth: 120,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {user.email ?? "Usuário"}
+            </span>
             <LogOut size={14} />
           </button>
         ) : (
           <button
             onClick={() => router.push("/login")}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--esdras-primary, #f97316)", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#fff", fontWeight: 600, flexShrink: 0 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--esdras-primary, #f97316)",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 14px",
+              cursor: "pointer",
+              fontSize: 13,
+              color: "#fff",
+              fontWeight: 600,
+              flexShrink: 0,
+            }}
           >
             <LogIn size={14} />
             Entrar

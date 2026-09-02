@@ -10,7 +10,7 @@ import {
   saveOrganizationFeaturesSettings,
   saveOrganizationProfile,
   saveOrganizationSubscriptionSettings,
-  uploadOrganizationBrandAsset
+  uploadOrganizationBrandAsset,
 } from "@alvo/firebase";
 import type {
   Organization,
@@ -19,15 +19,20 @@ import type {
   OrganizationFeaturesSettings,
   OrganizationSettingsSnapshot,
   OrganizationSubscriptionSettings,
-  SubscriptionPlanTier
+  SubscriptionPlanTier,
 } from "@alvo/types";
 import { useAppAuth } from "./providers";
 
-const PLAN_OPTIONS: SubscriptionPlanTier[] = ["base", "growth", "advanced", "enterprise"];
+const PLAN_OPTIONS: SubscriptionPlanTier[] = [
+  "base",
+  "growth",
+  "advanced",
+  "enterprise",
+];
 const BRAND_MODE_OPTIONS: OrganizationBrandMode[] = [
   "alvo_managed",
   "co_branded",
-  "white_label"
+  "white_label",
 ];
 const ESDRAS_IDENTITY = {
   name: "Plataforma Esdras",
@@ -45,8 +50,8 @@ const ESDRAS_IDENTITY = {
     surfaceColor: "#f7f3ea",
     textColor: "#1c2433",
     showPoweredByAlvo: true,
-    poweredByLabel: "by Esdras"
-  }
+    poweredByLabel: "by Esdras",
+  },
 } as const;
 const MODULE_ORDER = [
   "core",
@@ -60,28 +65,35 @@ const MODULE_ORDER = [
   "journeys",
   "communication",
   "finance",
-  "ai"
+  "ai",
 ] as const;
 
-function cloneModule(module: OrganizationFeatureModule): OrganizationFeatureModule {
+function cloneModule(
+  module: OrganizationFeatureModule,
+): OrganizationFeatureModule {
   return {
     enabled: module.enabled,
     source: module.source,
     beta: module.beta,
-    limits: module.limits ? { ...module.limits } : undefined
+    limits: module.limits ? { ...module.limits } : undefined,
   };
 }
 
-function cloneSettings(settings: OrganizationSettingsSnapshot): OrganizationSettingsSnapshot {
+function cloneSettings(
+  settings: OrganizationSettingsSnapshot,
+): OrganizationSettingsSnapshot {
   return {
     branding: { ...settings.branding },
     subscription: { ...settings.subscription },
     features: {
       organizationId: settings.features.organizationId,
       modules: Object.fromEntries(
-        MODULE_ORDER.map((module) => [module, cloneModule(settings.features.modules[module])])
-      ) as OrganizationFeaturesSettings["modules"]
-    }
+        MODULE_ORDER.map((module) => [
+          module,
+          cloneModule(settings.features.modules[module]),
+        ]),
+      ) as OrganizationFeaturesSettings["modules"],
+    },
   };
 }
 
@@ -97,24 +109,28 @@ export function TenantAdminSettings() {
     () =>
       createFirebaseWebRuntimeConfigFromEnv({
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
+          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
+          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
           process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       }),
-    []
+    [],
   );
   const uploadApiBaseUrl = useMemo(
     () =>
       createTenantUploadApiBaseUrlFromEnv(
         {
-          NEXT_PUBLIC_UPLOAD_API_BASE_URL: process.env.NEXT_PUBLIC_UPLOAD_API_BASE_URL
+          NEXT_PUBLIC_UPLOAD_API_BASE_URL:
+            process.env.NEXT_PUBLIC_UPLOAD_API_BASE_URL,
         },
-        "NEXT_PUBLIC"
+        "NEXT_PUBLIC",
       ),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -131,7 +147,9 @@ export function TenantAdminSettings() {
     return (
       <section style={sectionStyle}>
         <strong style={{ fontSize: 24 }}>Configuracoes da organizacao</strong>
-        <p style={captionStyle}>Carregando marca, assinatura e modulos do tenant...</p>
+        <p style={captionStyle}>
+          Carregando marca, assinatura e modulos do tenant...
+        </p>
       </section>
     );
   }
@@ -140,12 +158,16 @@ export function TenantAdminSettings() {
 
   async function handleSave() {
     if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setError("Firebase nao configurado para salvar as configuracoes do tenant.");
+      setError(
+        "Firebase nao configurado para salvar as configuracoes do tenant.",
+      );
       return;
     }
 
     if (!draft) {
-      setError("O tenant ainda nao carregou configuracoes suficientes para salvar.");
+      setError(
+        "O tenant ainda nao carregou configuracoes suficientes para salvar.",
+      );
       return;
     }
 
@@ -158,8 +180,11 @@ export function TenantAdminSettings() {
 
       await Promise.all([
         saveOrganizationBrandingSettings(firebaseConfig, nextDraft.branding),
-        saveOrganizationSubscriptionSettings(firebaseConfig, nextDraft.subscription),
-        saveOrganizationFeaturesSettings(firebaseConfig, nextDraft.features)
+        saveOrganizationSubscriptionSettings(
+          firebaseConfig,
+          nextDraft.subscription,
+        ),
+        saveOrganizationFeaturesSettings(firebaseConfig, nextDraft.features),
       ]);
 
       setStatus("Configuracoes salvas no Firestore com sucesso.");
@@ -167,7 +192,7 @@ export function TenantAdminSettings() {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : "Nao foi possivel salvar as configuracoes da organizacao."
+          : "Nao foi possivel salvar as configuracoes da organizacao.",
       );
     } finally {
       setSaving(false);
@@ -181,14 +206,18 @@ export function TenantAdminSettings() {
     }
 
     if (!draft) {
-      setError("O tenant ainda nao carregou configuracoes suficientes para atualizar a marca.");
+      setError(
+        "O tenant ainda nao carregou configuracoes suficientes para atualizar a marca.",
+      );
       return;
     }
 
     const currentTenantRuntime = tenantRuntime;
 
     if (!currentTenantRuntime) {
-      setError("O tenant ainda nao carregou a organizacao para atualizar a marca.");
+      setError(
+        "O tenant ainda nao carregou a organizacao para atualizar a marca.",
+      );
       return;
     }
 
@@ -198,11 +227,11 @@ export function TenantAdminSettings() {
       legalName: ESDRAS_IDENTITY.legalName,
       publicName: ESDRAS_IDENTITY.publicName,
       displayName: ESDRAS_IDENTITY.displayName,
-      slug: ESDRAS_IDENTITY.slug
+      slug: ESDRAS_IDENTITY.slug,
     };
     const nextBranding: OrganizationSettingsSnapshot["branding"] = {
       ...draft.branding,
-      ...ESDRAS_IDENTITY.branding
+      ...ESDRAS_IDENTITY.branding,
     };
 
     try {
@@ -212,19 +241,21 @@ export function TenantAdminSettings() {
 
       await Promise.all([
         saveOrganizationProfile(firebaseConfig, nextOrganization),
-        saveOrganizationBrandingSettings(firebaseConfig, nextBranding)
+        saveOrganizationBrandingSettings(firebaseConfig, nextBranding),
       ]);
 
       setDraft({
         ...draft,
-        branding: nextBranding
+        branding: nextBranding,
       });
-      setStatus("Identidade Esdras aplicada no Firestore. Atualize a pagina para ver o tenant renomeado.");
+      setStatus(
+        "Identidade Esdras aplicada no Firestore. Atualize a pagina para ver o tenant renomeado.",
+      );
     } catch (nextError) {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : "Nao foi possivel aplicar a identidade Esdras."
+          : "Nao foi possivel aplicar a identidade Esdras.",
       );
     } finally {
       setSaving(false);
@@ -233,7 +264,7 @@ export function TenantAdminSettings() {
 
   async function handleAssetUpload(
     assetKind: "logoLight" | "logoDark" | "icon" | "favicon",
-    file: File | null
+    file: File | null,
   ) {
     if (!file || !draft) {
       return;
@@ -265,7 +296,7 @@ export function TenantAdminSettings() {
         organizationId: draft.branding.organizationId,
         assetKind,
         file,
-        authToken: await currentUser.getIdToken()
+        authToken: await currentUser.getIdToken(),
       });
 
       const nextBranding =
@@ -279,14 +310,14 @@ export function TenantAdminSettings() {
 
       setDraft({
         ...draft,
-        branding: nextBranding
+        branding: nextBranding,
       });
       setStatus(`Asset ${assetKind} enviado com sucesso.`);
     } catch (nextError) {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : "Nao foi possivel enviar o asset da marca."
+          : "Nao foi possivel enviar o asset da marca.",
       );
     } finally {
       setUploadingAsset(null);
@@ -297,14 +328,17 @@ export function TenantAdminSettings() {
     <section style={sectionStyle}>
       <div style={headerStyle}>
         <div>
-          <strong style={{ display: "block", fontSize: 24 }}>Configuracoes da organizacao</strong>
+          <strong style={{ display: "block", fontSize: 24 }}>
+            Configuracoes da organizacao
+          </strong>
           <p style={captionStyle}>
-            Edite marca, plano e modulos do tenant autenticado. Isso prepara o produto para
-            co-branding e white-label real.
+            Edite marca, plano e modulos do tenant autenticado. Isso prepara o
+            produto para co-branding e white-label real.
           </p>
         </div>
         <div style={previewBadgeStyle}>
-          {tenantRuntime.organization.displayName ?? tenantRuntime.organization.name}
+          {tenantRuntime.organization.displayName ??
+            tenantRuntime.organization.name}
         </div>
       </div>
 
@@ -313,10 +347,17 @@ export function TenantAdminSettings() {
           style={{
             ...previewCardStyle,
             background: brandTheme.colors.surface,
-            borderColor: `${brandTheme.colors.accent}33`
+            borderColor: `${brandTheme.colors.accent}33`,
           }}
         >
-          <span style={{ color: brandTheme.colors.accentDark, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          <span
+            style={{
+              color: brandTheme.colors.accentDark,
+              fontSize: 12,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
             Preview
           </span>
           <strong style={{ fontSize: 28, color: brandTheme.colors.ink }}>
@@ -343,7 +384,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, publicProductName: value }
+                  branding: { ...draft.branding, publicProductName: value },
                 })
               }
             />
@@ -353,7 +394,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, publicShortName: value }
+                  branding: { ...draft.branding, publicShortName: value },
                 })
               }
             />
@@ -366,8 +407,8 @@ export function TenantAdminSettings() {
                   ...draft,
                   branding: {
                     ...draft.branding,
-                    brandMode: value as OrganizationBrandMode
-                  }
+                    brandMode: value as OrganizationBrandMode,
+                  },
                 })
               }
             />
@@ -377,7 +418,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, poweredByLabel: value }
+                  branding: { ...draft.branding, poweredByLabel: value },
                 })
               }
             />
@@ -387,7 +428,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, logoLightUrl: value }
+                  branding: { ...draft.branding, logoLightUrl: value },
                 })
               }
             />
@@ -397,7 +438,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, logoDarkUrl: value }
+                  branding: { ...draft.branding, logoDarkUrl: value },
                 })
               }
             />
@@ -407,7 +448,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, iconUrl: value }
+                  branding: { ...draft.branding, iconUrl: value },
                 })
               }
             />
@@ -417,7 +458,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, faviconUrl: value }
+                  branding: { ...draft.branding, faviconUrl: value },
                 })
               }
             />
@@ -427,7 +468,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, primaryColor: value }
+                  branding: { ...draft.branding, primaryColor: value },
                 })
               }
             />
@@ -437,7 +478,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, secondaryColor: value }
+                  branding: { ...draft.branding, secondaryColor: value },
                 })
               }
             />
@@ -447,7 +488,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, accentColor: value }
+                  branding: { ...draft.branding, accentColor: value },
                 })
               }
             />
@@ -457,7 +498,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, surfaceColor: value }
+                  branding: { ...draft.branding, surfaceColor: value },
                 })
               }
             />
@@ -467,7 +508,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  branding: { ...draft.branding, textColor: value }
+                  branding: { ...draft.branding, textColor: value },
                 })
               }
             />
@@ -475,8 +516,9 @@ export function TenantAdminSettings() {
           <div style={assetGridStyle}>
             {!uploadApiBaseUrl ? (
               <div style={assetHintStyle}>
-                Configure <code>NEXT_PUBLIC_UPLOAD_API_BASE_URL</code> para ativar upload via
-                Cloudflare Worker. Enquanto isso, as URLs podem ser preenchidas manualmente.
+                Configure <code>NEXT_PUBLIC_UPLOAD_API_BASE_URL</code> para
+                ativar upload via Cloudflare Worker. Enquanto isso, as URLs
+                podem ser preenchidas manualmente.
               </div>
             ) : null}
             <AssetUploadField
@@ -513,8 +555,8 @@ export function TenantAdminSettings() {
                   ...draft,
                   branding: {
                     ...draft.branding,
-                    showPoweredByAlvo: event.target.checked
-                  }
+                    showPoweredByAlvo: event.target.checked,
+                  },
                 })
               }
             />
@@ -531,7 +573,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, planCode: value }
+                  subscription: { ...draft.subscription, planCode: value },
                 })
               }
             />
@@ -544,8 +586,8 @@ export function TenantAdminSettings() {
                   ...draft,
                   subscription: {
                     ...draft.subscription,
-                    planTier: value as SubscriptionPlanTier
-                  }
+                    planTier: value as SubscriptionPlanTier,
+                  },
                 })
               }
             />
@@ -555,7 +597,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, seatLimit: value }
+                  subscription: { ...draft.subscription, seatLimit: value },
                 })
               }
             />
@@ -565,7 +607,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, campusLimit: value }
+                  subscription: { ...draft.subscription, campusLimit: value },
                 })
               }
             />
@@ -575,7 +617,7 @@ export function TenantAdminSettings() {
               onChange={(value) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, aiQuota: value }
+                  subscription: { ...draft.subscription, aiQuota: value },
                 })
               }
             />
@@ -587,7 +629,10 @@ export function TenantAdminSettings() {
               onChange={(checked) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, coBrandingEnabled: checked }
+                  subscription: {
+                    ...draft.subscription,
+                    coBrandingEnabled: checked,
+                  },
                 })
               }
             />
@@ -597,7 +642,10 @@ export function TenantAdminSettings() {
               onChange={(checked) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, whiteLabelEnabled: checked }
+                  subscription: {
+                    ...draft.subscription,
+                    whiteLabelEnabled: checked,
+                  },
                 })
               }
             />
@@ -607,7 +655,10 @@ export function TenantAdminSettings() {
               onChange={(checked) =>
                 setDraft({
                   ...draft,
-                  subscription: { ...draft.subscription, multiCampusEnabled: checked }
+                  subscription: {
+                    ...draft.subscription,
+                    multiCampusEnabled: checked,
+                  },
                 })
               }
             />
@@ -619,8 +670,8 @@ export function TenantAdminSettings() {
                   ...draft,
                   subscription: {
                     ...draft.subscription,
-                    denominationalModeEnabled: checked
-                  }
+                    denominationalModeEnabled: checked,
+                  },
                 })
               }
             />
@@ -634,8 +685,12 @@ export function TenantAdminSettings() {
           {MODULE_ORDER.map((module) => (
             <label key={module} style={moduleCardStyle}>
               <div>
-                <strong style={{ textTransform: "capitalize" }}>{module}</strong>
-                <p style={{ margin: "6px 0 0", fontSize: 13, color: "#475467" }}>
+                <strong style={{ textTransform: "capitalize" }}>
+                  {module}
+                </strong>
+                <p
+                  style={{ margin: "6px 0 0", fontSize: 13, color: "#475467" }}
+                >
                   Origem: {draft.features.modules[module].source}
                 </p>
               </div>
@@ -651,10 +706,10 @@ export function TenantAdminSettings() {
                         ...draft.features.modules,
                         [module]: {
                           ...draft.features.modules[module],
-                          enabled: event.target.checked
-                        }
-                      }
-                    }
+                          enabled: event.target.checked,
+                        },
+                      },
+                    },
                   })
                 }
               />
@@ -668,7 +723,11 @@ export function TenantAdminSettings() {
           {status ? <span style={{ color: "#166534" }}>{status}</span> : null}
           {error ? <span style={{ color: "#b42318" }}>{error}</span> : null}
         </div>
-        <button onClick={() => void handleSave()} style={saveButtonStyle} disabled={saving}>
+        <button
+          onClick={() => void handleSave()}
+          style={saveButtonStyle}
+          disabled={saving}
+        >
           {saving ? "Salvando..." : "Salvar configuracoes"}
         </button>
         <button
@@ -686,7 +745,7 @@ export function TenantAdminSettings() {
 function LabeledInput({
   label,
   onChange,
-  value
+  value,
 }: {
   label: string;
   onChange: (value: string) => void;
@@ -695,7 +754,11 @@ function LabeledInput({
   return (
     <label style={fieldStyle}>
       <span>{label}</span>
-      <input style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        style={inputStyle}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
@@ -703,7 +766,7 @@ function LabeledInput({
 function LabeledNumber({
   label,
   onChange,
-  value
+  value,
 }: {
   label: string;
   onChange: (value: number) => void;
@@ -726,7 +789,7 @@ function LabeledSelect({
   label,
   onChange,
   options,
-  value
+  value,
 }: {
   label: string;
   onChange: (value: string) => void;
@@ -736,7 +799,11 @@ function LabeledSelect({
   return (
     <label style={fieldStyle}>
       <span>{label}</span>
-      <select style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        style={inputStyle}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -750,7 +817,7 @@ function LabeledSelect({
 function LabeledColor({
   label,
   onChange,
-  value
+  value,
 }: {
   label: string;
   onChange: (value: string) => void;
@@ -760,8 +827,16 @@ function LabeledColor({
     <label style={fieldStyle}>
       <span>{label}</span>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input type="color" value={value} onChange={(event) => onChange(event.target.value)} />
-        <input style={{ ...inputStyle, flex: 1 }} value={value} onChange={(event) => onChange(event.target.value)} />
+        <input
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <input
+          style={{ ...inputStyle, flex: 1 }}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
       </div>
     </label>
   );
@@ -770,7 +845,7 @@ function LabeledColor({
 function CheckboxToggle({
   checked,
   label,
-  onChange
+  onChange,
 }: {
   checked: boolean;
   label: string;
@@ -778,7 +853,11 @@ function CheckboxToggle({
 }) {
   return (
     <label style={checkboxRowStyle}>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
       {label}
     </label>
   );
@@ -788,7 +867,7 @@ function AssetUploadField({
   busy,
   disabled,
   label,
-  onSelect
+  onSelect,
 }: {
   busy: boolean;
   disabled: boolean;
@@ -820,7 +899,7 @@ const sectionStyle = {
   padding: 24,
   borderRadius: 24,
   background: "#fffdf8",
-  border: "1px solid var(--alvo-line)"
+  border: "1px solid var(--alvo-line)",
 } as const;
 
 const headerStyle = {
@@ -828,16 +907,16 @@ const headerStyle = {
   justifyContent: "space-between",
   gap: 16,
   flexWrap: "wrap",
-  alignItems: "center"
+  alignItems: "center",
 } as const;
 
 const captionStyle = {
   margin: "8px 0 0",
-  lineHeight: 1.6
+  lineHeight: 1.6,
 } as const;
 
 const previewStyle = {
-  marginTop: 20
+  marginTop: 20,
 } as const;
 
 const previewCardStyle = {
@@ -845,7 +924,7 @@ const previewCardStyle = {
   gap: 8,
   padding: 20,
   borderRadius: 20,
-  border: "1px solid var(--alvo-line)"
+  border: "1px solid var(--alvo-line)",
 } as const;
 
 const previewBadgeStyle = {
@@ -853,39 +932,39 @@ const previewBadgeStyle = {
   borderRadius: 999,
   background: "#eef7ef",
   color: "#166534",
-  fontWeight: 700
+  fontWeight: 700,
 } as const;
 
 const gridStyle = {
   marginTop: 20,
   display: "grid",
   gap: 16,
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))"
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
 } as const;
 
 const cardStyle = {
   padding: 20,
   borderRadius: 20,
   border: "1px solid var(--alvo-line)",
-  background: "#fff"
+  background: "#fff",
 } as const;
 
 const cardTitleStyle = {
   display: "block",
   marginBottom: 16,
-  fontSize: 18
+  fontSize: 18,
 } as const;
 
 const fieldGridStyle = {
   display: "grid",
   gap: 14,
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))"
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
 } as const;
 
 const fieldStyle = {
   display: "grid",
   gap: 6,
-  fontSize: 14
+  fontSize: 14,
 } as const;
 
 const inputStyle = {
@@ -894,20 +973,20 @@ const inputStyle = {
   borderRadius: 12,
   border: "1px solid rgba(29, 41, 64, 0.16)",
   fontSize: 14,
-  background: "#fffdf8"
+  background: "#fffdf8",
 } as const;
 
 const checkboxGridStyle = {
   display: "grid",
   gap: 10,
-  marginTop: 16
+  marginTop: 16,
 } as const;
 
 const assetGridStyle = {
   display: "grid",
   gap: 14,
   marginTop: 16,
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))"
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
 } as const;
 
 const assetHintStyle = {
@@ -917,20 +996,20 @@ const assetHintStyle = {
   color: "#1d4ed8",
   fontSize: 13,
   lineHeight: 1.6,
-  gridColumn: "1 / -1"
+  gridColumn: "1 / -1",
 } as const;
 
 const checkboxRowStyle = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  fontSize: 14
+  fontSize: 14,
 } as const;
 
 const moduleGridStyle = {
   display: "grid",
   gap: 12,
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))"
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
 } as const;
 
 const moduleCardStyle = {
@@ -940,7 +1019,7 @@ const moduleCardStyle = {
   alignItems: "start",
   padding: 14,
   borderRadius: 16,
-  background: "#f7f0e3"
+  background: "#f7f0e3",
 } as const;
 
 const footerStyle = {
@@ -949,7 +1028,7 @@ const footerStyle = {
   justifyContent: "space-between",
   gap: 16,
   alignItems: "center",
-  flexWrap: "wrap"
+  flexWrap: "wrap",
 } as const;
 
 const saveButtonStyle = {
@@ -959,12 +1038,12 @@ const saveButtonStyle = {
   background: "var(--alvo-accent-dark)",
   color: "#fff",
   fontWeight: 700,
-  cursor: "pointer"
+  cursor: "pointer",
 } as const;
 
 const secondaryButtonStyle = {
   ...saveButtonStyle,
   background: "#fff7ed",
   color: "var(--esdras-primary-dark)",
-  border: "1px solid rgba(210, 120, 54, 0.35)"
+  border: "1px solid rgba(210, 120, 54, 0.35)",
 } as const;

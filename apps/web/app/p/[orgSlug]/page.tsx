@@ -14,7 +14,13 @@ export default async function PublicOrgPortal({ params }: Props) {
         {/* Logo placeholder */}
         <div style={logoAreaStyle}>
           <div style={logoPlaceholderStyle}>
-            <span style={{ fontSize: 28, fontWeight: 800, color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }}>
+            <span
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: "var(--alvo-accent-dark, var(--esdras-primary-dark))",
+              }}
+            >
               {orgSlug.slice(0, 2).toUpperCase()}
             </span>
           </div>
@@ -25,15 +31,29 @@ export default async function PublicOrgPortal({ params }: Props) {
         {/* Quick actions */}
         <div style={actionsStyle}>
           <Link href={`/p/${orgSlug}/visit`} style={actionCardStyle}>
-            <ClipboardList size={24} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
+            <ClipboardList
+              size={24}
+              strokeWidth={1.8}
+              style={{
+                color: "var(--alvo-accent-dark, var(--esdras-primary-dark))",
+              }}
+            />
             <div>
               <strong style={actionTitleStyle}>Sou visitante</strong>
-              <p style={actionDescStyle}>Preencha um breve formulário para nos conhecermos</p>
+              <p style={actionDescStyle}>
+                Preencha um breve formulário para nos conhecermos
+              </p>
             </div>
           </Link>
 
           <Link href={`/p/${orgSlug}/give`} style={actionCardStyle}>
-            <Heart size={24} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
+            <Heart
+              size={24}
+              strokeWidth={1.8}
+              style={{
+                color: "var(--alvo-accent-dark, var(--esdras-primary-dark))",
+              }}
+            />
             <div>
               <strong style={actionTitleStyle}>Contribuir</strong>
               <p style={actionDescStyle}>Dízimos, ofertas e campanhas</p>

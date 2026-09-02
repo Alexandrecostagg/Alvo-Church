@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
 
-function clampInt(value: string | null, fallback: number, min: number, max: number): number {
+function clampInt(
+  value: string | null,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
   const n = Number.parseInt(value ?? "", 10);
   if (Number.isNaN(n)) return fallback;
   return Math.min(max, Math.max(min, n));
@@ -26,7 +31,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = req.nextUrl;
-  const prompt = searchParams.get("prompt") ?? "church worship abstract background";
+  const prompt =
+    searchParams.get("prompt") ?? "church worship abstract background";
   const w = clampInt(searchParams.get("w"), 1080, 256, 2048);
   const h = clampInt(searchParams.get("h"), 1080, 256, 2048);
   // Sem seed explícito, deriva um seed estável do prompt em vez de sortear:
@@ -42,13 +48,21 @@ export async function GET(req: NextRequest) {
 
   let imgRes: Response;
   try {
-    imgRes = await fetch(pollinationsUrl, { signal: AbortSignal.timeout(55_000) });
+    imgRes = await fetch(pollinationsUrl, {
+      signal: AbortSignal.timeout(55_000),
+    });
   } catch (e) {
-    return NextResponse.json({ error: "Timeout ao gerar imagem" }, { status: 504 });
+    return NextResponse.json(
+      { error: "Timeout ao gerar imagem" },
+      { status: 504 },
+    );
   }
 
   if (!imgRes.ok) {
-    return NextResponse.json({ error: "Pollinations retornou erro" }, { status: 502 });
+    return NextResponse.json(
+      { error: "Pollinations retornou erro" },
+      { status: 502 },
+    );
   }
 
   const contentType = imgRes.headers.get("Content-Type") ?? "image/jpeg";

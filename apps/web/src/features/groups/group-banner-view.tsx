@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Download, Sparkles, Image as ImageIcon, Upload, X, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Sparkles,
+  Image as ImageIcon,
+  Upload,
+  X,
+  Star,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { fetchGroups, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import { useAppAuth } from "../../../app/providers";
@@ -11,22 +19,82 @@ interface GroupBannerViewProps {
 }
 
 const COLOR_THEMES = [
-  { name: "Esdras Classic (Laranja)", primary: "#d27836", secondary: "#1c2433", text: "#ffffff", accent: "#f7f3ea" },
-  { name: "Sleek Emerald (Verde)", primary: "#10b981", secondary: "#064e3b", text: "#ffffff", accent: "#ecfdf5" },
-  { name: "Deep Ruby (Vermelho)", primary: "#dc2626", secondary: "#450a0a", text: "#ffffff", accent: "#fef2f2" },
-  { name: "Royal Purple (Roxo)", primary: "#8b5cf6", secondary: "#2e1065", text: "#ffffff", accent: "#faf5ff" },
-  { name: "Midnight Teal (Turquesa)", primary: "#0d9488", secondary: "#115e59", text: "#ffffff", accent: "#f0fdfa" },
-  { name: "Gospel Azul", primary: "#2563eb", secondary: "#1e3a8a", text: "#ffffff", accent: "#eff6ff" },
-  { name: "Junino (Festa)", primary: "#f59e0b", secondary: "#7c2d12", text: "#ffffff", accent: "#fffbeb" },
-  { name: "Natal", primary: "#dc2626", secondary: "#064e3b", text: "#ffffff", accent: "#fef2f2" }
+  {
+    name: "Esdras Classic (Laranja)",
+    primary: "#d27836",
+    secondary: "#1c2433",
+    text: "#ffffff",
+    accent: "#f7f3ea",
+  },
+  {
+    name: "Sleek Emerald (Verde)",
+    primary: "#10b981",
+    secondary: "#064e3b",
+    text: "#ffffff",
+    accent: "#ecfdf5",
+  },
+  {
+    name: "Deep Ruby (Vermelho)",
+    primary: "#dc2626",
+    secondary: "#450a0a",
+    text: "#ffffff",
+    accent: "#fef2f2",
+  },
+  {
+    name: "Royal Purple (Roxo)",
+    primary: "#8b5cf6",
+    secondary: "#2e1065",
+    text: "#ffffff",
+    accent: "#faf5ff",
+  },
+  {
+    name: "Midnight Teal (Turquesa)",
+    primary: "#0d9488",
+    secondary: "#115e59",
+    text: "#ffffff",
+    accent: "#f0fdfa",
+  },
+  {
+    name: "Gospel Azul",
+    primary: "#2563eb",
+    secondary: "#1e3a8a",
+    text: "#ffffff",
+    accent: "#eff6ff",
+  },
+  {
+    name: "Junino (Festa)",
+    primary: "#f59e0b",
+    secondary: "#7c2d12",
+    text: "#ffffff",
+    accent: "#fffbeb",
+  },
+  {
+    name: "Natal",
+    primary: "#dc2626",
+    secondary: "#064e3b",
+    text: "#ffffff",
+    accent: "#fef2f2",
+  },
 ];
 
 const WEEKDAY_LABELS = [
-  "Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
 ];
 
 // Desenha uma imagem preenchendo (cover) um círculo de raio r centrado em (cx, cy).
-function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, cy: number, r: number) {
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  cx: number,
+  cy: number,
+  r: number,
+) {
   const size = r * 2;
   const scale = Math.max(size / img.width, size / img.height);
   const drawW = img.width * scale;
@@ -35,14 +103,17 @@ function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx
 }
 
 export function GroupBannerView({ groupId }: GroupBannerViewProps) {
-  const { organizationId, firebaseConfig, user, configured, firebaseReady } = useAppAuth();
+  const { organizationId, firebaseConfig, user, configured, firebaseReady } =
+    useAppAuth();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [themeIndex, setThemeIndex] = useState(0);
   const [format, setFormat] = useState<"feed" | "story">("feed");
   const [title, setTitle] = useState("Minha Célula");
   const [subtitle, setSubtitle] = useState("Viver em Família e Comunhão");
-  const [customText, setCustomText] = useState("Você é nosso convidado especial!");
+  const [customText, setCustomText] = useState(
+    "Você é nosso convidado especial!",
+  );
   const [customAddress, setCustomAddress] = useState("Endereço da Célula");
   const [meetingDay, setMeetingDay] = useState("Quarta-feira");
   const [meetingTime, setMeetingTime] = useState("19:30");
@@ -55,15 +126,28 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
 
   // Carrega a célula REAL do Firestore e pré-preenche os campos (uma vez).
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (
+      !configured ||
+      !firebaseReady ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    )
+      return;
     let cancelled = false;
     async function load() {
       try {
-        const groups = await fetchGroups(firebaseConfig, { organizationId }, 100);
+        const groups = await fetchGroups(
+          firebaseConfig,
+          { organizationId },
+          100,
+        );
         const group = groups.find((g) => g.id === groupId);
         if (cancelled || !group) return;
         setTitle(group.name);
-        if (typeof group.meetingDayOfWeek === "number" && WEEKDAY_LABELS[group.meetingDayOfWeek]) {
+        if (
+          typeof group.meetingDayOfWeek === "number" &&
+          WEEKDAY_LABELS[group.meetingDayOfWeek]
+        ) {
           setMeetingDay(WEEKDAY_LABELS[group.meetingDayOfWeek]);
         }
         if (group.meetingTime) setMeetingTime(group.meetingTime);
@@ -74,10 +158,22 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
       }
     }
     void load();
-    return () => { cancelled = true; };
-  }, [configured, firebaseReady, user, firebaseConfig, organizationId, groupId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    configured,
+    firebaseReady,
+    user,
+    firebaseConfig,
+    organizationId,
+    groupId,
+  ]);
 
-  function onImageFile(file: File, setter: (img: HTMLImageElement | null) => void) {
+  function onImageFile(
+    file: File,
+    setter: (img: HTMLImageElement | null) => void,
+  ) {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
@@ -185,7 +281,14 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     if (mainImage) {
       drawImageCover(ctx, mainImage, width / 2, centerY, 160);
     } else {
-      const circleGrad = ctx.createRadialGradient(width / 2, centerY, 20, width / 2, centerY, 160);
+      const circleGrad = ctx.createRadialGradient(
+        width / 2,
+        centerY,
+        20,
+        width / 2,
+        centerY,
+        160,
+      );
       circleGrad.addColorStop(0, theme.primary);
       circleGrad.addColorStop(1, "#1e293b");
       ctx.fillStyle = circleGrad;
@@ -223,7 +326,11 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     ctx.font = "bold 42px Outfit, sans-serif";
-    ctx.fillText(`${meetingDay.toUpperCase()} às ${meetingTime}h`, width / 2, boxY + 70);
+    ctx.fillText(
+      `${meetingDay.toUpperCase()} às ${meetingTime}h`,
+      width / 2,
+      boxY + 70,
+    );
 
     ctx.beginPath();
     ctx.moveTo(boxX + 80, boxY + 110);
@@ -254,7 +361,19 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
   useEffect(() => {
     drawBanner();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [themeIndex, format, title, subtitle, customText, customAddress, meetingDay, meetingTime, highlight, mainImage, logoImage]);
+  }, [
+    themeIndex,
+    format,
+    title,
+    subtitle,
+    customText,
+    customAddress,
+    meetingDay,
+    meetingTime,
+    highlight,
+    mainImage,
+    logoImage,
+  ]);
 
   const handleDownload = () => {
     setIsGenerating(true);
@@ -284,23 +403,50 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
             <ArrowLeft size={14} style={{ marginRight: 6 }} />
             Voltar para Células
           </Link>
-          <p className="eyebrow" style={{ color: theme.primary }}>Esdras Canvas Engine</p>
-          <h1 style={{ whiteSpace: "nowrap", fontSize: "clamp(1.9rem, 4vw, 2.8rem)" }}>Gerador de Banners</h1>
+          <p className="eyebrow" style={{ color: theme.primary }}>
+            Esdras Canvas Engine
+          </p>
+          <h1
+            style={{
+              whiteSpace: "nowrap",
+              fontSize: "clamp(1.9rem, 4vw, 2.8rem)",
+            }}
+          >
+            Gerador de Banners
+          </h1>
           <p>
-            Crie panfletos dinâmicos profissionais para WhatsApp e Instagram em 1 clique.
+            Crie panfletos dinâmicos profissionais para WhatsApp e Instagram em
+            1 clique.
           </p>
         </div>
       </section>
 
-      <section className="groups-workbench" style={{ gridTemplateColumns: "1fr 1fr", gap: "2.5rem" }}>
+      <section
+        className="groups-workbench"
+        style={{ gridTemplateColumns: "1fr 1fr", gap: "2.5rem" }}
+      >
         {/* Painel de controles */}
-        <aside className="quick-group-form" style={{ padding: "2rem", width: "100%" }}>
-          <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: 8 }}>
+        <aside
+          className="quick-group-form"
+          style={{ padding: "2rem", width: "100%" }}
+        >
+          <h3
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 700,
+              marginBottom: "1.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
             <Sparkles size={18} style={{ color: theme.primary }} />
             Personalizar Banner
           </h3>
 
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem" }}>
+          <div
+            style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem" }}
+          >
             <button
               onClick={() => setFormat("feed")}
               className={`primary-button ${format === "feed" ? "" : "ghost-button"}`}
@@ -350,7 +496,10 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           </label>
 
           {/* Uploads de imagem */}
-          <div className="quick-group-grid" style={{ gap: "1rem", marginBottom: "1rem" }}>
+          <div
+            className="quick-group-grid"
+            style={{ gap: "1rem", marginBottom: "1rem" }}
+          >
             <ImageSlot
               label="Imagem principal"
               hint="Foto do convidado ou tema"
@@ -382,7 +531,10 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           <div className="quick-group-grid" style={{ gap: "1rem" }}>
             <label>
               Dia da Reunião
-              <select value={meetingDay} onChange={(e) => setMeetingDay(e.target.value)}>
+              <select
+                value={meetingDay}
+                onChange={(e) => setMeetingDay(e.target.value)}
+              >
                 <option value="Segunda-feira">Segunda-feira</option>
                 <option value="Terça-feira">Terça-feira</option>
                 <option value="Quarta-feira">Quarta-feira</option>
@@ -413,7 +565,16 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           </label>
 
           <div style={{ marginBottom: "1.5rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, marginBottom: "0.5rem" }}>
+            <span
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: "0.5rem",
+              }}
+            >
               <Star size={13} style={{ color: theme.primary }} /> Tema de Cores
             </span>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -425,14 +586,24 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
                   style={{
                     padding: "0.5rem 0.75rem",
                     fontSize: "0.8rem",
-                    border: themeIndex === idx ? `2px solid ${themeOption.primary}` : "1px solid rgba(255,255,255,0.15)",
+                    border:
+                      themeIndex === idx
+                        ? `2px solid ${themeOption.primary}`
+                        : "1px solid rgba(255,255,255,0.15)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 6
+                    gap: 6,
                   }}
                   type="button"
                 >
-                  <span style={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: themeOption.primary }} />
+                  <span
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      backgroundColor: themeOption.primary,
+                    }}
+                  />
                   {themeOption.name.split(" ")[0]}
                 </button>
               ))}
@@ -442,18 +613,43 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
           <button
             onClick={handleDownload}
             className="primary-button full"
-            style={{ padding: "1rem", backgroundColor: theme.primary, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+            style={{
+              padding: "1rem",
+              backgroundColor: theme.primary,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 8,
+            }}
             type="button"
             disabled={isGenerating}
           >
             <Download size={18} />
-            {isGenerating ? "Renderizando..." : "Baixar Banner em Alta Definição (PNG)"}
+            {isGenerating
+              ? "Renderizando..."
+              : "Baixar Banner em Alta Definição (PNG)"}
           </button>
         </aside>
 
         {/* Preview */}
-        <article style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-          <p className="eyebrow" style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: 6 }}>
+        <article
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+          }}
+        >
+          <p
+            className="eyebrow"
+            style={{
+              alignSelf: "center",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
             <ImageIcon size={14} style={{ color: theme.primary }} />
             Pré-visualização em Tempo Real (HTML5 Canvas)
           </p>
@@ -467,7 +663,7 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
               borderRadius: 16,
               overflow: "hidden",
               border: "4px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
             }}
           >
             <canvas
@@ -476,12 +672,13 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
                 width: "100%",
                 height: "100%",
                 display: "block",
-                backgroundColor: theme.secondary
+                backgroundColor: theme.secondary,
               }}
             />
           </div>
           <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}>
-            Resolução de saída: 1080x{format === "feed" ? 1350 : 1920}px (Qualidade Superior)
+            Resolução de saída: 1080x{format === "feed" ? 1350 : 1920}px
+            (Qualidade Superior)
           </span>
         </article>
       </section>
@@ -490,7 +687,12 @@ export function GroupBannerView({ groupId }: GroupBannerViewProps) {
 }
 
 function ImageSlot({
-  label, hint, image, onPick, onClear, accent
+  label,
+  hint,
+  image,
+  onPick,
+  onClear,
+  accent,
 }: {
   label: string;
   hint: string;
@@ -501,21 +703,59 @@ function ImageSlot({
 }) {
   return (
     <div>
-      <span style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: 6 }}>{label}</span>
+      <span
+        style={{
+          fontSize: "0.85rem",
+          fontWeight: 600,
+          display: "block",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </span>
       {image ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image.src} alt={label} style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: `2px solid ${accent}` }} />
-          <button type="button" className="ghost-button" onClick={onClear} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem" }}>
+          <img
+            src={image.src}
+            alt={label}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              objectFit: "cover",
+              border: `2px solid ${accent}`,
+            }}
+          />
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onClear}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: "0.8rem",
+            }}
+          >
             <X size={13} /> Remover
           </button>
         </div>
       ) : (
         <label
           style={{
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
-            padding: "12px", borderRadius: 10, border: "1.5px dashed rgba(255,255,255,0.25)", cursor: "pointer",
-            fontSize: "0.75rem", textAlign: "center", color: "rgba(255,255,255,0.7)"
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            padding: "12px",
+            borderRadius: 10,
+            border: "1.5px dashed rgba(255,255,255,0.25)",
+            cursor: "pointer",
+            fontSize: "0.75rem",
+            textAlign: "center",
+            color: "rgba(255,255,255,0.7)",
           }}
         >
           <Upload size={16} style={{ color: accent }} />
@@ -524,7 +764,10 @@ function ImageSlot({
             type="file"
             accept="image/*"
             style={{ display: "none" }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onPick(f);
+            }}
           />
         </label>
       )}
@@ -533,10 +776,12 @@ function ImageSlot({
 }
 
 function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "celula";
+  return (
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "celula"
+  );
 }

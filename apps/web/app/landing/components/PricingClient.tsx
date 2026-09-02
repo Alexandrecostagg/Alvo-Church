@@ -87,8 +87,7 @@ export function PricingClient() {
           <span className="lp-toggle-thumb" />
         </button>
         <span className={annual ? "active" : ""}>
-          Anual{" "}
-          <span className="lp-toggle-badge">-20%</span>
+          Anual <span className="lp-toggle-badge">-20%</span>
         </span>
       </div>
 
@@ -114,8 +113,7 @@ export function PricingClient() {
               </div>
               {annual && plan.priceMonthly > 0 && (
                 <div className="lp-plan-annual-note">
-                  cobrado R${" "}
-                  {(price * 12).toLocaleString("pt-BR")}/ano
+                  cobrado R$ {(price * 12).toLocaleString("pt-BR")}/ano
                 </div>
               )}
               <div className="lp-plan-desc">{plan.desc}</div>

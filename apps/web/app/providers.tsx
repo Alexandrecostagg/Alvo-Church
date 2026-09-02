@@ -7,9 +7,12 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode
+  type ReactNode,
 } from "react";
-import type { FirebaseAuthUser, FirebaseWebRuntimeConfig } from "@alvo/firebase";
+import type {
+  FirebaseAuthUser,
+  FirebaseWebRuntimeConfig,
+} from "@alvo/firebase";
 import type { AppRole, TenantRuntimeSnapshot } from "@alvo/types";
 
 interface AuthContextValue {
@@ -35,7 +38,7 @@ const LS_ORG_KEY = "alvo_active_org";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function createFirebaseWebRuntimeConfigFromEnv(
-  env: Record<string, string | undefined>
+  env: Record<string, string | undefined>,
 ): FirebaseWebRuntimeConfig {
   return {
     apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
@@ -44,12 +47,17 @@ function createFirebaseWebRuntimeConfigFromEnv(
     storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
     messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
+    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true",
   };
 }
 
 function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
-  const fields = ["apiKey", "authDomain", "projectId", "storageBucket"] as const;
+  const fields = [
+    "apiKey",
+    "authDomain",
+    "projectId",
+    "storageBucket",
+  ] as const;
   return fields.every((field) => !!config[field]);
 }
 
@@ -57,7 +65,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
+  const [tenantRuntime, setTenantRuntime] =
+    useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
   // Só é true depois que o custom claim `organizationId` do usuário foi
   // resolvido — evita que o bootstrap de tenant rode com o organizationId
@@ -75,13 +84,17 @@ export function AppProviders({ children }: { children: ReactNode }) {
     () =>
       createFirebaseWebRuntimeConfigFromEnv({
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
+          process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
+          process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
+          process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       }),
-    []
+    [],
   );
 
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
@@ -98,10 +111,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
     async function init() {
       const sdk = await import("@alvo/firebase");
       if (!active) return;
-      unsubscribe = sdk.subscribeToFirebaseAuthState(firebaseConfig, (nextUser) => {
-        setUser(nextUser);
-        setFirebaseReady(true);
-      });
+      unsubscribe = sdk.subscribeToFirebaseAuthState(
+        firebaseConfig,
+        (nextUser) => {
+          setUser(nextUser);
+          setFirebaseReady(true);
+        },
+      );
     }
 
     void init();
@@ -119,18 +135,23 @@ export function AppProviders({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
-    user.getIdTokenResult().then((result) => {
-      if (cancelled) return;
-      const claimOrgId = result.claims["organizationId"];
-      if (typeof claimOrgId === "string" && claimOrgId) {
-        setOrganizationId(claimOrgId);
-      }
-      setOrgResolved(true);
-    }).catch(() => {
-      // keep default — mas libera o bootstrap com o org atual
-      if (!cancelled) setOrgResolved(true);
-    });
-    return () => { cancelled = true; };
+    user
+      .getIdTokenResult()
+      .then((result) => {
+        if (cancelled) return;
+        const claimOrgId = result.claims["organizationId"];
+        if (typeof claimOrgId === "string" && claimOrgId) {
+          setOrganizationId(claimOrgId);
+        }
+        setOrgResolved(true);
+      })
+      .catch(() => {
+        // keep default — mas libera o bootstrap com o org atual
+        if (!cancelled) setOrgResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [firebaseReady, user]);
 
   useEffect(() => {
@@ -166,7 +187,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         // uma sessão antiga) não corresponde a nenhuma organização real,
         // não insiste tentando provisionar acesso nela — volta pro default
         // em vez de deixar o usuário preso numa conta fantasma.
-        const orgExists = await sdk.fetchOrganizationById(firebaseConfig, organizationId);
+        const orgExists = await sdk.fetchOrganizationById(
+          firebaseConfig,
+          organizationId,
+        );
         if (!orgExists) {
           if (organizationId !== DEFAULT_ORGANIZATION_ID) {
             localStorage.removeItem(LS_ORG_KEY);
@@ -199,7 +223,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
         if (!cancelled) setRoles(userRoles);
 
-        const snapshot = await sdk.fetchTenantRuntimeSnapshot(firebaseConfig, { organizationId });
+        const snapshot = await sdk.fetchTenantRuntimeSnapshot(firebaseConfig, {
+          organizationId,
+        });
 
         if (!cancelled) setTenantRuntime(snapshot);
       } catch {
@@ -210,11 +236,26 @@ export function AppProviders({ children }: { children: ReactNode }) {
     }
 
     void loadTenantRuntime();
-    return () => { cancelled = true; };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, orgResolved, user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    configured,
+    firebaseConfig,
+    firebaseReady,
+    organizationId,
+    orgResolved,
+    user,
+  ]);
 
-  const hasRole = useMemo(() => (role: AppRole) => roles.includes(role), [roles]);
-  const hasAnyRole = useMemo(() => (required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
+  const hasRole = useMemo(
+    () => (role: AppRole) => roles.includes(role),
+    [roles],
+  );
+  const hasAnyRole = useMemo(
+    () => (required: AppRole[]) => required.some((r) => roles.includes(r)),
+    [roles],
+  );
 
   const switchOrganization = useCallback((orgId: string) => {
     localStorage.setItem(LS_ORG_KEY, orgId);
@@ -234,11 +275,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
     if (existing) setRoles(existing.roles);
   }, [firebaseConfig, organizationId, user]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    if (!configured) throw new Error("Firebase nao configurado.");
-    const sdk = await import("@alvo/firebase");
-    await sdk.signInWithFirebaseEmailPassword({ config: firebaseConfig, email, password });
-  }, [configured, firebaseConfig]);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      if (!configured) throw new Error("Firebase nao configurado.");
+      const sdk = await import("@alvo/firebase");
+      await sdk.signInWithFirebaseEmailPassword({
+        config: firebaseConfig,
+        email,
+        password,
+      });
+    },
+    [configured, firebaseConfig],
+  );
 
   const signOut = useCallback(async () => {
     if (!configured) return;
@@ -264,7 +312,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       switchOrganization,
       refreshRoles,
       signIn,
-      signOut
+      signOut,
     }),
     [
       firebaseReady,
@@ -280,19 +328,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
       switchOrganization,
       refreshRoles,
       signIn,
-      signOut
-    ]
+      signOut,
+    ],
   );
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 
 export function useAppAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAppAuth deve ser usado dentro de um AppProviders");
+  if (!context)
+    throw new Error("useAppAuth deve ser usado dentro de um AppProviders");
   return context;
 }

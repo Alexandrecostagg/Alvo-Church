@@ -5,8 +5,11 @@ import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const MarketplaceView = dynamic(
-  () => import("../../../src/features/marketplace/marketplace-view").then((mod) => mod.MarketplaceView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/marketplace/marketplace-view").then(
+      (mod) => mod.MarketplaceView,
+    ),
+  { ssr: false },
 );
 
 export default function MarketplacePage() {

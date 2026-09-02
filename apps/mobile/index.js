@@ -38,13 +38,26 @@ class RootErrorReporter extends React.Component {
           style={{ flex: 1, backgroundColor: "#0b0b0b" }}
           contentContainerStyle={{ padding: 24, paddingTop: 64 }}
         >
-          <Text style={{ color: "#f87171", fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
+          <Text
+            style={{
+              color: "#f87171",
+              fontSize: 18,
+              fontWeight: "bold",
+              marginBottom: 12,
+            }}
+          >
             ⚠️ Crash capturado
           </Text>
-          <Text selectable style={{ color: "#ffffff", fontSize: 14, marginBottom: 10 }}>
+          <Text
+            selectable
+            style={{ color: "#ffffff", fontSize: 14, marginBottom: 10 }}
+          >
             {String(e?.name || "Error")}: {String(e?.message || e)}
           </Text>
-          <Text selectable style={{ color: "#93c5fd", fontSize: 11, lineHeight: 16 }}>
+          <Text
+            selectable
+            style={{ color: "#93c5fd", fontSize: 11, lineHeight: 16 }}
+          >
             {String(e?.stack || "sem stack").slice(0, 4000)}
           </Text>
         </ScrollView>

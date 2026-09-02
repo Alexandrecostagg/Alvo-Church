@@ -3,11 +3,11 @@ import { callChatWithFallback } from "@alvo/ai";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
 
 export interface BannerCopyInput {
-  tipo: string;      // Culto Domingo, Evento, Célula, etc.
+  tipo: string; // Culto Domingo, Evento, Célula, etc.
   tema: string;
   pregador?: string;
   data?: string;
-  estilo?: string;   // "impactante" | "acolhedor" | "reverente"
+  estilo?: string; // "impactante" | "acolhedor" | "reverente"
 }
 
 export interface BannerCopy {
@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
     groqApiKey: process.env.GROQ_API_KEY,
   };
   if (!keys.deepseekApiKey && !keys.groqApiKey) {
-    return NextResponse.json({ error: "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY)." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY).",
+      },
+      { status: 500 },
+    );
   }
 
   const input: BannerCopyInput = await req.json();
@@ -62,11 +67,15 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
   // tem ~300 tokens, então o modelo rápido já basta.
   let raw: string;
   try {
-    const result = await callChatWithFallback(keys, [{ role: "user", content: prompt }], {
-      maxTokens: 500,
-      temperature: 0.8,
-      jsonMode: true,
-    });
+    const result = await callChatWithFallback(
+      keys,
+      [{ role: "user", content: prompt }],
+      {
+        maxTokens: 500,
+        temperature: 0.8,
+        jsonMode: true,
+      },
+    );
     raw = result.content || "{}";
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido";
@@ -74,13 +83,19 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
   }
 
   // strip accidental markdown fences
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const cleaned = raw
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim();
 
   let copy: BannerCopy;
   try {
     copy = JSON.parse(cleaned) as BannerCopy;
   } catch {
-    return NextResponse.json({ error: "Resposta da IA inválida", raw }, { status: 502 });
+    return NextResponse.json(
+      { error: "Resposta da IA inválida", raw },
+      { status: 502 },
+    );
   }
 
   return NextResponse.json({ ok: true, copy });

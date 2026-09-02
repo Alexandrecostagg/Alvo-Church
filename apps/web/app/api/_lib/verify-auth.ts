@@ -31,7 +31,8 @@ interface GoogleJwk {
   use?: string;
 }
 
-let cachedJwks: { keys: Map<string, CryptoKey>; expiresAt: number } | null = null;
+let cachedJwks: { keys: Map<string, CryptoKey>; expiresAt: number } | null =
+  null;
 
 function base64UrlDecode(input: string): Uint8Array<ArrayBuffer> {
   const b64 = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -65,7 +66,7 @@ async function getGooglePublicKeys(): Promise<Map<string, CryptoKey>> {
       { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: "RS256", ext: true },
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
       false,
-      ["verify"]
+      ["verify"],
     );
     imported.set(jwk.kid, key);
   }
@@ -85,7 +86,10 @@ async function getGooglePublicKeys(): Promise<Map<string, CryptoKey>> {
  * audience errada) e lança quando não foi possível decidir (ex.: JWKS fora do
  * ar) — nesse caso o chamador cai para a verificação remota.
  */
-async function verifyIdTokenLocally(idToken: string, projectId: string): Promise<string | null> {
+async function verifyIdTokenLocally(
+  idToken: string,
+  projectId: string,
+): Promise<string | null> {
   const parts = idToken.split(".");
   if (parts.length !== 3) return null;
 
@@ -107,7 +111,7 @@ async function verifyIdTokenLocally(idToken: string, projectId: string): Promise
     "RSASSA-PKCS1-v1_5",
     key,
     base64UrlDecode(parts[2]),
-    encoder.encode(`${parts[0]}.${parts[1]}`)
+    encoder.encode(`${parts[0]}.${parts[1]}`),
   );
   if (!valid) return null;
 
@@ -123,7 +127,8 @@ async function verifyIdTokenLocally(idToken: string, projectId: string): Promise
   if (!payload.exp || payload.exp < now - CLOCK_SKEW_SECONDS) return null;
   if (payload.iat && payload.iat > now + CLOCK_SKEW_SECONDS) return null;
   if (payload.aud !== projectId) return null;
-  if (payload.iss !== `https://securetoken.google.com/${projectId}`) return null;
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`)
+    return null;
   if (!payload.sub) return null;
 
   return payload.sub;
@@ -142,7 +147,7 @@ async function verifyIdTokenRemotely(idToken: string): Promise<string | null> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
         signal: AbortSignal.timeout(8000),
-      }
+      },
     );
     if (!res.ok) return null;
 
@@ -153,9 +158,13 @@ async function verifyIdTokenRemotely(idToken: string): Promise<string | null> {
   }
 }
 
-export async function verifyFirebaseIdToken(req: NextRequest): Promise<string | null> {
+export async function verifyFirebaseIdToken(
+  req: NextRequest,
+): Promise<string | null> {
   const authorization = req.headers.get("authorization") ?? "";
-  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : null;
+  const idToken = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : null;
   if (!idToken) return null;
 
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;

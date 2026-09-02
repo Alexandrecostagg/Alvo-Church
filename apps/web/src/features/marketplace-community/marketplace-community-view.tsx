@@ -20,7 +20,7 @@ import {
   GraduationCap,
   Wrench,
   Users,
-  Navigation
+  Navigation,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
@@ -28,8 +28,14 @@ import type { CommunityStore, TenantContext, PostalAddress } from "@alvo/types";
 
 // URL do Google Maps a partir do endereço da loja (abre o app no celular).
 function buildMapsUrl(address: PostalAddress): string {
-  const parts = [address.street, address.number, address.district, address.city, address.state, address.postalCode]
-    .filter(Boolean);
+  const parts = [
+    address.street,
+    address.number,
+    address.district,
+    address.city,
+    address.state,
+    address.postalCode,
+  ].filter(Boolean);
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
 }
 
@@ -39,40 +45,50 @@ const mockStores: CommunityStore[] = [
     organizationId: "org_alvo_demo",
     ownerId: "user_admin_demo",
     name: "Doces & Travessuras",
-    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
+    description:
+      "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
     category: "food",
     status: "approved",
     images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
+    bannerImageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
     socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "store_2",
     organizationId: "org_alvo_demo",
     ownerId: "user_admin_demo",
     name: "Conecta Informática",
-    description: "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade para abençoar a comunidade.",
+    description:
+      "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade para abençoar a comunidade.",
     category: "services",
     status: "approved",
     images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&auto=format&fit=crop",
+    bannerImageUrl:
+      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&auto=format&fit=crop",
     contact: { address: { city: "Belém", state: "PA" } },
-    socialLinks: { whatsapp: "91999999992", website: "https://conecta.esdras.app" },
+    socialLinks: {
+      whatsapp: "91999999992",
+      website: "https://conecta.esdras.app",
+    },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export function MarketplaceCommunityView() {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } =
+    useAppAuth();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [stores, setStores] = useState<CommunityStore[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<"all" | "approved">("approved");
+  const [filterStatus, setFilterStatus] = useState<"all" | "approved">(
+    "approved",
+  );
 
   useEffect(() => {
     async function loadStores() {
@@ -84,10 +100,14 @@ export function MarketplaceCommunityView() {
       try {
         setLoading(true);
         const context: TenantContext = { organizationId };
-        const allStores = await fetchCommunityStores(firebaseConfig, context, 200);
+        const allStores = await fetchCommunityStores(
+          firebaseConfig,
+          context,
+          200,
+        );
         const activeStores = allStores.length > 0 ? allStores : mockStores;
         // Filter by status - show only approved stores to regular users, all to admins/moderators
-        const filtered = activeStores.filter(store => {
+        const filtered = activeStores.filter((store) => {
           if (filterStatus === "approved") {
             return store.status === "approved";
           }
@@ -96,33 +116,59 @@ export function MarketplaceCommunityView() {
         setStores(filtered);
       } catch (error) {
         console.error("Error loading community stores:", error);
-        setStores(mockStores.filter(s => filterStatus === "approved" ? s.status === "approved" : true));
+        setStores(
+          mockStores.filter((s) =>
+            filterStatus === "approved" ? s.status === "approved" : true,
+          ),
+        );
       } finally {
         setLoading(false);
       }
     }
     loadStores();
-  }, [firebaseConfig, organizationId, firebaseReady, tenantReady, filterStatus]);
+  }, [
+    firebaseConfig,
+    organizationId,
+    firebaseReady,
+    tenantReady,
+    filterStatus,
+  ]);
 
   const categories = [
-    { id: "health", label: "Saúde & Bem-estar", color: "#ef4444", icon: HeartPulse },
+    {
+      id: "health",
+      label: "Saúde & Bem-estar",
+      color: "#ef4444",
+      icon: HeartPulse,
+    },
     { id: "food", label: "Alimentação", color: "#f59e0b", icon: Utensils },
-    { id: "education", label: "Educação", color: "#3b82f6", icon: GraduationCap },
+    {
+      id: "education",
+      label: "Educação",
+      color: "#3b82f6",
+      icon: GraduationCap,
+    },
     { id: "services", label: "Serviços", color: "#10b981", icon: Wrench },
     { id: "community", label: "Comunidade", color: "#8b5cf6", icon: Users },
   ];
 
-  const filteredStores = stores.filter(store => {
-    const matchesSearch = 
+  const filteredStores = stores.filter((store) => {
+    const matchesSearch =
       store.name.toLowerCase().includes(search.toLowerCase()) ||
       store.description.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = !activeCategory || store.category === activeCategory;
+    const matchesCategory =
+      !activeCategory || store.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
-  const approvedStores = stores.filter((store) => store.status === "approved").length;
-  const storesWithWhatsapp = stores.filter((store) => store.socialLinks?.whatsapp).length;
+  const approvedStores = stores.filter(
+    (store) => store.status === "approved",
+  ).length;
+  const storesWithWhatsapp = stores.filter(
+    (store) => store.socialLinks?.whatsapp,
+  ).length;
   const activeCategoryLabel = activeCategory
-    ? categories.find((category) => category.id === activeCategory)?.label ?? "Categoria"
+    ? (categories.find((category) => category.id === activeCategory)?.label ??
+      "Categoria")
     : "Todas";
 
   return (
@@ -134,18 +180,27 @@ export function MarketplaceCommunityView() {
             Economia Colaborativa
           </div>
           <h1>Marketplace da Comunidade</h1>
-          <p>Apoie os empreendimentos dos nossos membros! Descubra produtos, serviços e promoções exclusivas de comerciantes congregados.</p>
+          <p>
+            Apoie os empreendimentos dos nossos membros! Descubra produtos,
+            serviços e promoções exclusivas de comerciantes congregados.
+          </p>
         </div>
 
         <div className="marketplace-actions">
-          <Link href="/marketplace-community/my-stores" className="btn-secondary-store">
+          <Link
+            href="/marketplace-community/my-stores"
+            className="btn-secondary-store"
+          >
             Minhas lojas
           </Link>
-          <Link href="/marketplace-community/admin/moderation" className="btn-secondary-store">
+          <Link
+            href="/marketplace-community/admin/moderation"
+            className="btn-secondary-store"
+          >
             Moderação
           </Link>
           {user && (
-            <Link 
+            <Link
               href="/marketplace-community/new"
               className="btn-create-store"
             >
@@ -158,39 +213,43 @@ export function MarketplaceCommunityView() {
         <div className="search-bar-container">
           <div className="search-input-wrapper">
             <Search size={18} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Buscar lojas, produtos ou serviços..." 
+            <input
+              type="text"
+              placeholder="Buscar lojas, produtos ou serviços..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="search-input"
             />
           </div>
           <div className="category-pills">
-            <button 
-              className={`pill ${!activeCategory ? 'active' : ''}`}
+            <button
+              className={`pill ${!activeCategory ? "active" : ""}`}
               onClick={() => setActiveCategory(null)}
             >
               Todas
             </button>
-            {categories.map(cat => {
+            {categories.map((cat) => {
               const CategoryIcon = cat.icon;
               return (
-              <button 
-                key={cat.id}
-                className={`pill ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.id)}
-                style={{ '--pill-accent': cat.color } as any}
-              >
-                <CategoryIcon size={16} className="pill-icon" />
-                {cat.label}
-              </button>
-            )})}
+                <button
+                  key={cat.id}
+                  className={`pill ${activeCategory === cat.id ? "active" : ""}`}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{ "--pill-accent": cat.color } as any}
+                >
+                  <CategoryIcon size={16} className="pill-icon" />
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
 
-      <section className="marketplace-kpis" aria-label="Indicadores do marketplace">
+      <section
+        className="marketplace-kpis"
+        aria-label="Indicadores do marketplace"
+      >
         <article>
           <span>Lojas aprovadas</span>
           <strong>{approvedStores}</strong>
@@ -220,7 +279,7 @@ export function MarketplaceCommunityView() {
           <ShoppingBag size={48} opacity={0.3} />
           <h3>Nenhuma loja encontrada</h3>
           <p>
-            {search || activeCategory 
+            {search || activeCategory
               ? "Tente ajustar seus filtros de busca"
               : "Seja o primeiro a criar uma loja na comunidade!"}
           </p>
@@ -228,11 +287,15 @@ export function MarketplaceCommunityView() {
       )}
 
       <section className="stores-grid">
-        {filteredStores.map(store => (
+        {filteredStores.map((store) => (
           <article key={store.id} className="store-card">
             <div className="store-image-header">
               {store.bannerImageUrl ? (
-                <img src={store.bannerImageUrl} alt={store.name} className="store-banner" />
+                <img
+                  src={store.bannerImageUrl}
+                  alt={store.name}
+                  className="store-banner"
+                />
               ) : (
                 <div className="placeholder-banner">
                   <Store size={40} opacity={0.2} />
@@ -244,7 +307,11 @@ export function MarketplaceCommunityView() {
                     <BadgeCheck size={14} /> Verificado
                   </span>
                 )}
-                <button className="favorite-btn" type="button" aria-label={`Favoritar ${store.name}`}>
+                <button
+                  className="favorite-btn"
+                  type="button"
+                  aria-label={`Favoritar ${store.name}`}
+                >
                   <Heart size={18} />
                 </button>
               </div>
@@ -252,19 +319,24 @@ export function MarketplaceCommunityView() {
 
             <div className="store-body">
               {(() => {
-                const category = categories.find(c => c.id === store.category);
+                const category = categories.find(
+                  (c) => c.id === store.category,
+                );
                 const CategoryIcon = category?.icon ?? ShoppingBag;
                 return (
-                  <div className="category-tag" style={{ color: category?.color }}>
+                  <div
+                    className="category-tag"
+                    style={{ color: category?.color }}
+                  >
                     <CategoryIcon size={15} />
                     {category?.label ?? "Comunidade"}
                   </div>
                 );
               })()}
-              
+
               <h3>{store.name}</h3>
               <p className="store-description">{store.description}</p>
-              
+
               <div className="store-meta">
                 {store.contact?.address?.city && (
                   <a
@@ -275,42 +347,62 @@ export function MarketplaceCommunityView() {
                     title="Como chegar (Google Maps)"
                   >
                     <MapPin size={14} />
-                    <span>{store.contact.address.city}, {store.contact.address.state}</span>
+                    <span>
+                      {store.contact.address.city},{" "}
+                      {store.contact.address.state}
+                    </span>
                     <Navigation size={13} style={{ marginLeft: 4 }} />
                   </a>
                 )}
               </div>
 
               <div className="store-contact">
-                {store.contact?.address && (store.contact.address.street || store.contact.address.city) && (
+                {store.contact?.address &&
+                  (store.contact.address.street ||
+                    store.contact.address.city) && (
+                    <a
+                      href={buildMapsUrl(store.contact.address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="contact-link"
+                      title="Como chegar"
+                    >
+                      <Navigation size={16} />
+                    </a>
+                  )}
+                {store.socialLinks?.whatsapp && (
                   <a
-                    href={buildMapsUrl(store.contact.address)}
+                    href={`https://wa.me/${store.socialLinks.whatsapp.replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="contact-link"
-                    title="Como chegar"
                   >
-                    <Navigation size={16} />
-                  </a>
-                )}
-                {store.socialLinks?.whatsapp && (
-                  <a href={`https://wa.me/${store.socialLinks.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="contact-link">
                     <Smartphone size={16} />
                   </a>
                 )}
                 {store.socialLinks?.instagram && (
-                  <a href={`https://instagram.com/${store.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer" className="contact-link">
+                  <a
+                    href={`https://instagram.com/${store.socialLinks.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="contact-link"
+                  >
                     <Instagram size={16} />
                   </a>
                 )}
                 {store.socialLinks?.website && (
-                  <a href={store.socialLinks.website} target="_blank" rel="noopener noreferrer" className="contact-link">
+                  <a
+                    href={store.socialLinks.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="contact-link"
+                  >
                     <Globe size={16} />
                   </a>
                 )}
               </div>
 
-              <Link 
+              <Link
                 href={`/marketplace-community/${store.id}`}
                 className="btn-view-store"
               >
@@ -494,7 +586,9 @@ export function MarketplaceCommunityView() {
         }
 
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .empty-state {
@@ -519,7 +613,10 @@ export function MarketplaceCommunityView() {
 
         .stores-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+          grid-template-columns: repeat(
+            auto-fill,
+            minmax(min(100%, 320px), 1fr)
+          );
           gap: 2rem;
           margin-top: 1rem;
         }
@@ -566,7 +663,11 @@ export function MarketplaceCommunityView() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(30, 41, 59, 0.2) 0%,
+            rgba(15, 23, 42, 0.4) 100%
+          );
         }
 
         .store-badge-container {
@@ -735,8 +836,16 @@ export function MarketplaceCommunityView() {
           margin: 0 auto;
           padding: 32px clamp(20px, 3vw, 44px) 56px;
           background:
-            radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.08), transparent 28%),
-            radial-gradient(circle at 92% 0%, rgba(22, 163, 74, 0.10), transparent 24%),
+            radial-gradient(
+              circle at 8% 0%,
+              rgba(37, 99, 235, 0.08),
+              transparent 28%
+            ),
+            radial-gradient(
+              circle at 92% 0%,
+              rgba(22, 163, 74, 0.1),
+              transparent 24%
+            ),
             linear-gradient(180deg, #f8fafc 0%, #ffffff 42%, #f8fafc 100%);
           color: #111827;
         }
@@ -748,7 +857,7 @@ export function MarketplaceCommunityView() {
           align-items: end;
           margin-bottom: 24px;
           padding-bottom: 24px;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.1);
         }
 
         .header-content {
@@ -805,14 +914,14 @@ export function MarketplaceCommunityView() {
         .btn-create-store {
           background: #ea580c;
           color: #ffffff;
-          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.70);
+          box-shadow: 0 12px 24px -16px rgba(234, 88, 12, 0.7);
         }
 
         .btn-secondary-store {
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           background: #ffffff;
           color: #334155;
-          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.50);
+          box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.5);
         }
 
         .search-bar-container {
@@ -821,7 +930,7 @@ export function MarketplaceCommunityView() {
           gap: 14px;
           margin-top: 0;
           padding: 18px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.96);
           box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
@@ -830,7 +939,7 @@ export function MarketplaceCommunityView() {
         .search-input-wrapper {
           max-width: none;
           min-height: 52px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #f8fafc;
           padding: 0 14px;
@@ -858,7 +967,7 @@ export function MarketplaceCommunityView() {
         .pill {
           min-height: 42px;
           padding: 0 14px;
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 10px;
           background: #ffffff;
           color: #334155;
@@ -890,7 +999,7 @@ export function MarketplaceCommunityView() {
         .store-card,
         .loading-container,
         .empty-state {
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.96);
           box-shadow: 0 18px 44px -30px rgba(15, 23, 42, 0.45);
@@ -967,7 +1076,7 @@ export function MarketplaceCommunityView() {
 
         .favorite-btn {
           background: rgba(255, 255, 255, 0.92);
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           color: #64748b;
         }
 
@@ -1017,7 +1126,7 @@ export function MarketplaceCommunityView() {
         }
 
         .contact-link {
-          border: 1px solid rgba(15, 23, 42, 0.10);
+          border: 1px solid rgba(15, 23, 42, 0.1);
           background: #f8fafc;
           color: #334155;
           border-radius: 10px;

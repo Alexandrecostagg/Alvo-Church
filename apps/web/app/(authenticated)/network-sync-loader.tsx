@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 // blocks eval/new Function which protobufjs codegen requires).
 const NetworkSync = dynamic(
   () => import("./network-sync").then((m) => ({ default: m.NetworkSync })),
-  { ssr: false }
+  { ssr: false },
 );
 
 export function NetworkSyncLoader() {

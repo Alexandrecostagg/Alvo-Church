@@ -38,32 +38,319 @@ const BRAZIL_STATES = [
 
 // Cidades por estado (base compacta — estados com mais igrejas primeiro)
 const CITIES_BY_STATE: Record<string, string[]> = {
-  SP: ["São Paulo", "Campinas", "Santos", "São Bernardo do Campo", "Osasco", "Ribeirão Preto", "Sorocaba", "São José dos Campos", "Curitiba", "Barueri", "Campina Grande"],
-  MG: ["Belo Horizonte", "Uberlândia", "Juiz de Fora", "Betim", "Montes Claros", "Ribeirão das Neves", "Uberaba", "Governador Valadares", "Contagem", "Lagoa Santa"],
-  RJ: ["Rio de Janeiro", "São João de Meriti", "Nova Iguaçu", "Niterói", "Duque de Caxias", "Belford Roxo", "São Gonçalo", "Magé", "Itaboraí", "Mesquita"],
-  RS: ["Porto Alegre", "Caxias do Sul", "Pelotas", "Canoas", "Santa Maria", "Gravataí", "Viamão", "Novo Hamburgo", "São Leopoldo", "Rio Grande"],
-  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Itabuna", "Jequié", "Teixeira de Freitas", "Lençóis", "Valença", "Salinas da Margarida"],
-  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel", "São José dos Pinhais", "Foz do Iguaçu", "Colombo", "Guarapuava", "Paranaguá"],
-  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral", "Crato", "Itapipoca", "Macapá", "Tabatinga", "Irakema"],
-  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina", "Paulista", "Camaragibe", "Garanhuns", "Vitória de Santo Antão", "Igarassu"],
-  SC: ["Florianópolis", "Joinville", "Blumenau", "São José", "Chapecó", "Criciúma", "Itajaí", "Jaraguá do Sul", "Tubarão", "Lages"],
-  GO: ["Goiânia", "Anápolis", "Senador Canedo", "Abadia de Goiás", "Aparecida de Goiânia", "Goianésia", "Goianira", "Nova Veneza", "Sírio", "Trindade"],
-  AM: ["Manaus", "Parintins", "Itacoatiara", "Manicoré", "Mauá", "Novo Airão", "Tefé", "Tabatinga", "Lábrea", "Autazes"],
-  PA: ["Belém", "Ananindeua", "Santarém", "Marabá", "Parauapebas", "Castanhal", "Altamira", "Cametá", "Bragança", "Baião"],
-  MA: ["São Luís", "Imperatriz", "São José de Ribamar", "Timon", "Caxias", "Codó", "Paço do Lumiar", "Açailândia", "Bacabal", "Balsas"],
-  PB: ["João Pessoa", "Campina Grande", "Santa Rita", "Bayeux", "Soluânia", "Cabedelo", "Guarabira", "Mamanguape", "Patos", "Itaporanga"],
-  RN: ["Natal", "Mossoró", "Parnamirim", "São Gonçalo do Amarante", "Ceará-Mirim", "Currais Novos", "Doutor Severiano", "Assu", "Caicó", "Pendências"],
-  PI: ["Teresina", "Parnaíba", "Picos", "Piripiri", "Floriano", "Baliza", "Altos", "Campo Maior", "Oeiras", "Luís Corrêa"],
-  MS: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã", "Naviraí", "Nova Andradina", "Paranaíba", "Sidrolândia", "Coxim"],
-  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop", "Tangará da Serra", "Cáceres", "Sorriso", "Luciara", "Nova Mutum", "Barra do Garças"],
-  DF: ["Brasília", "Ceilândia", "Samambaia", "Planaltina", "Taguatinga", "Recanto das Emas", "Lago Norte", "Lago Sul", "Núcleo Bandeirante", "Santa Maria"],
-  SE: ["Aracaju", "Lagarto", "Itabaiana", "Estância", "São Cristóvão", "Nossa Senhora do Socorro", "Tobias Barreto", "Simão Dias", "Boquim", "Canindé de São Francisco"],
-  AL: ["Maceió", "Arapiraca", "Rio Largo", "Penedo", "União dos Palmares", "Palmeira dos Índios", "São Miguel dos Campos", "Matriz de Camaragibe", "Murici", "Porto de Pedras"],
-  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Domingos Martins", "Linhares", "São Mateus", "Guarapari", "Aracruz", "Capanema"],
-  AP: ["Macapá", "Santana", "Laranjal do Jari", "Oiapoque", "Mazagão", "Porto Grande", "Pedra Branca do Amapari", "Itaubal", "Vitória do Jari", "Tartarugalzinho"],
-  RO: ["Porto Velho", "Ji-Paraná", "Ariquemes", "Vilhena", "Cacoal", "Rolim de Moura", "Jaru", "Machadinho d'Oeste", "Buritis", "Guajará-Mirim"],
-  RR: ["Boa Vista", "Rorainópolis", "Caracaraí", "Mucajaí", "Bonfim", "Cantá", "Alto Alegre", "Pacaraima", "Normandia", "São João da Baliza"],
-  TO: ["Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins", "Colinas do Tocantins", "Guaraí", "Dianópolis", "Miracema do Tocantins", "Aguiarnópolis"],
+  SP: [
+    "São Paulo",
+    "Campinas",
+    "Santos",
+    "São Bernardo do Campo",
+    "Osasco",
+    "Ribeirão Preto",
+    "Sorocaba",
+    "São José dos Campos",
+    "Curitiba",
+    "Barueri",
+    "Campina Grande",
+  ],
+  MG: [
+    "Belo Horizonte",
+    "Uberlândia",
+    "Juiz de Fora",
+    "Betim",
+    "Montes Claros",
+    "Ribeirão das Neves",
+    "Uberaba",
+    "Governador Valadares",
+    "Contagem",
+    "Lagoa Santa",
+  ],
+  RJ: [
+    "Rio de Janeiro",
+    "São João de Meriti",
+    "Nova Iguaçu",
+    "Niterói",
+    "Duque de Caxias",
+    "Belford Roxo",
+    "São Gonçalo",
+    "Magé",
+    "Itaboraí",
+    "Mesquita",
+  ],
+  RS: [
+    "Porto Alegre",
+    "Caxias do Sul",
+    "Pelotas",
+    "Canoas",
+    "Santa Maria",
+    "Gravataí",
+    "Viamão",
+    "Novo Hamburgo",
+    "São Leopoldo",
+    "Rio Grande",
+  ],
+  BA: [
+    "Salvador",
+    "Feira de Santana",
+    "Vitória da Conquista",
+    "Camaçari",
+    "Itabuna",
+    "Jequié",
+    "Teixeira de Freitas",
+    "Lençóis",
+    "Valença",
+    "Salinas da Margarida",
+  ],
+  PR: [
+    "Curitiba",
+    "Londrina",
+    "Maringá",
+    "Ponta Grossa",
+    "Cascavel",
+    "São José dos Pinhais",
+    "Foz do Iguaçu",
+    "Colombo",
+    "Guarapuava",
+    "Paranaguá",
+  ],
+  CE: [
+    "Fortaleza",
+    "Caucaia",
+    "Juazeiro do Norte",
+    "Maracanaú",
+    "Sobral",
+    "Crato",
+    "Itapipoca",
+    "Macapá",
+    "Tabatinga",
+    "Irakema",
+  ],
+  PE: [
+    "Recife",
+    "Jaboatão dos Guararapes",
+    "Olinda",
+    "Caruaru",
+    "Petrolina",
+    "Paulista",
+    "Camaragibe",
+    "Garanhuns",
+    "Vitória de Santo Antão",
+    "Igarassu",
+  ],
+  SC: [
+    "Florianópolis",
+    "Joinville",
+    "Blumenau",
+    "São José",
+    "Chapecó",
+    "Criciúma",
+    "Itajaí",
+    "Jaraguá do Sul",
+    "Tubarão",
+    "Lages",
+  ],
+  GO: [
+    "Goiânia",
+    "Anápolis",
+    "Senador Canedo",
+    "Abadia de Goiás",
+    "Aparecida de Goiânia",
+    "Goianésia",
+    "Goianira",
+    "Nova Veneza",
+    "Sírio",
+    "Trindade",
+  ],
+  AM: [
+    "Manaus",
+    "Parintins",
+    "Itacoatiara",
+    "Manicoré",
+    "Mauá",
+    "Novo Airão",
+    "Tefé",
+    "Tabatinga",
+    "Lábrea",
+    "Autazes",
+  ],
+  PA: [
+    "Belém",
+    "Ananindeua",
+    "Santarém",
+    "Marabá",
+    "Parauapebas",
+    "Castanhal",
+    "Altamira",
+    "Cametá",
+    "Bragança",
+    "Baião",
+  ],
+  MA: [
+    "São Luís",
+    "Imperatriz",
+    "São José de Ribamar",
+    "Timon",
+    "Caxias",
+    "Codó",
+    "Paço do Lumiar",
+    "Açailândia",
+    "Bacabal",
+    "Balsas",
+  ],
+  PB: [
+    "João Pessoa",
+    "Campina Grande",
+    "Santa Rita",
+    "Bayeux",
+    "Soluânia",
+    "Cabedelo",
+    "Guarabira",
+    "Mamanguape",
+    "Patos",
+    "Itaporanga",
+  ],
+  RN: [
+    "Natal",
+    "Mossoró",
+    "Parnamirim",
+    "São Gonçalo do Amarante",
+    "Ceará-Mirim",
+    "Currais Novos",
+    "Doutor Severiano",
+    "Assu",
+    "Caicó",
+    "Pendências",
+  ],
+  PI: [
+    "Teresina",
+    "Parnaíba",
+    "Picos",
+    "Piripiri",
+    "Floriano",
+    "Baliza",
+    "Altos",
+    "Campo Maior",
+    "Oeiras",
+    "Luís Corrêa",
+  ],
+  MS: [
+    "Campo Grande",
+    "Dourados",
+    "Três Lagoas",
+    "Corumbá",
+    "Ponta Porã",
+    "Naviraí",
+    "Nova Andradina",
+    "Paranaíba",
+    "Sidrolândia",
+    "Coxim",
+  ],
+  MT: [
+    "Cuiabá",
+    "Várzea Grande",
+    "Rondonópolis",
+    "Sinop",
+    "Tangará da Serra",
+    "Cáceres",
+    "Sorriso",
+    "Luciara",
+    "Nova Mutum",
+    "Barra do Garças",
+  ],
+  DF: [
+    "Brasília",
+    "Ceilândia",
+    "Samambaia",
+    "Planaltina",
+    "Taguatinga",
+    "Recanto das Emas",
+    "Lago Norte",
+    "Lago Sul",
+    "Núcleo Bandeirante",
+    "Santa Maria",
+  ],
+  SE: [
+    "Aracaju",
+    "Lagarto",
+    "Itabaiana",
+    "Estância",
+    "São Cristóvão",
+    "Nossa Senhora do Socorro",
+    "Tobias Barreto",
+    "Simão Dias",
+    "Boquim",
+    "Canindé de São Francisco",
+  ],
+  AL: [
+    "Maceió",
+    "Arapiraca",
+    "Rio Largo",
+    "Penedo",
+    "União dos Palmares",
+    "Palmeira dos Índios",
+    "São Miguel dos Campos",
+    "Matriz de Camaragibe",
+    "Murici",
+    "Porto de Pedras",
+  ],
+  ES: [
+    "Vitória",
+    "Vila Velha",
+    "Serra",
+    "Cariacica",
+    "Domingos Martins",
+    "Linhares",
+    "São Mateus",
+    "Guarapari",
+    "Aracruz",
+    "Capanema",
+  ],
+  AP: [
+    "Macapá",
+    "Santana",
+    "Laranjal do Jari",
+    "Oiapoque",
+    "Mazagão",
+    "Porto Grande",
+    "Pedra Branca do Amapari",
+    "Itaubal",
+    "Vitória do Jari",
+    "Tartarugalzinho",
+  ],
+  RO: [
+    "Porto Velho",
+    "Ji-Paraná",
+    "Ariquemes",
+    "Vilhena",
+    "Cacoal",
+    "Rolim de Moura",
+    "Jaru",
+    "Machadinho d'Oeste",
+    "Buritis",
+    "Guajará-Mirim",
+  ],
+  RR: [
+    "Boa Vista",
+    "Rorainópolis",
+    "Caracaraí",
+    "Mucajaí",
+    "Bonfim",
+    "Cantá",
+    "Alto Alegre",
+    "Pacaraima",
+    "Normandia",
+    "São João da Baliza",
+  ],
+  TO: [
+    "Palmas",
+    "Araguaína",
+    "Gurupi",
+    "Porto Nacional",
+    "Paraíso do Tocantins",
+    "Colinas do Tocantins",
+    "Guaraí",
+    "Dianópolis",
+    "Miracema do Tocantins",
+    "Aguiarnópolis",
+  ],
 };
 
 function slugify(value: string) {
@@ -106,7 +393,10 @@ function isValidCpf(digits: string): boolean {
 function isValidCnpj(digits: string): boolean {
   if (digits.length !== 14 || /^(\d)\1{13}$/.test(digits)) return false;
   const calc = (len: number) => {
-    const weights = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const weights =
+      len === 12
+        ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     let sum = 0;
     for (let i = 0; i < len; i++) sum += Number(digits[i]) * weights[i];
     const rest = sum % 11;
@@ -126,12 +416,25 @@ function isValidTaxId(raw: string): boolean {
 // sequência óbvia (12345678, abcdefgh) — não é força bruta-proof, mas
 // barra as senhas mais comuns/fracas sem irritar demais o usuário.
 function passwordIssue(password: string): string | null {
-  if (password.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
-  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return "A senha precisa ter letras e números.";
-  if (/^(.)\1+$/.test(password)) return "A senha não pode ser um caractere repetido.";
+  if (password.length < 8)
+    return "A senha precisa ter pelo menos 8 caracteres.";
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password))
+    return "A senha precisa ter letras e números.";
+  if (/^(.)\1+$/.test(password))
+    return "A senha não pode ser um caractere repetido.";
   const lower = password.toLowerCase();
-  const sequences = ["01234567", "12345678", "23456789", "abcdefgh", "bcdefghi", "qwertyui", "senha123", "12345678"];
-  if (sequences.some((seq) => lower.includes(seq))) return "Essa senha é fácil demais de adivinhar. Escolha outra.";
+  const sequences = [
+    "01234567",
+    "12345678",
+    "23456789",
+    "abcdefgh",
+    "bcdefghi",
+    "qwertyui",
+    "senha123",
+    "12345678",
+  ];
+  if (sequences.some((seq) => lower.includes(seq)))
+    return "Essa senha é fácil demais de adivinhar. Escolha outra.";
   return null;
 }
 
@@ -144,7 +447,13 @@ async function fetchAddressByCep(cep: string) {
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
-    const data = await res.json() as { logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: boolean };
+    const data = (await res.json()) as {
+      logradouro?: string;
+      bairro?: string;
+      localidade?: string;
+      uf?: string;
+      erro?: boolean;
+    };
     if (data.erro) return null;
     return {
       address: data.logradouro || "",
@@ -196,19 +505,21 @@ export default function SignupPage() {
     if (digits.length !== 8) return;
 
     setCepLoading(true);
-    fetchAddressByCep(cep).then((data) => {
-      setCepLoading(false);
-      if (data) {
-        setAddress(data.address);
-        setNeighborhood(data.neighborhood);
-        if (data.city && data.state) {
-          setCity(data.city);
-          setState(data.state);
+    fetchAddressByCep(cep)
+      .then((data) => {
+        setCepLoading(false);
+        if (data) {
+          setAddress(data.address);
+          setNeighborhood(data.neighborhood);
+          if (data.city && data.state) {
+            setCity(data.city);
+            setState(data.state);
+          }
         }
-      }
-    }).catch(() => {
-      setCepLoading(false);
-    });
+      })
+      .catch(() => {
+        setCepLoading(false);
+      });
   }, [cep]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -217,7 +528,13 @@ export default function SignupPage() {
       setError("Firebase não configurado.");
       return;
     }
-    if (!churchName.trim() || !adminName.trim() || !email.trim() || !city.trim() || !state) {
+    if (
+      !churchName.trim() ||
+      !adminName.trim() ||
+      !email.trim() ||
+      !city.trim() ||
+      !state
+    ) {
       setError("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -227,7 +544,9 @@ export default function SignupPage() {
     }
     if (!isValidTaxId(taxId)) {
       const type = taxIdType === "cpf" ? "CPF" : "CNPJ";
-      setError(`Digite um ${type} válido (do responsável, se a igreja ainda não tiver CNPJ).`);
+      setError(
+        `Digite um ${type} válido (do responsável, se a igreja ainda não tiver CNPJ).`,
+      );
       return;
     }
     const pwIssue = passwordIssue(password);
@@ -245,7 +564,7 @@ export default function SignupPage() {
         config: firebaseConfig,
         email: email.trim(),
         password,
-        displayName: adminName.trim()
+        displayName: adminName.trim(),
       });
 
       const baseSlug = slugify(churchName) || "igreja";
@@ -261,15 +580,17 @@ export default function SignupPage() {
         addressState: state,
       });
 
-      sdk.claimOrganizationSlug(firebaseConfig, {
-        slug: baseSlug,
-        organizationId,
-        displayName: churchName.trim()
-      }).catch(() => {
-        // Best-effort: se o slug já estiver em uso por outra igreja, o
-        // formulário público simplesmente não fica disponível ainda —
-        // não deve travar o cadastro.
-      });
+      sdk
+        .claimOrganizationSlug(firebaseConfig, {
+          slug: baseSlug,
+          organizationId,
+          displayName: churchName.trim(),
+        })
+        .catch(() => {
+          // Best-effort: se o slug já estiver em uso por outra igreja, o
+          // formulário público simplesmente não fica disponível ainda —
+          // não deve travar o cadastro.
+        });
 
       switchOrganization(organizationId);
       router.replace("/");
@@ -277,7 +598,7 @@ export default function SignupPage() {
       setError(
         nextError instanceof Error
           ? translateFirebaseError(nextError.message)
-          : "Não foi possível criar sua conta. Tente novamente."
+          : "Não foi possível criar sua conta. Tente novamente.",
       );
       setIsSubmitting(false);
     }
@@ -292,15 +613,23 @@ export default function SignupPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24
+        padding: 24,
       }}
     >
       <div style={{ width: "100%", maxWidth: 460 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
             <BrandLogo size={56} iconOnly />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Criar sua conta</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
+            Criar sua conta
+          </h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
             Grátis até 100 membros. Sem cartão de crédito.
           </p>
@@ -314,7 +643,7 @@ export default function SignupPage() {
             padding: 20,
             borderRadius: 20,
             background: "#fffdf8",
-            border: "1px solid rgba(31, 41, 55, 0.12)"
+            border: "1px solid rgba(31, 41, 55, 0.12)",
           }}
         >
           <label style={labelStyle}>
@@ -344,19 +673,29 @@ export default function SignupPage() {
                 required
               />
               {cepLoading && (
-                <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "#f97316" }}>
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: 12,
+                    color: "#f97316",
+                  }}
+                >
                   Buscando...
                 </span>
               )}
             </div>
             {address && (
               <span style={{ fontSize: 11, color: "#16a34a" }}>
-                ✓ {address}{neighborhood ? `, ${neighborhood}` : ""}
+                ✓ {address}
+                {neighborhood ? `, ${neighborhood}` : ""}
               </span>
             )}
           </label>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
             <label style={labelStyle}>
               Cidade
               <select
@@ -368,7 +707,9 @@ export default function SignupPage() {
               >
                 <option value="">UF primeiro</option>
                 {availableCities.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </label>
@@ -382,7 +723,9 @@ export default function SignupPage() {
               >
                 <option value="">UF</option>
                 {BRAZIL_STATES.map((uf) => (
-                  <option key={uf.uf} value={uf.uf}>{uf.name}</option>
+                  <option key={uf.uf} value={uf.uf}>
+                    {uf.name}
+                  </option>
                 ))}
               </select>
             </label>
@@ -396,7 +739,9 @@ export default function SignupPage() {
               onChange={(e) => {
                 const val = e.target.value;
                 setTaxId(isCnpj ? maskCnpj(val) : maskCpf(val));
-                setTaxIdType(val.replace(/\D/g, "").length >= 14 ? "cnpj" : "cpf");
+                setTaxIdType(
+                  val.replace(/\D/g, "").length >= 14 ? "cnpj" : "cpf",
+                );
               }}
               style={inputStyle}
               placeholder={isCnpj ? "00.000.000/0000-00" : "000.000.000-00"}
@@ -440,18 +785,34 @@ export default function SignupPage() {
               minLength={8}
               required
             />
-            <span style={{ fontSize: 11, color: "#9ca3af" }}>Mínimo 8 caracteres, com letras e números.</span>
+            <span style={{ fontSize: 11, color: "#9ca3af" }}>
+              Mínimo 8 caracteres, com letras e números.
+            </span>
           </label>
 
-          <button type="submit" style={buttonStyle} disabled={isSubmitting || !configured}>
+          <button
+            type="submit"
+            style={buttonStyle}
+            disabled={isSubmitting || !configured}
+          >
             {isSubmitting ? "Criando conta..." : "Criar conta gratuita"}
           </button>
 
           {error && <p style={errorStyle}>{error}</p>}
         </form>
 
-        <p style={{ textAlign: "center", fontSize: 13, color: "#6b7280", marginTop: 16 }}>
-          Já tem conta? <Link href="/login" style={{ color: "#f97316", fontWeight: 600 }}>Entrar</Link>
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: 13,
+            color: "#6b7280",
+            marginTop: 16,
+          }}
+        >
+          Já tem conta?{" "}
+          <Link href="/login" style={{ color: "#f97316", fontWeight: 600 }}>
+            Entrar
+          </Link>
         </p>
       </div>
     </div>
@@ -464,8 +825,10 @@ function maskCep(value: string): string {
 }
 
 function translateFirebaseError(message: string): string {
-  if (message.includes("email-already-in-use")) return "Este email já está cadastrado. Tente entrar.";
-  if (message.includes("weak-password")) return "Senha muito fraca. Use letras e números, mínimo 8 caracteres.";
+  if (message.includes("email-already-in-use"))
+    return "Este email já está cadastrado. Tente entrar.";
+  if (message.includes("weak-password"))
+    return "Senha muito fraca. Use letras e números, mínimo 8 caracteres.";
   if (message.includes("invalid-email")) return "Email inválido.";
   return "Não foi possível criar sua conta. Tente novamente.";
 }
@@ -474,7 +837,7 @@ const labelStyle = {
   display: "grid",
   gap: 8,
   fontSize: 14,
-  color: "#1f2937"
+  color: "#1f2937",
 } as const;
 
 const inputStyle = {
@@ -483,7 +846,7 @@ const inputStyle = {
   borderRadius: 14,
   border: "1px solid rgba(31, 41, 55, 0.16)",
   background: "#fffdf8",
-  color: "#1f2937"
+  color: "#1f2937",
 } as const;
 
 const buttonStyle = {
@@ -494,12 +857,12 @@ const buttonStyle = {
   color: "#fffaf1",
   fontWeight: 700,
   cursor: "pointer",
-  marginTop: 4
+  marginTop: 4,
 } as const;
 
 const errorStyle = {
   margin: "4px 0 0",
   color: "#b42318",
   fontSize: 13,
-  lineHeight: 1.5
+  lineHeight: 1.5,
 } as const;

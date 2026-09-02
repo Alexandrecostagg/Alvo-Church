@@ -11,7 +11,7 @@ interface LocalMemberStoreSnapshot {
 const emptySnapshot: LocalMemberStoreSnapshot = {
   families: [],
   familyMembers: [],
-  people: []
+  people: [],
 };
 
 export function loadLocalMemberStore(): LocalMemberStoreSnapshot {
@@ -30,8 +30,10 @@ export function loadLocalMemberStore(): LocalMemberStoreSnapshot {
 
     return {
       families: Array.isArray(parsed.families) ? parsed.families : [],
-      familyMembers: Array.isArray(parsed.familyMembers) ? parsed.familyMembers : [],
-      people: Array.isArray(parsed.people) ? parsed.people : []
+      familyMembers: Array.isArray(parsed.familyMembers)
+        ? parsed.familyMembers
+        : [],
+      people: Array.isArray(parsed.people) ? parsed.people : [],
     };
   } catch {
     return emptySnapshot;
@@ -51,7 +53,7 @@ export function saveLocalMemberProfile(params: {
   const next: LocalMemberStoreSnapshot = {
     families: upsertById(current.families, params.family),
     familyMembers: upsertById(current.familyMembers, params.familyMember),
-    people: upsertById(current.people, params.person)
+    people: upsertById(current.people, params.person),
   };
 
   window.localStorage.setItem(LOCAL_MEMBER_STORE_KEY, JSON.stringify(next));

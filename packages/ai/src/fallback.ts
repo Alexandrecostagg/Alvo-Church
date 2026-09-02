@@ -16,13 +16,15 @@ export interface AiKeys {
 export async function callChatWithFallback(
   keys: AiKeys,
   messages: AiMessage[],
-  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean }
+  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean },
 ): Promise<AiResponse> {
   if (keys.deepseekApiKey) {
     try {
       return await callDeepSeek(keys.deepseekApiKey, messages, opts);
     } catch (e) {
-      console.warn(`[ai] DeepSeek falhou, caindo para Groq: ${(e as Error).message}`);
+      console.warn(
+        `[ai] DeepSeek falhou, caindo para Groq: ${(e as Error).message}`,
+      );
     }
   }
 
@@ -30,5 +32,7 @@ export async function callChatWithFallback(
     return callGroqWithCascade(keys.groqApiKey, messages, opts);
   }
 
-  throw new Error("Nenhuma API de IA configurada (defina DEEPSEEK_API_KEY e/ou GROQ_API_KEY).");
+  throw new Error(
+    "Nenhuma API de IA configurada (defina DEEPSEEK_API_KEY e/ou GROQ_API_KEY).",
+  );
 }

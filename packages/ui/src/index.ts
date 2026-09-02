@@ -1,6 +1,6 @@
 export function PlaceholderButton(props: { label: string }) {
   // simple non-React placeholder to avoid introducing framework deps in the package
-  return { type: 'button', label: props.label };
+  return { type: "button", label: props.label };
 }
 import type { OrganizationBrandingSettings } from "@alvo/types";
 
@@ -17,26 +17,26 @@ export const alvoTheme = {
     inkSoft: "#647087",
     line: "#dfe5ee",
     successSurface: "#eef7ef",
-    successInk: "#166534"
+    successInk: "#166534",
   },
   radius: {
     sm: 16,
     md: 24,
     lg: 32,
-    pill: 999
+    pill: 999,
   },
   spacing: {
     xs: 8,
     sm: 12,
     md: 16,
     lg: 24,
-    xl: 32
+    xl: 32,
   },
   brand: {
     appName: "Plataforma Esdras",
     shortName: "Esdras",
-    tagline: "Igrejas em movimento"
-  }
+    tagline: "Igrejas em movimento",
+  },
 };
 
 export interface BrandThemeTokens {
@@ -54,7 +54,7 @@ export interface BrandThemeTokens {
 }
 
 export function createBrandTheme(
-  branding?: OrganizationBrandingSettings | null
+  branding?: OrganizationBrandingSettings | null,
 ): BrandThemeTokens {
   return {
     colors: {
@@ -65,7 +65,9 @@ export function createBrandTheme(
       accentSoft: branding?.accentColor ?? alvoTheme.colors.accentSoft,
       accentDark: branding?.secondaryColor ?? alvoTheme.colors.accentDark,
       ink: branding?.textColor ?? alvoTheme.colors.ink,
-      inkSoft: branding?.textColor ? `${branding.textColor}cc` : alvoTheme.colors.inkSoft
+      inkSoft: branding?.textColor
+        ? `${branding.textColor}cc`
+        : alvoTheme.colors.inkSoft,
     },
     brand: {
       appName: branding?.publicProductName ?? alvoTheme.brand.appName,
@@ -75,7 +77,7 @@ export function createBrandTheme(
       logoUrl: branding?.logoLightUrl,
       poweredByLabel: branding?.poweredByLabel,
       showPoweredByAlvo: branding?.showPoweredByAlvo ?? false,
-      mode: branding?.brandMode ?? "alvo_managed"
-    }
+      mode: branding?.brandMode ?? "alvo_managed",
+    },
   };
 }

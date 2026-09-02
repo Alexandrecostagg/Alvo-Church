@@ -5,8 +5,11 @@ import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 
 const GivingView = dynamic(
-  () => import("../../../src/features/giving/giving-view").then((mod) => mod.GivingView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/giving/giving-view").then(
+      (mod) => mod.GivingView,
+    ),
+  { ssr: false },
 );
 
 export default function GivingPage() {

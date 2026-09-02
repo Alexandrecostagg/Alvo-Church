@@ -87,7 +87,7 @@ export default function VisitorFormPage() {
     if (res.ok) {
       setState("success");
     } else {
-      const data = await res.json().catch(() => ({})) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
       setState("error");
       setErrorMsg(data.error ?? "Erro ao enviar. Tente novamente.");
     }
@@ -97,7 +97,11 @@ export default function VisitorFormPage() {
     return (
       <main style={pageStyle}>
         <div style={successCardStyle}>
-          <CheckCircle size={48} strokeWidth={1.6} style={{ color: "#16a34a" }} />
+          <CheckCircle
+            size={48}
+            strokeWidth={1.6}
+            style={{ color: "#16a34a" }}
+          />
           <h1 style={successTitleStyle}>Bem-vindo!</h1>
           <p style={successDescStyle}>
             Suas informações foram recebidas. É uma alegria ter você aqui hoje!
@@ -229,7 +233,8 @@ export default function VisitorFormPage() {
               onChange={(e) => set("consent", e.target.checked)}
             />
             <span>
-              Aceito receber mensagens da organização sobre eventos e cuidado pastoral
+              Aceito receber mensagens da organização sobre eventos e cuidado
+              pastoral
             </span>
           </label>
 
@@ -242,7 +247,10 @@ export default function VisitorFormPage() {
           >
             {state === "submitting" ? (
               <>
-                <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                <Loader2
+                  size={18}
+                  style={{ animation: "spin 1s linear infinite" }}
+                />
                 Enviando...
               </>
             ) : (
@@ -255,22 +263,109 @@ export default function VisitorFormPage() {
   );
 }
 
-const pageStyle = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px", background: "#fdfaf6" } as const;
-const formCardStyle = { maxWidth: 520, width: "100%", padding: "32px 24px", borderRadius: 20, background: "#fff", border: "1px solid rgba(29,41,64,0.1)", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" } as const;
-const successCardStyle = { maxWidth: 360, width: "100%", padding: "48px 24px", borderRadius: 20, background: "#fff", border: "1px solid rgba(29,41,64,0.1)", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, textAlign: "center" as const } as const;
+const pageStyle = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "24px 16px",
+  background: "#fdfaf6",
+} as const;
+const formCardStyle = {
+  maxWidth: 520,
+  width: "100%",
+  padding: "32px 24px",
+  borderRadius: 20,
+  background: "#fff",
+  border: "1px solid rgba(29,41,64,0.1)",
+  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+} as const;
+const successCardStyle = {
+  maxWidth: 360,
+  width: "100%",
+  padding: "48px 24px",
+  borderRadius: 20,
+  background: "#fff",
+  border: "1px solid rgba(29,41,64,0.1)",
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+  gap: 16,
+  textAlign: "center" as const,
+} as const;
 const headerStyle = { marginBottom: 24 } as const;
-const titleStyle = { margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "#1c2433" } as const;
+const titleStyle = {
+  margin: "0 0 4px",
+  fontSize: 22,
+  fontWeight: 700,
+  color: "#1c2433",
+} as const;
 const subtitleStyle = { margin: 0, fontSize: 14, color: "#64748b" } as const;
 const formStyle = { display: "grid", gap: 16 } as const;
 const fieldStyle = { display: "grid", gap: 6 } as const;
-const fieldRowStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } as const;
+const fieldRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 12,
+} as const;
 const labelStyle = { fontSize: 13, fontWeight: 600, color: "#374151" } as const;
 const optionalStyle = { fontWeight: 400, color: "#9ca3af" } as const;
-const inputStyle = { padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(29,41,64,0.18)", fontSize: 15, outline: "none", background: "#fff", width: "100%", boxSizing: "border-box" as const } as const;
-const radioGroupStyle = { display: "flex", gap: 16, flexWrap: "wrap" as const } as const;
-const radioLabelStyle = { display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" } as const;
-const consentLabelStyle = { display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#64748b", cursor: "pointer", lineHeight: 1.5 } as const;
+const inputStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1.5px solid rgba(29,41,64,0.18)",
+  fontSize: 15,
+  outline: "none",
+  background: "#fff",
+  width: "100%",
+  boxSizing: "border-box" as const,
+} as const;
+const radioGroupStyle = {
+  display: "flex",
+  gap: 16,
+  flexWrap: "wrap" as const,
+} as const;
+const radioLabelStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  fontSize: 14,
+  cursor: "pointer",
+} as const;
+const consentLabelStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  fontSize: 13,
+  color: "#64748b",
+  cursor: "pointer",
+  lineHeight: 1.5,
+} as const;
 const errorStyle = { color: "#dc2626", fontSize: 13, margin: 0 } as const;
-const submitButtonStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, background: "var(--esdras-primary-dark)", color: "#fff", border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer", marginTop: 4 } as const;
-const successTitleStyle = { margin: 0, fontSize: 24, fontWeight: 700, color: "#1c2433" } as const;
-const successDescStyle = { margin: 0, fontSize: 15, color: "#64748b", lineHeight: 1.6 } as const;
+const submitButtonStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  padding: "14px",
+  borderRadius: 12,
+  background: "var(--esdras-primary-dark)",
+  color: "#fff",
+  border: "none",
+  fontSize: 16,
+  fontWeight: 600,
+  cursor: "pointer",
+  marginTop: 4,
+} as const;
+const successTitleStyle = {
+  margin: 0,
+  fontSize: 24,
+  fontWeight: 700,
+  color: "#1c2433",
+} as const;
+const successDescStyle = {
+  margin: 0,
+  fontSize: 15,
+  color: "#64748b",
+  lineHeight: 1.6,
+} as const;

@@ -32,7 +32,9 @@ function plainValue(v: FirestoreFieldValue | undefined): unknown {
 
 export async function GET(req: NextRequest) {
   const authorization = req.headers.get("authorization") ?? "";
-  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const idToken = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : "";
   const uid = await verifyFirebaseIdToken(req);
   if (!uid || !idToken) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -42,7 +44,10 @@ export async function GET(req: NextRequest) {
   const organizationId = searchParams.get("organizationId");
   const groupId = searchParams.get("groupId") ?? "";
   if (!organizationId) {
-    return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
+    return NextResponse.json(
+      { error: "organizationId é obrigatório" },
+      { status: 400 },
+    );
   }
 
   const weekStartDate = getMondayOfWeek(new Date());
@@ -52,7 +57,10 @@ export async function GET(req: NextRequest) {
     {
       method: "POST",
       signal: AbortSignal.timeout(8000),
-      headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         structuredQuery: {
           from: [{ collectionId: "weeklyThemes" }],
@@ -60,19 +68,24 @@ export async function GET(req: NextRequest) {
             fieldFilter: {
               field: { fieldPath: "weekStartDate" },
               op: "EQUAL",
-              value: { stringValue: weekStartDate }
-            }
-          }
-        }
-      })
-    }
+              value: { stringValue: weekStartDate },
+            },
+          },
+        },
+      }),
+    },
   );
 
   if (!res.ok) {
-    return NextResponse.json({ error: "Não foi possível consultar o tema semanal." }, { status: 502 });
+    return NextResponse.json(
+      { error: "Não foi possível consultar o tema semanal." },
+      { status: 502 },
+    );
   }
 
-  const rows = (await res.json()) as Array<{ document?: { name: string; fields?: Record<string, FirestoreFieldValue> } }>;
+  const rows = (await res.json()) as Array<{
+    document?: { name: string; fields?: Record<string, FirestoreFieldValue> };
+  }>;
   const themes = rows
     .filter((r) => r.document)
     .map((r) => {
@@ -83,11 +96,13 @@ export async function GET(req: NextRequest) {
         bibleVerse: plainValue(f.bibleVerse) as string | undefined,
         description: plainValue(f.description) as string | undefined,
         scope: plainValue(f.scope) as string | undefined,
-        groupIds: (plainValue(f.groupIds) as string[] | undefined) ?? []
+        groupIds: (plainValue(f.groupIds) as string[] | undefined) ?? [],
       };
     });
 
-  const specific = groupId ? themes.find((t) => t.scope === "specific" && t.groupIds.includes(groupId)) : undefined;
+  const specific = groupId
+    ? themes.find((t) => t.scope === "specific" && t.groupIds.includes(groupId))
+    : undefined;
   const theme = specific ?? themes.find((t) => t.scope === "all") ?? null;
 
   // O tema muda uma vez por semana — o cliente pode reusar a resposta por
@@ -95,6 +110,6 @@ export async function GET(req: NextRequest) {
   // então só o cache do próprio cliente (não CDN compartilhado).
   return NextResponse.json(
     { theme },
-    { headers: { "Cache-Control": "private, max-age=3600" } }
+    { headers: { "Cache-Control": "private, max-age=3600" } },
   );
 }

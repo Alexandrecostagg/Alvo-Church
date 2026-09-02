@@ -128,9 +128,9 @@ function ModuleVisual({ type }: { type: string }) {
           pastoralmente?
         </div>
         <div className="lp-visual-bubble ai">
-          <strong>Abordagem sugerida:</strong> Presença e escuta ativa
-          primeiro. Indicar acompanhamento profissional paralelamente. Versículo
-          inicial: Salmo 34:18
+          <strong>Abordagem sugerida:</strong> Presença e escuta ativa primeiro.
+          Indicar acompanhamento profissional paralelamente. Versículo inicial:
+          Salmo 34:18
           <span className="lp-visual-cursor" />
           <div className="lp-visual-disclaimer">
             Sugestão pastoral · Valide com seu discernimento

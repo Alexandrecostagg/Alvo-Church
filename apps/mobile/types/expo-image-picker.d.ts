@@ -22,7 +22,11 @@ declare module "expo-image-picker" {
     canAskAgain?: boolean;
     status?: string;
   }
-  export function launchImageLibraryAsync(options?: ImagePickerOptions): Promise<ImagePickerResult>;
-  export function launchCameraAsync(options?: ImagePickerOptions): Promise<ImagePickerResult>;
+  export function launchImageLibraryAsync(
+    options?: ImagePickerOptions,
+  ): Promise<ImagePickerResult>;
+  export function launchCameraAsync(
+    options?: ImagePickerOptions,
+  ): Promise<ImagePickerResult>;
   export function requestCameraPermissionsAsync(): Promise<PermissionResponse>;
 }

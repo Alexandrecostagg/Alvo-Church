@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getBrandModeLabel, getEnabledModuleCount, getPlanTierLabel } from "@alvo/domain";
+import {
+  getBrandModeLabel,
+  getEnabledModuleCount,
+  getPlanTierLabel,
+} from "@alvo/domain";
 import type {
   Event,
   EventCheckIn,
@@ -14,7 +18,7 @@ import type {
   GroupMeeting,
   Person,
   VisitorIntake,
-  VisitorJourney
+  VisitorJourney,
 } from "@alvo/types";
 import {
   createFirebaseWebRuntimeConfigFromEnv,
@@ -30,9 +34,12 @@ import {
   fetchPeople,
   fetchVisitorIntakes,
   fetchVisitorJourneys,
-  isFirebaseWebRuntimeConfigured
+  isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
-import { cachedFetchPeople, cachedFetchGroups } from "../src/lib/org-data-cache";
+import {
+  cachedFetchPeople,
+  cachedFetchGroups,
+} from "../src/lib/org-data-cache";
 import { useAppAuth } from "./providers";
 
 interface LiveTenantDataProps {
@@ -49,9 +56,13 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
   const [groupMeetings, setGroupMeetings] = useState<GroupMeeting[]>([]);
   const [groupAttendance, setGroupAttendance] = useState<GroupAttendance[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
-  const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<
+    EventRegistration[]
+  >([]);
   const [eventCheckIns, setEventCheckIns] = useState<EventCheckIn[]>([]);
-  const [financeReports, setFinanceReports] = useState<FinancialTransparencyReport[]>([]);
+  const [financeReports, setFinanceReports] = useState<
+    FinancialTransparencyReport[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { firebaseReady, tenantReady, tenantRuntime, user } = useAppAuth();
@@ -62,14 +73,15 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
           process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID:
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
           process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
           process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       }),
-    []
+    [],
   );
 
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
@@ -94,7 +106,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
           nextFollowUpTasks,
           nextGroups,
           nextEvents,
-          nextFinanceReports
+          nextFinanceReports,
         ] = await Promise.all([
           cachedFetchPeople(firebaseConfig, { organizationId }),
           fetchFamilies(firebaseConfig, { organizationId }),
@@ -103,20 +115,24 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
           fetchFollowUpTasks(firebaseConfig, { organizationId }),
           cachedFetchGroups(firebaseConfig, { organizationId }),
           fetchEvents(firebaseConfig, { organizationId }),
-          fetchFinancialTransparencyReports(firebaseConfig, { organizationId })
+          fetchFinancialTransparencyReports(firebaseConfig, { organizationId }),
         ]);
 
         const [nextGroupMeetings, nextEventRegistrations, nextEventCheckIns] =
           await Promise.all([
             fetchGroupMeetings(firebaseConfig, { organizationId }, nextGroups),
-            fetchEventRegistrations(firebaseConfig, { organizationId }, nextEvents),
-            fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents)
+            fetchEventRegistrations(
+              firebaseConfig,
+              { organizationId },
+              nextEvents,
+            ),
+            fetchEventCheckIns(firebaseConfig, { organizationId }, nextEvents),
           ]);
 
         const nextGroupAttendance = await fetchGroupAttendance(
           firebaseConfig,
           { organizationId },
-          nextGroupMeetings
+          nextGroupMeetings,
         );
 
         if (cancelled) {
@@ -143,7 +159,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
         setError(
           nextError instanceof Error
             ? nextError.message
-            : "Nao foi possivel carregar dados reais do Firebase."
+            : "Nao foi possivel carregar dados reais do Firebase.",
         );
       } finally {
         if (!cancelled) {
@@ -179,7 +195,8 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
       <article className="dashboard-card">
         <strong>Leitura real do Firebase</strong>
         <p style={{ margin: "8px 0 0", lineHeight: 1.6 }}>
-          Entre no painel para consultar organization, people e families com as regras atuais.
+          Entre no painel para consultar organization, people e families com as
+          regras atuais.
         </p>
       </article>
     );
@@ -202,7 +219,7 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
             gap: 8,
             marginTop: 12,
             fontSize: 14,
-            lineHeight: 1.5
+            lineHeight: 1.5,
           }}
         >
           <span>
@@ -221,24 +238,37 @@ export function LiveTenantData({ organizationId }: LiveTenantDataProps) {
             <strong>{eventCheckIns.length}</strong> check-in(s)
           </span>
           <span>
-            Transparencia: <strong>{financeReports.length}</strong> demonstrativo(s)
+            Transparencia: <strong>{financeReports.length}</strong>{" "}
+            demonstrativo(s)
           </span>
           {tenantRuntime.settings ? (
             <span>
-              Plano: <strong>{getPlanTierLabel(tenantRuntime.settings.subscription.planTier)}</strong> ·
-              Marca: <strong>{getBrandModeLabel(tenantRuntime.settings.branding.brandMode)}</strong> ·
-              Modulos ativos: <strong>{getEnabledModuleCount(tenantRuntime.settings.features.modules)}</strong>
+              Plano:{" "}
+              <strong>
+                {getPlanTierLabel(tenantRuntime.settings.subscription.planTier)}
+              </strong>{" "}
+              · Marca:{" "}
+              <strong>
+                {getBrandModeLabel(tenantRuntime.settings.branding.brandMode)}
+              </strong>{" "}
+              · Modulos ativos:{" "}
+              <strong>
+                {getEnabledModuleCount(tenantRuntime.settings.features.modules)}
+              </strong>
             </span>
           ) : null}
         </div>
       ) : null}
       {tenantReady && !tenantRuntime ? (
         <p style={{ margin: "10px 0 0", color: "#6941c6", lineHeight: 1.6 }}>
-          O tenant autenticado ainda nao devolveu branding e assinatura completos.
+          O tenant autenticado ainda nao devolveu branding e assinatura
+          completos.
         </p>
       ) : null}
       {error ? (
-        <p style={{ margin: "10px 0 0", color: "#b42318", lineHeight: 1.6 }}>{error}</p>
+        <p style={{ margin: "10px 0 0", color: "#b42318", lineHeight: 1.6 }}>
+          {error}
+        </p>
       ) : null}
     </article>
   );

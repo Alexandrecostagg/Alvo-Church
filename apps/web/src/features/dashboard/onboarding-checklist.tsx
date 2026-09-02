@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle, ChevronRight, Rocket, Smartphone, X } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  ChevronRight,
+  Rocket,
+  Smartphone,
+  X,
+} from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
 
 // Primeiros passos de uma igreja recém-cadastrada. Cada passo é medido em
@@ -67,27 +74,32 @@ export function OnboardingChecklist({
       done: visitorsCount > 0,
     },
     ...(hasFeature("groups")
-      ? [{
-          id: "groups",
-          title: "Crie sua primeira célula",
-          detail: "Vincule membros e acompanhe os encontros.",
-          href: "/groups",
-          done: groupsCount > 0,
-        }]
+      ? [
+          {
+            id: "groups",
+            title: "Crie sua primeira célula",
+            detail: "Vincule membros e acompanhe os encontros.",
+            href: "/groups",
+            done: groupsCount > 0,
+          },
+        ]
       : []),
     ...(hasFeature("events")
-      ? [{
-          id: "events",
-          title: "Agende o próximo culto ou evento",
-          detail: "A agenda aparece automaticamente no app dos membros.",
-          href: "/events",
-          done: eventsCount > 0,
-        }]
+      ? [
+          {
+            id: "events",
+            title: "Agende o próximo culto ou evento",
+            detail: "A agenda aparece automaticamente no app dos membros.",
+            href: "/events",
+            done: eventsCount > 0,
+          },
+        ]
       : []),
     {
       id: "app",
       title: "Conheça o app do membro",
-      detail: "É por ele que sua igreja vê agenda, células e pedidos de oração.",
+      detail:
+        "É por ele que sua igreja vê agenda, células e pedidos de oração.",
       href: "/me",
       done: appStepDone,
     },
@@ -107,47 +119,82 @@ export function OnboardingChecklist({
   }
 
   return (
-    <section style={{
-      background: "var(--color-background-primary, #fff)",
-      border: "0.5px solid var(--color-border-tertiary, #e5e7eb)",
-      borderRadius: 16,
-      padding: "1.25rem 1.5rem",
-      marginBottom: "1.5rem",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+    <section
+      style={{
+        background: "var(--color-background-primary, #fff)",
+        border: "0.5px solid var(--color-border-tertiary, #e5e7eb)",
+        borderRadius: 16,
+        padding: "1.25rem 1.5rem",
+        marginBottom: "1.5rem",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 4,
+        }}
+      >
         <Rocket size={18} style={{ color: "#7c3aed" }} />
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Primeiros passos da sua igreja</h2>
-        <span style={{
-          fontSize: 12, color: "var(--color-text-secondary, #6b7280)",
-          background: "var(--color-background-secondary, #f3f4f6)",
-          padding: "2px 10px", borderRadius: 999,
-        }}>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+          Primeiros passos da sua igreja
+        </h2>
+        <span
+          style={{
+            fontSize: 12,
+            color: "var(--color-text-secondary, #6b7280)",
+            background: "var(--color-background-secondary, #f3f4f6)",
+            padding: "2px 10px",
+            borderRadius: 999,
+          }}
+        >
           {doneCount} de {steps.length}
         </span>
         <button
           onClick={dismiss}
           title="Ocultar primeiros passos"
           style={{
-            marginLeft: "auto", background: "none", border: "none", cursor: "pointer",
-            color: "var(--color-text-tertiary, #9ca3af)", padding: 4, display: "flex",
+            marginLeft: "auto",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-tertiary, #9ca3af)",
+            padding: 4,
+            display: "flex",
           }}
         >
           <X size={16} />
         </button>
       </div>
-      <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--color-text-secondary, #6b7280)" }}>
+      <p
+        style={{
+          margin: "0 0 14px",
+          fontSize: 13,
+          color: "var(--color-text-secondary, #6b7280)",
+        }}
+      >
         Complete estes passos e sua igreja já estará operando na plataforma.
       </p>
 
-      <div style={{
-        height: 6, borderRadius: 999, background: "var(--color-background-secondary, #f3f4f6)",
-        marginBottom: 16, overflow: "hidden",
-      }}>
-        <div style={{
-          height: "100%", borderRadius: 999, background: "#7c3aed",
-          width: `${Math.round((doneCount / steps.length) * 100)}%`,
-          transition: "width 0.4s ease",
-        }} />
+      <div
+        style={{
+          height: 6,
+          borderRadius: 999,
+          background: "var(--color-background-secondary, #f3f4f6)",
+          marginBottom: 16,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            borderRadius: 999,
+            background: "#7c3aed",
+            width: `${Math.round((doneCount / steps.length) * 100)}%`,
+            transition: "width 0.4s ease",
+          }}
+        />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -157,32 +204,68 @@ export function OnboardingChecklist({
             href={step.href}
             onClick={step.id === "app" ? markAppStep : undefined}
             style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "0.6rem 0.75rem", borderRadius: 10, textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "0.6rem 0.75rem",
+              borderRadius: 10,
+              textDecoration: "none",
               color: "inherit",
               opacity: step.done ? 0.55 : 1,
-              background: step.done ? "transparent" : "var(--color-background-secondary, #f9fafb)",
+              background: step.done
+                ? "transparent"
+                : "var(--color-background-secondary, #f9fafb)",
             }}
           >
-            {step.done
-              ? <CheckCircle2 size={19} style={{ color: "#1b8a4a", flexShrink: 0 }} />
-              : step.id === "app"
-                ? <Smartphone size={19} style={{ color: "#7c3aed", flexShrink: 0 }} />
-                : <Circle size={19} style={{ color: "var(--color-text-tertiary, #9ca3af)", flexShrink: 0 }} />}
+            {step.done ? (
+              <CheckCircle2
+                size={19}
+                style={{ color: "#1b8a4a", flexShrink: 0 }}
+              />
+            ) : step.id === "app" ? (
+              <Smartphone
+                size={19}
+                style={{ color: "#7c3aed", flexShrink: 0 }}
+              />
+            ) : (
+              <Circle
+                size={19}
+                style={{
+                  color: "var(--color-text-tertiary, #9ca3af)",
+                  flexShrink: 0,
+                }}
+              />
+            )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: 14, fontWeight: 500,
-                textDecoration: step.done ? "line-through" : "none",
-              }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  textDecoration: step.done ? "line-through" : "none",
+                }}
+              >
                 {step.title}
               </div>
               {!step.done && (
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary, #6b7280)" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text-secondary, #6b7280)",
+                  }}
+                >
                   {step.detail}
                 </div>
               )}
             </div>
-            {!step.done && <ChevronRight size={16} style={{ color: "var(--color-text-tertiary, #9ca3af)", flexShrink: 0 }} />}
+            {!step.done && (
+              <ChevronRight
+                size={16}
+                style={{
+                  color: "var(--color-text-tertiary, #9ca3af)",
+                  flexShrink: 0,
+                }}
+              />
+            )}
           </Link>
         ))}
       </div>

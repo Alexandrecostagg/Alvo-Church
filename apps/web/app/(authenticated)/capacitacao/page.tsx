@@ -6,8 +6,11 @@ import dynamic from "next/dynamic";
 // igreja independente do plano — por isso NÃO fica atrás do ModuleGuard/PlanGuard.
 // O acesso ao conteúdo é gated por entitlement (compra), não por plano.
 const CapacitacaoStoreView = dynamic(
-  () => import("../../../src/features/capacitacao/capacitacao-store-view").then((mod) => mod.CapacitacaoStoreView),
-  { ssr: false }
+  () =>
+    import("../../../src/features/capacitacao/capacitacao-store-view").then(
+      (mod) => mod.CapacitacaoStoreView,
+    ),
+  { ssr: false },
 );
 
 export default function Page() {

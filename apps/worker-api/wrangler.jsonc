@@ -4,17 +4,17 @@
   "compatibility_date": "2026-03-17",
   "vars": {
     "PUBLIC_BRAND_BASE_URL": "https://assets.alvochurch.app",
-    "FIREBASE_PROJECT_ID": "alvo-church"
+    "FIREBASE_PROJECT_ID": "alvo-church",
   },
   // Cron do NetworkSnapshot diário — 06:00 UTC = 03:00 em America/Belem.
   // Requer o secret GOOGLE_SERVICE_ACCOUNT_JSON (wrangler secret put).
   "triggers": {
-    "crons": ["0 6 * * *"]
+    "crons": ["0 6 * * *"],
   },
   "r2_buckets": [
     {
       "binding": "BRAND_ASSETS_BUCKET",
-      "bucket_name": "alvo-brand-assets"
-    }
-  ]
+      "bucket_name": "alvo-brand-assets",
+    },
+  ],
 }

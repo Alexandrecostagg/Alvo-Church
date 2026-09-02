@@ -9,7 +9,7 @@ import { safeStringCompare } from "../../_lib/safe-compare";
 
 const VALUE_TO_PLAN: Record<number, string> = {
   79: "comunidade",
-  159: "pastoral"
+  159: "pastoral",
 };
 
 const CONFIRMED_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
@@ -17,7 +17,11 @@ const CONFIRMED_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
 // plano na hora, só quando o prazo estoura (calculado em resolveBillingStatus,
 // packages/firebase/src/plans.ts) ou quando a assinatura é de fato cancelada.
 const OVERDUE_EVENTS = new Set(["PAYMENT_OVERDUE"]);
-const CANCELLED_EVENTS = new Set(["SUBSCRIPTION_DELETED", "PAYMENT_DELETED", "PAYMENT_REFUNDED"]);
+const CANCELLED_EVENTS = new Set([
+  "SUBSCRIPTION_DELETED",
+  "PAYMENT_DELETED",
+  "PAYMENT_REFUNDED",
+]);
 
 interface AsaasWebhookPayload {
   event: string;
@@ -33,8 +37,15 @@ interface AsaasWebhookPayload {
 export async function POST(req: NextRequest) {
   const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
   const receivedToken = req.headers.get("asaas-access-token");
-  if (!expectedToken || !receivedToken || !safeStringCompare(expectedToken, receivedToken)) {
-    return NextResponse.json({ error: "Token de webhook inválido" }, { status: 401 });
+  if (
+    !expectedToken ||
+    !receivedToken ||
+    !safeStringCompare(expectedToken, receivedToken)
+  ) {
+    return NextResponse.json(
+      { error: "Token de webhook inválido" },
+      { status: 401 },
+    );
   }
 
   let payload: AsaasWebhookPayload;
@@ -64,14 +75,14 @@ export async function POST(req: NextRequest) {
           status: "active",
           purchasedAt: new Date().toISOString(),
           asaasPaymentId: payload.payment?.id ?? "",
-          asaasStatus: payload.payment?.status ?? payload.event
+          asaasStatus: payload.payment?.status ?? payload.event,
         });
       } else if (CANCELLED_EVENTS.has(payload.event)) {
         // Estorno/cancelamento: revoga (flip de status — não dá pra deletar
         // via service account patch, e manter o doc preserva o histórico).
         await adminPatchDocument(entPath, {
           status: "revoked",
-          asaasStatus: payload.payment?.status ?? payload.event
+          asaasStatus: payload.payment?.status ?? payload.event,
         });
       }
       return NextResponse.json({ ok: true, program: true });
@@ -93,26 +104,30 @@ export async function POST(req: NextRequest) {
 
   try {
     if (CONFIRMED_EVENTS.has(payload.event)) {
-      const plan = payload.payment?.value ? VALUE_TO_PLAN[payload.payment.value] : undefined;
+      const plan = payload.payment?.value
+        ? VALUE_TO_PLAN[payload.payment.value]
+        : undefined;
       await adminPatchDocument(docPath, {
         ...(plan ? { plan } : {}),
         billingStatus: "active",
         overdueSince: null,
         asaasStatus: payload.payment?.status ?? payload.event,
-        ...(payload.payment?.subscription ? { asaasSubscriptionId: payload.payment.subscription } : {})
+        ...(payload.payment?.subscription
+          ? { asaasSubscriptionId: payload.payment.subscription }
+          : {}),
       });
     } else if (OVERDUE_EVENTS.has(payload.event)) {
       await adminPatchDocument(docPath, {
         billingStatus: "overdue",
         overdueSince: new Date().toISOString(),
-        asaasStatus: payload.payment?.status ?? payload.event
+        asaasStatus: payload.payment?.status ?? payload.event,
       });
     } else if (CANCELLED_EVENTS.has(payload.event)) {
       await adminPatchDocument(docPath, {
         plan: "free",
         billingStatus: "active",
         overdueSince: null,
-        asaasStatus: payload.payment?.status ?? payload.event
+        asaasStatus: payload.payment?.status ?? payload.event,
       });
     }
 

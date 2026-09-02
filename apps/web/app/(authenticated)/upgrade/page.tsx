@@ -31,14 +31,21 @@ function UpgradeContent() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={iconWrapStyle}>
-          <Lock size={32} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
+          <Lock
+            size={32}
+            strokeWidth={1.8}
+            style={{
+              color: "var(--alvo-accent-dark, var(--esdras-primary-dark))",
+            }}
+          />
         </div>
 
         <h1 style={titleStyle}>Módulo não incluído no seu plano</h1>
 
         <p style={descStyle}>
-          O recurso <strong>{moduleLabel}</strong> não está ativo na assinatura atual da sua
-          organização. Fale com o administrador para habilitar este módulo.
+          O recurso <strong>{moduleLabel}</strong> não está ativo na assinatura
+          atual da sua organização. Fale com o administrador para habilitar este
+          módulo.
         </p>
 
         <div style={actionsStyle}>

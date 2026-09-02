@@ -13,7 +13,7 @@ import {
   Palette,
   ShieldCheck,
   Sparkles,
-  UsersRound
+  UsersRound,
 } from "lucide-react";
 import {
   ensureTenantUserAccess,
@@ -23,34 +23,74 @@ import {
   saveOrganizationFeaturesSettings,
   saveOrganizationProfile,
   saveOrganizationSubscriptionSettings,
-  setOrgPlan
+  setOrgPlan,
 } from "@alvo/firebase";
 import type {
   Organization,
   OrganizationBrandingSettings,
   OrganizationFeaturesSettings,
-  OrganizationSubscriptionSettings
+  OrganizationSubscriptionSettings,
 } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 
 const moduleOptions = [
-  { id: "visitors", label: "Recepção", desc: "Visitantes e boas-vindas", source: "plan" },
-  { id: "finance", label: "Finanças", desc: "Gestão e transparência", source: "addon" },
-  { id: "children", label: "Kids Security", desc: "Segurança infantil", source: "manual" },
+  {
+    id: "visitors",
+    label: "Recepção",
+    desc: "Visitantes e boas-vindas",
+    source: "plan",
+  },
+  {
+    id: "finance",
+    label: "Finanças",
+    desc: "Gestão e transparência",
+    source: "addon",
+  },
+  {
+    id: "children",
+    label: "Kids Security",
+    desc: "Segurança infantil",
+    source: "manual",
+  },
   { id: "tribes", label: "Tribos", desc: "Identidade e dons", source: "plan" },
-  { id: "journeys", label: "Jornadas", desc: "Discipulado e integração", source: "plan" },
-  { id: "ai", label: "Cuidado Pastoral", desc: "Insights e sinais", source: "trial" },
-  { id: "events", label: "Eventos", desc: "Check-in e inscrições", source: "plan" },
+  {
+    id: "journeys",
+    label: "Jornadas",
+    desc: "Discipulado e integração",
+    source: "plan",
+  },
+  {
+    id: "ai",
+    label: "Cuidado Pastoral",
+    desc: "Insights e sinais",
+    source: "trial",
+  },
+  {
+    id: "events",
+    label: "Eventos",
+    desc: "Check-in e inscrições",
+    source: "plan",
+  },
   { id: "groups", label: "Células", desc: "Pequenos grupos", source: "plan" },
-  { id: "volunteers", label: "Escalas", desc: "Serviço e voluntários", source: "addon" },
-  { id: "communication", label: "Comunicação", desc: "WhatsApp e campanhas", source: "addon" }
+  {
+    id: "volunteers",
+    label: "Escalas",
+    desc: "Serviço e voluntários",
+    source: "addon",
+  },
+  {
+    id: "communication",
+    label: "Comunicação",
+    desc: "WhatsApp e campanhas",
+    source: "addon",
+  },
 ] as const;
 
 const planDefaults = {
   base: { seats: 4, campuses: 1, aiQuota: 50 },
   growth: { seats: 8, campuses: 1, aiQuota: 100 },
   advanced: { seats: 18, campuses: 3, aiQuota: 350 },
-  enterprise: { seats: 50, campuses: 10, aiQuota: 1000 }
+  enterprise: { seats: 50, campuses: 10, aiQuota: 1000 },
 } as const;
 
 export function OrganizationNewView() {
@@ -59,8 +99,10 @@ export function OrganizationNewView() {
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [slug, setSlug] = useState("");
-  const [planTier, setPlanTier] = useState<OrganizationSubscriptionSettings["planTier"]>("growth");
-  const [brandMode, setBrandMode] = useState<OrganizationBrandingSettings["brandMode"]>("co_branded");
+  const [planTier, setPlanTier] =
+    useState<OrganizationSubscriptionSettings["planTier"]>("growth");
+  const [brandMode, setBrandMode] =
+    useState<OrganizationBrandingSettings["brandMode"]>("co_branded");
   const [primaryColor, setPrimaryColor] = useState("#06b6d4");
 
   const planConfig = planDefaults[planTier];
@@ -75,19 +117,30 @@ export function OrganizationNewView() {
     const publicName = getFormValue(form, "publicName") || displayName;
     const slug = slugify(getFormValue(form, "slug") || publicName);
     const organizationId = `org_${slug}`;
-    const organizationType = (getFormValue(form, "organizationType") || "church") as Organization["organizationType"];
-    const brandMode = (getFormValue(form, "brandMode") || "co_branded") as OrganizationBrandingSettings["brandMode"];
-    const selectedPlanTier = (getFormValue(form, "planTier") || "growth") as OrganizationSubscriptionSettings["planTier"];
-    const billingCycle = (getFormValue(form, "billingCycle") || "monthly") as OrganizationSubscriptionSettings["billingCycle"];
-    const memberRange = (getFormValue(form, "memberRange") || "101_to_300") as OrganizationSubscriptionSettings["memberRange"];
+    const organizationType = (getFormValue(form, "organizationType") ||
+      "church") as Organization["organizationType"];
+    const brandMode = (getFormValue(form, "brandMode") ||
+      "co_branded") as OrganizationBrandingSettings["brandMode"];
+    const selectedPlanTier = (getFormValue(form, "planTier") ||
+      "growth") as OrganizationSubscriptionSettings["planTier"];
+    const billingCycle = (getFormValue(form, "billingCycle") ||
+      "monthly") as OrganizationSubscriptionSettings["billingCycle"];
+    const memberRange = (getFormValue(form, "memberRange") ||
+      "101_to_300") as OrganizationSubscriptionSettings["memberRange"];
 
     if (!displayName || !slug) {
       setStatus("Informe o nome da instituicao e um slug valido.");
       return;
     }
 
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Formulario validado. Entre no Firebase para cadastrar a instituicao.");
+    if (
+      !configured ||
+      !user ||
+      !isFirebaseWebRuntimeConfigured(firebaseConfig)
+    ) {
+      setStatus(
+        "Formulario validado. Entre no Firebase para cadastrar a instituicao.",
+      );
       return;
     }
 
@@ -104,12 +157,13 @@ export function OrganizationNewView() {
       timezone: getFormValue(form, "timezone") || "America/Belem",
       locale: "pt-BR",
       countryCode: "BR",
-      organizationType
+      organizationType,
     };
     const branding: OrganizationBrandingSettings = {
       organizationId,
       brandMode,
-      publicProductName: getFormValue(form, "productName") || "Plataforma Esdras",
+      publicProductName:
+        getFormValue(form, "productName") || "Plataforma Esdras",
       publicShortName: getFormValue(form, "shortName") || "Esdras",
       primaryColor: getFormValue(form, "primaryColor") || "#06b6d4",
       secondaryColor: "#1c2433",
@@ -117,7 +171,7 @@ export function OrganizationNewView() {
       surfaceColor: "#f7f3ea",
       textColor: "#1c2433",
       showPoweredByAlvo: Boolean(form.get("showPoweredByAlvo")),
-      poweredByLabel: "by Esdras"
+      poweredByLabel: "by Esdras",
     };
     const subscription: OrganizationSubscriptionSettings = {
       organizationId,
@@ -125,14 +179,21 @@ export function OrganizationNewView() {
       planTier: selectedPlanTier,
       billingCycle,
       memberRange,
-      seatLimit: Number(getFormValue(form, "seatLimit") || planDefaults[selectedPlanTier].seats),
-      campusLimit: Number(getFormValue(form, "campusLimit") || planDefaults[selectedPlanTier].campuses),
-      aiQuota: Number(getFormValue(form, "aiQuota") || planDefaults[selectedPlanTier].aiQuota),
+      seatLimit: Number(
+        getFormValue(form, "seatLimit") || planDefaults[selectedPlanTier].seats,
+      ),
+      campusLimit: Number(
+        getFormValue(form, "campusLimit") ||
+          planDefaults[selectedPlanTier].campuses,
+      ),
+      aiQuota: Number(
+        getFormValue(form, "aiQuota") || planDefaults[selectedPlanTier].aiQuota,
+      ),
       whiteLabelEnabled: brandMode === "white_label",
       coBrandingEnabled: brandMode === "co_branded",
       multiCampusEnabled: Number(getFormValue(form, "campusLimit") || 1) > 1,
       denominationalModeEnabled: organizationType === "denomination",
-      startedAt: now
+      startedAt: now,
     };
     const features: OrganizationFeaturesSettings = {
       organizationId,
@@ -143,20 +204,32 @@ export function OrganizationNewView() {
         events: { enabled: Boolean(form.get("events")), source: "plan" },
         children: { enabled: Boolean(form.get("children")), source: "manual" },
         youth: { enabled: Boolean(form.get("youth")), source: "addon" },
-        volunteers: { enabled: Boolean(form.get("volunteers")), source: "addon" },
+        volunteers: {
+          enabled: Boolean(form.get("volunteers")),
+          source: "addon",
+        },
         tribes: { enabled: Boolean(form.get("tribes")), source: "plan" },
         journeys: { enabled: Boolean(form.get("journeys")), source: "plan" },
-        communication: { enabled: Boolean(form.get("communication")), source: "addon" },
-        marketplace: { enabled: Boolean(form.get("marketplace")), source: "addon" },
+        communication: {
+          enabled: Boolean(form.get("communication")),
+          source: "addon",
+        },
+        marketplace: {
+          enabled: Boolean(form.get("marketplace")),
+          source: "addon",
+        },
         giving: { enabled: Boolean(form.get("giving")), source: "addon" },
-        publicForms: { enabled: Boolean(form.get("publicForms")), source: "plan" },
+        publicForms: {
+          enabled: Boolean(form.get("publicForms")),
+          source: "plan",
+        },
         finance: { enabled: Boolean(form.get("finance")), source: "addon" },
         ai: {
           enabled: Boolean(form.get("ai")),
           source: "trial",
-          limits: { monthlySuggestions: subscription.aiQuota ?? 100 }
-        }
-      }
+          limits: { monthlySuggestions: subscription.aiQuota ?? 100 },
+        },
+      },
     };
 
     try {
@@ -171,7 +244,7 @@ export function OrganizationNewView() {
         organizationId,
         userId: user.uid,
         email: user.email ?? "",
-        roles: ["church_admin"]
+        roles: ["church_admin"],
       });
       await saveOrganizationBrandingSettings(firebaseConfig, branding);
       await saveOrganizationSubscriptionSettings(firebaseConfig, subscription);
@@ -179,7 +252,11 @@ export function OrganizationNewView() {
       // fetchOrgPlan/PlanGuard leem o campo `plan`, não `planTier` — sem
       // isto a organização fica presa no tier gratuito mesmo com o plano
       // pago selecionado aqui.
-      await setOrgPlan(firebaseConfig, { organizationId }, planTierToPlanId(selectedPlanTier));
+      await setOrgPlan(
+        firebaseConfig,
+        { organizationId },
+        planTierToPlanId(selectedPlanTier),
+      );
 
       setStatus(`${displayName} criada em organizations/${organizationId}.`);
       formElement.reset();
@@ -201,20 +278,27 @@ export function OrganizationNewView() {
           </Link>
           <h1 className="page-title">Nova Organização</h1>
           <p className="page-subtitle">
-            Expanda o ecossistema criando uma nova organização. Configure a identidade estratégica,
-            escolha o modelo pastoral (Tribos) e ative os módulos operacionais.
+            Expanda o ecossistema criando uma nova organização. Configure a
+            identidade estratégica, escolha o modelo pastoral (Tribos) e ative
+            os módulos operacionais.
           </p>
         </div>
         <div className="page-header-actions">
-          <span className="saas-mini-badge"><ShieldCheck size={14} /> 99.9% uptime</span>
-          <span className="saas-mini-badge"><LockKeyhole size={14} /> Multi-tenant</span>
+          <span className="saas-mini-badge">
+            <ShieldCheck size={14} /> 99.9% uptime
+          </span>
+          <span className="saas-mini-badge">
+            <LockKeyhole size={14} /> Multi-tenant
+          </span>
         </div>
       </header>
 
       <form className="onboarding-form" onSubmit={handleSubmit}>
         <div className="onboarding-sections">
           <fieldset className="premium-fieldset">
-            <legend><Building2 size={22} /> Identidade & Estratégia</legend>
+            <legend>
+              <Building2 size={22} /> Identidade & Estratégia
+            </legend>
             <div className="form-row">
               <label>
                 Nome da Igreja/Unidade
@@ -244,7 +328,11 @@ export function OrganizationNewView() {
             <div className="form-row">
               <label>
                 Nome público
-                <input name="publicName" placeholder="Esdras Sul" defaultValue={displayName} />
+                <input
+                  name="publicName"
+                  placeholder="Esdras Sul"
+                  defaultValue={displayName}
+                />
               </label>
               <label>
                 Razão social
@@ -264,8 +352,12 @@ export function OrganizationNewView() {
               <label>
                 Fuso horário
                 <select name="timezone" defaultValue="America/Belem">
-                  <option value="America/Belem">Belém / Brasília sem horário de verão</option>
-                  <option value="America/Sao_Paulo">São Paulo / Brasília</option>
+                  <option value="America/Belem">
+                    Belém / Brasília sem horário de verão
+                  </option>
+                  <option value="America/Sao_Paulo">
+                    São Paulo / Brasília
+                  </option>
                   <option value="America/Manaus">Manaus</option>
                   <option value="America/Fortaleza">Fortaleza</option>
                 </select>
@@ -274,11 +366,15 @@ export function OrganizationNewView() {
             <label>
               Modelo de Identidade Pastoral
               <select name="identityModel" defaultValue="tribes_12">
-                <option value="tribes_12">Modelo das 12 Tribos (Integrado)</option>
+                <option value="tribes_12">
+                  Modelo das 12 Tribos (Integrado)
+                </option>
                 <option value="custom">Ministérios Tradicionais</option>
                 <option value="cells_only">Células (G12/MDS)</option>
               </select>
-              <p className="field-hint">Isso afeta como os membros são classificados e escalados.</p>
+              <p className="field-hint">
+                Isso afeta como os membros são classificados e escalados.
+              </p>
             </label>
             <div className="tenant-preview">
               <Globe2 size={18} />
@@ -288,30 +384,39 @@ export function OrganizationNewView() {
           </fieldset>
 
           <fieldset className="premium-fieldset">
-            <legend><Layers3 size={22} /> Módulos Ativos</legend>
+            <legend>
+              <Layers3 size={22} /> Módulos Ativos
+            </legend>
             <div className="modules-grid-selection">
-               {moduleOptions.map(mod => (
-                 <label className="checkbox-tile" key={mod.id}>
-                    <input type="checkbox" name={mod.id} defaultChecked />
-                    <div className="tile-content">
-                       <strong>{mod.label}</strong>
-                       <span>{mod.desc}</span>
-                       <small>{mod.source}</small>
-                    </div>
-                 </label>
-               ))}
+              {moduleOptions.map((mod) => (
+                <label className="checkbox-tile" key={mod.id}>
+                  <input type="checkbox" name={mod.id} defaultChecked />
+                  <div className="tile-content">
+                    <strong>{mod.label}</strong>
+                    <span>{mod.desc}</span>
+                    <small>{mod.source}</small>
+                  </div>
+                </label>
+              ))}
             </div>
           </fieldset>
 
           <fieldset className="premium-fieldset">
-            <legend><Landmark size={22} /> Plano & Capacidade</legend>
+            <legend>
+              <Landmark size={22} /> Plano & Capacidade
+            </legend>
             <div className="form-row">
               <label>
                 Plano
                 <select
                   name="planTier"
                   value={planTier}
-                  onChange={(event) => setPlanTier(event.target.value as OrganizationSubscriptionSettings["planTier"])}
+                  onChange={(event) =>
+                    setPlanTier(
+                      event.target
+                        .value as OrganizationSubscriptionSettings["planTier"],
+                    )
+                  }
                 >
                   <option value="base">Base</option>
                   <option value="growth">Growth</option>
@@ -340,22 +445,45 @@ export function OrganizationNewView() {
               </label>
               <label>
                 Usuários internos
-                <input name="seatLimit" type="number" min="1" value={planConfig.seats} readOnly />
+                <input
+                  name="seatLimit"
+                  type="number"
+                  min="1"
+                  value={planConfig.seats}
+                  readOnly
+                />
               </label>
               <label>
                 Campi/unidades
-                <input name="campusLimit" type="number" min="1" value={planConfig.campuses} readOnly />
+                <input
+                  name="campusLimit"
+                  type="number"
+                  min="1"
+                  value={planConfig.campuses}
+                  readOnly
+                />
               </label>
             </div>
             <label>
               Cota mensal de IA
-              <input name="aiQuota" type="number" min="0" value={planConfig.aiQuota} readOnly />
-              <p className="field-hint">A cota alimenta os limites iniciais do Cuidado Pastoral para esse tenant.</p>
+              <input
+                name="aiQuota"
+                type="number"
+                min="0"
+                value={planConfig.aiQuota}
+                readOnly
+              />
+              <p className="field-hint">
+                A cota alimenta os limites iniciais do Cuidado Pastoral para
+                esse tenant.
+              </p>
             </label>
           </fieldset>
 
           <fieldset className="premium-fieldset">
-            <legend><Palette size={22} /> Branding & White-label</legend>
+            <legend>
+              <Palette size={22} /> Branding & White-label
+            </legend>
             <div className="form-row">
               <label>
                 Nome do Produto
@@ -381,7 +509,12 @@ export function OrganizationNewView() {
                 <select
                   name="brandMode"
                   value={brandMode}
-                  onChange={(event) => setBrandMode(event.target.value as OrganizationBrandingSettings["brandMode"])}
+                  onChange={(event) =>
+                    setBrandMode(
+                      event.target
+                        .value as OrganizationBrandingSettings["brandMode"],
+                    )
+                  }
                 >
                   <option value="alvo_managed">Marca Esdras Standard</option>
                   <option value="co_branded">Co-branded (Recomendado)</option>
@@ -393,48 +526,170 @@ export function OrganizationNewView() {
               <input name="showPoweredByAlvo" type="checkbox" defaultChecked />
               <span>Exibir selo “by Esdras” no rodapé público</span>
             </label>
-            <div className="brand-preview" style={{ "--preview-color": primaryColor } as CSSProperties}>
+            <div
+              className="brand-preview"
+              style={{ "--preview-color": primaryColor } as CSSProperties}
+            >
               <Sparkles size={18} />
-              <span>{brandMode === "white_label" ? "White-label premium" : brandMode === "co_branded" ? "Co-branded recomendado" : "Marca Esdras standard"}</span>
+              <span>
+                {brandMode === "white_label"
+                  ? "White-label premium"
+                  : brandMode === "co_branded"
+                    ? "Co-branded recomendado"
+                    : "Marca Esdras standard"}
+              </span>
             </div>
           </fieldset>
         </div>
 
         <div className="form-actions-saas">
-           <button type="submit" className="primary-button giant antigravity-float" disabled={isSaving}>
-             {isSaving ? "Provisionando..." : "Provisionar Nova Organização"}
-           </button>
-           {status && (
+          <button
+            type="submit"
+            className="primary-button giant antigravity-float"
+            disabled={isSaving}
+          >
+            {isSaving ? "Provisionando..." : "Provisionar Nova Organização"}
+          </button>
+          {status && (
             <p className="status-message-saas">
               <CheckCircle2 size={18} />
               {status}
             </p>
-           )}
+          )}
         </div>
 
         <style jsx>{`
-          .saas-mini-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #475569; background: rgba(255,255,255,0.94); padding: 6px 12px; border-radius: 100px; border: 1px solid rgba(15,23,42,0.10); white-space: nowrap; }
-          .saas-mini-badge svg { color: #16a34a; flex: 0 0 auto; }
+          .saas-mini-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            background: rgba(255, 255, 255, 0.94);
+            padding: 6px 12px;
+            border-radius: 100px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            white-space: nowrap;
+          }
+          .saas-mini-badge svg {
+            color: #16a34a;
+            flex: 0 0 auto;
+          }
 
-          .premium-fieldset { border: 1px solid rgba(15,23,42,0.10); background: rgba(255,255,255,0.96); padding: 1.5rem; border-radius: 14px; margin-bottom: 20px; }
-          .premium-fieldset legend { display: inline-flex; align-items: center; gap: 10px; font-weight: 950; font-size: 1.35rem; margin-bottom: 1.5rem; letter-spacing: 0; color: #0891b2; background: transparent; padding: 0; }
-          .premium-fieldset legend svg { color: #ea580c; }
-          .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 18px; }
-          .form-row.three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-          .field-hint { font-size: 0.8125rem; color: #64748b; margin: 0.5rem 0 0; }
-          label { color: #111827; font-weight: 850; }
-          input, select { width: 100%; min-height: 46px; margin-top: 8px; padding: 0 14px; border: 1px solid rgba(15,23,42,0.14); border-radius: 10px; background: #ffffff; color: #111827; font-size: 15px; font-weight: 700; outline: none; }
-          input:focus, select:focus { border-color: #0891b2; box-shadow: 0 0 0 4px rgba(8,145,178,0.12); }
-          input[readonly] { background: #f8fafc; color: #475569; }
+          .premium-fieldset {
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            background: rgba(255, 255, 255, 0.96);
+            padding: 1.5rem;
+            border-radius: 14px;
+            margin-bottom: 20px;
+          }
+          .premium-fieldset legend {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 950;
+            font-size: 1.35rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0;
+            color: #0891b2;
+            background: transparent;
+            padding: 0;
+          }
+          .premium-fieldset legend svg {
+            color: #ea580c;
+          }
+          .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+          }
+          .form-row.three-columns {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+          .field-hint {
+            font-size: 0.8125rem;
+            color: #64748b;
+            margin: 0.5rem 0 0;
+          }
+          label {
+            color: #111827;
+            font-weight: 850;
+          }
+          input,
+          select {
+            width: 100%;
+            min-height: 46px;
+            margin-top: 8px;
+            padding: 0 14px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 10px;
+            background: #ffffff;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            outline: none;
+          }
+          input:focus,
+          select:focus {
+            border-color: #0891b2;
+            box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.12);
+          }
+          input[readonly] {
+            background: #f8fafc;
+            color: #475569;
+          }
 
-          .modules-grid-selection { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-          .checkbox-tile { position: relative; cursor: pointer; display: block; }
-          .checkbox-tile input { position: absolute; opacity: 0; }
-          .tile-content { min-height: 112px; border: 1px solid rgba(15,23,42,0.12); padding: 1.2rem; border-radius: 14px; transition: all 0.2s ease; background: #f8fafc; }
-          .checkbox-tile input:checked + .tile-content { border-color: #0891b2; background: rgba(8,145,178,0.08); transform: translateY(-1px); }
-          .tile-content strong { display: block; font-size: 1rem; color: #111827; }
-          .tile-content span { display: block; margin-top: 4px; font-size: 0.8125rem; color: #64748b; }
-          .tile-content small { display: inline-flex; margin-top: 12px; padding: 3px 8px; border-radius: 999px; background: #ffffff; color: #0891b2; font-size: 0.68rem; font-weight: 900; text-transform: uppercase; }
+          .modules-grid-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 14px;
+          }
+          .checkbox-tile {
+            position: relative;
+            cursor: pointer;
+            display: block;
+          }
+          .checkbox-tile input {
+            position: absolute;
+            opacity: 0;
+          }
+          .tile-content {
+            min-height: 112px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            padding: 1.2rem;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+          }
+          .checkbox-tile input:checked + .tile-content {
+            border-color: #0891b2;
+            background: rgba(8, 145, 178, 0.08);
+            transform: translateY(-1px);
+          }
+          .tile-content strong {
+            display: block;
+            font-size: 1rem;
+            color: #111827;
+          }
+          .tile-content span {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.8125rem;
+            color: #64748b;
+          }
+          .tile-content small {
+            display: inline-flex;
+            margin-top: 12px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #0891b2;
+            font-size: 0.68rem;
+            font-weight: 900;
+            text-transform: uppercase;
+          }
 
           .tenant-preview,
           .brand-preview,
@@ -447,27 +702,82 @@ export function OrganizationNewView() {
             border-radius: 12px;
             background: #f8fafc;
             color: #475569;
-            border: 1px solid rgba(15,23,42,0.08);
+            border: 1px solid rgba(15, 23, 42, 0.08);
           }
 
-          .tenant-preview strong { color: #111827; overflow-wrap: anywhere; }
+          .tenant-preview strong {
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
           .tenant-preview svg,
-          .brand-preview svg { color: #0891b2; flex: 0 0 auto; }
-          .brand-preview { border-color: color-mix(in srgb, var(--preview-color) 35%, rgba(15,23,42,0.10)); }
-          .brand-preview span { color: #111827; font-weight: 850; }
-          .org-check-row input { width: 18px; min-height: 18px; margin: 0; padding: 0; }
+          .brand-preview svg {
+            color: #0891b2;
+            flex: 0 0 auto;
+          }
+          .brand-preview {
+            border-color: color-mix(
+              in srgb,
+              var(--preview-color) 35%,
+              rgba(15, 23, 42, 0.1)
+            );
+          }
+          .brand-preview span {
+            color: #111827;
+            font-weight: 850;
+          }
+          .org-check-row input {
+            width: 18px;
+            min-height: 18px;
+            margin: 0;
+            padding: 0;
+          }
 
-          .form-actions-saas { text-align: center; margin-top: 2.5rem; padding-bottom: 6rem; }
-          .primary-button.giant { min-height: 64px; padding: 0 3.2rem; font-size: 1.1rem; border-radius: 16px; font-weight: 900; background: #111827; color: #ffffff; border: 0; }
-          .primary-button.giant:disabled { opacity: 0.62; cursor: progress; }
-          .status-message-saas { display: inline-flex; align-items: center; gap: 8px; margin-top: 1.25rem; padding: 12px 16px; border-radius: 12px; font-weight: 850; color: #166534; background: #ecfdf5; border: 1px solid rgba(22,163,74,0.18); font-size: 0.95rem; }
+          .form-actions-saas {
+            text-align: center;
+            margin-top: 2.5rem;
+            padding-bottom: 6rem;
+          }
+          .primary-button.giant {
+            min-height: 64px;
+            padding: 0 3.2rem;
+            font-size: 1.1rem;
+            border-radius: 16px;
+            font-weight: 900;
+            background: #111827;
+            color: #ffffff;
+            border: 0;
+          }
+          .primary-button.giant:disabled {
+            opacity: 0.62;
+            cursor: progress;
+          }
+          .status-message-saas {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1.25rem;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-weight: 850;
+            color: #166534;
+            background: #ecfdf5;
+            border: 1px solid rgba(22, 163, 74, 0.18);
+            font-size: 0.95rem;
+          }
 
           @media (max-width: 768px) {
             .form-row,
             .form-row.three-columns,
-            .modules-grid-selection { grid-template-columns: 1fr; }
-            .premium-fieldset { padding: 1.25rem; border-radius: 16px; }
-            .form-actions-saas { padding-bottom: 2rem; }
+            .modules-grid-selection {
+              grid-template-columns: 1fr;
+            }
+            .premium-fieldset {
+              padding: 1.25rem;
+              border-radius: 16px;
+            }
+            .form-actions-saas {
+              padding-bottom: 2rem;
+            }
           }
         `}</style>
       </form>

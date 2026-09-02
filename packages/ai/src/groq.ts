@@ -9,7 +9,7 @@ export type GroqModel =
 const CASCADE: GroqModel[] = [
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",
-  "openai/gpt-oss-120b"
+  "openai/gpt-oss-120b",
 ];
 
 export interface GroqMessage {
@@ -32,7 +32,10 @@ const REQUEST_TIMEOUT_MS = 20_000;
 // Erros de requisição inválida — repetir em outro modelo daria o mesmo
 // resultado, então a cascata falha rápido nesses casos.
 class GroqRequestError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
   }
 }
@@ -40,7 +43,12 @@ class GroqRequestError extends Error {
 export async function callGroq(
   apiKey: string,
   messages: GroqMessage[],
-  opts?: { model?: GroqModel; maxTokens?: number; temperature?: number; jsonMode?: boolean }
+  opts?: {
+    model?: GroqModel;
+    maxTokens?: number;
+    temperature?: number;
+    jsonMode?: boolean;
+  },
 ): Promise<GroqResponse> {
   const model = opts?.model ?? CASCADE[1];
   const body = {
@@ -48,23 +56,28 @@ export async function callGroq(
     messages,
     max_tokens: opts?.maxTokens ?? 1024,
     temperature: opts?.temperature ?? 0.7,
-    ...(opts?.jsonMode ? { response_format: { type: "json_object" as const } } : {})
+    ...(opts?.jsonMode
+      ? { response_format: { type: "json_object" as const } }
+      : {}),
   };
 
   const res = await fetch(GROQ_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!res.ok) {
     const err = await res.text();
     if (res.status === 400 || res.status === 401 || res.status === 403) {
-      throw new GroqRequestError(`Groq error ${res.status}: ${err}`, res.status);
+      throw new GroqRequestError(
+        `Groq error ${res.status}: ${err}`,
+        res.status,
+      );
     }
     throw new Error(`Groq error ${res.status}: ${err}`);
   }
@@ -80,8 +93,8 @@ export async function callGroq(
     model: data.model as GroqModel,
     usage: {
       promptTokens: data.usage.prompt_tokens,
-      completionTokens: data.usage.completion_tokens
-    }
+      completionTokens: data.usage.completion_tokens,
+    },
   };
 }
 
@@ -91,7 +104,7 @@ export async function callGroq(
 export async function callGroqWithCascade(
   apiKey: string,
   messages: GroqMessage[],
-  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean }
+  opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean },
 ): Promise<GroqResponse> {
   let lastError: Error | null = null;
 

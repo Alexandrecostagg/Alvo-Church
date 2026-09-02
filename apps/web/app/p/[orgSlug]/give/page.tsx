@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Heart, QrCode, Copy, Check, ChevronLeft, Loader2, CheckCircle, Paperclip } from "lucide-react";
+import {
+  Heart,
+  QrCode,
+  Copy,
+  Check,
+  ChevronLeft,
+  Loader2,
+  CheckCircle,
+  Paperclip,
+} from "lucide-react";
 import {
   getFirebaseFirestore,
   getOrganizationBrandingDocumentPath,
@@ -30,7 +39,12 @@ export default function PublicGivePage() {
   const orgSlug = params?.orgSlug as string;
 
   const [campaignId, setCampaignId] = useState("");
-  const [campaign, setCampaign] = useState<{ title: string; description?: string; goalAmount: number; raisedAmount: number } | null>(null);
+  const [campaign, setCampaign] = useState<{
+    title: string;
+    description?: string;
+    goalAmount: number;
+    raisedAmount: number;
+  } | null>(null);
   const [amount, setAmount] = useState("");
   const [donorName, setDonorName] = useState("");
   const [donorWhatsapp, setDonorWhatsapp] = useState("");
@@ -68,27 +82,48 @@ export default function PublicGivePage() {
         setOrgId(organizationId);
 
         // Se veio ?campanha=, carrega a campanha pra mostrar a causa + meta.
-        const cid = new URLSearchParams(window.location.search).get("campanha") ?? "";
+        const cid =
+          new URLSearchParams(window.location.search).get("campanha") ?? "";
         setCampaignId(cid);
         if (cid) {
           try {
-            const campSnap = await getDoc(doc(db, `organizations/${organizationId}/givingCampaigns/${cid}`));
+            const campSnap = await getDoc(
+              doc(db, `organizations/${organizationId}/givingCampaigns/${cid}`),
+            );
             if (campSnap.exists()) {
-              const c = campSnap.data() as { title?: string; description?: string; goalAmount?: number; raisedAmount?: number };
-              setCampaign({ title: c.title ?? "Campanha", description: c.description, goalAmount: c.goalAmount ?? 0, raisedAmount: c.raisedAmount ?? 0 });
+              const c = campSnap.data() as {
+                title?: string;
+                description?: string;
+                goalAmount?: number;
+                raisedAmount?: number;
+              };
+              setCampaign({
+                title: c.title ?? "Campanha",
+                description: c.description,
+                goalAmount: c.goalAmount ?? 0,
+                raisedAmount: c.raisedAmount ?? 0,
+              });
             }
-          } catch (e) { console.error("Falha ao carregar campanha:", e); }
+          } catch (e) {
+            console.error("Falha ao carregar campanha:", e);
+          }
         }
 
         const brandingSnap = await getDoc(
-          doc(db, getOrganizationBrandingDocumentPath({ organizationId }))
+          doc(db, getOrganizationBrandingDocumentPath({ organizationId })),
         );
         if (brandingSnap.exists()) {
-          const data = brandingSnap.data() as { pixKey?: string; pixReceiverName?: string; publicShortName?: string; givingWhatsappNumber?: string };
+          const data = brandingSnap.data() as {
+            pixKey?: string;
+            pixReceiverName?: string;
+            publicShortName?: string;
+            givingWhatsappNumber?: string;
+          };
           if (data.pixKey) setPixKey(data.pixKey);
           if (data.pixReceiverName) setPixName(data.pixReceiverName);
           else if (data.publicShortName) setPixName(data.publicShortName);
-          if (data.givingWhatsappNumber) setChurchWhatsapp(data.givingWhatsappNumber);
+          if (data.givingWhatsappNumber)
+            setChurchWhatsapp(data.givingWhatsappNumber);
         }
       } catch (e) {
         console.error("Failed to load org config:", e);
@@ -102,7 +137,7 @@ export default function PublicGivePage() {
   // Render QR Code on canvas when payload is ready
   useEffect(() => {
     if (!pixPayload || !canvasRef.current) return;
-    import("qrcode").then(QRCode => {
+    import("qrcode").then((QRCode) => {
       QRCode.toCanvas(canvasRef.current!, pixPayload, {
         width: 240,
         margin: 2,
@@ -112,7 +147,13 @@ export default function PublicGivePage() {
   }, [pixPayload]);
 
   async function generatePix() {
-    if (!amount || Number(amount) <= 0 || !donorName.trim() || !donorWhatsapp.trim()) return;
+    if (
+      !amount ||
+      Number(amount) <= 0 ||
+      !donorName.trim() ||
+      !donorWhatsapp.trim()
+    )
+      return;
     const key = pixKey || "demo@pix.esdras";
     const payload = buildPixPayload({
       key,
@@ -155,7 +196,11 @@ export default function PublicGivePage() {
       r.readAsDataURL(file);
     });
     const img = new Image();
-    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = dataUrl; });
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
     const maxW = 1000;
     const scale = Math.min(1, maxW / img.width);
     const canvas = document.createElement("canvas");
@@ -167,7 +212,10 @@ export default function PublicGivePage() {
   }
 
   async function declarePaid() {
-    if (!orgId || !intentId) { setDeclaredPaid(true); return; }
+    if (!orgId || !intentId) {
+      setDeclaredPaid(true);
+      return;
+    }
     setDeclaring(true);
     try {
       await saveGivingReceipt(buildFirebaseConfig(), {
@@ -186,7 +234,7 @@ export default function PublicGivePage() {
 
   const waHref = churchWhatsapp
     ? `https://wa.me/${churchWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
-        `Olá! Acabei de contribuir com R$ ${Number(amount).toFixed(2).replace(".", ",")} via PIX${donorName ? ` — ${donorName}` : ""}.`
+        `Olá! Acabei de contribuir com R$ ${Number(amount).toFixed(2).replace(".", ",")} via PIX${donorName ? ` — ${donorName}` : ""}.`,
       )}`
     : "";
 
@@ -197,7 +245,10 @@ export default function PublicGivePage() {
   }
 
   const numericAmount = Number(amount);
-  const canProceed = numericAmount > 0 && donorName.trim().length >= 2 && donorWhatsapp.replace(/\D/g, "").length >= 8;
+  const canProceed =
+    numericAmount > 0 &&
+    donorName.trim().length >= 2 &&
+    donorWhatsapp.replace(/\D/g, "").length >= 8;
 
   if (step === "pix") {
     return (
@@ -208,8 +259,22 @@ export default function PublicGivePage() {
           </button>
 
           <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <CheckCircle size={28} style={{ color: "#16a34a", margin: "0 auto 8px", display: "block" }} />
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1c2433" }}>
+            <CheckCircle
+              size={28}
+              style={{
+                color: "#16a34a",
+                margin: "0 auto 8px",
+                display: "block",
+              }}
+            />
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 18,
+                fontWeight: 700,
+                color: "#1c2433",
+              }}
+            >
               R$ {numericAmount.toFixed(2).replace(".", ",")}
             </h1>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
@@ -217,17 +282,43 @@ export default function PublicGivePage() {
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
             <canvas
               ref={canvasRef}
-              style={{ borderRadius: 12, border: "1px solid rgba(29,41,64,0.1)" }}
+              style={{
+                borderRadius: 12,
+                border: "1px solid rgba(29,41,64,0.1)",
+              }}
             />
             <div style={{ width: "100%", display: "grid", gap: 8 }}>
-              <p style={{ margin: 0, fontSize: 12, color: "#64748b", textAlign: "center" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  color: "#64748b",
+                  textAlign: "center",
+                }}
+              >
                 Ou copie a chave PIX manualmente:
               </p>
               <div style={keyRowStyle}>
-                <code style={{ flex: 1, fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <code
+                  style={{
+                    flex: 1,
+                    fontSize: 12,
+                    color: "#374151",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {pixKey || "demo@pix.esdras"}
                 </code>
                 <button onClick={copyKey} style={copyBtnStyle}>
@@ -236,7 +327,15 @@ export default function PublicGivePage() {
                 </button>
               </div>
             </div>
-            <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.5 }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                color: "#9ca3af",
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
               Beneficiário: <strong>{pixName}</strong>
             </p>
 
@@ -245,31 +344,116 @@ export default function PublicGivePage() {
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "12px",
+                  borderRadius: 12,
+                  background: "#25D366",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
               >
                 Falar no WhatsApp com a igreja
               </a>
             )}
             {declaredPaid ? (
-              <div style={{ width: "100%", textAlign: "center", padding: "12px", borderRadius: 12, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-                <CheckCircle size={20} style={{ color: "#16a34a", display: "block", margin: "0 auto 4px" }} />
-                <p style={{ margin: 0, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Pagamento confirmado! Obrigado. 🙏</p>
+              <div
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "12px",
+                  borderRadius: 12,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                }}
+              >
+                <CheckCircle
+                  size={20}
+                  style={{
+                    color: "#16a34a",
+                    display: "block",
+                    margin: "0 auto 4px",
+                  }}
+                />
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: "#16a34a",
+                    fontWeight: 600,
+                  }}
+                >
+                  Pagamento confirmado! Obrigado. 🙏
+                </p>
               </div>
             ) : (
               <div style={{ width: "100%", display: "grid", gap: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", borderRadius: 10, border: "1.5px dashed rgba(29,41,64,0.2)", fontSize: 13, color: "#374151", cursor: "pointer" }}>
-                  <Paperclip size={15} /> {receiptBase64 ? "Comprovante anexado ✓" : "Anexar comprovante (opcional)"}
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onReceiptFile(f); }} />
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "10px",
+                    borderRadius: 10,
+                    border: "1.5px dashed rgba(29,41,64,0.2)",
+                    fontSize: 13,
+                    color: "#374151",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Paperclip size={15} />{" "}
+                  {receiptBase64
+                    ? "Comprovante anexado ✓"
+                    : "Anexar comprovante (opcional)"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onReceiptFile(f);
+                    }}
+                  />
                 </label>
                 <button
                   type="button"
                   onClick={declarePaid}
                   disabled={declaring}
-                  style={{ width: "100%", padding: "13px", borderRadius: 12, background: "#16a34a", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: declaring ? "default" : "pointer", opacity: declaring ? 0.6 : 1 }}
+                  style={{
+                    width: "100%",
+                    padding: "13px",
+                    borderRadius: 12,
+                    background: "#16a34a",
+                    color: "#fff",
+                    border: "none",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: declaring ? "default" : "pointer",
+                    opacity: declaring ? 0.6 : 1,
+                  }}
                 >
-                  {declaring ? "Registrando..." : `Já paguei — R$ ${numericAmount.toFixed(2).replace(".", ",")}`}
+                  {declaring
+                    ? "Registrando..."
+                    : `Já paguei — R$ ${numericAmount.toFixed(2).replace(".", ",")}`}
                 </button>
-                <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", textAlign: "center" }}>Sua contribuição já foi registrada. Confirme o pagamento pra igreja acompanhar.</p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    color: "#9ca3af",
+                    textAlign: "center",
+                  }}
+                >
+                  Sua contribuição já foi registrada. Confirme o pagamento pra
+                  igreja acompanhar.
+                </p>
               </div>
             )}
           </div>
@@ -282,12 +466,32 @@ export default function PublicGivePage() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={headerStyle}>
-          <Heart size={28} strokeWidth={1.6} style={{ color: "var(--esdras-primary-dark)", display: "block", margin: "0 auto" }} />
+          <Heart
+            size={28}
+            strokeWidth={1.6}
+            style={{
+              color: "var(--esdras-primary-dark)",
+              display: "block",
+              margin: "0 auto",
+            }}
+          />
           {campaign ? (
             <>
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#ea580c" }}>Campanha de oferta</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#ea580c",
+                }}
+              >
+                Campanha de oferta
+              </span>
               <h1 style={titleStyle}>{campaign.title}</h1>
-              {campaign.description && <p style={subtitleStyle}>{campaign.description}</p>}
+              {campaign.description && (
+                <p style={subtitleStyle}>{campaign.description}</p>
+              )}
             </>
           ) : (
             <>
@@ -299,18 +503,49 @@ export default function PublicGivePage() {
 
         {campaign && campaign.goalAmount > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-              <span style={{ color: "#16a34a", fontWeight: 700 }}>R$ {campaign.raisedAmount.toLocaleString("pt-BR")}</span>
-              <span style={{ color: "#64748b" }}>de R$ {campaign.goalAmount.toLocaleString("pt-BR")}</span>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 13,
+                marginBottom: 6,
+              }}
+            >
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                R$ {campaign.raisedAmount.toLocaleString("pt-BR")}
+              </span>
+              <span style={{ color: "#64748b" }}>
+                de R$ {campaign.goalAmount.toLocaleString("pt-BR")}
+              </span>
             </div>
-            <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-              <div style={{ width: `${Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100))}%`, height: "100%", background: "#16a34a", borderRadius: 999 }} />
+            <div
+              style={{
+                height: 8,
+                borderRadius: 999,
+                background: "#e2e8f0",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100))}%`,
+                  height: "100%",
+                  background: "#16a34a",
+                  borderRadius: 999,
+                }}
+              />
             </div>
           </div>
         )}
 
         {loadingConfig ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "32px 0",
+            }}
+          >
             <Loader2 size={24} style={{ color: "#94a3b8" }} />
           </div>
         ) : (
@@ -322,7 +557,7 @@ export default function PublicGivePage() {
                 type="text"
                 placeholder="Nome completo"
                 value={donorName}
-                onChange={e => setDonorName(e.target.value)}
+                onChange={(e) => setDonorName(e.target.value)}
               />
             </div>
 
@@ -334,18 +569,22 @@ export default function PublicGivePage() {
                 inputMode="tel"
                 placeholder="(00) 00000-0000"
                 value={donorWhatsapp}
-                onChange={e => setDonorWhatsapp(e.target.value)}
+                onChange={(e) => setDonorWhatsapp(e.target.value)}
               />
             </div>
 
             <div style={fieldStyle}>
               <label style={labelStyle}>Valor da oferta</label>
               <div style={suggestedStyle}>
-                {SUGGESTED_AMOUNTS.map(v => (
+                {SUGGESTED_AMOUNTS.map((v) => (
                   <button
                     key={v}
                     type="button"
-                    style={amount === String(v) ? { ...chipStyle, ...chipActiveStyle } : chipStyle}
+                    style={
+                      amount === String(v)
+                        ? { ...chipStyle, ...chipActiveStyle }
+                        : chipStyle
+                    }
                     onClick={() => setAmount(String(v))}
                   >
                     R$ {v}
@@ -359,14 +598,16 @@ export default function PublicGivePage() {
                 step="0.01"
                 placeholder="Outro valor (R$)"
                 value={SUGGESTED_AMOUNTS.includes(Number(amount)) ? "" : amount}
-                onChange={e => setAmount(e.target.value)}
+                onChange={(e) => setAmount(e.target.value)}
               />
             </div>
 
             <div style={pixInfoStyle}>
               <QrCode size={16} style={{ color: "#16a34a", flexShrink: 0 }} />
               <div>
-                <strong style={{ fontSize: 13, color: "#1c2433", display: "block" }}>
+                <strong
+                  style={{ fontSize: 13, color: "#1c2433", display: "block" }}
+                >
                   Pagamento via PIX
                 </strong>
                 <span style={{ fontSize: 12, color: "#64748b" }}>
@@ -377,9 +618,26 @@ export default function PublicGivePage() {
               </div>
             </div>
 
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "#64748b", cursor: "pointer" }}>
-              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
-              <span>Autorizo a igreja a entrar em contato comigo pelo WhatsApp (LGPD).</span>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                fontSize: 12,
+                color: "#64748b",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                style={{ marginTop: 2 }}
+              />
+              <span>
+                Autorizo a igreja a entrar em contato comigo pelo WhatsApp
+                (LGPD).
+              </span>
             </label>
 
             <button
@@ -398,26 +656,131 @@ export default function PublicGivePage() {
         )}
       </div>
       <style jsx global>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
       `}</style>
     </main>
   );
 }
 
-const pageStyle = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px", background: "#fdfaf6" } as const;
-const cardStyle = { maxWidth: 420, width: "100%", padding: "28px 24px", borderRadius: 20, background: "#fff", border: "1px solid rgba(29,41,64,0.1)", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" } as const;
-const headerStyle = { display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 8, marginBottom: 24, textAlign: "center" as const };
-const titleStyle = { margin: 0, fontSize: 20, fontWeight: 700, color: "#1c2433" } as const;
+const pageStyle = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "24px 16px",
+  background: "#fdfaf6",
+} as const;
+const cardStyle = {
+  maxWidth: 420,
+  width: "100%",
+  padding: "28px 24px",
+  borderRadius: 20,
+  background: "#fff",
+  border: "1px solid rgba(29,41,64,0.1)",
+  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+} as const;
+const headerStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 24,
+  textAlign: "center" as const,
+};
+const titleStyle = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 700,
+  color: "#1c2433",
+} as const;
 const subtitleStyle = { margin: 0, fontSize: 13, color: "#64748b" } as const;
 const formStyle = { display: "grid", gap: 20 } as const;
 const fieldStyle = { display: "grid", gap: 8 } as const;
 const labelStyle = { fontSize: 13, fontWeight: 600, color: "#374151" } as const;
-const suggestedStyle = { display: "flex", gap: 8, flexWrap: "wrap" as const } as const;
-const chipStyle = { padding: "8px 16px", borderRadius: 999, border: "1.5px solid rgba(29,41,64,0.18)", background: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" } as const;
-const chipActiveStyle = { background: "var(--esdras-primary-dark)", borderColor: "var(--esdras-primary-dark)", color: "#fff" } as const;
-const inputStyle = { padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(29,41,64,0.18)", fontSize: 15, width: "100%", boxSizing: "border-box" as const, outline: "none", background: "#fff" } as const;
-const pixInfoStyle = { display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0" } as const;
-const submitStyle = { padding: "14px", borderRadius: 12, background: "var(--esdras-primary-dark)", color: "#fff", border: "none", fontSize: 15, fontWeight: 600, width: "100%" } as const;
-const backBtnStyle = { display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#64748b", padding: "0 0 16px", fontWeight: 500 } as const;
-const keyRowStyle = { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid rgba(29,41,64,0.08)", overflow: "hidden" } as const;
-const copyBtnStyle = { display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(29,41,64,0.15)", background: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 } as const;
+const suggestedStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap" as const,
+} as const;
+const chipStyle = {
+  padding: "8px 16px",
+  borderRadius: 999,
+  border: "1.5px solid rgba(29,41,64,0.18)",
+  background: "#fff",
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
+} as const;
+const chipActiveStyle = {
+  background: "var(--esdras-primary-dark)",
+  borderColor: "var(--esdras-primary-dark)",
+  color: "#fff",
+} as const;
+const inputStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1.5px solid rgba(29,41,64,0.18)",
+  fontSize: 15,
+  width: "100%",
+  boxSizing: "border-box" as const,
+  outline: "none",
+  background: "#fff",
+} as const;
+const pixInfoStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  padding: "12px 14px",
+  borderRadius: 10,
+  background: "#f0fdf4",
+  border: "1px solid #bbf7d0",
+} as const;
+const submitStyle = {
+  padding: "14px",
+  borderRadius: 12,
+  background: "var(--esdras-primary-dark)",
+  color: "#fff",
+  border: "none",
+  fontSize: 15,
+  fontWeight: 600,
+  width: "100%",
+} as const;
+const backBtnStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  fontSize: 13,
+  color: "#64748b",
+  padding: "0 0 16px",
+  fontWeight: 500,
+} as const;
+const keyRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "10px 12px",
+  borderRadius: 10,
+  background: "#f8fafc",
+  border: "1px solid rgba(29,41,64,0.08)",
+  overflow: "hidden",
+} as const;
+const copyBtnStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "5px 10px",
+  borderRadius: 8,
+  border: "1px solid rgba(29,41,64,0.15)",
+  background: "#fff",
+  fontSize: 12,
+  fontWeight: 500,
+  cursor: "pointer",
+  flexShrink: 0,
+} as const;

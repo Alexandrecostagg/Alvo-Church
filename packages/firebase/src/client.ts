@@ -14,10 +14,17 @@ import {
   updateProfile,
   inMemoryPersistence,
   type Auth,
-  type User
+  type User,
 } from "firebase/auth";
-import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
-import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  type Firestore,
+} from "firebase/firestore";
+import type {
+  BrandAssetKind,
+  TenantBrandAssetUploadResponse,
+} from "@alvo/types";
 
 export interface FirebaseWebRuntimeConfig {
   apiKey: string;
@@ -38,7 +45,7 @@ const REQUIRED_FIREBASE_WEB_CONFIG_FIELDS = [
   "projectId",
   "storageBucket",
   "messagingSenderId",
-  "appId"
+  "appId",
 ] as const;
 
 let firebaseApp: FirebaseApp | null = null;
@@ -46,18 +53,20 @@ let firebaseAuth: Auth | null = null;
 let firebaseMobileAuth: Auth | null = null;
 let firebaseFirestore: Firestore | null = null;
 
-export function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
+export function isFirebaseWebRuntimeConfigured(
+  config: FirebaseWebRuntimeConfig,
+) {
   return getMissingFirebaseWebRuntimeConfigFields(config).length === 0;
 }
 
 export function getMissingFirebaseWebRuntimeConfigFields(
-  config: FirebaseWebRuntimeConfig
+  config: FirebaseWebRuntimeConfig,
 ) {
   return REQUIRED_FIREBASE_WEB_CONFIG_FIELDS.filter((field) => !config[field]);
 }
 
 export function createFirebaseWebRuntimeConfigFromEnv(
-  env: Record<string, string | undefined>
+  env: Record<string, string | undefined>,
 ): FirebaseWebRuntimeConfig {
   return {
     apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
@@ -66,13 +75,13 @@ export function createFirebaseWebRuntimeConfigFromEnv(
     storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
     messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
+    useEmulator: env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true",
   };
 }
 
 export function createFirebaseRuntimeConfigFromEnv(
   env: Record<string, string | undefined>,
-  prefix: "NEXT_PUBLIC" | "EXPO_PUBLIC"
+  prefix: "NEXT_PUBLIC" | "EXPO_PUBLIC",
 ): FirebaseRuntimeConfig {
   return {
     apiKey: env[`${prefix}_FIREBASE_API_KEY`] ?? "",
@@ -81,7 +90,7 @@ export function createFirebaseRuntimeConfigFromEnv(
     storageBucket: env[`${prefix}_FIREBASE_STORAGE_BUCKET`] ?? "",
     messagingSenderId: env[`${prefix}_FIREBASE_MESSAGING_SENDER_ID`],
     appId: env[`${prefix}_FIREBASE_APP_ID`],
-    useEmulator: env[`${prefix}_USE_FIREBASE_EMULATOR`] === "true"
+    useEmulator: env[`${prefix}_USE_FIREBASE_EMULATOR`] === "true",
   };
 }
 
@@ -100,9 +109,12 @@ export function getFirebaseWebAuth(config: FirebaseWebRuntimeConfig) {
       getApps().length > 0
         ? getAuth(app)
         : initializeAuth(app, {
-            persistence: typeof window !== "undefined" ? browserLocalPersistence : inMemoryPersistence
+            persistence:
+              typeof window !== "undefined"
+                ? browserLocalPersistence
+                : inMemoryPersistence,
           });
-          
+
     if (config.useEmulator) {
       connectAuthEmulator(firebaseAuth, "http://localhost:9099");
     }
@@ -115,7 +127,7 @@ export function getFirebaseFirestore(config: FirebaseWebRuntimeConfig) {
   if (!firebaseFirestore) {
     const app = getFirebaseWebApp(config);
     firebaseFirestore = getFirestore(app);
-    
+
     if (config.useEmulator) {
       connectFirestoreEmulator(firebaseFirestore, "localhost", 8080);
     }
@@ -126,7 +138,7 @@ export function getFirebaseFirestore(config: FirebaseWebRuntimeConfig) {
 
 export function subscribeToFirebaseAuthState(
   config: FirebaseWebRuntimeConfig,
-  callback: (user: FirebaseAuthUser | null) => void
+  callback: (user: FirebaseAuthUser | null) => void,
 ) {
   const auth = getFirebaseWebAuth(config);
   return onAuthStateChanged(auth, callback);
@@ -146,7 +158,10 @@ export async function signOutFromFirebase(config: FirebaseWebRuntimeConfig) {
   await signOut(auth);
 }
 
-export async function sendPasswordResetEmailWeb(config: FirebaseWebRuntimeConfig, email: string) {
+export async function sendPasswordResetEmailWeb(
+  config: FirebaseWebRuntimeConfig,
+  email: string,
+) {
   const auth = getFirebaseWebAuth(config);
   await sendPasswordResetEmail(auth, email);
 }
@@ -158,7 +173,11 @@ export async function registerWithFirebaseEmailPassword(params: {
   displayName: string;
 }) {
   const auth = getFirebaseWebAuth(params.config);
-  const credential = await createUserWithEmailAndPassword(auth, params.email, params.password);
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    params.email,
+    params.password,
+  );
   await updateProfile(credential.user, { displayName: params.displayName });
   return credential;
 }
@@ -174,7 +193,7 @@ export function getFirebaseMobileAuth(config: FirebaseRuntimeConfig) {
 
 export function subscribeToFirebaseMobileAuthState(
   config: FirebaseRuntimeConfig,
-  callback: (user: FirebaseAuthUser | null) => void
+  callback: (user: FirebaseAuthUser | null) => void,
 ) {
   const auth = getFirebaseMobileAuth(config);
   return onAuthStateChanged(auth, callback);
@@ -194,7 +213,10 @@ export async function signOutFromFirebaseMobile(config: FirebaseRuntimeConfig) {
   await signOut(auth);
 }
 
-export async function sendPasswordResetEmailMobile(config: FirebaseRuntimeConfig, email: string) {
+export async function sendPasswordResetEmailMobile(
+  config: FirebaseRuntimeConfig,
+  email: string,
+) {
   const auth = getFirebaseMobileAuth(config);
   await sendPasswordResetEmail(auth, email);
 }
@@ -206,14 +228,18 @@ export async function registerWithFirebaseMobileEmailPassword(params: {
   displayName: string;
 }) {
   const auth = getFirebaseMobileAuth(params.config);
-  const credential = await createUserWithEmailAndPassword(auth, params.email, params.password);
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    params.email,
+    params.password,
+  );
   await updateProfile(credential.user, { displayName: params.displayName });
   return credential;
 }
 
 export function createTenantUploadApiBaseUrlFromEnv(
   env: Record<string, string | undefined>,
-  prefix: "NEXT_PUBLIC" | "EXPO_PUBLIC"
+  prefix: "NEXT_PUBLIC" | "EXPO_PUBLIC",
 ) {
   return env[`${prefix}_UPLOAD_API_BASE_URL`] ?? "";
 }
@@ -234,22 +260,33 @@ export async function uploadOrganizationBrandAsset(params: {
   formData.append("assetKind", params.assetKind);
   formData.append("file", params.file);
 
-  const response = await fetch(`${params.uploadApiBaseUrl.replace(/\/$/, "")}/tenant-assets/upload`, {
-    method: "POST",
-    headers: params.authToken
-      ? {
-          Authorization: `Bearer ${params.authToken}`
-        }
-      : undefined,
-    body: formData
-  });
+  const response = await fetch(
+    `${params.uploadApiBaseUrl.replace(/\/$/, "")}/tenant-assets/upload`,
+    {
+      method: "POST",
+      headers: params.authToken
+        ? {
+            Authorization: `Bearer ${params.authToken}`,
+          }
+        : undefined,
+      body: formData,
+    },
+  );
 
-  const payload = (await response.json()) as Partial<TenantBrandAssetUploadResponse> & {
-    error?: string;
-  };
+  const payload =
+    (await response.json()) as Partial<TenantBrandAssetUploadResponse> & {
+      error?: string;
+    };
 
-  if (!response.ok || !payload.success || !payload.publicUrl || !payload.objectKey) {
-    throw new Error(payload.error ?? "Nao foi possivel enviar o asset para a Cloudflare.");
+  if (
+    !response.ok ||
+    !payload.success ||
+    !payload.publicUrl ||
+    !payload.objectKey
+  ) {
+    throw new Error(
+      payload.error ?? "Nao foi possivel enviar o asset para a Cloudflare.",
+    );
   }
 
   return payload as TenantBrandAssetUploadResponse;
@@ -257,7 +294,10 @@ export async function uploadOrganizationBrandAsset(params: {
 
 // Parte de arquivo aceita tanto o File do navegador quanto o objeto
 // { uri, name, type } que o React Native/Expo usa em FormData.
-export type UploadFilePart = File | Blob | { uri: string; name: string; type: string };
+export type UploadFilePart =
+  | File
+  | Blob
+  | { uri: string; name: string; type: string };
 
 // Upload de foto de criança (Segurança Kids). Reusa o endpoint tenant-assets
 // com assetKind "kidsPhoto"; o worker roteia para o prefixo R2 organizations/
@@ -280,15 +320,30 @@ export async function uploadKidsPhoto(params: {
   // RN aceita { uri, name, type }; DOM aceita File/Blob. Cast evita atrito de tipo.
   formData.append("file", params.file as unknown as Blob);
 
-  const response = await fetch(`${params.uploadApiBaseUrl.replace(/\/$/, "")}/tenant-assets/upload`, {
-    method: "POST",
-    headers: params.authToken ? { Authorization: `Bearer ${params.authToken}` } : undefined,
-    body: formData
-  });
+  const response = await fetch(
+    `${params.uploadApiBaseUrl.replace(/\/$/, "")}/tenant-assets/upload`,
+    {
+      method: "POST",
+      headers: params.authToken
+        ? { Authorization: `Bearer ${params.authToken}` }
+        : undefined,
+      body: formData,
+    },
+  );
 
-  const payload = (await response.json()) as Partial<TenantBrandAssetUploadResponse> & { error?: string };
-  if (!response.ok || !payload.success || !payload.publicUrl || !payload.objectKey) {
-    throw new Error(payload.error ?? "Nao foi possivel enviar a foto para a Cloudflare.");
+  const payload =
+    (await response.json()) as Partial<TenantBrandAssetUploadResponse> & {
+      error?: string;
+    };
+  if (
+    !response.ok ||
+    !payload.success ||
+    !payload.publicUrl ||
+    !payload.objectKey
+  ) {
+    throw new Error(
+      payload.error ?? "Nao foi possivel enviar a foto para a Cloudflare.",
+    );
   }
   return payload as TenantBrandAssetUploadResponse;
 }

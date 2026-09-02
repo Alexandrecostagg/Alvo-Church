@@ -49,7 +49,7 @@ import type {
   EventsDashboardSnapshot,
   GroupsDashboardSnapshot,
   VisitorDashboardSnapshot,
-  VisitorJourney
+  VisitorJourney,
 } from "@alvo/types";
 
 export function getDefaultJourneyStage(): JourneyStage {
@@ -96,18 +96,22 @@ export function getTenantPaths(context: TenantContext): FirestorePathMap {
     settings: settingsBase,
     branding: `${settingsBase}/branding`,
     subscription: `${settingsBase}/subscription`,
-    features: `${settingsBase}/features`
+    features: `${settingsBase}/features`,
   };
 }
 
 export function getOrganizationDisplayName(organization: Organization) {
-  return organization.displayName || organization.publicName || organization.name;
+  return (
+    organization.displayName || organization.publicName || organization.name
+  );
 }
 
 export * from "./featureGate";
 export * from "./pix";
 
-export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brandMode"]) {
+export function getBrandModeLabel(
+  brandMode: OrganizationBrandingSettings["brandMode"],
+) {
   switch (brandMode) {
     case "alvo_managed":
       return "Marca Esdras";
@@ -118,7 +122,9 @@ export function getBrandModeLabel(brandMode: OrganizationBrandingSettings["brand
   }
 }
 
-export function getPlanTierLabel(planTier: OrganizationSubscriptionSettings["planTier"]) {
+export function getPlanTierLabel(
+  planTier: OrganizationSubscriptionSettings["planTier"],
+) {
   switch (planTier) {
     case "base":
       return "Base";
@@ -156,7 +162,7 @@ export function createOrganizationSettingsSnapshot(params: {
   return {
     branding: params.branding,
     subscription: params.subscription,
-    features: params.features
+    features: params.features,
   };
 }
 
@@ -171,12 +177,14 @@ export function createDashboardSnapshot(params: {
       people: 0,
       families: 0,
       visitors: 0,
-      groups: 0
-    }
+      groups: 0,
+    },
   };
 }
 
-export function getPersonFullName(person: Pick<Person, "firstName" | "lastName" | "preferredName">) {
+export function getPersonFullName(
+  person: Pick<Person, "firstName" | "lastName" | "preferredName">,
+) {
   if (person.preferredName) {
     return person.preferredName;
   }
@@ -192,11 +200,13 @@ export function toPeopleListItem(person: Person): PeopleListItem {
     personType: person.personType,
     campusId: person.campusId,
     primaryFamilyId: person.primaryFamilyId,
-    tribePrimaryCode: person.tribePrimaryCode
+    tribePrimaryCode: person.tribePrimaryCode,
   };
 }
 
-export function createFamilyDisplayName(family: Pick<Family, "displayName" | "familyName">) {
+export function createFamilyDisplayName(
+  family: Pick<Family, "displayName" | "familyName">,
+) {
   return family.displayName || family.familyName;
 }
 
@@ -215,7 +225,7 @@ export function createPeopleDashboardSnapshot(params: {
 }): PeopleDashboardSnapshot {
   const base = createDashboardSnapshot({
     organization: params.organization,
-    currentUser: params.currentUser
+    currentUser: params.currentUser,
   });
 
   return {
@@ -224,10 +234,12 @@ export function createPeopleDashboardSnapshot(params: {
       ...base.totals,
       people: params.recentPeople.length,
       families: params.families.length,
-      visitors: params.recentPeople.filter((person) => person.memberStatus === "visitor").length
+      visitors: params.recentPeople.filter(
+        (person) => person.memberStatus === "visitor",
+      ).length,
     },
     recentPeople: params.recentPeople.map(toPeopleListItem),
-    activeFamilies: params.families
+    activeFamilies: params.families,
   };
 }
 
@@ -262,7 +274,9 @@ export function getFollowUpStatusLabel(status: FollowUpTask["status"]) {
 }
 
 export function getOpenFollowUps(tasks: readonly FollowUpTask[]) {
-  return tasks.filter((task) => task.status === "open" || task.status === "in_progress");
+  return tasks.filter(
+    (task) => task.status === "open" || task.status === "in_progress",
+  );
 }
 
 export function createVisitorDashboardSnapshot(params: {
@@ -280,13 +294,13 @@ export function createVisitorDashboardSnapshot(params: {
     organization: params.organization,
     currentUser: params.currentUser,
     recentPeople: params.recentPeople,
-    families: params.families
+    families: params.families,
   });
 
   return {
     ...peopleSnapshot,
     activeJourneys: params.activeJourneys,
-    openFollowUps: getOpenFollowUps(params.followUps)
+    openFollowUps: getOpenFollowUps(params.followUps),
   };
 }
 
@@ -305,7 +319,9 @@ export function getGroupTypeLabel(type: Group["type"]) {
   }
 }
 
-export function getAttendanceStatusLabel(status: GroupAttendance["attendanceStatus"]) {
+export function getAttendanceStatusLabel(
+  status: GroupAttendance["attendanceStatus"],
+) {
   switch (status) {
     case "present":
       return "Presente";
@@ -338,18 +354,18 @@ export function createGroupsDashboardSnapshot(params: {
     recentPeople: params.recentPeople,
     families: params.families,
     activeJourneys: params.activeJourneys,
-    followUps: params.followUps
+    followUps: params.followUps,
   });
 
   return {
     ...visitorSnapshot,
     totals: {
       ...visitorSnapshot.totals,
-      groups: params.activeGroups.length
+      groups: params.activeGroups.length,
     },
     activeGroups: params.activeGroups,
     upcomingMeetings: params.upcomingMeetings,
-    latestAttendance: params.latestAttendance
+    latestAttendance: params.latestAttendance,
   };
 }
 
@@ -370,7 +386,9 @@ export function getEventTypeLabel(type: Event["type"]) {
   }
 }
 
-export function getRegistrationStatusLabel(status: EventRegistration["status"]) {
+export function getRegistrationStatusLabel(
+  status: EventRegistration["status"],
+) {
   switch (status) {
     case "confirmed":
       return "Confirmada";
@@ -407,18 +425,20 @@ export function createEventsDashboardSnapshot(params: {
     followUps: params.followUps,
     activeGroups: params.activeGroups,
     upcomingMeetings: params.upcomingMeetings,
-    latestAttendance: params.latestAttendance
+    latestAttendance: params.latestAttendance,
   });
 
   return {
     ...groupsSnapshot,
     publishedEvents: params.publishedEvents,
     latestRegistrations: params.latestRegistrations,
-    latestEventCheckIns: params.latestEventCheckIns
+    latestEventCheckIns: params.latestEventCheckIns,
   };
 }
 
-export function getJourneyKindLabel(kind: MemberJourneyProfile["currentJourneyKind"]) {
+export function getJourneyKindLabel(
+  kind: MemberJourneyProfile["currentJourneyKind"],
+) {
   switch (kind) {
     case "visitor":
       return "Visitante";
@@ -480,14 +500,14 @@ export function createJourneysDashboardSnapshot(params: {
     latestAttendance: params.latestAttendance,
     publishedEvents: params.publishedEvents,
     latestRegistrations: params.latestRegistrations,
-    latestEventCheckIns: params.latestEventCheckIns
+    latestEventCheckIns: params.latestEventCheckIns,
   });
 
   return {
     ...eventsSnapshot,
     journeyProfiles: params.journeyProfiles,
     activeMissions: params.activeMissions,
-    earnedBadges: params.earnedBadges
+    earnedBadges: params.earnedBadges,
   };
 }
 
@@ -551,7 +571,9 @@ export function getTribeMinistrySummary(tribeCode: TribeCode) {
   }
 }
 
-export function getTribeValidationLabel(status: MemberTribeProfile["validationStatus"]) {
+export function getTribeValidationLabel(
+  status: MemberTribeProfile["validationStatus"],
+) {
   switch (status) {
     case "not_required":
       return "Nao exige validacao";
@@ -565,7 +587,9 @@ export function getTribeValidationLabel(status: MemberTribeProfile["validationSt
 }
 
 export function rankTribeScores(scores: readonly TribeAssessmentScore[]) {
-  return [...scores].sort((left, right) => left.rankPosition - right.rankPosition);
+  return [...scores].sort(
+    (left, right) => left.rankPosition - right.rankPosition,
+  );
 }
 
 export function createTribesDashboardSnapshot(params: {
@@ -606,14 +630,14 @@ export function createTribesDashboardSnapshot(params: {
     latestEventCheckIns: params.latestEventCheckIns,
     journeyProfiles: params.journeyProfiles,
     activeMissions: params.activeMissions,
-    earnedBadges: params.earnedBadges
+    earnedBadges: params.earnedBadges,
   });
 
   return {
     ...journeysSnapshot,
     tribeDefinitions: params.tribeDefinitions,
     latestTribeAssessments: params.latestTribeAssessments,
-    currentTribeProfiles: params.currentTribeProfiles
+    currentTribeProfiles: params.currentTribeProfiles,
   };
 }
 
@@ -626,30 +650,31 @@ export const tribeQuestionnaireV1: TribeQuestionnaire = {
       options: [
         {
           code: "a",
-          label: "Conduzir pessoas em adoracao e criar ambiente espiritual forte",
-          weights: [{ tribeCode: "LEVI", value: 3 }]
+          label:
+            "Conduzir pessoas em adoracao e criar ambiente espiritual forte",
+          weights: [{ tribeCode: "LEVI", value: 3 }],
         },
         {
           code: "b",
           label: "Liderar pessoas e assumir responsabilidade",
-          weights: [{ tribeCode: "JUDAH", value: 3 }]
+          weights: [{ tribeCode: "JUDAH", value: 3 }],
         },
         {
           code: "c",
           label: "Entender a direcao certa e ajudar no planejamento",
-          weights: [{ tribeCode: "ISSACHAR", value: 3 }]
+          weights: [{ tribeCode: "ISSACHAR", value: 3 }],
         },
         {
           code: "d",
           label: "Organizar bastidores para tudo funcionar bem",
-          weights: [{ tribeCode: "JOSEPH", value: 3 }]
+          weights: [{ tribeCode: "JOSEPH", value: 3 }],
         },
         {
           code: "e",
           label: "Acolher e cuidar bem das pessoas",
-          weights: [{ tribeCode: "ASHER", value: 3 }]
-        }
-      ]
+          weights: [{ tribeCode: "ASHER", value: 3 }],
+        },
+      ],
     },
     {
       code: "q2",
@@ -658,32 +683,32 @@ export const tribeQuestionnaireV1: TribeQuestionnaire = {
         {
           code: "a",
           label: "Comunicacao, criatividade e expressao",
-          weights: [{ tribeCode: "NAPHTALI", value: 3 }]
+          weights: [{ tribeCode: "NAPHTALI", value: 3 }],
         },
         {
           code: "b",
           label: "Missoes, mobilizacao e projetos externos",
-          weights: [{ tribeCode: "ZEBULUN", value: 3 }]
+          weights: [{ tribeCode: "ZEBULUN", value: 3 }],
         },
         {
           code: "c",
           label: "Evangelismo de rua, acao pratica e resposta rapida",
           weights: [
             { tribeCode: "GAD", value: 2 },
-            { tribeCode: "BENJAMIN", value: 1 }
-          ]
+            { tribeCode: "BENJAMIN", value: 1 },
+          ],
         },
         {
           code: "d",
           label: "Restauracao e cuidado profundo",
-          weights: [{ tribeCode: "MANASSEH", value: 3 }]
+          weights: [{ tribeCode: "MANASSEH", value: 3 }],
         },
         {
           code: "e",
           label: "Multiplicacao, crescimento e abertura de novas frentes",
-          weights: [{ tribeCode: "EPHRAIM", value: 3 }]
-        }
-      ]
+          weights: [{ tribeCode: "EPHRAIM", value: 3 }],
+        },
+      ],
     },
     {
       code: "q3",
@@ -692,118 +717,125 @@ export const tribeQuestionnaireV1: TribeQuestionnaire = {
         {
           code: "a",
           label: "Eu gosto de comecar coisas novas",
-          weights: [{ tribeCode: "REUBEN", value: 3 }]
+          weights: [{ tribeCode: "REUBEN", value: 3 }],
         },
         {
           code: "b",
           label: "Eu gosto de ver pessoas e ministerios crescerem",
-          weights: [{ tribeCode: "EPHRAIM", value: 3 }]
+          weights: [{ tribeCode: "EPHRAIM", value: 3 }],
         },
         {
           code: "c",
           label: "Eu gosto de manter tudo em ordem e funcionando",
           weights: [
             { tribeCode: "JOSEPH", value: 2 },
-            { tribeCode: "ISSACHAR", value: 1 }
-          ]
+            { tribeCode: "ISSACHAR", value: 1 },
+          ],
         },
         {
           code: "d",
           label: "Eu gosto de ajudar pessoas a se reconstruirem",
-          weights: [{ tribeCode: "MANASSEH", value: 3 }]
+          weights: [{ tribeCode: "MANASSEH", value: 3 }],
         },
         {
           code: "e",
           label: "Eu gosto de estar pronto para agir quando necessario",
           weights: [
             { tribeCode: "BENJAMIN", value: 2 },
-            { tribeCode: "GAD", value: 1 }
-          ]
-        }
-      ]
+            { tribeCode: "GAD", value: 1 },
+          ],
+        },
+      ],
     },
     {
       code: "q4",
-      prompt: "Se voce fosse ajudar em um grande evento da igreja, qual area escolheria primeiro?",
+      prompt:
+        "Se voce fosse ajudar em um grande evento da igreja, qual area escolheria primeiro?",
       options: [
         {
           code: "a",
           label: "Louvor, palco, oracao ou ambiente",
-          weights: [{ tribeCode: "LEVI", value: 3 }]
+          weights: [{ tribeCode: "LEVI", value: 3 }],
         },
         {
           code: "b",
           label: "Coordenacao geral e lideranca",
-          weights: [{ tribeCode: "JUDAH", value: 3 }]
+          weights: [{ tribeCode: "JUDAH", value: 3 }],
         },
         {
           code: "c",
           label: "Conteudo, direcao ou estrategia",
           weights: [
             { tribeCode: "ISSACHAR", value: 2 },
-            { tribeCode: "NAPHTALI", value: 1 }
-          ]
+            { tribeCode: "NAPHTALI", value: 1 },
+          ],
         },
         {
           code: "d",
           label: "Operacao, secretaria, credenciamento ou financas",
           weights: [
             { tribeCode: "JOSEPH", value: 2 },
-            { tribeCode: "BENJAMIN", value: 1 }
-          ]
+            { tribeCode: "BENJAMIN", value: 1 },
+          ],
         },
         {
           code: "e",
           label: "Recepcao, suporte as pessoas e cuidado",
           weights: [
             { tribeCode: "ASHER", value: 2 },
-            { tribeCode: "MANASSEH", value: 1 }
-          ]
-        }
-      ]
+            { tribeCode: "MANASSEH", value: 1 },
+          ],
+        },
+      ],
     },
     {
       code: "q5",
-      prompt: "Em relacao ao seu momento ministerial hoje, qual opcao se aproxima mais de voce?",
+      prompt:
+        "Em relacao ao seu momento ministerial hoje, qual opcao se aproxima mais de voce?",
       options: [
         {
           code: "a",
           label: "Estou descobrindo onde posso florescer",
-          weights: [{ tribeCode: "REUBEN", value: 3 }]
+          weights: [{ tribeCode: "REUBEN", value: 3 }],
         },
         {
           code: "b",
           label: "Ja me vejo conduzindo pessoas",
           weights: [
             { tribeCode: "JUDAH", value: 2 },
-            { tribeCode: "EPHRAIM", value: 1 }
-          ]
+            { tribeCode: "EPHRAIM", value: 1 },
+          ],
         },
         {
           code: "c",
           label: "Contribuo melhor com entendimento e direcao",
-          weights: [{ tribeCode: "ISSACHAR", value: 3 }]
+          weights: [{ tribeCode: "ISSACHAR", value: 3 }],
         },
         {
           code: "d",
           label: "Vejo meu valor em sustentar e organizar a obra",
-          weights: [{ tribeCode: "JOSEPH", value: 3 }]
+          weights: [{ tribeCode: "JOSEPH", value: 3 }],
         },
         {
           code: "e",
           label: "Sinto forte chamado para cuidar de pessoas",
           weights: [
             { tribeCode: "MANASSEH", value: 2 },
-            { tribeCode: "ASHER", value: 1 }
-          ]
-        }
-      ]
-    }
-  ]
+            { tribeCode: "ASHER", value: 1 },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
-export function getQuestionByCode(questionCode: string, questionnaire = tribeQuestionnaireV1) {
-  return questionnaire.questions.find((question) => question.code === questionCode);
+export function getQuestionByCode(
+  questionCode: string,
+  questionnaire = tribeQuestionnaireV1,
+) {
+  return questionnaire.questions.find(
+    (question) => question.code === questionCode,
+  );
 }
 
 export function getQuestionOption(question: TribeQuestion, optionCode: string) {
@@ -812,7 +844,7 @@ export function getQuestionOption(question: TribeQuestion, optionCode: string) {
 
 export function calculateTribeQuestionnaireResult(
   answers: readonly TribeAnswer[],
-  questionnaire = tribeQuestionnaireV1
+  questionnaire = tribeQuestionnaireV1,
 ): TribeQuestionnaireResult {
   const scoreMap = new Map<TribeCode, number>();
 
@@ -828,7 +860,10 @@ export function calculateTribeQuestionnaireResult(
     }
 
     for (const weight of option.weights) {
-      scoreMap.set(weight.tribeCode, (scoreMap.get(weight.tribeCode) ?? 0) + weight.value);
+      scoreMap.set(
+        weight.tribeCode,
+        (scoreMap.get(weight.tribeCode) ?? 0) + weight.value,
+      );
     }
   }
 
@@ -839,12 +874,12 @@ export function calculateTribeQuestionnaireResult(
       tribeAssessmentId: "preview",
       tribeCode,
       scoreRaw,
-      rankPosition: 0
+      rankPosition: 0,
     }))
     .sort((left, right) => right.scoreRaw - left.scoreRaw)
     .map((score, index) => ({
       ...score,
-      rankPosition: index + 1
+      rankPosition: index + 1,
     }));
 
   const primary = rankedScores[0];
@@ -854,7 +889,7 @@ export function calculateTribeQuestionnaireResult(
     return {
       primaryTribeCode: "REUBEN",
       scores: [],
-      confidenceLevel: "low"
+      confidenceLevel: "low",
     };
   }
 
@@ -866,11 +901,13 @@ export function calculateTribeQuestionnaireResult(
     primaryTribeCode: primary.tribeCode,
     secondaryTribeCode: secondary?.tribeCode,
     scores: rankedScores,
-    confidenceLevel
+    confidenceLevel,
   };
 }
 
-export function getReviewRequestStatusLabel(status: TribeReviewRequest["requestStatus"]) {
+export function getReviewRequestStatusLabel(
+  status: TribeReviewRequest["requestStatus"],
+) {
   switch (status) {
     case "open":
       return "Aberta";
@@ -887,7 +924,9 @@ export function getReviewRequestStatusLabel(status: TribeReviewRequest["requestS
   }
 }
 
-export function getRecommendedReviewTypeLabel(type: TribeRecommendedReviewType) {
+export function getRecommendedReviewTypeLabel(
+  type: TribeRecommendedReviewType,
+) {
   switch (type) {
     case "revalidation":
       return "Revalidacao";
@@ -910,7 +949,9 @@ export function shouldRecommendTribeReview(profile: MemberTribeProfile) {
   return false;
 }
 
-export function getRecommendedReviewType(profile: MemberTribeProfile): TribeRecommendedReviewType {
+export function getRecommendedReviewType(
+  profile: MemberTribeProfile,
+): TribeRecommendedReviewType {
   if (profile.fitScore < 50) {
     return "full_reclassification";
   }
@@ -924,7 +965,7 @@ export function getRecommendedReviewType(profile: MemberTribeProfile): TribeReco
 
 export function getStrongestBehaviorSignal(
   signals: readonly TribeBehaviorSignal[],
-  personId: string
+  personId: string,
 ) {
   return [...signals]
     .filter((signal) => signal.personId === personId)
@@ -974,19 +1015,32 @@ export function createTribeReclassificationSnapshot(params: {
     earnedBadges: params.earnedBadges,
     tribeDefinitions: params.tribeDefinitions,
     latestTribeAssessments: params.latestTribeAssessments,
-    currentTribeProfiles: params.currentTribeProfiles
+    currentTribeProfiles: params.currentTribeProfiles,
   });
 
   return {
     ...tribesSnapshot,
     reviewRequests: params.reviewRequests,
-    behaviorSignals: params.behaviorSignals
+    behaviorSignals: params.behaviorSignals,
   };
 }
 
 // DYNAMIC CHORDS TRANSPOSER (Louvor e Cifras Dinâmicas)
-const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const FLATS  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+const SHARPS = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 
 // Normaliza o tom para encontrar a nota base (remove menor 'm', números, etc.)
 function getBaseNote(chord: string): { base: string; suffix: string } {
@@ -1005,48 +1059,56 @@ function getNoteIndex(note: string): number {
 }
 
 // Transpõe uma única nota base
-function transposeNote(note: string, semitones: number, preferFlats = false): string {
+function transposeNote(
+  note: string,
+  semitones: number,
+  preferFlats = false,
+): string {
   const currentIdx = getNoteIndex(note);
   if (currentIdx === -1) return note;
-  
+
   let targetIdx = (currentIdx + semitones) % 12;
   if (targetIdx < 0) targetIdx += 12;
-  
+
   return preferFlats ? FLATS[targetIdx] : SHARPS[targetIdx];
 }
 
 // Transpõe um acorde completo (suporta acordes com barra como G/B e suspensos/menores)
 export function transposeChord(chord: string, semitones: number): string {
   if (!chord) return "";
-  
+
   // Se for acorde com barra (ex: G/B), transpõe ambos os lados da barra
   if (chord.includes("/")) {
     const parts = chord.split("/");
     return `${transposeChord(parts[0], semitones)}/${transposeChord(parts[1], semitones)}`;
   }
-  
+
   const { base, suffix } = getBaseNote(chord);
   const isFlat = base.includes("b");
   const transposedBase = transposeNote(base, semitones, isFlat);
-  
+
   return transposedBase + suffix;
 }
 
 // Função principal: Recebe a letra cifrada [C] [G] e transpõe todas as ocorrências
-export function transposeChordsText(lyricsWithChords: string, originalKey: string, selectedKey: string): string {
+export function transposeChordsText(
+  lyricsWithChords: string,
+  originalKey: string,
+  selectedKey: string,
+): string {
   if (!lyricsWithChords) return "";
-  
+
   const origBase = getBaseNote(originalKey).base;
   const targetBase = getBaseNote(selectedKey).base;
-  
+
   const origIdx = getNoteIndex(origBase);
   const targetIdx = getNoteIndex(targetBase);
-  
+
   if (origIdx === -1 || targetIdx === -1) return lyricsWithChords;
-  
+
   const semitones = targetIdx - origIdx;
   if (semitones === 0) return lyricsWithChords;
-  
+
   // Regex para achar tudo dentro de colchetes, ex: [C#m7/G#]
   return lyricsWithChords.replace(/\[([^\]]+)\]/g, (match, chord) => {
     try {
@@ -1064,7 +1126,7 @@ export function transposeChordsText(lyricsWithChords: string, originalKey: strin
  */
 export function checkScheduleConflict(
   assignments: readonly ServiceAssignment[],
-  newAssignment: Pick<ServiceAssignment, "personId" | "serviceDate" | "id">
+  newAssignment: Pick<ServiceAssignment, "personId" | "serviceDate" | "id">,
 ): ServiceAssignment | null {
   return (
     assignments.find(
@@ -1072,7 +1134,7 @@ export function checkScheduleConflict(
         assignment.personId === newAssignment.personId &&
         assignment.serviceDate === newAssignment.serviceDate &&
         assignment.id !== newAssignment.id &&
-        assignment.status !== "declined"
+        assignment.status !== "declined",
     ) || null
   );
 }
@@ -1083,7 +1145,7 @@ export function checkScheduleConflict(
  */
 export function processScheduleSwap(
   request: ScheduleSwapRequest,
-  assignments: readonly ServiceAssignment[]
+  assignments: readonly ServiceAssignment[],
 ): {
   requestorAssignment: ServiceAssignment;
   replacementAssignment?: ServiceAssignment;
@@ -1093,7 +1155,8 @@ export function processScheduleSwap(
     throw new Error("Escala de origem não encontrada.");
   }
 
-  const replacementPersonId = request.proposedReplacementPersonId || request.targetPersonId;
+  const replacementPersonId =
+    request.proposedReplacementPersonId || request.targetPersonId;
   if (!replacementPersonId) {
     throw new Error("Nenhum voluntário de substituição definido.");
   }
@@ -1103,10 +1166,10 @@ export function processScheduleSwap(
     ...reqAssignment,
     personId: replacementPersonId,
     status: "confirmed",
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   return {
-    requestorAssignment
+    requestorAssignment,
   };
 }

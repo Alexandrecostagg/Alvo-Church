@@ -23,7 +23,8 @@ const LS_SNAPSHOT_KEY = "alvo_network_snapshot_written";
  * Runs at most once per day per browser, silently in the background.
  */
 export function useNetworkSnapshotWriter() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig } =
+    useAppAuth();
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !organizationId) return;
@@ -34,7 +35,10 @@ export function useNetworkSnapshotWriter() {
 
     // Já escreveu o snapshot de hoje para esta organização? Então nada a fazer.
     try {
-      if (localStorage.getItem(LS_SNAPSHOT_KEY) === `${organizationId}:${today}`) return;
+      if (
+        localStorage.getItem(LS_SNAPSHOT_KEY) === `${organizationId}:${today}`
+      )
+        return;
     } catch {
       // localStorage indisponível — segue com o write normal
     }
@@ -47,36 +51,56 @@ export function useNetworkSnapshotWriter() {
         ]);
 
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const monthStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1,
+        ).toISOString();
 
-        const totalMembers    = people.filter(p => p.memberStatus !== "visitor").length;
-        const visitors        = people.filter(p => p.memberStatus === "visitor").length;
-        const newThisMonth    = people.filter(p => (p as unknown as { createdAt?: string }).createdAt && (p as unknown as { createdAt?: string }).createdAt! >= monthStart).length;
-        const activeMembers   = people.filter(p =>
-          p.memberStatus === "member" || p.memberStatus === "leader" || p.memberStatus === "volunteer"
+        const totalMembers = people.filter(
+          (p) => p.memberStatus !== "visitor",
+        ).length;
+        const visitors = people.filter(
+          (p) => p.memberStatus === "visitor",
+        ).length;
+        const newThisMonth = people.filter(
+          (p) =>
+            (p as unknown as { createdAt?: string }).createdAt &&
+            (p as unknown as { createdAt?: string }).createdAt! >= monthStart,
+        ).length;
+        const activeMembers = people.filter(
+          (p) =>
+            p.memberStatus === "member" ||
+            p.memberStatus === "leader" ||
+            p.memberStatus === "volunteer",
         ).length;
 
-        const totalGroups     = groups.length;
-        const activeGroupsCount = groups.filter(g => g.status === "active").length;
+        const totalGroups = groups.length;
+        const activeGroupsCount = groups.filter(
+          (g) => g.status === "active",
+        ).length;
 
         const snapshot: NetworkSnapshot = {
-          id:                    today,
-          organizationId:        organizationId,
-          date:                  today,
+          id: today,
+          organizationId: organizationId,
+          date: today,
           month,
           totalMembers,
-          newMembersThisMonth:   newThisMonth,
+          newMembersThisMonth: newThisMonth,
           activeMembers,
           visitors,
           totalGroups,
-          activeGroups:          activeGroupsCount,
-          avgGroupAttendance:    0,
-          eventsThisMonth:       0,
-          totalEventAttendance:  0,
-          givingThisMonth:       0,
-          givingLastMonth:       0,
-          serviceAttendanceRate: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
-          createdAt:             new Date().toISOString(),
+          activeGroups: activeGroupsCount,
+          avgGroupAttendance: 0,
+          eventsThisMonth: 0,
+          totalEventAttendance: 0,
+          givingThisMonth: 0,
+          givingLastMonth: 0,
+          serviceAttendanceRate:
+            totalMembers > 0
+              ? Math.round((activeMembers / totalMembers) * 100)
+              : 0,
+          createdAt: new Date().toISOString(),
         };
 
         await saveNetworkSnapshot(firebaseConfig, snapshot);
@@ -93,6 +117,6 @@ export function useNetworkSnapshotWriter() {
     }
 
     void writeSnapshot();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configured, firebaseReady, user, organizationId]);
 }

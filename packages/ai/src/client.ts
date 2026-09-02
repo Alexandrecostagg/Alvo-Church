@@ -19,15 +19,15 @@ export async function callAiTask(
   baseUrl: string,
   task: AiTask,
   input: unknown,
-  idToken?: string
+  idToken?: string,
 ): Promise<string> {
   const res = await fetch(`${baseUrl}/api/ai`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {})
+      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
     },
-    body: JSON.stringify({ task, input })
+    body: JSON.stringify({ task, input }),
   });
 
   const data = (await res.json()) as AiApiResponse;
