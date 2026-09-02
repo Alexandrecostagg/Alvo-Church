@@ -271,7 +271,7 @@ export async function writeDailyNetworkSnapshots(env: {
           countDocuments({ ...base, collectionId: "groups", where: eqFilter("status", "active") })
         ]);
 
-      // Mesma semântica do writer do cliente: totalMembers = todos - visitantes.
+      // Mesma semântica do writer do cliente: totalMembers = total de pessoas - visitantes.
       const totalMembers = totalPeople - visitors;
 
       await patchSnapshot({
