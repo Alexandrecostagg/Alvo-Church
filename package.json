@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.6.3",
   "scripts": {
     "build": "corepack pnpm -r build",
-    "build:cloudflare:web": "cd apps/web && corepack pnpm install --frozen-lockfile && corepack pnpm build && npx @cloudflare/next-on-pages",
+    "build:cloudflare:web": "cd apps/web && corepack pnpm install --frozen-lockfile && corepack pnpm build --webpack && npx @cloudflare/next-on-pages",
     "dev": "corepack pnpm --parallel --filter @alvo/web --filter @alvo/mobile --filter @alvo/worker-api dev",
     "lint": "corepack pnpm -r lint",
     "typecheck": "corepack pnpm -r typecheck",
