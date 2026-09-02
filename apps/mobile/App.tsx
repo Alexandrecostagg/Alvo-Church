@@ -243,7 +243,7 @@ export default function App() {
       try {
   const orgId = linkedOrg?.id ?? "";
   if (!orgId) { setDataReady(true); return; }
-  const ctx = { organizationId: orgId };
+  const ctx = { organizationId: orgId || "" };
         const [snap, evts, grps] = await Promise.all([
           fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
           fetchEvents(firebaseConfig, ctx, 8),
@@ -494,7 +494,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
     (async () => {
       try {
         const { fetchCourses } = await import("@alvo/firebase");
-        const list = await fetchCourses(firebaseConfig, { organizationId: orgId });
+        const list = await fetchCourses(firebaseConfig, { organizationId: orgId || "" });
         if (!cancelled) setCourses(list.filter((c) => c.isActive !== false));
       } catch (e) { if (__DEV__) console.warn("fetchCourses falhou:", e); }
       finally { if (!cancelled) setLoading(false); }
@@ -508,15 +508,15 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
     try {
       const sdk = await import("@alvo/firebase");
       const [mods, less, prog] = await Promise.all([
-        sdk.fetchCourseModules(firebaseConfig, { organizationId: orgId }, course.id),
-        sdk.fetchCourseLessons(firebaseConfig, { organizationId: orgId }, course.id),
-        sdk.fetchMemberCourseProgress(firebaseConfig, { organizationId: orgId }, user.uid, course.id)
+        sdk.fetchCourseModules(firebaseConfig, { organizationId: orgId || "" }, course.id),
+        sdk.fetchCourseLessons(firebaseConfig, { organizationId: orgId || "" }, course.id),
+        sdk.fetchMemberCourseProgress(firebaseConfig, { organizationId: orgId || "" }, user.uid, course.id)
       ]);
       setModules(mods);
       setLessons(less);
       setProgress(prog ?? {
         id: `progress_${user.uid}_${course.id}`,
-        organizationId: orgId, memberId: user.uid, courseId: course.id,
+        organizationId: orgId || "", memberId: user.uid, courseId: course.id,
         completedLessons: [], isCompleted: false, updatedAt: new Date().toISOString()
       });
     } catch (e) { if (__DEV__) console.warn("openCourse falhou:", e); }
@@ -539,7 +539,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
     setProgress(next);
     try {
       const { saveMemberCourseProgress } = await import("@alvo/firebase");
-      await saveMemberCourseProgress(firebaseConfig, { organizationId: orgId }, next);
+      await saveMemberCourseProgress(firebaseConfig, { organizationId: orgId || "" }, next);
     } catch (e) { if (__DEV__) console.warn("saveMemberCourseProgress falhou:", e); }
   }
 
@@ -735,7 +735,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
     let cancelled = false;
     (async () => {
       try {
-        const promos = await fetchMarketplacePromotions(firebaseConfig, { organizationId: orgId }, 30);
+        const promos = await fetchMarketplacePromotions(firebaseConfig, { organizationId: orgId || "" }, 30);
         if (!cancelled) setPromotions(promos);
       } catch (e) {
         if (__DEV__) console.warn("fetchMarketplacePromotions falhou:", e);
@@ -845,8 +845,8 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
     try {
       if (!orgId) return;
       await Promise.all([
-        fetchEvents(firebaseConfig, { organizationId: orgId }, 8),
-        fetchGroups(firebaseConfig, { organizationId: orgId }, 8)
+        fetchEvents(firebaseConfig, { organizationId: orgId || "" }, 8),
+        fetchGroups(firebaseConfig, { organizationId: orgId || "" }, 8)
       ]);
     } catch {}
     finally { setRefreshing(false); }
@@ -937,7 +937,7 @@ function JourneySection({ primary, user, orgId }: { primary: string; user: Fireb
     let cancelled = false;
     async function load() {
       try {
-        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId }, user.uid);
+        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId || "" }, user.uid);
         if (!cancelled) setProfile(p);
       } catch {
         if (!cancelled) setProfile(null);
@@ -1055,7 +1055,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
 
   async function loadWall() {
     try {
-      const items = await fetchPublicPrayerWall(firebaseConfig, { organizationId: orgId }, 50);
+      const items = await fetchPublicPrayerWall(firebaseConfig, { organizationId: orgId || "" }, 50);
       setWall(items);
     } catch {
       // silencioso — mural é conteúdo secundário, não deve travar a tela
@@ -1071,7 +1071,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
     if (!text || prayerSending) return;
     setPrayerSending(true);
     try {
-      await addPrayerRequest(firebaseConfig, { organizationId: orgId }, {
+      await addPrayerRequest(firebaseConfig, { organizationId: orgId || "" }, {
         personName: user.displayName ?? user.email ?? "Membro",
         phone: user.phoneNumber ?? undefined,
         message: text,
@@ -1092,7 +1092,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
     setPrayedIds(prev => new Set(prev).add(id));
     setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: r.prayerCount + 1 } : r));
     try {
-      await incrementPrayerCount(firebaseConfig, { organizationId: orgId }, id);
+      await incrementPrayerCount(firebaseConfig, { organizationId: orgId || "" }, id);
     } catch {
       // reverte silenciosamente se falhar
       setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: Math.max(0, r.prayerCount - 1) } : r));
@@ -1310,7 +1310,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
     async function load() {
       try {
         const sdk = await import("@alvo/firebase");
-        const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
+        const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId || "", userId: user.uid });
         if (!cancelled && existing) {
           const d = existing as any;
           if (d.ministerialInterests) setInterests(d.ministerialInterests);
@@ -1333,7 +1333,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
     try {
       const sdk = await import("@alvo/firebase");
       // reuse ensureTenantUserAccess with merge to save ministerial profile fields
-      await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
+      await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId || "", userId: user.uid }, {
         ministerialInterests: interests,
         servingProfile: serving || undefined,
         availability,
@@ -1536,7 +1536,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ organizationId: orgId, amount: finalAmountNumber, description: type })
+          body: JSON.stringify({ organizationId: orgId || "", amount: finalAmountNumber, description: type })
         });
         const data = await res.json() as { ok?: boolean; payload?: string; qrDataUrl?: string; pixKey?: string; receiverName?: string; error?: string };
         if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível gerar o PIX");
@@ -1562,8 +1562,8 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
       let receiptId: string | undefined;
       if (receiptBase64) {
         try {
-          receiptId = await saveContributionReceipt(firebaseConfig, { organizationId: orgId }, {
-            organizationId: orgId,
+          receiptId = await saveContributionReceipt(firebaseConfig, { organizationId: orgId || "" }, {
+            organizationId: orgId || "",
             imageBase64: receiptBase64,
             createdByUserId: user.uid,
           });
@@ -1571,8 +1571,8 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
           if (__DEV__) console.warn("salvar comprovante falhou:", e?.code || e?.message || e);
         }
       }
-      await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
-        organizationId: orgId,
+      await addMemberContribution(firebaseConfig, { organizationId: orgId || "" }, {
+        organizationId: orgId || "",
         userId: user.uid,
         contributorName: user.displayName ?? user.email ?? "Membro",
         amount: finalAmountNumber,
@@ -1776,10 +1776,10 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     setLoading(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const ctx = { organizationId: orgId };
+      const ctx = { organizationId: orgId || "" };
       const [settings, tenantUser, checkIns] = await Promise.all([
         sdk.fetchKidsSettings(firebaseConfig, ctx).catch(() => null) as Promise<OrganizationKidsSettings | null>,
-        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null),
+        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId || "", userId: user.uid }).catch(() => null),
         sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
       ]);
       const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
@@ -1820,7 +1820,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
       const nowIso = new Date().toISOString();
       const checkIn: KidsCheckIn = {
         id: token,
-        organizationId: orgId,
+        organizationId: orgId || "",
         childId: `quick_${token}`,
         parentId: user.uid,
         authorizedPickUpIds: [user.uid],
@@ -1837,7 +1837,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
         photoUrl: photo ?? undefined,
         photoConsentAt: photo && consent ? nowIso : undefined
       };
-      await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId }, checkIn);
+      await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId || "" }, checkIn);
       setActive((p) => [checkIn, ...p]);
       setChildName(""); setRoom(null); setAllergies(""); setRestrictions(""); setPhoto(null); setConsent(false);
       Alert.alert("Check-in feito!", "O crachá com o QR está disponível abaixo. Mostre-o na retirada.");
@@ -1853,7 +1853,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     scanLock.current = true;
     try {
       const sdk = await import("@alvo/firebase");
-      const ci = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId: orgId }, data.trim());
+      const ci = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId: orgId || "" }, data.trim());
       setScanning(false);
       if (!ci) { Alert.alert("QR inválido", "Nenhum check-in encontrado para este código."); }
       else if (ci.status !== "checked_in") { Alert.alert("Já retirada", "Esta criança não está com check-in ativo."); }
@@ -1869,7 +1869,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     if (!scanned) return;
     try {
       const sdk = await import("@alvo/firebase");
-      await sdk.checkoutKidsCheckIn(firebaseConfig, { organizationId: orgId }, scanned.id, user.uid);
+      await sdk.checkoutKidsCheckIn(firebaseConfig, { organizationId: orgId || "" }, scanned.id, user.uid);
       setActive((p) => p.filter((c) => c.id !== scanned.id));
       setScanned(null);
       Alert.alert("Retirada confirmada", "Criança liberada com sucesso.");
@@ -2017,7 +2017,7 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
     async function load() {
       try {
         setLoading(true);
-        const assignments = await fetchServiceAssignments(firebaseConfig, { organizationId: orgId }, 120);
+        const assignments = await fetchServiceAssignments(firebaseConfig, { organizationId: orgId || "" }, 120);
         const myAssignments = assignments
           .filter(a => a.personId === user.uid)
           .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
@@ -2052,9 +2052,9 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
     const now = new Date().toISOString();
 
     try {
-      await saveServiceAssignment(firebaseConfig, { organizationId: orgId }, {
+      await saveServiceAssignment(firebaseConfig, { organizationId: orgId || "" }, {
         id,
-        organizationId: orgId,
+        organizationId: orgId || "",
         serviceTeamId: "",
         ministryCode: "",
         personId: user.uid,
@@ -2277,7 +2277,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
         const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ organizationId: orgId, amount: price, description: `Inscrição: ${event.name}` }),
+          body: JSON.stringify({ organizationId: orgId || "", amount: price, description: `Inscrição: ${event.name}` }),
         });
         const data = await res.json() as { ok?: boolean; payload?: string; qrDataUrl?: string; pixKey?: string; receiverName?: string; error?: string };
         if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível gerar o PIX");
@@ -2300,7 +2300,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
     const token = `${event.id}|${regId}`; // o scanner de check-in lê isto
     const registration: EventRegistration = {
       id: regId,
-      organizationId: orgId,
+      organizationId: orgId || "",
       eventId: event.id,
       responsiblePersonId: user.uid,
       registrationCode: code,
@@ -2312,7 +2312,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
       ...(receiptBase64 ? { receiptImage: receiptBase64 } : {}),
     };
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);
+      await saveEventRegistration(firebaseConfig, { organizationId: orgId || "" }, registration);
       setReg({ code, token });
       setConfirmed(true);
     } catch (e) {
@@ -2471,10 +2471,10 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
       let content = "";
       if (activeTool === "roteiro") {
         if (!theme.trim()) { setError("Informe o tema do encontro."); setLoading(false); return; }
-        content = await callAi("cell_script", { theme, bibleVerse: verse, groupProfile }, idToken, orgId);
+        content = await callAi("cell_script", { theme, bibleVerse: verse, groupProfile }, idToken, orgId || "");
       } else if (activeTool === "dinamica") {
         if (!dynTheme.trim()) { setError("Informe o tema."); setLoading(false); return; }
-        content = await callAi("cell_dynamic", { theme: dynTheme, dynamicType: dynType, groupProfile }, idToken, orgId);
+        content = await callAi("cell_dynamic", { theme: dynTheme, dynamicType: dynType, groupProfile }, idToken, orgId || "");
       } else if (activeTool === "relatorio") {
         if (!repGroupName.trim() || !repTheme.trim()) { setError("Preencha grupo e tema."); setLoading(false); return; }
         content = await callAi("cell_meeting_summary", {
@@ -2484,14 +2484,14 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
           presentCount: parseInt(repPresent) || 0,
           leaderNotes: repNotes,
           prayerRequests: repPrayer ? repPrayer.split(",").map(s => s.trim()) : []
-        }, idToken, orgId);
+        }, idToken, orgId || "");
       } else if (activeTool === "mensagem") {
         if (!absMember.trim()) { setError("Informe o nome do membro."); setLoading(false); return; }
         content = await callAi("absence_message", {
           memberName: absMember,
           groupName: "minha célula",
           weeksAbsent: parseInt(absWeeks) || 2
-        }, idToken, orgId);
+        }, idToken, orgId || "");
       }
       setResult(content);
     } catch (e) {
