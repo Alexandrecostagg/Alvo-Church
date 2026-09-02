@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@alvo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
   }
 }
-
