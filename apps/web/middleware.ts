@@ -22,13 +22,17 @@ const SECURITY_HEADERS: Record<string, string> = {
 // é viável sem um server-side nonce generator), imagens de qualquer origem
 // (necessário para avatares/fotos de visitantes), e estilos inline.
 // Em produção com CSP strict, considere gerar nonce por request.
+const isDevelopment = process.env.NODE_ENV === "development";
+const emulatorConnections = isDevelopment && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
+  ? " http://localhost:9099 http://localhost:8080"
+  : "";
 const CSP_VALUE = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.google.com https://www.googleapis.com",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://www.google.com https://www.googleapis.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://brasilapi.com.br https://servicodados.ibge.gov.br",
+  `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://brasilapi.com.br https://servicodados.ibge.gov.br${emulatorConnections}${isDevelopment ? " ws://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

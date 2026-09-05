@@ -50,7 +50,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { recentPeople } from "../../lib/mock-data";
+import { formatCalendarDate } from "../../lib/member-form";
 
 const JOURNEY_STAGES = [
   { code: "reception", label: "Recepção", desc: "Cadastrado na entrada" },
@@ -130,22 +130,10 @@ export function MemberProfileView() {
     }
 
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      const mockPerson = (recentPeople as readonly any[]).find(p => p.id === personId) || (recentPeople as readonly any[])[0];
-      if (mockPerson) {
-        setPerson(mockPerson);
-        if (mockPerson.memberStatus === "visitor") {
-          setActiveStage("reception");
-        } else if (mockPerson.memberStatus === "congregant" || mockPerson.memberStatus === "new_believer") {
-          setActiveStage("cell");
-        } else if (mockPerson.memberStatus === "member") {
-          setActiveStage("baptism");
-        } else if (mockPerson.memberStatus === "leader" || mockPerson.memberStatus === "volunteer") {
-          setActiveStage("leader");
-        }
-        setStatus("Exibindo dados de demonstração.");
-      } else {
-        setStatus("Entre na sua conta para abrir a ficha completa.");
-      }
+      setPerson(null);
+      setFamily(null);
+      setFamilyPeople([]);
+      setStatus("Entre na sua conta para abrir a ficha completa.");
       return;
     }
 
@@ -244,7 +232,7 @@ export function MemberProfileView() {
         );
       } catch (error) {
         if (!cancelled) {
-          setStatus("Exibindo dados simulados da ficha contábil.");
+          setStatus("Não foi possível carregar a ficha. Tente novamente.");
         }
       }
     }
@@ -332,7 +320,7 @@ export function MemberProfileView() {
             {person ? getMemberStatusLabel(person.memberStatus) : "Aguardando"}
           </span>
           <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--alvo-ink)", marginTop: 4, fontFamily: "monospace" }}>
-            {person?.memberCardCode ?? "ESD-992-041"}
+            {person?.memberCardCode ?? "Sem identificação externa"}
           </strong>
           <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: 8 }}>{status}</p>
         </aside>
@@ -345,7 +333,7 @@ export function MemberProfileView() {
             <article style={S.card}>
               <span style={S.label}>Idade</span>
               <strong style={S.value}>
-                {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "28 anos"}
+                {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "Não informada"}
               </strong>
               <p style={S.hint}>
                 {person.birthDate ? formatDate(person.birthDate) : "nascimento não informado"}
@@ -355,10 +343,10 @@ export function MemberProfileView() {
             <article style={S.card}>
               <span style={S.label}>Casa / Família</span>
               <strong style={{ ...S.value, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                {family ? family.displayName || family.familyName : "Família Costa"}
+                {family ? family.displayName || family.familyName : "Sem família vinculada"}
               </strong>
               <p style={S.hint}>
-                {familyPeople.length || 3} pessoas mapeadas no domicílio
+                {familyPeople.length} pessoas mapeadas no domicílio
               </p>
             </article>
 
@@ -514,43 +502,10 @@ export function MemberProfileView() {
               <div style={{ marginTop: "2rem" }}>
 
                 {activeTab === "cell" && (
-                  <div className="animate-entrance">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-                      <div>
-                        <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--alvo-ink)" }}>Célula Betel (Jovens)</h3>
-                        <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 4 }}>
-                          Líder Responsável: <strong>Patrícia Albuquerque</strong>
-                        </p>
-                      </div>
-                      <span style={{ fontSize: "0.75rem", background: "rgba(16,185,129,0.1)", color: "#10b981", padding: "6px 12px", borderRadius: 10, fontWeight: 700 }}>
-                        Frequência Alta
-                      </span>
-                    </div>
-
-                    <p style={{ fontSize: "0.9rem", color: "var(--alvo-ink-soft)", lineHeight: "1.5rem" }}>
-                      Esta pessoa faz parte da Célula Betel, que se reúne às <strong style={S.ink}>quartas-feiras às 20:00</strong> no bairro Campestre.
-                    </p>
-
-                    <div style={{ marginTop: "2rem" }}>
-                      <h4 style={{ fontSize: "0.9rem", color: "var(--alvo-accent)", fontWeight: 800, marginBottom: "1rem" }}>Rastreador de Presenças (Últimas 4 reuniões):</h4>
-                      <div style={{ display: "flex", gap: "1rem" }}>
-                        {[
-                          { date: "17/05/2026", present: true },
-                          { date: "10/05/2026", present: true },
-                          { date: "03/05/2026", present: true },
-                          { date: "26/04/2026", present: false },
-                        ].map(({ date, present }) => (
-                          <div key={date} style={{ flex: 1, backgroundColor: present ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${present ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 12, padding: "1rem", textAlign: "center" }}>
-                            {present
-                              ? <CheckCircle size={20} style={{ color: "#10b981", margin: "0 auto 8px" }} />
-                              : <ShieldAlert size={20} style={{ color: "#ef4444", margin: "0 auto 8px" }} />
-                            }
-                            <strong style={{ display: "block", fontSize: "0.8rem", color: "var(--alvo-ink)" }}>{date}</strong>
-                            <span style={{ fontSize: "0.7rem", color: present ? "#10b981" : "#ef4444" }}>{present ? "Presente" : "Ausente"}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <div>
+                    <h3>{personGroup?.name ?? "Sem célula vinculada"}</h3>
+                    <p>{personGroup ? [personGroup.meetingTime, personGroup.city].filter(Boolean).join(" · ") : "Vincule o membro a uma célula para acompanhar sua participação."}</p>
+                    <Link href="/groups">Consultar células e presenças</Link>
                   </div>
                 )}
 
@@ -626,28 +581,10 @@ export function MemberProfileView() {
                 )}
 
                 {activeTab === "academy" && (
-                  <div className="animate-entrance">
-                    <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--alvo-ink)", marginBottom: "1.5rem" }}>
-                      Matrícula Ativa no EAD Academia Esdras
-                    </h3>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                      {[
-                        { title: "Curso de Maturidade Cristã V1", pct: 85, color: "var(--alvo-accent)", note: "Faltam 2 aulas para a emissão do certificado digital." },
-                        { title: "DNA Esdras - Integração e Visão", pct: 100, color: "#10b981", note: "✓ Certificado gerado e anexado ao Esdras Passe." },
-                      ].map(c => (
-                        <div key={c.title} style={S.card}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                            <strong style={S.ink}>{c.title}</strong>
-                            <span style={{ color: c.color, fontWeight: 700, fontSize: "0.85rem" }}>{c.pct}% Concluído</span>
-                          </div>
-                          <div style={{ width: "100%", height: 8, backgroundColor: "var(--alvo-surface-muted)", borderRadius: 4, overflow: "hidden" }}>
-                            <div style={{ width: `${c.pct}%`, height: "100%", backgroundColor: c.color }} />
-                          </div>
-                          <small style={{ color: c.pct === 100 ? c.color : "var(--alvo-ink-soft)", display: "block", marginTop: 8 }}>{c.note}</small>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    <h3>Ensino / EAD</h3>
+                    <p>O acompanhamento acadêmico ainda não está disponível nesta ficha.</p>
+                    <Link href="/learning/manage">Consultar cursos</Link>
                   </div>
                 )}
 
@@ -730,7 +667,7 @@ export function MemberProfileView() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.85rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink-soft)" }}>
                     <Smartphone size={16} style={{ color: "var(--alvo-accent)" }} />
-                    <span>{person.mobilePhone || "(11) 98765-4321"}</span>
+                    <span>{person.mobilePhone || person.whatsappPhone || "Telefone não informado"}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink-soft)" }}>
                     <Mail size={16} style={{ color: "var(--alvo-accent)" }} />
@@ -772,7 +709,7 @@ export function MemberProfileView() {
                   </div>
                   <div>
                     <span style={{ fontSize: "0.65rem", color: "var(--alvo-ink-soft)", textTransform: "uppercase", display: "block" }}>MEMBER IDENTIFIER</span>
-                    <strong style={{ fontSize: "1rem", color: "var(--alvo-ink)", fontFamily: "monospace" }}>{person.memberCardCode || "ALVO-002-391"}</strong>
+                    <strong style={{ fontSize: "1rem", color: "var(--alvo-ink)", fontFamily: "monospace" }}>{person.memberCardCode || "Não emitido"}</strong>
                   </div>
                 </div>
               </div>
@@ -815,7 +752,7 @@ function calculateAge(birthDate: string) {
 
 function formatDate(value: string) {
   try {
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(value));
+    return formatCalendarDate(value);
   } catch (e) {
     return value;
   }

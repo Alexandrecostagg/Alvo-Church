@@ -68,7 +68,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
     {
       title: "Membros",
       items: [
-        { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname.startsWith("/me") },
+        { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname === "/me" || pathname.startsWith("/me/") },
         { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname.startsWith("/members") },
         { label: "Marketplace", icon: Store, href: "/marketplace-community", moduleKey: "marketplace", match: (pathname) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
         { label: "Comunicação", icon: MessageSquareText, href: "/communication", moduleKey: "communication", match: (pathname) => pathname.startsWith("/communication") },

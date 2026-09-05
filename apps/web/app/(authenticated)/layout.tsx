@@ -6,7 +6,6 @@ import { AuthGate } from "./auth-gate";
 import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
 import { PlanProvider } from "../../contexts/PlanContext";
 import { ToastProvider } from "../../contexts/ToastContext";
-import { NetworkSyncLoader } from "./network-sync-loader";
 import { BillingGate } from "./billing-gate";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
@@ -26,7 +25,6 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                 <BillingGate>{children}</BillingGate>
               </div>
             </div>
-            <NetworkSyncLoader />
           </AuthGate>
         </ToastProvider>
       </OrgFeaturesProvider>

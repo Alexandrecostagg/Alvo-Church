@@ -22,6 +22,8 @@ Outros comandos:
 - `corepack pnpm build:cloudflare:web`: gera o Worker OpenNext, sem publicar.
 
 Os arquivos `.env.local`, credenciais e backups locais ficam fora do Git.
+Para homologar login e membros sem tocar nos dados reais, use o
+[roteiro com emuladores e duas igrejas de teste](docs/homologacao-membros-2026-09-05.md).
 Para retomar em outra máquina, envie primeiro os commits da branch de trabalho
 ao remoto; `main` ainda não contém esta consolidação.
 

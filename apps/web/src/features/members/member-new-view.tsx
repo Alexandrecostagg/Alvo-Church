@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   isFirebaseWebRuntimeConfigured,
   saveFamilyMemberProfile,
@@ -15,6 +15,8 @@ import type { Family, FamilyMember, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { usePlan } from "../../../contexts/PlanContext";
 import { PLAN_LIMITS } from "@alvo/firebase";
+import { birthDateError, daysInMonth, lookupCep } from "../../lib/member-form";
+import { invalidateOrgDataCache } from "../../lib/org-data-cache";
 import { saveLocalMemberProfile } from "../../lib/local-member-store";
 import {
   ShieldCheck,
@@ -86,10 +88,6 @@ function isValidCpf(value: string) {
   );
 }
 
-function daysInMonth(year: string, month: string) {
-  if (!year || !month) return 31;
-  return new Date(Number(year), Number(month), 0).getDate();
-}
 
 export function MemberNewView() {
   const { configured, user, organizationId, firebaseConfig } = useAppAuth();
@@ -104,6 +102,10 @@ export function MemberNewView() {
   const [partnerBenefitsEnabled, setPartnerBenefitsEnabled] = useState(false);
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const cepRequest = useRef<AbortController | null>(null);
+  const saving = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => () => cepRequest.current?.abort(), []);
   const [birthDay, setBirthDay] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthYear, setBirthYear] = useState("");
@@ -141,52 +143,49 @@ export function MemberNewView() {
     });
   }
 
-  async function lookupCep(cleanCep: string) {
-    const viaCep = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-    if (viaCep.ok) {
-      const data = await viaCep.json();
-      if (!data.erro) {
-        return {
-          street: data.logradouro || "",
-          district: data.bairro || "",
-          city: data.localidade || "",
-          state: data.uf || "",
-        };
-      }
-    }
-
-    const brasilApi = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
-    if (!brasilApi.ok) throw new Error("CEP não encontrado");
-    const data = await brasilApi.json();
-    return {
-      street: data.street || "",
-      district: data.neighborhood || "",
-      city: data.city || "",
-      state: data.state || "",
-    };
-  }
-
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanCep = digitsOnly(e.target.value).slice(0, 8);
     setAddress(prev => ({ ...prev, postalCode: formatCep(cleanCep) }));
 
+    cepRequest.current?.abort();
+    const request = new AbortController();
+    cepRequest.current = request;
+    setLoadingCep(false);
+    setStatus(null);
     if (cleanCep.length === 8) {
       try {
         setLoadingCep(true);
         setStatus(null);
-        const foundAddress = await lookupCep(cleanCep);
+        const foundAddress = await lookupCep(cleanCep, request.signal);
+        if (request.signal.aborted) return;
         setAddress(prev => ({ ...prev, ...foundAddress }));
         setStatus("✓ Endereço preenchido. Confira o número e o complemento.");
       } catch (error) {
-        console.error("Não foi possível consultar o CEP:", error);
+        if (request.signal.aborted) return;
         setStatus("Não encontramos esse CEP. Você pode preencher o endereço manualmente.");
       } finally {
-        setLoadingCep(false);
+        if (!request.signal.aborted) setLoadingCep(false);
       }
     }
   };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
+    setIsSaving(true);
+    try {
+      await saveMember(event);
+    } catch (error) {
+      setStatus(friendlyError(error, "Não foi possível salvar o membro. Tente novamente."));
+      setLastSavedMember(null);
+    } finally {
+      saving.current = false;
+      setIsSaving(false);
+    }
+  }
+
+  async function saveMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formElement = event.currentTarget;
@@ -199,8 +198,9 @@ export function MemberNewView() {
       return;
     }
 
-    if ((birthDay || birthMonth || birthYear) && (!birthDay || !birthMonth || !birthYear)) {
-      setStatus("Informe dia, mês e ano de nascimento ou deixe a data em branco.");
+    const birthError = birthDateError(birthDay, birthMonth, birthYear);
+    if (birthError) {
+      setStatus(birthError);
       setLastSavedMember(null);
       return;
     }
@@ -318,6 +318,7 @@ export function MemberNewView() {
       }
 
       await savePersonProfile(firebaseConfig, { organizationId }, person);
+      invalidateOrgDataCache(organizationId);
       setStatus(
         familyId
           ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.`
@@ -425,13 +426,13 @@ export function MemberNewView() {
                       <option key={day} value={String(day)}>{day}</option>
                     ))}
                   </select>
-                  <select aria-label="Mês de nascimento" value={birthMonth} onChange={(e) => setBirthMonth(e.target.value)}>
+                  <select aria-label="Mês de nascimento" value={birthMonth} onChange={(e) => { const month = e.target.value; setBirthMonth(month); if (Number(birthDay) > daysInMonth(birthYear, month)) setBirthDay(""); }}>
                     <option value="">Mês</option>
                     {MONTHS.map((month, index) => (
                       <option key={month} value={String(index + 1)}>{month}</option>
                     ))}
                   </select>
-                  <select aria-label="Ano de nascimento" value={birthYear} onChange={(e) => setBirthYear(e.target.value)}>
+                  <select aria-label="Ano de nascimento" value={birthYear} onChange={(e) => { const year = e.target.value; setBirthYear(year); if (Number(birthDay) > daysInMonth(year, birthMonth)) setBirthDay(""); }}>
                     <option value="">Ano</option>
                     {Array.from({ length: new Date().getFullYear() - 1899 }, (_, index) => new Date().getFullYear() - index).map((year) => (
                       <option key={year} value={String(year)}>{year}</option>
@@ -634,8 +635,8 @@ export function MemberNewView() {
           </fieldset>
 
           <div className="form-actions">
-            <button className="primary-button submit-btn" type="submit">
-              <Sparkles size={16} /> Salvar Membro na Base
+            <button className="primary-button submit-btn" type="submit" disabled={isSaving}>
+              <Sparkles size={16} /> {isSaving ? "Salvando membro..." : "Salvar Membro na Base"}
             </button>
             {status && <p className="form-status">{status}</p>}
           </div>

@@ -14,7 +14,7 @@ import { useAppAuth } from "../../../app/providers";
 import { loadLocalMemberStore } from "../../lib/local-member-store";
 
 export function MembersView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, tenantReady, user, organizationId, firebaseConfig } = useAppAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
   const [status, setStatus] = useState("Entre no painel para consultar a base real.");
@@ -26,11 +26,12 @@ export function MembersView() {
   useEffect(() => {
     function loadLocalMembers() {
       const localStore = loadLocalMemberStore();
-
-      if (localStore.people.length || localStore.families.length) {
-        setPeople((current) => mergeById(current, localStore.people));
-        setFamilies((current) => mergeById(current, localStore.families));
-        setStatus(`${localStore.people.length} cadastro(s) local(is) carregado(s) neste navegador.`);
+      const localPeople = localStore.people.filter((p) => p.organizationId === organizationId);
+      const localFamilies = localStore.families.filter((f) => f.organizationId === organizationId);
+      setPeople((current) => mergeById(current.filter((p) => p.organizationId === organizationId), localPeople));
+      setFamilies((current) => mergeById(current.filter((f) => f.organizationId === organizationId), localFamilies));
+      if (localPeople.length || localFamilies.length) {
+        setStatus(`${localPeople.length} cadastro(s) local(is) carregado(s) neste navegador.`);
       }
     }
 
@@ -40,17 +41,19 @@ export function MembersView() {
     return () => {
       window.removeEventListener("alvo-local-members-updated", loadLocalMembers);
     };
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    if (!configured || !firebaseReady || !tenantReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       return;
     }
 
     let cancelled = false;
 
+    setPeople([]);
+    setFamilies([]);
     async function loadMembers() {
-      setStatus("Carregando membros e famílias do Firestore...");
+      setStatus("Carregando membros e famílias...");
 
       try {
         const [nextPeople, nextFamilies] = await Promise.all([
@@ -63,10 +66,10 @@ export function MembersView() {
         }
 
         const localStore = loadLocalMemberStore();
-        setPeople(mergeById(nextPeople, localStore.people));
-        setFamilies(mergeById(nextFamilies, localStore.families));
+        setPeople(mergeById(nextPeople, localStore.people.filter((p) => p.organizationId === organizationId)));
+        setFamilies(mergeById(nextFamilies, localStore.families.filter((f) => f.organizationId === organizationId)));
         setStatus(
-          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) sincronizadas no Firestore.`
+          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) carregadas.`
         );
       } catch (error) {
         if (!cancelled) {
@@ -80,7 +83,7 @@ export function MembersView() {
     return () => {
       cancelled = true;
     };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
+  }, [configured, firebaseConfig, firebaseReady, tenantReady, organizationId, user]);
 
   const members = people.filter((person) =>
     ["member", "leader", "volunteer"].includes(person.memberStatus)
@@ -126,7 +129,7 @@ export function MembersView() {
       label: "03",
       title: "Ativar cuidado",
       detail: "Use status pastoral para alimentar jornadas, grupos e comunicação.",
-      href: "/#journeys"
+      href: "/journeys"
     },
     {
       label: "04",
@@ -213,7 +216,7 @@ export function MembersView() {
         <article>
           <span>Famílias</span>
           <strong>{families.length}</strong>
-          <p>casas mapeadas no tenant</p>
+          <p>casas cadastradas</p>
         </article>
         <article>
           <span>Aspirantes</span>
@@ -304,7 +307,7 @@ export function MembersView() {
                 <p>
                   {people.length
                     ? "Ajuste os filtros para encontrar outra pessoa."
-                    : "Entre no Firebase ou cadastre uma pessoa para iniciar a base."}
+                    : "Cadastre uma pessoa para iniciar a base da sua igreja."}
                 </p>
                 {!people.length ? (
                   <Link className="ghost-button" href="/members/new">
