@@ -1,9 +1,46 @@
 # Plano de ação — segurança e estabilização
 
-Atualizado em 21/08/2026. Este plano organiza os achados da varredura técnica
+Atualizado em **05/09/2026**; nome do arquivo preservado para manter os links.
+Este plano organiza os achados da varredura técnica
 para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
+
+## Situação consolidada em 05/09
+
+Os andamentos e IDs de publicação de agosto, preservados abaixo, são históricos.
+A consolidação de setembro foi validada localmente e **não foi publicada**.
+Execução atual: [backlog ativo](backlog-mvp-implementacao-v2.md).
+Medição e evidências: [estado da implementação](status-implementacao-2026-09-05.md).
+
+| Frente | Confirmado localmente | Ainda bloqueia o fechamento |
+| --- | --- | --- |
+| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Migrar recepção/escalas, rever cobertura por coleção e proteger vínculo conta/pessoa. |
+| 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR por URL/cache, fotos privadas, mediação de comprovantes, rate limit persistente/anti-spam. |
+| 3 — Custo/cobrança | API principal de IA consome cota no servidor; PIX estático existe. | Cota uniforme de banners, idempotência de checkout, consentimento/opt-out e destinatários da comunicação. |
+| 4 — Dados/fluxos | Dashboard/ficha sem dados inventados; leitura Kids por responsável/operador testada. | Fallbacks em recepção, rede, marketplace, bem-estar e pastoral; falso sucesso Wi-Fi; fluxo Kids mobile. |
+| 5 — Validação | 167 testes, typecheck, QA transacional e export iOS registrados; build LP passou nesta revisão. | Dependências com advisories; homologação física Android/iOS; cobertura completa de papéis/coleções e integrações. |
+
+### Novo requisito explícito — identidade e Passe
+
+`AuthUser.personId` existe como tipo, mas `fetchTenantUser` não o devolve ao app.
+As regras de autoedição em `users/{uid}` não o protegem. Antes de usar esse campo
+como prova de identidade, bloquear autoatribuição/troca, definir vinculação por
+operação autorizada e testar isolamento entre usuários/igrejas. A carteirinha
+deve respeitar consentimento e benefício ativo; não associar por nome/e-mail.
+
+### Auditoria de dependências de 05/09
+
+`pnpm audit --prod` retornou 3 críticos, 50 altos, 51 moderados e 5 baixos no
+resumo do scanner. O inventário possui 105 advisories distintos; não confundir
+com quantidade de falhas exploráveis no produto. Inclui cadeias de ferramentas
+do Expo. [Inventário](auditoria-dependencias-2026-09-05.json).
+
+Next instalado ainda é 16.2.4; o mínimo antigo abaixo não deve virar garantia
+permanente de segurança. Selecionar versões compatíveis que resolvam **todos os
+avisos aplicáveis atuais**, incluindo Hono e transitivos, com auditoria após o
+lockfile atualizado. Os críticos reportados envolvem protobufjs, shell-quote e
+websocket-driver; alcance no runtime ainda não foi demonstrado.
 
 ## Princípios de decisão
 
@@ -106,13 +143,13 @@ entregá-la apenas por armazenamento privado.
 4. Homologar com usuários de igreja, pastor, secretário, membro e visitante
    antes de novo deploy e antes da distribuição mobile.
 
-## Ordem de execução
+## Ordem de execução atualizada
 
-1. Acesso/abrangência e regra de Firestore.
-2. Upload público, QR Kids e controles de IA.
-3. Atualização de dependências críticas.
-4. Remoção de dados simulados e fluxos funcionais.
-5. Testes de regra, build, homologação e publicação.
+1. Corrigir dependências aplicáveis e validar os artefatos afetados.
+2. Fechar vínculo conta/pessoa e Passe; QR/fotos/fluxo Kids.
+3. Migrar cadastros legados, proteger uploads e persistir limites/cotas.
+4. Remover dados simulados e homologar cobrança/comunicação.
+5. Ampliar testes de regras, homologar aparelhos/papéis e só então publicar.
 
 ## Critério de conclusão
 

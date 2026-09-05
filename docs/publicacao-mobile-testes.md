@@ -1,5 +1,20 @@
 # Testes nas lojas — EsdrasApp
 
+Atualizado em **05/09/2026**. Estado: **implementação parcial, sem homologação
+em aparelhos comprovada nesta base**. Typecheck e export JS/Hermes iOS passaram;
+isso não comprova build nativo assinado, instalação ou aprovação em loja.
+Contas EAS/lojas não foram inspecionadas nesta revisão.
+
+Antes do roteiro de distribuição abaixo, fechar dependências, vínculo conta/pessoa
+e Passe, QR/fotos Kids e papéis. Ver [backlog ativo](backlog-mvp-implementacao-v2.md).
+O app já tem registro de Expo Push Token; entrega de notificação em aparelho ainda
+precisa ser comprovada. A carteirinha Passe não está implementada no mobile.
+
+Os perfis `preview` e `store-test` atualmente herdam configuração Firebase/API
+de produção de `eas.json`. Preparar um ambiente de homologação próprio antes de
+testar novos fluxos com dados sensíveis. Não confundir perfil de distribuição
+interna com isolamento de dados. Este documento não autoriza envio às lojas.
+
 O app mobile usa Expo/EAS e está preparado para os dois formatos de teste:
 
 - `preview`: instala diretamente nos aparelhos (APK no Android e distribuição ad hoc no iOS).
@@ -43,10 +58,10 @@ No Google Play Console, adicione os e-mails dos testadores no canal **Teste inte
 
 ## Antes de enviar
 
-- Confirmar que as variáveis `EXPO_PUBLIC_FIREBASE_*` e `EXPO_PUBLIC_WEB_API_URL` apontam para produção no ambiente de build EAS.
+- Confirmar o ambiente das variáveis `EXPO_PUBLIC_FIREBASE_*` e `EXPO_PUBLIC_WEB_API_URL`: homologação no preview de QA; produção apenas na versão deliberadamente preparada para esse ambiente.
 - No Firebase Console, criar a credencial **FCM V1** do Android e enviá-la em `Expo > Credentials` para o projeto. No primeiro build iOS, permitir que o EAS crie/associe a chave APNs da conta Apple Developer.
 - Instalar um build `preview` em aparelho físico, fazer login e aceitar a permissão de notificações. O app salva o `ExpoPushToken` no perfil do usuário; use o Expo Notifications Tool para o primeiro envio de teste.
 - Testar criação de conta, login, recuperação de senha, leitura dos dados da igreja, câmera/QR e escolha de foto em aparelhos reais.
 - Cadastrar músicas no módulo **Louvor & Cifras** do painel e vincular uma setlist ao próximo evento: o aplicativo lê esse repertório real, sem usar os conteúdos de demonstração na tela.
 - Criar a política de privacidade e preencher os formulários de privacidade/dados das duas lojas de acordo com o comportamento real do app.
-- Preparar textos da loja, e-mail de suporte, categoria e capturas de tela. Não declarar notificações push como funcionalidade enquanto elas permanecerem desativadas no app.
+- Preparar textos da loja, e-mail de suporte, categoria e capturas de tela. Declarar push apenas após comprovar recebimento em aparelho; registro do token sozinho não fecha o fluxo.

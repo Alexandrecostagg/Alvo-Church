@@ -1,5 +1,8 @@
 # Mapa operacional de rotas e modulos - Alvo Church
 
+> Histórico. Use o [mapa v2](mapa-operacional-rotas-modulos-v2.md) para entradas
+> e o [diagnóstico de 05/09](status-implementacao-2026-09-05.md) para maturidade.
+
 Atualizado em: 17 de junho de 2026
 
 ## Objetivo

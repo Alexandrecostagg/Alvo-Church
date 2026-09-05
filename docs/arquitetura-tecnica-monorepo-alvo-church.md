@@ -1,6 +1,32 @@
 # Arquitetura técnica do monorepo - Alvo Church
 
-Data: 17 de março de 2026
+Criado em 17/03/2026. Revisão de fronteiras em **05/09/2026**.
+
+## Fronteiras atuais e recomendação de evolução
+
+O monorepo já existe. Além de web/mobile/worker-api, contém `apps/lp` (Next com
+export estático) e `apps/lp-worker` (roteamento do domínio comercial).
+O [diagnóstico atual](status-implementacao-2026-09-05.md) registra as evidências.
+
+- **Mobile:** manter neste repositório enquanto domínio, identidade e permissões
+  evoluem juntos. Depende de quatro pacotes workspace e do script de ambiente
+  da raiz. Ter build/release EAS próprios; organizar telas em módulos internos.
+- **LP:** consolidar uma única fonte em `apps/lp`, separada do runtime do painel.
+  Não possui dependência declarada de `@alvo/*`. Repo próprio é recomendável se
+  marketing tiver operação/acesso independentes, após reconciliar cópias e validar
+  preview. Build/deploy próprios já são possíveis no mesmo repo.
+- **Backend:** continua central para identidade, dados e APIs. `/p/[orgSlug]` e
+  formulários públicos das igrejas são parte da plataforma, não da LP comercial.
+- **CI:** separar verificações/releases por app e incluir seus pacotes comuns nos
+  filtros. Não há workflow GitHub Actions versionado nesta base; a configuração
+  remota do Cloudflare não foi auditada nesta revisão.
+
+Essa é uma recomendação documentada; não houve extração de código, criação de
+repo, mudança de DNS ou deploy. A sequência de migração/rollback da LP está no
+diagnóstico. Separar Git não implica separar banco ou duplicar regras de negócio.
+
+Referências oficiais: [Expo/EAS em monorepos](https://docs.expo.dev/build-reference/build-with-monorepos/)
+e [Workers independentes no Cloudflare](https://developers.cloudflare.com/workers/ci-cd/builds/advanced-setups/).
 
 ## 1. Objetivo
 
@@ -625,10 +651,7 @@ Se eu fosse fechar a tese técnica do Alvo Church em uma frase:
 
 `Um monorepo TypeScript com Next.js, Expo, Firebase e Cloudflare, organizado por domínio, com regras compartilhadas, multi-tenant desde a base e uma camada própria de IA.`
 
-## 26. Próximo passo ideal
+## 26. Próximo passo atual
 
-Depois desta arquitetura, os próximos passos mais fortes são:
-
-1. backlog do MVP com épicos e histórias
-2. estrutura inicial do monorepo no repositório
-3. wireframes principais do web admin e do app
+Executar o backlog ativo de estabilização, modularizar internamente o mobile e
+consolidar a LP. A estrutura inicial e as interfaces já foram construídas.

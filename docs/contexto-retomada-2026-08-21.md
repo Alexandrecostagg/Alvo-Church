@@ -1,5 +1,11 @@
 # Contexto para retomada — 21/08/2026
 
+> Registro histórico. A retomada vigente está em `../CONTEXT.md`, no
+> [encerramento do Jules](encerramento-jules-2026-09-05.md) e no
+> [diagnóstico de implementação](status-implementacao-2026-09-05.md).
+> CEP, CPF e nascimento listados abaixo já foram homologados localmente.
+> IDs de publicação deste documento descrevem agosto, não a base local atual.
+
 ## Estado publicado
 
 - Worker web publicado no Cloudflare: `alvo-church-web`.

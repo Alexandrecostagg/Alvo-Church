@@ -3,6 +3,16 @@
 Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
 
 - Produto: Plataforma Esdras / EsdrasApp; monorepo Alvo Church.
+- Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
+  `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
+  cerca de 63% do escopo operacional (não prontidão de produção nem PRD completo).
+- Prioridade atual: dependências com advisories → identidade/Passe → QR/fotos
+  e fluxo Kids → limites/cadastros legados → dados reais e QA mobile.
+- Recomendação arquitetural: mobile no monorepo; LP com fonte e deploy próprios,
+  candidata a repo separado após consolidação. Nenhuma migração foi executada.
+- Revisão documental: 167 testes e typecheck passaram novamente; build estático
+  da LP passou. Auditoria de produção reportou 3 críticos/50 altos/51 moderados/
+  5 baixos; alcance ainda por avaliar, inventário sanitizado em `docs/`.
 - Branch de trabalho: `codex/consolidacao-local-2026-09-05`.
 - O trabalho local anterior foi salvo no commit `67d58d6` e na branch
   `backup/local-2026-09-05`. Não descartar esse trabalho.

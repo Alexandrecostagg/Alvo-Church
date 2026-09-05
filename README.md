@@ -235,9 +235,12 @@ Enquanto `NEXT_PUBLIC_UPLOAD_API_BASE_URL` nao estiver configurada, o painel con
 
 Documentos de trabalho:
 
-- [Mapa operacional de rotas e modulos](docs/mapa-operacional-rotas-modulos.md)
+- [Estado da implementação e percentuais — 05/09](docs/status-implementacao-2026-09-05.md)
+- [Backlog ativo de implementação](docs/backlog-mvp-implementacao-v2.md)
+- [Plano atualizado de segurança e estabilização](docs/plano-acao-seguranca-estabilizacao-2026-08-21.md)
+- [Mapa operacional de rotas e modulos](docs/mapa-operacional-rotas-modulos-v2.md)
 - [Manual operacional dos modulos atuais](docs/manual-operacional-modulos.md)
-- [Backlog MVP de implementacao](docs/backlog-mvp-implementacao.md)
+- [Backlog de junho — histórico](docs/backlog-mvp-implementacao.md)
 
 Documentos de produto e arquitetura:
 
@@ -250,4 +253,7 @@ Documentos de produto e arquitetura:
 
 ## Status
 
-Base funcional em estabilização. O estado local atual e a triagem das branches estão em [docs/consolidacao-git-2026-09-05.md](docs/consolidacao-git-2026-09-05.md). Os documentos de agosto são históricos e podem conter pendências já implementadas.
+Base funcional em estabilização: estimativa gerencial de cerca de 63% do escopo
+operacional avaliado, com critérios e limites no [diagnóstico atual](docs/status-implementacao-2026-09-05.md).
+Não equivale a prontidão para produção. Os planos ativos foram atualizados em
+05/09; documentos conceituais e registros datados preservam a história do projeto.
