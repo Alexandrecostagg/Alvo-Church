@@ -33,7 +33,9 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
   ordem; cota compartilhada de IA e remoção assistida de fotos antigas Kids.
   Atual: **83,70% (~83,7%)**, +7,05 pontos. 301 testes, 444 verificações numeradas
   de integração mais regressão de cadastro; ver `docs/entrega-ampliada-7-2026-09-05.md`.
-  Homologação Asaas usou adaptador simulado; sandbox real, aparelhos e deploy pendentes.
+  Homologação Asaas usou adaptador simulado; sandbox real e aparelhos pendentes.
+  Commit `e92452c` enviado à branch remota. Worker web, regras Firestore/Storage
+  e índice Kids publicados; versão Cloudflare `863769ab-6c0f-405f-883f-58865ba1d67a`.
 - Usuário pediu entregas maiores (~7–10 pontos), sem aumentar porcentagem sem
   implementação/validação. Agrupar várias histórias por entrega e commitar ao final.
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
@@ -47,6 +49,8 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
   da LP passou. Auditoria de produção reportou 3 críticos/50 altos/51 moderados/
   5 baixos; alcance ainda por avaliar, inventário sanitizado em `docs/`.
 - Branch de trabalho: `codex/consolidacao-local-2026-09-05`.
+- Branch publicada em `origin/codex/consolidacao-local-2026-09-05`; `main` não foi
+  alterada nem reescrita.
 - O trabalho local anterior foi salvo no commit `67d58d6` e na branch
   `backup/local-2026-09-05`. Não descartar esse trabalho.
 - Backup adicional, ignorado pelo Git: `.local-backups/2026-09-05-before-integration/`.

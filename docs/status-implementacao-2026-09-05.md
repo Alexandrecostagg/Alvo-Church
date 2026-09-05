@@ -6,10 +6,11 @@
 > Ver [evidências e limites](entrega-ampliada-7-2026-09-05.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base auditada: `ecc86b4`, branch `codex/consolidacao-local-2026-09-05`.
-Avaliação do código local e dos registros de homologação. Não é uma verificação
-do que está publicado no Cloudflare ou nas lojas. A consolidação ainda não foi
-enviada ao remoto.
+Entrega publicada: `e92452c`, branch `codex/consolidacao-local-2026-09-05`.
+O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
+o deploy. O app não foi enviado às lojas e as integrações externas continuam com
+os limites registrados no documento da entrega. A branch foi enviada ao remoto;
+`main` permaneceu intacta.
 
 ## Onde estão os planos
 
@@ -148,8 +149,7 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Entrega 6 fecha localmente as entradas legadas de cadastro, sessões Kids e as
-frentes de dados reais documentadas. Seguem retenção/legados Kids, aparelhos,
-comprovantes privados, cobrança/cotas e comunicação real. Manter pacotes maiores
-conforme pedido do usuário, com percentual sustentado por evidência. Sem deploy
-ou extração do mobile/LP para outros repositórios.
+Entrega 7 publicou finanças/doações, cobrança vinculada, cota de IA e retenção
+assistida Kids. Seguem migração de legados, sandbox Asaas, aparelhos, comunicação
+real e auditoria EAD/eventos. Manter pacotes maiores conforme pedido do usuário,
+com percentual sustentado por evidência. Mobile e LP não foram extraídos.

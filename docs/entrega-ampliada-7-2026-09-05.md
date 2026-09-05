@@ -1,9 +1,27 @@
 # Entrega ampliada 7 — finanças, cobrança, IA e retenção Kids
 
 Data: 05/09/2026. Base: `850e7d0`, branch `codex/consolidacao-local-2026-09-05`.
-Implementação e homologação locais. Gratuito mantém **50 membros**.
+Implementação e homologação locais; publicação coordenada concluída depois dos
+testes. Gratuito mantém **50 membros**.
 Avanço gerencial: **76,65% → 83,70% (+7,05 pontos)**, mesmos pesos e escopo.
 Não representa prontidão para produção, percentual de tempo ou todo o PRD.
+
+## Publicação
+
+- GitHub: `e92452c` em `origin/codex/consolidacao-local-2026-09-05`; `main`
+  preservada.
+- Cloudflare: Worker `alvo-church-web`, versão
+  `863769ab-6c0f-405f-883f-58865ba1d67a`; `/landing` respondeu 200 e a nova
+  `/api/public/giving` respondeu 400 para operação inválida, como esperado.
+- Firestore: ruleset `83b9a880-82a7-4d36-b4fb-16ac865ad04f` ativo.
+- Storage: release para `alvo-church.firebasestorage.app` usando o ruleset
+  `35194dd3-2100-4d2d-a5b7-dde7ee5f0dcd`.
+- Índice `kidsCheckIns(photoRetentionPending, checkedOutAt)` em estado `READY`.
+
+O projeto não lista bucket físico no Cloud Storage. A release de regras ficou
+registrada para o bucket configurado, mas upload real de comprovante/foto em
+produção depende do provisionamento e deve ser verificado antes do uso. LP,
+worker auxiliar e lojas mobile não receberam deploy, pois não mudaram nesta entrega.
 
 ## Comportamento entregue
 
@@ -121,15 +139,15 @@ Margem de julgamento aproximada de 10 pontos; decimais tornam a fórmula auditá
 sem representar precisão estatística. Nenhum crédito por envio de comunicação,
 Asaas real, aparelho, publicação, CI remoto ou novas funcionalidades de Passe/LP.
 
-## Pendências e preparação para publicação
+## Pendências após a publicação
 
 1. Homologar Asaas em sandbox real; inventariar/migrar referências legadas antes
    de ativar o webhook. Troca/cancelamento self-service e recuperação de POST
    incerto sem correspondência única exigem atendimento; cobrança deletada cujo
    recurso já retorna 404 requer tratamento assistido. Não migrar por valor/preço.
-2. Coordenar backend, Firestore/Storage rules, índice de retenção, web e versão
-   mínima mobile. Apps antigos com escrita financeira direta serão recusados.
-   Nenhuma dessas alterações foi publicada nesta entrega.
+2. Worker, regras e índice foram publicados juntos. Definir versão mínima mobile
+   antes de liberar o fluxo para usuários do app: versões antigas com escrita
+   financeira direta serão recusadas. O app não foi enviado às lojas.
 3. Inventariar fotos Kids antigas sem `photoRetentionPending`, URLs externas e
    comprovantes legados grandes; definir migração e retenção de comprovantes.
    Não houve varredura remota nem reconciliação de objetos órfãos. Se falhar também
