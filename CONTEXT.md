@@ -21,11 +21,19 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
   autorização nominal e confirmação de identidade; transações impedem duplicação
   e dupla retirada. Legados exigem confirmação no painel. 235 testes, 77 checks
   de custódia, 62 de mídia, regressão 49→50, OpenNext e Hermes passaram.
-  Atual: 69,45% (~69,5%); veja `docs/kids-custodia-2026-09-05.md`.
+  Percentual após entrega 5: 69,45% (~69,5%); veja `docs/kids-custodia-2026-09-05.md`.
+- Entrega 6 ampliada: cadastros de recepção/dashboard/escalas centralizados,
+  limite global de 50, formulário público com cota persistente, Kids por
+  sessão/sala/evento/equipe/capacidade e criança cadastral, limpeza de simulações,
+  privacidade de bem-estar/lojas e CI versionado. 263 testes e 308 verificações
+  numeradas mais regressão de cadastro; QA visual, types e builds.
+  Atual: **76,65% (~76,7%)**, +7,20 pontos. Veja `docs/entrega-ampliada-6-2026-09-05.md`.
+- Usuário pediu entregas maiores (~7–10 pontos), sem aumentar porcentagem sem
+  implementação/validação. Agrupar várias histórias por entrega e commitar ao final.
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
   `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
   63,25% como linha de base (não prontidão de produção nem PRD completo).
-- Prioridade atual: escala/sala/evento Kids e QA físico → limites/cadastros legados → dados reais e QA mobile.
+- Prioridade atual: retenção/legados Kids e QA físico → comprovantes/cobrança/cotas → comunicação real e dados restantes (EAD/eventos).
 - Recomendação arquitetural: mobile no monorepo; LP com fonte e deploy próprios,
   candidata a repo separado após consolidação. Nenhuma migração foi executada.
 - Revisão documental: 167 testes e typecheck passaram novamente; build estático
@@ -79,8 +87,8 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
 - Consulte `docs/auditoria-jules-kids-passe-2026-09-05.md` e
   `docs/cadastro-transacional-2026-09-05.md`. QR e fotos privadas implementados localmente na entrega 4;
   vínculo responsável/operador e retirada atômica validados localmente na entrega 5.
-  Escala/sala/evento, retenção e QA físico seguem pendentes. Recepção/escalas ainda precisam
-  migrar para a mesma API para fechar o limite global de pessoas.
+  Escala nominal/sala/evento e entradas legadas validados na entrega 6. Retenção,
+  relação familiar cadastral e QA físico ainda pendentes.
 - Mobile usa Expo 57.0.20 e React Native 0.86.3, identidade `com.plataformaesdras.app`.
 - Segurança de tenant, dados simulados, armazenamento Kids e limites persistentes
   ainda exigem a estabilização descrita em `docs/plano-acao-seguranca-estabilizacao-2026-08-21.md`.

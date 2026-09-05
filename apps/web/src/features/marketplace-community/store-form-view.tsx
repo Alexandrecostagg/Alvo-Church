@@ -104,7 +104,7 @@ export function StoreFormView({ initialStore }: { initialStore?: CommunityStore 
         name: formData.name,
         description: formData.description,
         category: formData.category,
-        status: initialStore?.status || "pending",
+        status: "pending",
         images: [],
         bannerImageUrl: bannerPreview || undefined,
         contact: {

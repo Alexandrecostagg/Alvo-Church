@@ -1,3 +1,4 @@
+import { authorizeSession } from "./kids-sessions";
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
@@ -43,10 +44,11 @@ async function operator(tx: AccountTransaction, orgId: string, uid: string) {
 export async function createKids(raw: any, uid: string) {
   const organizationId = documentId(raw.organizationId, "Igreja"), attempt = requestId(raw.requestId);
   const guardians = guardianInput(raw);
-  const input = { ...guardians, childName: text(raw.childName, "Nome da criança"), roomCode: text(raw.roomCode, "Sala", 120, false), allergies: text(raw.allergies, "Alergias", 500, false), securityRestrictions: text(raw.securityRestrictions, "Restrições", 500, false) };
+  const input = { ...guardians, sessionId: documentId(raw.sessionId, "Sessão"), childId: raw.childId ? documentId(raw.childId, "Criança cadastrada") : "", childName: text(raw.childName, "Nome da criança"), roomCode: text(raw.roomCode, "Sala", 120, false), allergies: text(raw.allergies, "Alergias", 500, false), securityRestrictions: text(raw.securityRestrictions, "Restrições", 500, false) };
   const fingerprint = hash({ input, uid }), id = `kc_${attempt}`;
   return accountTransaction(async tx => {
     await operator(tx, organizationId, uid);
+    await authorizeSession(tx, organizationId, uid, input.sessionId);
     const path = `organizations/${organizationId}/kidsCheckIns/${id}`;
     const [existing] = await tx.read(path);
     if (existing) {
@@ -54,13 +56,23 @@ export async function createKids(raw: any, uid: string) {
       if (existing.status !== "checked_in") throw new AccountError(409, "Esta entrada já foi encerrada. Atualize a lista.");
       return { checkIn: existing, replayed: true };
     }
+    const session = (await authorizeSession(tx, organizationId, uid, input.sessionId, true))!;
+    let childName = input.childName;
+    if (input.childId) {
+      const [child, claim] = await tx.read(`organizations/${organizationId}/people/${input.childId}`, `organizations/${organizationId}/kidsChildPresence/${input.childId}`);
+      if (child?.organizationId !== organizationId || child.status !== "active" || !["child", "teen"].includes(child.personType)) throw new AccountError(409, "Criança cadastral não encontrada nesta igreja.");
+      if (claim) throw new AccountError(409, "Esta criança já possui uma entrada ativa. Confira a outra sala.");
+      childName = `${child.firstName} ${child.lastName ?? ""}`.trim();
+      tx.set(`organizations/${organizationId}/kidsChildPresence/${input.childId}`, { checkInId: id, sessionId: session.id });
+    }
     const guardian = await guardianData(tx, organizationId, input);
     const now = new Date().toISOString();
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const random = crypto.getRandomValues(new Uint8Array(10));
     const code = Array.from(random, n => alphabet[n % alphabet.length]).join("");
-    const checkIn = { id, organizationId, childId: `quick_${attempt}`, ...guardian, childName: input.childName, roomCode: input.roomCode, allergies: input.allergies, securityRestrictions: input.securityRestrictions, securityToken: `KID-${crypto.randomUUID().replaceAll("-", "")}`, pickupCode: `KD-${code}`, checkedInAt: now, checkedInByUserId: uid, status: "checked_in", guardianVersion: 1, registrationFingerprint: fingerprint };
+    const checkIn = { id, organizationId, childId: input.childId || `quick_${attempt}`, ...guardian, childName, registeredChild: Boolean(input.childId), sessionId: session.id, eventId: session.eventId, serviceTeamId: session.serviceTeamId, roomCode: session.roomName, allergies: input.allergies, securityRestrictions: input.securityRestrictions, securityToken: `KID-${crypto.randomUUID().replaceAll("-", "")}`, pickupCode: `KD-${code}`, checkedInAt: now, checkedInByUserId: uid, status: "checked_in", guardianVersion: 1, registrationFingerprint: fingerprint };
     tx.set(path, checkIn);
+    tx.patch(`organizations/${organizationId}/kidsOperationSessions/${session.id}`, { occupancy: session.occupancy + 1 });
     tx.set(`organizations/${organizationId}/kidsCustodyAudit/${crypto.randomUUID()}`, { checkInId: id, action: "check_in", actorId: uid, parentId: guardian.parentId, pickupPeople: guardian.pickupPeople, identityConfirmed: true, at: now });
     return { checkIn, replayed: false };
   });
@@ -99,6 +111,17 @@ export async function releaseKids(raw: any, uid: string) {
     if (receiver.userId) {
       const [account] = await tx.read(`organizations/${organizationId}/users/${documentId(receiver.userId, "Responsável")}`);
       if (account?.isActive !== true || account.organizationId !== organizationId) throw new AccountError(409, "Conta do responsável inativa. Confirme novamente a autorização pelo painel.");
+    }
+    const session = await authorizeSession(tx, organizationId, uid, current.sessionId);
+    if (session) {
+      if (!Number.isInteger(session.occupancy) || session.occupancy < 1) throw new AccountError(409, "Ocupação inconsistente. Procure a administração.");
+      tx.patch(`organizations/${organizationId}/kidsOperationSessions/${session.id}`, { occupancy: session.occupancy - 1 });
+    }
+    if (current.registeredChild === true) {
+      const claimPath = `organizations/${organizationId}/kidsChildPresence/${documentId(current.childId, "Criança")}`;
+      const [claim] = await tx.read(claimPath);
+      if (claim?.checkInId !== id) throw new AccountError(409, "Presença cadastral inconsistente. Procure a administração.");
+      tx.remove(claimPath);
     }
     const at = new Date().toISOString();
     tx.patch(`organizations/${organizationId}/kidsCheckIns/${id}`, { status: "checked_out", checkedOutAt: at, checkedOutByUserId: uid, checkedOutByParentId: receiver.userId || null, releasedTo: receiver.name, releaseNote: note, checkoutReceiverId: receiverId, checkoutRequestId: attempt, checkoutFingerprint: fingerprint });

@@ -1,3 +1,4 @@
+import { authorizeSession, isKidsAdmin } from "./kids-sessions";
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
@@ -20,6 +21,9 @@ export async function authorizeKids(tx: AccountTransaction, orgId: string, id: s
   const [org, actor, checkIn, settings] = await tx.read(root, `${root}/users/${uid}`, `${root}/kidsCheckIns/${id}`, `${root}/settings/kids`);
   const access = kidsAccess(actor, checkIn, settings, orgId, uid);
   if (org?.status !== "active" || !(upload ? access.upload : access.read)) throw new AccountError(403, "Você não tem acesso a esta mídia Kids.");
+  // Guardian access is independent of the operator's room assignment.
+  const guardian = checkIn?.parentId === uid || checkIn?.authorizedPickUpIds?.includes(uid);
+  if ((upload || !guardian) && (active || !isKidsAdmin(actor))) await authorizeSession(tx, orgId, uid, checkIn?.sessionId);
   if (active && checkIn?.status !== "checked_in") throw new AccountError(409, "Este check-in não está ativo.");
   return checkIn!;
 }

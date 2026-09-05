@@ -51,45 +51,6 @@ type ActivityLog = {
 
 const assistantStatus: AssistantStatus = "online";
 
-const initialPastoralRequests: PastoralRequest[] = [
-  {
-    id: "req_1",
-    person: "Gabriela Fernandes",
-    category: "Oração",
-    channel: "WhatsApp",
-    priority: "urgent",
-    status: "triage",
-    summary: "Pediu oração e conversa pastoral por causa de crise familiar.",
-    owner: "Pr. Ricardo",
-    receivedAt: "08:12",
-    phone: "11987654321"
-  },
-  {
-    id: "req_2",
-    person: "Marcos Paulo",
-    category: "Cesta básica",
-    channel: "WhatsApp",
-    priority: "important",
-    status: "assigned",
-    summary: "Família recém-chegada solicitou apoio social para esta semana.",
-    owner: "Ação Social",
-    receivedAt: "09:34",
-    phone: "21998765432"
-  },
-  {
-    id: "req_3",
-    person: "Lívia Santos",
-    category: "Integração",
-    channel: "Assistente IA",
-    priority: "normal",
-    status: "new",
-    summary: "Visitante perguntou sobre classe de integração e células próximas.",
-    owner: "Recepção",
-    receivedAt: "10:05",
-    phone: "31991234567"
-  }
-];
-
 const priorityLabel: Record<RequestPriority, string> = {
   urgent: "Urgente",
   important: "Importante",
@@ -111,8 +72,8 @@ const filterLabel: Record<RequestFilter, string> = {
   resolved: "Resolvidas"
 };
 
-// Um id "req_..." é do mock local; qualquer outro é doc real do Firestore.
-const isRealRequest = (id: string) => !id.startsWith("req_");
+// A fila contém somente documentos persistidos.
+const isRealRequest = (id: string) => Boolean(id);
 
 function formatHm(iso: string) {
   const d = new Date(iso);
@@ -150,8 +111,8 @@ function prayerToRequest(p: PrayerRequest): PastoralRequest {
 export function PastoralAiView() {
   const { user, organizationId, firebaseConfig } = useAppAuth();
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
-  const [requests, setRequests] = useState<PastoralRequest[]>(initialPastoralRequests);
-  const [selectedRequestId, setSelectedRequestId] = useState(initialPastoralRequests[0]?.id ?? "");
+  const [requests, setRequests] = useState<PastoralRequest[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState("");
   const [requestFilter, setRequestFilter] = useState<RequestFilter>("all");
   const [draftRequest, setDraftRequest] = useState({
     person: "",
@@ -183,17 +144,17 @@ export function PastoralAiView() {
     : "";
 
   // Carrega os pedidos reais (prayerRequests, unificados com o Radar Pastoral).
-  // Se não houver Firebase ou a fila estiver vazia, mantém o mock de demonstração.
+  // Uma fila vazia permanece vazia.
   const reloadPrayers = useCallback(async () => {
     if (!configured) return;
     try {
       const list = await fetchPrayerRequests(firebaseConfig, { organizationId }, 200);
-      if (!list.length) return;
+
       const mapped = list.map(prayerToRequest);
       setRequests(mapped);
-      setSelectedRequestId((prev) => (mapped.some((r) => r.id === prev) ? prev : mapped[0].id));
+      setSelectedRequestId((prev) => (mapped.some((r) => r.id === prev) ? prev : mapped[0]?.id ?? ""));
     } catch (e) {
-      console.error("Falha ao carregar pedidos de cuidado:", e);
+      setRequests([]); addActivity("Falha ao carregar", "Atualize a fila para tentar novamente.");
     }
   }, [configured, firebaseConfig, organizationId]);
 
@@ -206,7 +167,7 @@ export function PastoralAiView() {
     if (!selectedRequest) return;
     const first = selectedRequest.person.split(" ")[0];
     setResponseDraft(
-      `Olá, ${first}. Recebemos sua mensagem e vamos caminhar com você. Já encaminhei seu pedido para a equipe responsável.`
+      `Olá, ${first}. Recebemos sua mensagem e vamos caminhar com você. Podemos combinar o melhor horário para conversar?`
     );
     if (!configured || !user) return;
 
@@ -279,21 +240,22 @@ export function PastoralAiView() {
     );
   };
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (!selectedRequest) return;
-    updateSelectedRequest("assigned", selectedRequest.owner);
-    addActivity(
-      "Tarefa pastoral criada",
-      `${selectedRequest.person} foi encaminhado para ${selectedRequest.owner}.`
-    );
+    if (!configured || !user) return;
+    try {
+      await updatePrayerRequestStatus(firebaseConfig, { organizationId }, { requestId: selectedRequest.id, status: "in_progress", respondedByUserId: user.uid });
+      await reloadPrayers(); addActivity("Encaminhamento registrado", `${selectedRequest.person} foi encaminhado para acompanhamento.`);
+    } catch { addActivity("Não salvo", "Não foi possível encaminhar. Tente novamente."); }
+
   };
 
   const handleSendWhatsApp = () => {
     if (!selectedRequest) return;
-    updateSelectedRequest(selectedRequest.status === "new" ? "triage" : selectedRequest.status);
+
     addActivity(
       "Mensagem preparada para WhatsApp",
-      `Resposta supervisionada enviada para ${selectedRequest.person}.`
+      `Rascunho aberto para revisão e envio manual a ${selectedRequest.person}.`
     );
   };
 
@@ -319,11 +281,9 @@ export function PastoralAiView() {
         });
         await reloadPrayers();
       } catch (e) {
-        console.error("Falha ao resolver:", e);
+        addActivity("Não salvo", "Não foi possível resolver a solicitação."); return;
       }
-    } else {
-      updateSelectedRequest("resolved");
-    }
+    } else { return; }
     addActivity("Solicitação resolvida", `${selectedRequest.person} saiu da fila aberta.`);
   };
 
@@ -365,32 +325,15 @@ export function PastoralAiView() {
       }
     }
 
-    // Fallback local (demo / sem Firebase).
-    const nextRequest: PastoralRequest = {
-      id: `req_${Date.now()}`,
-      person,
-      category: draftRequest.category,
-      channel: "Manual",
-      priority: draftRequest.priority,
-      status: "new",
-      summary,
-      owner: draftRequest.owner || "Recepção",
-      receivedAt: formatHm(new Date().toISOString()),
-      phone: draftRequest.phone.trim() || undefined
-    };
-    setRequests((current) => [nextRequest, ...current]);
-    setSelectedRequestId(nextRequest.id);
-    setRequestFilter("all");
-    resetDraft();
-    addActivity("Solicitação criada (demo)", `${person} entrou na fila de cuidado.`);
+    addActivity("Não salvo", "Entre na sua conta e conecte-se para registrar a solicitação.");
   };
 
   const handleRefresh = () => {
     if (configured) {
       void reloadPrayers();
     } else {
-      setRequests(initialPastoralRequests);
-      setSelectedRequestId(initialPastoralRequests[0]?.id ?? "");
+      setRequests([]);
+      setSelectedRequestId("");
     }
     setRequestFilter("all");
     addActivity("Fila atualizada", "Pedidos de cuidado recarregados.");

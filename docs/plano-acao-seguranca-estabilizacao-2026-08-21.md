@@ -6,6 +6,14 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Entrega ampliada 6 — 05/09
+
+**76,65% estimados (+7,20 pontos)**. Cadastros legados centralizados, limite 50
+homologado entre três origens, intake público com contadores persistentes,
+sessões Kids por sala/evento/equipe/horário/capacidade, presença cadastral,
+privacidade de bem-estar e lojas, limpeza de simulações e CI versionado.
+[Evidências e limites](entrega-ampliada-6-2026-09-05.md). Nenhum deploy.
+
 ## Correção posterior — entrega 1 de 05/09
 
 Dependências e repetição concorrente do cadastro corrigidas: auditoria agora com **0 críticos, 0 altos e 1 moderado**
@@ -22,7 +30,7 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
-| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Migrar recepção/escalas, rever cobertura por coleção; vínculo conta/pessoa validado localmente na entrega 3. |
+| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Recepção/escalas migradas na entrega 6; rever demais coleções; vínculo conta/pessoa validado localmente na entrega 3. |
 | 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR/fotos validados na entrega 4; faltam publicação/IAM, legado/retenção, mediação de comprovantes e rate limit persistente/anti-spam. |
 | 3 — Custo/cobrança | API principal de IA consome cota no servidor; PIX estático existe. | Cota uniforme de banners, idempotência de checkout, consentimento/opt-out e destinatários da comunicação. |
 | 4 — Dados/fluxos | Dashboard/ficha sem dados inventados; leitura Kids por responsável/operador testada. | Fallbacks em recepção, rede, marketplace, bem-estar e pastoral; falso sucesso Wi-Fi; fluxo Kids mobile. |
@@ -104,8 +112,8 @@ existentes. Coleções novas não herdam mais leitura/escrita automaticamente.
 
 O formulário público de visitante deixou de gravar diretamente no Firestore:
 a API valida o pedido, aplica limite por IP/honeypot e grava com service
-account. A próxima evolução é substituir o limite em memória por Turnstile e
-limite persistente no Cloudflare.
+account. Na entrega 6, contadores persistentes no Firestore substituíram o
+limite em memória; a adoção de Turnstile continua pendente.
 
 ## Frente 3 — custo, comunicação e pagamentos **(alta)**
 
@@ -186,3 +194,12 @@ para retirada transacional; override livre removido. Regularização de legados
 exige motivo/confirmação e auditoria. 77 verificações de custódia, regressões de
 mídia/50 membros, 235 testes e builds passaram. Escala/sala/evento, criança
 cadastral e aparelhos ainda por fechar. [Evidências](kids-custodia-2026-09-05.md).
+
+
+### Fechamento local da entrega 6
+
+263 testes, 91 verificações novas, 77 de custódia, 62 de mídia e 78 de Passe,
+regressão 49→50, types, builds web/LP/mobile e QA de navegador. CI definido,
+mas não executado no remoto. Seguem retenção/legado Kids, aparelhos, comprovantes,
+cobrança/cotas e comunicação real. Regras de aprovação de loja e log não tornam
+as duas escritas atômicas; esse refinamento segue pendente.

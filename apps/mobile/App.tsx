@@ -1849,7 +1849,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
 
 // ─── Kids Check-in Screen ─────────────────────────────────────────────────────
 
-const DEFAULT_KIDS_ROOMS = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
+
 
 // A equipe registra a entrada; responsáveis consultam crachás já vinculados.
 // O vínculo com o responsável e a retirada transacional seguem no próximo marco Kids.
@@ -1886,36 +1886,33 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
   const [releasing, setReleasing] = useState(false);
 
+  const kidsOperation = async (body: object) => {
+    const response = await fetch(`${WEB_API_URL}/api/kids/operations`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ ...body, organizationId: orgId }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Operação Kids indisponível.");
+    return data;
+  };
+  const [loadError, setLoadError] = useState("");
   const load = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError("");
     try {
       const sdk = await import("@alvo/firebase");
       const ctx = { organizationId: orgId };
-      const [settings, tenantUser] = await Promise.all([
-        sdk.fetchKidsSettings(firebaseConfig, ctx).catch(() => null) as Promise<OrganizationKidsSettings | null>,
-        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null)
-      ]);
-      const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
-      const qrRoles = settings?.qrGeneratorRoles ?? [];
-      const isAdmin = roles.some((r) => ["super_admin", "church_admin", "pastor", "secretary"].includes(r));
-      const op = isAdmin || roles.some((r) => qrRoles.includes(r));
+      const [settings, tenantUser] = await Promise.all([sdk.fetchKidsSettings(firebaseConfig, ctx), sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid })]);
+      const roles = tenantUser?.roles ?? [];
+      const op = roles.some(r => ["super_admin", "church_admin", "pastor", "secretary", ...(settings?.qrGeneratorRoles ?? [])].includes(r));
       setCanOperate(op);
-      const checkIns = op
-        ? await sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
-        : await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid).catch(() => [] as KidsCheckIn[]);
-      setActive(checkIns);
-      let rms: Array<{ id: string; name: string }> = [];
-      if (settings?.kidsTeamIds?.length) {
-        const teams = (await sdk.fetchServiceTeams(firebaseConfig, ctx, 50).catch(() => [])) as ServiceTeam[];
-        rms = teams.filter((t) => settings.kidsTeamIds.includes(t.id)).map((t) => ({ id: t.id, name: t.name }));
-      }
-      if (!rms.length) rms = DEFAULT_KIDS_ROOMS.map((n, i) => ({ id: `room_${i}`, name: n }));
-      setRooms(rms);
-    } finally {
-      setLoading(false);
-    }
+      if (op) {
+        const { sessions } = await kidsOperation({ action: "sessions" });
+        setRooms(sessions.map((s: any) => ({ id: s.id, name: `${s.roomName} · ${s.eventName} (${s.occupancy}/${s.capacity})` })));
+        const lists = await Promise.all(sessions.map((s: any) => kidsOperation({ action: "list", sessionId: s.id })));
+        const mine = await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid);
+        setActive([...new Map<string, KidsCheckIn>([...lists.flatMap((list: any) => list.checkIns), ...mine].map(c => [c.id, c])).values()]);
+      } else { setRooms([]); setActive(await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid)); }
+    } catch (error) { setActive([]); setRooms([]); setLoadError(error instanceof Error ? error.message : "Não foi possível carregar o Kids."); }
+    finally { setLoading(false); }
   };
-  useEffect(() => { void load(); }, [orgId, user.uid]);
+  useEffect(() => { setActive([]); setRoom(null); setScanned(null); setCreatedBadge(null); void load(); const timer = setInterval(() => void load(), 60000); return () => clearInterval(timer); }, [orgId, user.uid]);
 
   const myKids = active.filter((c) => c.parentId === user.uid || c.authorizedPickUpIds.includes(user.uid));
 
@@ -1934,7 +1931,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     setSaving(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_in", organizationId: orgId, requestId: createAttempt.current, childName, roomCode: room.name, guardianName, guardianEmail, authorizedNames: authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies, securityRestrictions: restrictions, identityConfirmed: guardianConfirmed }) });
+      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_in", organizationId: orgId, requestId: createAttempt.current, childName, sessionId: room.id, guardianName, guardianEmail, authorizedNames: authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies, securityRestrictions: restrictions, identityConfirmed: guardianConfirmed }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       const checkIn: KidsCheckIn = data.checkIn;
@@ -1963,7 +1960,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     scanLock.current = true;
     try {
       const sdk = await import("@alvo/firebase");
-      const ci = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId: orgId }, data.trim());
+      const ci = (await kidsOperation({ action: "lookup", proof: data.trim() })).checkIn;
       setScanning(false);
       if (!ci) { Alert.alert("QR inválido", "Nenhum check-in encontrado para este código."); }
       else if (ci.status !== "checked_in") { Alert.alert("Já retirada", "Esta criança não está com check-in ativo."); }
@@ -2043,6 +2040,8 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
           <View style={s.row}><Switch value={guardianConfirmed} onValueChange={setGuardianConfirmed} /><Text style={[s.cardMeta, s.fill]}>Conferi a identidade, o vínculo da conta informada e a autorização destas pessoas.</Text></View>
           <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
+          {!!loadError && <Text accessibilityRole="alert">{loadError}</Text>}
+          {!rooms.length && <Text>Nenhuma sessão Kids disponível. A administração deve confirmar sala, evento e equipe no painel.</Text>}
           {rooms.map((r) => (
             <Pressable key={r.id} style={[s.roomRow, room?.id === r.id && { borderColor: primary, backgroundColor: `${primary}10` }]} onPress={() => setRoom(r)}>
               <View style={[s.radioOuter, room?.id === r.id && { borderColor: primary }]}>{room?.id === r.id && <View style={[s.radioInner, { backgroundColor: primary }]} />}</View>

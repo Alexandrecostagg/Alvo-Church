@@ -20,6 +20,7 @@ function decode(value: Data): any {
   return value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
+  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "ARRAY_CONTAINS", limit?: number, and?: { field: string; value: unknown }) => Promise<Data[]>;
   usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
   set: (path: string, data: Data) => void;
@@ -56,6 +57,12 @@ export async function accountTransaction<T>(work: (tx: AccountTransaction) => Pr
       if (!transaction) throw new Error("Transação ausente.");
       const writes: Data[] = [];
       const result = await work({
+        query: async (parent, collection, field, value, op = "EQUAL", limit = 200, and) => {
+          const filters = field ? [{ fieldFilter: { field: { fieldPath: field }, op, value: encode(value) } }] : [];
+          if (and) filters.push({ fieldFilter: { field: { fieldPath: and.field }, op: "EQUAL", value: encode(and.value) } });
+          const rows: Data[] = await call(`/${parent}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: collection }], ...(filters.length ? { where: filters.length === 1 ? filters[0] : { compositeFilter: { op: "AND", filters } } } : {}), limit } });
+          return rows.filter(row => row.document).map(row => ({ ...decode({ mapValue: { fields: row.document.fields } }), id: row.document.name.split("/").at(-1) }));
+        },
         usersByEmail: async (orgId, email) => {
           const rows: Data[] = await call(`/organizations/${orgId}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "email" }, op: "EQUAL", value: { stringValue: email } } }, limit: 2 } });
           return rows.filter(row => row.document).map(row => ({ ...decode({ mapValue: { fields: row.document.fields } }), id: row.document.name.split("/").at(-1) }));

@@ -1,5 +1,6 @@
 "use client";
 
+import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -16,9 +17,8 @@ import {
   ArrowRight,
   Award
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import {
-  createVisitorIntakeWorkflow,
   fetchVisitorIntakes,
   fetchVisitorJourneys,
   isFirebaseWebRuntimeConfigured,
@@ -39,27 +39,6 @@ type CapturedVisitor = {
   status: string;
   note?: string;
 };
-
-const demoVisitors: CapturedVisitor[] = [
-  {
-    id: "visitor_demo_1",
-    name: "Gabriela Fernandes",
-    nextStep: "Enviar boas-vindas no WhatsApp",
-    phone: "(11) 98765-4321",
-    source: "Convite de membro",
-    status: "Aguardando Contato",
-    note: "Convidada por Patrícia do Grupo de Jovens"
-  },
-  {
-    id: "visitor_demo_2",
-    name: "Marcos Paulo Silveira",
-    nextStep: "Enviar convite de célula",
-    phone: "(21) 99876-5432",
-    source: "Passando na rua",
-    status: "Aguardando Contato",
-    note: "Se interessou pelo ministério infantil"
-  }
-];
 
 function mapIntakeToCapturedVisitor(
   intake: VisitorIntake,
@@ -114,6 +93,9 @@ function getVisitorIntakeStatusLabel(status: VisitorIntake["status"]) {
 export function ReceptionView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
   
+  const attempt = useRef(crypto.randomUUID());
+  const busy = useRef(false);
+  const [saving, setSaving] = useState(false);
   // Estado básico
   const [visitorDraft, setVisitorDraft] = useState({
     name: "",
@@ -121,7 +103,7 @@ export function ReceptionView() {
     source: "Convite de membro",
     note: ""
   });
-  const [capturedVisitors, setCapturedVisitors] = useState<CapturedVisitor[]>(demoVisitors);
+  const [capturedVisitors, setCapturedVisitors] = useState<CapturedVisitor[]>([]);
   const [visitorJourneys, setVisitorJourneys] = useState<VisitorJourney[]>([]);
   const [visitorIntakes, setVisitorIntakes] = useState<VisitorIntake[]>([]);
   const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<string[]>([]);
@@ -144,6 +126,7 @@ export function ReceptionView() {
 
   // Sync real-time do Firestore
   useEffect(() => {
+    setCapturedVisitors([]); setVisitorJourneys([]); setVisitorIntakes([]);
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       return;
     }
@@ -161,7 +144,7 @@ export function ReceptionView() {
 
         setVisitorJourneys(nextJourneys);
         setVisitorIntakes(nextIntakes);
-        if (nextIntakes.length > 0) {
+        {
           const journeyById = new Map(nextJourneys.map((journey) => [journey.id, journey]));
           setCapturedVisitors(
             nextIntakes.filter((intake) => intake.status !== "archived").map((intake) =>
@@ -175,7 +158,7 @@ export function ReceptionView() {
         setStatus("Informações atualizadas.");
       } catch (error) {
         if (!cancelled) {
-          setStatus("Exibindo dados simulados de recepção.");
+          setCapturedVisitors([]); setStatus("Não foi possível carregar a recepção. Tente atualizar a página.");
         }
       }
     }
@@ -188,55 +171,20 @@ export function ReceptionView() {
   }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
 
   // Função central para capturar visitante
-  async function registerVisitor(name: string, phone: string, source: string, note?: string) {
-    const localVisitor: CapturedVisitor = {
-      id: `visitor_intake_${Date.now()}`,
-      name,
-      nextStep: "Enviar boas-vindas no WhatsApp",
-      phone: phone || undefined,
-      source,
-      status: "Jornada iniciada",
-      note: note || undefined
-    };
-
-    setCapturedVisitors((current) => [localVisitor, ...current]);
-    setLastCreated(localVisitor);
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Visitante registrado. O salvamento será concluído quando a conexão estiver disponível.");
-      return localVisitor;
-    }
-
+  async function registerVisitor(name: string, phone: string, source: string, note?: string, intakeId?: string) {
+    if (busy.current) return null;
+    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para salvar o visitante."); return null; }
+    busy.current = true; setSaving(true);
     try {
-      const created = await createVisitorIntakeWorkflow(
-        firebaseConfig,
-        { organizationId },
-        {
-          capturedByUserId: user.uid,
-          name,
-          note,
-          phone,
-          source
-        }
-      );
-      const savedVisitor = {
-        ...localVisitor,
-        id: created.intakeId,
-        journeyId: created.journeyId,
-        personId: created.personId,
-        status: "Cadastro concluído"
-      };
-
-      setCapturedVisitors((current) =>
-        current.map((v) => (v.id === localVisitor.id ? savedVisitor : v))
-      );
-      setLastCreated(savedVisitor);
-      setStatus("Visitante registrado e jornada de acolhimento iniciada!");
+      const [firstName, ...parts] = name.trim().split(/\s+/);
+      const created = await registerPerson(user, { organizationId, requestId: attempt.current, workflow: "reception", person: { firstName, lastName: parts.join(" "), whatsappPhone: phone, memberStatus: "visitor" }, reception: { source, note, intakeId } });
+      const savedVisitor: CapturedVisitor = { id: created.intakeId!, journeyId: created.journeyId, personId: created.personId, name, phone, source, note, status: "Jornada iniciada", nextStep: "Enviar boas-vindas no WhatsApp" };
+      setCapturedVisitors(current => [savedVisitor, ...current.filter(v => v.id !== savedVisitor.id)]);
+      setLastCreated(savedVisitor); attempt.current = crypto.randomUUID();
+      setStatus("Visitante e jornada salvos. Duas tarefas de acolhimento criadas.");
       return savedVisitor;
-    } catch (error) {
-      setStatus("Cadastro registrado. Tente novamente em instantes caso a atualização não apareça.");
-      return localVisitor;
-    }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível salvar. Os campos foram preservados."); return null; }
+    finally { busy.current = false; setSaving(false); }
   }
 
   // Submit do formulário do painel
@@ -247,14 +195,14 @@ export function ReceptionView() {
       return;
     }
 
-    await registerVisitor(
+    const saved = await registerVisitor(
       visitorDraft.name.trim(),
       visitorDraft.phone.trim(),
       visitorDraft.source,
       visitorDraft.note.trim()
     );
 
-    setVisitorDraft({ name: "", phone: "", source: "Convite de membro", note: "" });
+    if (saved) setVisitorDraft({ name: "", phone: "", source: "Convite de membro", note: "" });
   };
 
   // Submit do formulário do Totem de Autoatendimento
@@ -268,7 +216,7 @@ export function ReceptionView() {
 
     if (!name) return;
 
-    await registerVisitor(name, phone, source, "Autoatendimento Totem Entrada");
+    if (!await registerVisitor(name, phone, source, "Autoatendimento Totem Entrada")) return;
     setKioskStep("success");
 
     // Volta para o formulário após 5 segundos
@@ -378,7 +326,7 @@ export function ReceptionView() {
 
   const cloudVisitorCount = visitorIntakes.length;
   const localVisitorCount = cloudVisitorCount ? 0 : capturedVisitors.length;
-  const totalVisitorCount = cloudVisitorCount || localVisitorCount;
+  const totalVisitorCount = capturedVisitors.length;
   const firebaseConnected = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   return (
@@ -484,7 +432,7 @@ export function ReceptionView() {
                 </div>
 
                 <button
-                  type="submit"
+                  type="submit" disabled={saving}
                   className="primary-button"
                   style={{ width: "100%", padding: "1.1rem", fontSize: "1.15rem", backgroundColor: "#f97316", color: "white", borderRadius: 16, marginTop: "1rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
@@ -885,7 +833,7 @@ export function ReceptionView() {
             </label>
           </div>
 
-          <button className="primary-button compact" type="submit" style={{ color: "white", borderRadius: 12, height: 48, marginTop: "1rem" }}>
+          <button className="primary-button compact" type="submit" disabled={saving} style={{ color: "white", borderRadius: 12, height: 48, marginTop: "1rem" }}>
             <UserPlus size={17} />
             Iniciar Jornada Pastoral
           </button>
@@ -972,6 +920,7 @@ export function ReceptionView() {
                 <div className="queue-item" key={`communication-${visitor.id}`}>
                   <div>
                     <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
+                    {!visitor.personId && <button type="button" disabled={saving} onClick={() => void registerVisitor(visitor.name, visitor.phone ?? "", visitor.source, visitor.note, visitor.id)}>Integrar ao cadastro e iniciar jornada</button>}
                     <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.source} · {visitor.phone || "Sem telefone"}</p>
                   </div>
                   <button
@@ -1008,6 +957,7 @@ export function ReceptionView() {
                 <div className="queue-item" key={`greeting-${visitor.id}`}>
                   <div>
                     <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
+                    {!visitor.personId && <button type="button" disabled={saving} onClick={() => void registerVisitor(visitor.name, visitor.phone ?? "", visitor.source, visitor.note, visitor.id)}>Integrar ao cadastro e iniciar jornada</button>}
                     <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.note || "Visitante da celebração de hoje"}</p>
                   </div>
                   <button

@@ -70,6 +70,7 @@ export default function VisitorFormPage() {
     setState("submitting");
     setErrorMsg("");
 
+    try {
     const res = await fetch("/api/public/visit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -94,6 +95,7 @@ export default function VisitorFormPage() {
       setState("error");
       setErrorMsg(data.error ?? "Erro ao enviar. Tente novamente.");
     }
+    } catch { setState("error"); setErrorMsg("Não foi possível enviar. Verifique a conexão e tente novamente; seus campos foram preservados."); }
   }
 
   if (state === "success") {

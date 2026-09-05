@@ -17,7 +17,7 @@ async function api(body: object, token?: string, path = "custody") {
   equal(response.headers.get("cache-control"), "private, no-store", "Resposta privada");
   return { status: response.status, data: await response.json() };
 }
-const input = () => ({ action: "check_in", requestId: randomUUID(), childName: "Criança QA", guardianName: "Responsável QA", guardianEmail: "admin.secundaria@example.test", authorizedNames: ["Avó QA"], identityConfirmed: true });
+const input = () => ({ action: "check_in", sessionId: "session-qa", requestId: randomUUID(), childName: "Criança QA", guardianName: "Responsável QA", guardianEmail: "admin.secundaria@example.test", authorizedNames: ["Avó QA"], identityConfirmed: true });
 async function direct(id: string, token: string, method = "PATCH", fields: object = { status: { stringValue: "checked_out" } }) {
   return (await fetch(`http://127.0.0.1:8080/v1/projects/demo-alvo-qa/databases/(default)/documents/${org.path}/kidsCheckIns/${id}?updateMask.fieldPaths=status`, { method, headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, ...(method === "PATCH" ? { body: JSON.stringify({ fields }) } : {}) })).status;
 }
@@ -27,6 +27,10 @@ async function run() {
   await org.collection("settings").doc("subscription").set({ plan: "free" });
   await org.collection("users").doc(admin).set({ organizationId: orgId, isActive: true, roles: ["church_admin"], email: "admin.principal@example.test" });
   await org.collection("users").doc(member).set({ organizationId: orgId, isActive: true, roles: ["member"], email: "admin.secundaria@example.test" });
+  await org.collection("settings").doc("kids").set({ kidsTeamIds: ["kids"], qrGeneratorRoles: [] });
+  await org.collection("serviceTeams").doc("kids").set({ organizationId: orgId, name: "Sala QA" });
+  await org.collection("events").doc("event").set({ organizationId: orgId, name: "Culto QA", status: "published" });
+  await org.collection("kidsOperationSessions").doc("session-qa").set({ id: "session-qa", organizationId: orgId, serviceTeamId: "kids", eventId: "event", roomName: "Sala QA", operatorIds: [admin, member], startsAt: new Date(Date.now() - 60000).toISOString(), endsAt: new Date(Date.now() + 3600000).toISOString(), status: "open", capacity: 50, occupancy: 0, version: 1 });
   const sample = input();
   equal((await api(sample)).status, 401, "Sem autenticação");
   equal((await api(sample, m)).status, 403, "Responsável não registra operação da equipe");
@@ -65,7 +69,7 @@ async function run() {
   equal((await api(checkout, a)).status, 409, "Formulário de retirada desatualizado não libera");
   equal((await api(guardians, a)).status, 409, "Não sobrescrever alteração concorrente de responsáveis");
   const release = { ...checkout, expectedGuardianVersion: 2, receiverId: "authorized_1", proof: ci.securityToken };
-  await org.collection("settings").doc("kids").set({ qrGeneratorRoles: ["ministry_leader"] });
+  await org.collection("settings").doc("kids").set({ kidsTeamIds: ["kids"], qrGeneratorRoles: ["ministry_leader"] });
   await org.collection("users").doc(member).update({ roles: ["ministry_leader"] });
   const race = await Promise.all([api(release, a), api({ ...release, requestId: randomUUID() }, m)]);
   equal(race.map(r => r.status).sort(), [200, 409], JSON.stringify(race));

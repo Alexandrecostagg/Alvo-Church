@@ -17,57 +17,28 @@ import { useAppAuth } from "../../../app/providers";
 import { fetchCommunityStores } from "@alvo/firebase";
 import type { CommunityStore, TenantContext } from "@alvo/types";
 
-const mockStores: CommunityStore[] = [
-  {
-    id: "store_1",
-    organizationId: "org_alvo_demo",
-    ownerId: "user_admin_demo",
-    name: "Doces & Travessuras",
-    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
-    category: "food",
-    status: "approved",
-    images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
-    contact: { address: { city: "Belém", state: "PA" } },
-    socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
 export function MyStoresView() {
   const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
   const [stores, setStores] = useState<CommunityStore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
-    async function loadStores() {
-      if (!firebaseReady || !tenantReady || !user) {
-        // Fallback to mock stores when offline
-        const ownerId = user?.uid || "user_admin_demo";
-        setStores(mockStores.map(s => ({ ...s, ownerId })));
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    setStores([]);
+    setLoadError(null);
+    if (!firebaseReady || !tenantReady || !user) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
       try {
-        setLoading(true);
         const context: TenantContext = { organizationId };
-        const allStores = await fetchCommunityStores(firebaseConfig, context, 200);
-        
-        // Filter by owner
-        const myStores = allStores.filter(store => 
-          store.ownerId === user.uid
-        );
-        setStores(myStores.length > 0 ? myStores : mockStores.map(s => ({ ...s, ownerId: user.uid })));
-      } catch (error) {
-        console.error("Error loading stores:", error);
-        setStores(mockStores.map(s => ({ ...s, ownerId: user.uid })));
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadStores();
+        const rows = await fetchCommunityStores(firebaseConfig, context, 200, { ownerId: user.uid });
+        if (!cancelled) setStores(rows.filter(s => s.ownerId === user.uid));
+      } catch { if (!cancelled) { setStores([]); setLoadError("Não foi possível carregar os dados. Atualize a página para tentar novamente."); } }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady, user]);
 
   const filteredStores = stores.filter(store => {
@@ -99,6 +70,7 @@ export function MyStoresView() {
 
   return (
     <main className="my-stores-container">
+      {loadError && <p role="alert">{loadError}</p>}
       <div className="page-header">
         <div className="header-content">
           <div className="eyebrow">

@@ -56,6 +56,13 @@ function choice(data: Data, key: string, values: string[], fallback: string) {
 export function validateRegistration(raw: unknown) {
   const body = record(raw),
     source = record(body.person);
+  const workflow = choice(body, "workflow", ["member", "reception", "serving"], "member");
+  const receptionSource = workflow === "reception" ? record(body.reception) : null;
+  const reception = receptionSource ? { source: str(receptionSource, "source", 120, true), note: str(receptionSource, "note", 1000), intakeId: str(receptionSource, "intakeId", 128) } : null;
+  if (reception?.intakeId && !/^[a-zA-Z0-9_-]+$/.test(reception.intakeId)) return reject("Visitante inválido.");
+  const servingSource = workflow === "serving" ? record(body.serving) : null;
+  const serving = servingSource ? { serviceTeamId: str(servingSource, "serviceTeamId", 128, true), role: str(servingSource, "role", 120, true), serviceDate: str(servingSource, "serviceDate", 30, true) } : null;
+  if (serving && (!/^[a-zA-Z0-9_-]+$/.test(serving.serviceTeamId!) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(serving.serviceDate!) || !Number.isFinite(Date.parse(serving.serviceDate!)))) return reject("Escala inválida.");
   const organizationId = str(body, "organizationId", 128, true)!;
   const requestId = str(body, "requestId", 36, true)!;
   if (
@@ -102,7 +109,7 @@ export function validateRegistration(raw: unknown) {
     return reject("Estado inválido.");
   const person = {
     firstName: str(source, "firstName", 100, true),
-    lastName: str(source, "lastName", 160, true),
+    lastName: str(source, "lastName", 160, workflow === "member") ?? "",
     preferredName: str(source, "preferredName"),
     email: str(source, "email", 254),
     mobilePhone: str(source, "mobilePhone", 30),
@@ -154,7 +161,9 @@ export function validateRegistration(raw: unknown) {
         isLegalGuardian: flag(memberSource, "isLegalGuardian"),
       }
     : null;
-  return { organizationId, requestId, person, family, familyMember, consent };
+  if (workflow === "reception") person.memberStatus = "visitor";
+  if (workflow === "serving") person.memberStatus = "volunteer";
+  return { organizationId, requestId, person, family, familyMember, consent, workflow, reception, serving };
 }
 
 function encode(value: any): Data {
@@ -199,6 +208,7 @@ export async function registerMember(raw: unknown, uid: string) {
   const input = validateRegistration(raw);
   const { organizationId, requestId, person, family, familyMember, consent } =
     input;
+  const { workflow, reception, serving } = input;
   const base = serverFirestoreDocumentsUrl();
   const name = (path: string) => base.split("/v1/")[1] + "/" + path;
   const orgPath = `organizations/${organizationId}`;
@@ -254,6 +264,8 @@ export async function registerMember(raw: unknown, uid: string) {
         `${orgPath}/settings/subscription`,
         operationPath,
         ...(cpfPath ? [cpfPath] : []),
+        ...(reception?.intakeId ? [`${orgPath}/visitorIntakes/${reception.intakeId}`] : []),
+        ...(serving ? [`${orgPath}/serviceTeams/${serving.serviceTeamId}`] : []),
       ];
       const rows = (await call(":batchGet", {
         documents: paths.map(name),
@@ -291,6 +303,12 @@ export async function registerMember(raw: unknown, uid: string) {
             "Este pedido já foi usado para outro cadastro.",
           );
         return { ...previous.result, replayed: true };
+      }
+      const intake = reception?.intakeId ? docs.get(name(`${orgPath}/visitorIntakes/${reception.intakeId}`)) : null;
+      if (reception?.intakeId && (!intake || intake.organizationId !== organizationId || intake.personId || intake.status !== "captured")) throw new RegistrationError(409, "Este visitante já foi integrado ou não está disponível. Atualize a lista.");
+      if (serving) {
+        const team = docs.get(name(`${orgPath}/serviceTeams/${serving.serviceTeamId}`));
+        if (!team || team.organizationId !== organizationId || team.status === "inactive") throw new RegistrationError(409, "Ministério indisponível. Atualize a lista.");
       }
       if (cpfPath && docs.has(name(cpfPath)))
         throw new RegistrationError(
@@ -360,7 +378,10 @@ export async function registerMember(raw: unknown, uid: string) {
         ? `ESDRAS-${generateSecureCode(24)}`
         : undefined;
       const createdAt = new Date().toISOString();
-      const result = { personId, familyId, memberCardCode };
+      const intakeId = workflow === "reception" ? reception?.intakeId ?? `visitor_intake_${requestId}` : undefined;
+      const journeyId = intakeId ? `journey_${requestId}` : undefined;
+      const assignmentId = serving ? `service_assignment_${requestId}` : undefined;
+      const result = { personId, familyId, memberCardCode, intakeId, journeyId, assignmentId };
       const create = (path: string, data: Data) => ({
         update: { name: name(path), fields: encode(data).mapValue.fields },
         currentDocument: { exists: false },
@@ -385,6 +406,17 @@ export async function registerMember(raw: unknown, uid: string) {
           updateMask: { fieldPaths: ["memberCount"] },
         },
       ];
+      if (reception && intakeId && journeyId) {
+        const intakeData = { organizationId, id: intakeId, personId, journeyId, name: `${person.firstName} ${person.lastName}`.trim(), phone: person.whatsappPhone ?? person.mobilePhone ?? null, source: reception.source, greeting: reception.note ?? "", status: "journey_created", capturedByUserId: uid, createdAt: intake?.createdAt ?? createdAt, integratedAt: createdAt };
+        if (intake) writes.push({ update: { name: name(`${orgPath}/visitorIntakes/${intakeId}`), fields: encode(intakeData).mapValue.fields }, updateMask: { fieldPaths: Object.keys(intakeData) }, currentDocument: { exists: true } });
+        else writes.push(create(`${orgPath}/visitorIntakes/${intakeId}`, intakeData));
+        writes.push(create(`${orgPath}/visitorJourneys/${journeyId}`, { id: journeyId, organizationId, personId, originChannel: "secretary", currentStage: "new_visitor", status: "active", assignedToUserId: uid, firstVisitDate: createdAt, nextActionAt: createdAt, createdAt }));
+        for (const [suffix, title, type] of [["welcome", "Enviar boas-vindas no WhatsApp", "welcome_message"], ["group", "Convidar para uma célula", "invite_to_group"]]) {
+          const id = `followup_${requestId}_${suffix}`;
+          writes.push(create(`${orgPath}/followUpTasks/${id}`, { id, organizationId, personId, visitorJourneyId: journeyId, assignedToUserId: uid, title, type, status: "open", createdAt, dueAt: createdAt }));
+        }
+      }
+      if (serving && assignmentId) writes.push(create(`${orgPath}/serviceAssignments/${assignmentId}`, { ...serving, id: assignmentId, organizationId, personId, ministryCode: serving.serviceTeamId, status: "pending", createdAt, updatedAt: createdAt }));
       if (family && familyId) {
         writes.push(
           create(`${orgPath}/families/${familyId}`, {

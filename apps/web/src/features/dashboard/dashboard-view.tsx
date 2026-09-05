@@ -1,5 +1,6 @@
 "use client";
 
+import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
 import { OnboardingChecklist } from "./onboarding-checklist";
@@ -31,7 +32,7 @@ import {
   UsersRound,
   Waypoints
 } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useRef, type CSSProperties, type FormEvent } from "react";
 import {
   calculateTribeQuestionnaireResult,
   canManagePeople,
@@ -59,7 +60,6 @@ import {
 import { BrandLogo } from "../../../app/brand-logo";
 import { useAppAuth } from "../../../app/providers";
 import {
-  createVisitorIntakeWorkflow,
   createFirebaseWebRuntimeConfigFromEnv,
   fetchEventCheckIns,
   fetchEvents,
@@ -97,6 +97,8 @@ export function DashboardView() {
   const { configured, user, organizationId, firebaseConfig, roles, tenantReady } = useAppAuth();
   const { isEnabled } = useOrgFeatures();
   const moduleHighlights = getModuleHighlights(isEnabled, roles.includes("super_admin"));
+  const visitorAttempt = useRef(crypto.randomUUID());
+  const visitorBusy = useRef(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [completedActionIds, setCompletedActionIds] = useState<string[]>([]);
   const [actionSyncStatus, setActionSyncStatus] = useState<string | null>(null);
@@ -625,37 +627,20 @@ export function DashboardView() {
       presentationStatus: "Na lista"
     };
 
-    setCapturedVisitors((currentVisitors) => [
-      localVisitor,
-      ...currentVisitors
-    ]);
-    setVisitorDraft({ name: "", phone: "", source: "WhatsApp" });
-    setReceptionStatus("Visitante capturado localmente. Preparando jornada e comunicacao.");
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setReceptionStatus(
-        "Visitante capturado localmente. Conecte o Firebase para criar pessoa, jornada e follow-ups."
-      );
-      return;
-    }
-
+    if (visitorBusy.current) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) { setReceptionStatus("Entre na sua conta para salvar o visitante."); return; }
+    visitorBusy.current = true;
     try {
-      await createVisitorIntakeWorkflow(
-        firebaseConfig,
-        { organizationId },
-        {
-          capturedByUserId: user.uid,
-          name,
-          phone,
-          source: localVisitor.source
-        }
-      );
+      const [firstName, ...last] = name.split(/\s+/);
+      const result = await registerPerson(user, { organizationId, requestId: visitorAttempt.current, workflow: "reception", person: { firstName, lastName: last.join(" "), whatsappPhone: phone }, reception: { source: localVisitor.source } });
+      setCapturedVisitors(current => [{ ...localVisitor, id: result.intakeId! }, ...current]);
+      setVisitorDraft({ name: "", phone: "", source: "WhatsApp" }); visitorAttempt.current = crypto.randomUUID();
       setReceptionStatus("Visitante salvo no Firestore com jornada e follow-ups criados.");
     } catch (error) {
       setReceptionStatus(
         friendlyError(error, "Nao foi possivel salvar o visitante no Firestore.")
       );
-    }
+    } finally { visitorBusy.current = false; }
   }
 
   function handlePrepareVisitorCommunication(visitorId: string) {

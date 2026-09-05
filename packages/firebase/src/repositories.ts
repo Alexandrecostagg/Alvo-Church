@@ -1134,25 +1134,8 @@ export async function savePersonProfile(
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, getPeopleCollectionPath(context), person.id);
 
-  // Precisa saber se é criação (não update) ANTES de escrever, pra só
-  // incrementar o contador de membros — usado pela regra do Firestore que
-  // barra o cadastro acima do limite do plano — quando é um cadastro novo.
-  const existing = await getDoc(ref);
-  const isNew = !existing.exists();
-  // Carimba a data de entrada só na criação (não sobrescreve cadastros existentes).
-  const payload = isNew && !person.createdAt
-    ? { ...person, createdAt: new Date().toISOString() }
-    : person;
-  await setDoc(ref, cleanFirestoreData(payload), { merge: true });
-
-  if (isNew) {
-    await updateDoc(doc(firestore, "organizations", context.organizationId), {
-      memberCount: increment(1)
-    }).catch(() => {
-      // Contador é auxiliar (só alimenta o limite de plano); se falhar,
-      // não deve derrubar o cadastro que já foi salvo.
-    });
-  }
+  // Creation always goes through /api/members and its transactional limit.
+  await updateDoc(ref, cleanFirestoreData(person));
 }
 
 export async function deletePersonProfile(
@@ -1458,95 +1441,6 @@ export async function updateVisitorIntakeStatus(
   });
 }
 
-export async function createVisitorIntakeWorkflow(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  params: {
-    capturedByUserId?: string;
-    name: string;
-    note?: string;
-    phone?: string;
-    source: string;
-  }
-) {
-  const firestore = getFirebaseFirestore(config);
-  const createdAt = new Date().toISOString();
-  const baseId = `${Date.now()}`;
-  const personId = `person_${baseId}`;
-  const journeyId = `journey_${baseId}`;
-  const welcomeTaskId = `followup_${baseId}_welcome`;
-  const groupTaskId = `followup_${baseId}_group`;
-  const intakeId = `visitor_intake_${baseId}`;
-  const [firstName, ...lastNameParts] = params.name.trim().split(/\s+/);
-  const lastName = lastNameParts.join(" ");
-
-  await Promise.all([
-    setDoc(doc(firestore, `${getPeopleCollectionPath(context)}/${personId}`), {
-      id: personId,
-      organizationId: context.organizationId,
-      firstName: firstName || params.name.trim(),
-      lastName,
-      preferredName: firstName || params.name.trim(),
-      whatsappPhone: params.phone ?? null,
-      personType: "adult",
-      memberStatus: "visitor",
-      status: "active",
-      createdAt,
-      createdByUserId: params.capturedByUserId ?? null
-    }),
-    setDoc(doc(firestore, `${getVisitorJourneysCollectionPath(context)}/${journeyId}`), {
-      id: journeyId,
-      organizationId: context.organizationId,
-      personId,
-      originChannel: mapVisitorSourceToOriginChannel(params.source),
-      currentStage: "new_visitor",
-      status: "active",
-      assignedToUserId: params.capturedByUserId ?? null,
-      firstVisitDate: createdAt,
-      nextActionAt: createdAt,
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${welcomeTaskId}`), {
-      id: welcomeTaskId,
-      organizationId: context.organizationId,
-      personId,
-      visitorJourneyId: journeyId,
-      assignedToUserId: params.capturedByUserId ?? null,
-      title: "Enviar boas-vindas no WhatsApp",
-      type: "welcome_message",
-      status: "open",
-      dueAt: createdAt,
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${groupTaskId}`), {
-      id: groupTaskId,
-      organizationId: context.organizationId,
-      personId,
-      visitorJourneyId: journeyId,
-      assignedToUserId: params.capturedByUserId ?? null,
-      title: "Convidar para uma celula",
-      type: "invite_to_group",
-      status: "open",
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getVisitorIntakesCollectionPath(context)}/${intakeId}`), {
-      id: intakeId,
-      organizationId: context.organizationId,
-      personId,
-      journeyId,
-      name: params.name,
-      phone: params.phone ?? null,
-      source: params.source,
-      status: "journey_created",
-      greeting: params.note || "Incluir nos cumprimentos da celebracao",
-      capturedByUserId: params.capturedByUserId ?? null,
-      createdAt
-    })
-  ]);
-
-  return { groupTaskId, intakeId, journeyId, personId, welcomeTaskId };
-}
-
 export async function updateFollowUpTaskStatus(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -1621,24 +1515,6 @@ export async function fetchFinancialTransparencyReports(
   return snapshot.docs.map((item) =>
     toFinancialTransparencyReport(item.id, item.data())
   );
-}
-
-function mapVisitorSourceToOriginChannel(source: string): VisitorJourney["originChannel"] {
-  const normalizedSource = source.toLowerCase();
-
-  if (normalizedSource.includes("whatsapp")) {
-    return "whatsapp";
-  }
-
-  if (normalizedSource.includes("instagram")) {
-    return "app";
-  }
-
-  if (normalizedSource.includes("rua")) {
-    return "secretary";
-  }
-
-  return "form";
 }
 
 export async function fetchGroups(
@@ -2360,11 +2236,13 @@ export async function saveMemberBenefitValidation(
 export async function fetchCommunityStores(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  maxItems = 100
+  maxItems = 100,
+  scope?: { ownerId: string } | { approvedOnly: true }
 ) {
   const firestore = getFirebaseFirestore(config);
   const storesQuery = query(
     collection(firestore, getCommunityStoresCollectionPath(context)),
+    ...(scope ? ["ownerId" in scope ? where("ownerId", "==", scope.ownerId) : where("status", "==", "approved")] : []),
     limit(maxItems)
   );
   const snapshot = await getDocs(storesQuery);
@@ -2417,6 +2295,7 @@ export async function fetchCommunityOffers(
   const firestore = getFirebaseFirestore(config);
   const offersQuery = query(
     collection(firestore, getCommunityOffersCollectionPath(context, storeId)),
+    where("status", "==", "active"),
     limit(maxItems)
   );
   const snapshot = await getDocs(offersQuery);
@@ -3409,6 +3288,8 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     checkedOutByParentId: data.checkedOutByParentId ? String(data.checkedOutByParentId) : undefined,
     checkedInByUserId: data.checkedInByUserId ? String(data.checkedInByUserId) : undefined,
     status: (data.status as KidsCheckIn["status"]) ?? "checked_in",
+    sessionId: data.sessionId ? String(data.sessionId) : undefined,
+    eventId: data.eventId ? String(data.eventId) : undefined,
     roomCode: data.roomCode ? String(data.roomCode) : undefined,
     serviceTeamId: data.serviceTeamId ? String(data.serviceTeamId) : undefined,
     securityToken: String(data.securityToken ?? ""),
@@ -3436,18 +3317,6 @@ function toKidsSettings(data: DocumentData): OrganizationKidsSettings {
   };
 }
 
-// Check-ins ativos (crianças presentes) da organização.
-export async function fetchActiveKidsCheckIns(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext
-): Promise<KidsCheckIn[]> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("status", "==", "checked_in"))
-  );
-  return snap.docs.map((d) => toKidsCheckIn(d.id, d.data()));
-}
-
 // Check-ins ativos visíveis para um responsável. Não use a consulta geral e
 // filtre no cliente: as rules devem impedir que dados de outras crianças
 // atravessem a rede.
@@ -3467,39 +3336,6 @@ export async function fetchMyActiveKidsCheckIns(
     for (const document of snapshot.docs) byId.set(document.id, toKidsCheckIn(document.id, document.data()));
   }
   return [...byId.values()];
-}
-
-// Resolve um check-in pelo token do QR (usado na retirada).
-export async function fetchKidsCheckInByToken(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  token: string
-): Promise<KidsCheckIn | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("securityToken", "==", token), limit(1))
-  );
-  const d = snap.docs[0];
-  return d ? toKidsCheckIn(d.id, d.data()) : null;
-}
-
-// Resolve um check-in ATIVO pelo código curto de retirada (fallback ao QR).
-export async function fetchKidsCheckInByCode(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  pickupCode: string
-): Promise<KidsCheckIn | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(
-      collection(firestore, getKidsCheckInsCollectionPath(context)),
-      where("pickupCode", "==", pickupCode.toUpperCase()),
-      where("status", "==", "checked_in"),
-      limit(1)
-    )
-  );
-  const d = snap.docs[0];
-  return d ? toKidsCheckIn(d.id, d.data()) : null;
 }
 
 /* ── Gerador de Banner: histórico ──────────────────────────────────────── */

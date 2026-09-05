@@ -20,32 +20,6 @@ import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
 import { MetricCard, BarChart, Donut, Sparkline } from "../../../src/components/charts/NetworkCharts";
 
-/* ── Mock data (fallback offline) ────────────────────────────────────────── */
-const MOCK_AFFILIATES: NetworkAffiliate[] = [
-  { id: "1", parentOrganizationId: "demo", childOrganizationId: "child-1", childName: "Igreja Esdras Sede",       childCity: "São Paulo",      childState: "SP", status: "active",  joinedAt: "2024-01-10" },
-  { id: "2", parentOrganizationId: "demo", childOrganizationId: "child-2", childName: "Igreja Esdras Campinas",   childCity: "Campinas",        childState: "SP", status: "active",  joinedAt: "2024-03-05" },
-  { id: "3", parentOrganizationId: "demo", childOrganizationId: "child-3", childName: "Igreja Esdras Santos",     childCity: "Santos",          childState: "SP", status: "active",  joinedAt: "2024-04-12" },
-  { id: "4", parentOrganizationId: "demo", childOrganizationId: "child-4", childName: "Igreja Esdras Ribeirão",   childCity: "Ribeirão Preto",  childState: "SP", status: "active",  joinedAt: "2024-06-01" },
-  { id: "5", parentOrganizationId: "demo", childOrganizationId: "child-5", childName: "Igreja Esdras Sorocaba",   childCity: "Sorocaba",        childState: "SP", status: "pending" },
-  { id: "6", parentOrganizationId: "demo", childOrganizationId: "child-6", childName: "Igreja Esdras Bauru",      childCity: "Bauru",           childState: "SP", status: "pending" },
-];
-
-const MOCK_SNAPSHOTS: Record<string, NetworkSnapshot> = {
-  "child-1": { id: "t", organizationId: "child-1", date: "2026-06-21", month: "2026-06", totalMembers: 1240, newMembersThisMonth: 28, activeMembers: 890, visitors: 64, totalGroups: 48, activeGroups: 44, avgGroupAttendance: 11, eventsThisMonth: 4, totalEventAttendance: 620, givingThisMonth: 42800, givingLastMonth: 38500, serviceAttendanceRate: 72, createdAt: "" },
-  "child-2": { id: "t", organizationId: "child-2", date: "2026-06-21", month: "2026-06", totalMembers: 430,  newMembersThisMonth: 11, activeMembers: 310, visitors: 22, totalGroups: 18, activeGroups: 16, avgGroupAttendance: 9,  eventsThisMonth: 2, totalEventAttendance: 215, givingThisMonth: 16200, givingLastMonth: 14800, serviceAttendanceRate: 72, createdAt: "" },
-  "child-3": { id: "t", organizationId: "child-3", date: "2026-06-21", month: "2026-06", totalMembers: 210,  newMembersThisMonth: 5,  activeMembers: 155, visitors: 14, totalGroups: 9,  activeGroups: 8,  avgGroupAttendance: 8,  eventsThisMonth: 1, totalEventAttendance: 98,  givingThisMonth: 7600,  givingLastMonth: 7200,  serviceAttendanceRate: 74, createdAt: "" },
-  "child-4": { id: "t", organizationId: "child-4", date: "2026-06-21", month: "2026-06", totalMembers: 380,  newMembersThisMonth: 9,  activeMembers: 280, visitors: 31, totalGroups: 14, activeGroups: 13, avgGroupAttendance: 10, eventsThisMonth: 2, totalEventAttendance: 190, givingThisMonth: 14100, givingLastMonth: 12900, serviceAttendanceRate: 74, createdAt: "" },
-};
-
-// Mock histórico 6 meses para demo
-const MOCK_HISTORY: NetworkSnapshot[] = [
-  { id:"h1", organizationId:"net", date:"2026-01-01", month:"2026-01", totalMembers:2080, newMembersThisMonth:38, activeMembers:1490, visitors:88, totalGroups:84, activeGroups:76, avgGroupAttendance:10, eventsThisMonth:7, totalEventAttendance:980, givingThisMonth:68500, givingLastMonth:64000, serviceAttendanceRate:72, createdAt:"" },
-  { id:"h2", organizationId:"net", date:"2026-02-01", month:"2026-02", totalMembers:2138, newMembersThisMonth:42, activeMembers:1540, visitors:92, totalGroups:85, activeGroups:78, avgGroupAttendance:10, eventsThisMonth:6, totalEventAttendance:920, givingThisMonth:71200, givingLastMonth:68500, serviceAttendanceRate:72, createdAt:"" },
-  { id:"h3", organizationId:"net", date:"2026-03-01", month:"2026-03", totalMembers:2195, newMembersThisMonth:44, activeMembers:1580, visitors:98, totalGroups:87, activeGroups:80, avgGroupAttendance:11, eventsThisMonth:8, totalEventAttendance:1050, givingThisMonth:74800, givingLastMonth:71200, serviceAttendanceRate:72, createdAt:"" },
-  { id:"h4", organizationId:"net", date:"2026-04-01", month:"2026-04", totalMembers:2250, newMembersThisMonth:40, activeMembers:1620, visitors:95, totalGroups:88, activeGroups:81, avgGroupAttendance:11, eventsThisMonth:7, totalEventAttendance:1020, givingThisMonth:76200, givingLastMonth:74800, serviceAttendanceRate:72, createdAt:"" },
-  { id:"h5", organizationId:"net", date:"2026-05-01", month:"2026-05", totalMembers:2310, newMembersThisMonth:47, activeMembers:1665, visitors:105, totalGroups:89, activeGroups:82, avgGroupAttendance:11, eventsThisMonth:9, totalEventAttendance:1120, givingThisMonth:79400, givingLastMonth:76200, serviceAttendanceRate:72, createdAt:"" },
-  { id:"h6", organizationId:"net", date:"2026-06-01", month:"2026-06", totalMembers:2360, newMembersThisMonth:53, activeMembers:1710, visitors:131, totalGroups:89, activeGroups:81, avgGroupAttendance:11, eventsThisMonth:9, totalEventAttendance:1123, givingThisMonth:80700, givingLastMonth:79400, serviceAttendanceRate:72, createdAt:"" },
-];
 
 const MONTH_LABELS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 function monthLabel(m: string) {
@@ -74,6 +48,7 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
   const [state, setState] = useState("");
   const [saving, setSaving] = useState(false);
   const { firebaseConfig } = useAppAuth();
+  const [inviteError, setInviteError] = useState("");
 
   const code = useMemo(() => generateSecureCode(6), []);
 
@@ -90,17 +65,18 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
       status:     "pending",
       inviteCode: code,
     };
-    if (isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+    try {
+      if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) throw new Error("Conecte-se para salvar o convite.");
       await saveNetworkAffiliate(firebaseConfig, affiliate);
-    }
-    onSave(affiliate);
-    setSaving(false);
-    onClose();
+      onSave(affiliate); onClose();
+    } catch { setInviteError("Não foi possível salvar o convite. Tente novamente."); }
+    finally { setSaving(false); }
   }
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "var(--alvo-surface)", borderRadius: 20, padding: "28px 24px", maxWidth: 420, width: "100%", display: "grid", gap: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+        {inviteError && <p role="alert">{inviteError}</p>}
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--alvo-ink)" }}>Adicionar Igreja</h2>
         {[
           { label: "Nome da Igreja *", value: name, set: setName, placeholder: "Ex: Igreja Esdras Campinas" },
@@ -148,18 +124,22 @@ export function NetworkView() {
 
   const isReal = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => {
+    let cancelled = false;
+    setAffiliates([]); setSnapshots({}); setHistory([]); setLoadError(null); setLoading(true);
     async function load() {
       if (!isReal || !organizationId) {
-        setAffiliates(MOCK_AFFILIATES);
-        setSnapshots(MOCK_SNAPSHOTS);
-        setHistory(MOCK_HISTORY);
+        setAffiliates([]);
+        setSnapshots({});
+        setHistory([]);
         setLoading(false);
         return;
       }
       try {
         const affs = await fetchNetworkAffiliates(firebaseConfig, organizationId);
-        const usedAffs = affs.length ? affs : MOCK_AFFILIATES;
+        const usedAffs = affs;
+        if (cancelled) return;
         setAffiliates(usedAffs);
 
         const snaps: Record<string, NetworkSnapshot> = {};
@@ -190,19 +170,23 @@ export function NetworkView() {
           })
         );
 
-        setSnapshots(Object.keys(snaps).length ? snaps : MOCK_SNAPSHOTS);
+        if (cancelled) return;
+        setSnapshots(snaps);
         const sortedHistory = Object.values(histByMonth).sort((a, b) => a.month.localeCompare(b.month));
-        setHistory(sortedHistory.length >= 2 ? sortedHistory : MOCK_HISTORY);
+        setHistory(sortedHistory);
       } catch (e) {
-        setAffiliates(MOCK_AFFILIATES);
-        setSnapshots(MOCK_SNAPSHOTS);
-        setHistory(MOCK_HISTORY);
+        if (cancelled) return;
+        setLoadError("Dados da rede indisponíveis. Atualize a página para tentar novamente.");
+        setAffiliates([]);
+        setSnapshots({});
+        setHistory([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     void load();
-  }, [isReal, organizationId]);
+    return () => { cancelled = true; };
+  }, [isReal, organizationId, firebaseConfig]);
 
   /* ── Totais consolidados ──────────────────────────────────────────── */
   const totals = useMemo(() => {
@@ -284,6 +268,7 @@ export function NetworkView() {
     );
   }
 
+  if (loadError) return <main><p role="alert">{loadError}</p></main>;
   const selectedAffiliate = selectedId ? affiliates.find(a => a.id === selectedId) : null;
   const selectedSnap = selectedAffiliate ? snapshots[selectedAffiliate.childOrganizationId] : null;
 

@@ -1,4 +1,5 @@
 "use client";
+import { kidsOperation } from "./kids-operations-client";
 import { useRef, useState } from "react";
 import type { KidsCheckIn } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
@@ -33,7 +34,7 @@ export function KidsCustodyPanel({ record, initialProof, onClose }: { record: Ki
     setBusy(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const updated = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId }, current.securityToken);
+      const updated = (await kidsOperation(user, organizationId, { action: "lookup", proof: current.securityToken })).checkIn;
       if (!updated || updated.status !== "checked_in") { onClose(); return; }
       setCurrent(updated); setReceiverId(""); setConfirmed(false); setMessage("");
     } catch { setMessage("Não foi possível atualizar. Não libere sem verificar."); }

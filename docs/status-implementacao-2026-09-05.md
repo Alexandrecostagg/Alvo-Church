@@ -1,8 +1,9 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 5: **69,45% (aproximadamente 69,5%)**. Responsável
-> separado do operador e retirada Kids transacional; 235 testes, 77 verificações
-> de custódia e 62 de mídia. Regra de 50 preservada. Ver [entregas e cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 6 ampliada: **76,65% (aproximadamente 76,7%)**, ganho
+> de **7,20 pontos**. Cadastros/50, público persistente, sessões Kids, dados reais,
+> privacidade e CI versionado. 263 testes e 308 verificações numeradas de integração.
+> Ver [evidências](entrega-ampliada-6-2026-09-05.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base auditada: `ecc86b4`, branch `codex/consolidacao-local-2026-09-05`.
@@ -91,8 +92,8 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
 2. Achado inicial resolvido localmente na entrega 4: GET do QR desativado,
    consulta autenticada e foto privada. Publicação coordenada e revisão do
    cache/legado remoto ainda pendentes.
-3. `reception-view`, `wellness-view`, `network-view` e telas do marketplace ainda
-   têm dados simulados/fallbacks. `/wifi` transforma falha de requisição em sucesso.
+3. Achado inicial corrigido nas frentes revisadas na entrega 6: recepção, cuidado,
+   bem-estar, rede, lojas/moderação e Wi-Fi. EAD/eventos ainda exigem auditoria.
 4. `/api/giving/pix` gera BR Code estático. Isso não é gateway de PIX dinâmico,
    confirmação bancária nem doação recorrente automática.
 5. O app registra Expo Push Token, mas a tela de comunicação ainda anuncia push
@@ -101,8 +102,8 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
    e o teste de limite aplicam **50**. Corrigir conteúdo conforme o plano vigente
    ou alterar o produto por decisão comercial explícita; não aumentar limite
    silenciosamente para acompanhar a propaganda.
-7. Não há workflow GitHub Actions versionado nesta base. Há configurações
-   Cloudflare/EAS, mas sua automação remota não foi auditada.
+7. CI versionado na entrega 6 para tipos, testes, builds por aplicação e emuladores.
+   Sem push: nenhuma execução desse workflow remoto foi verificada.
 
 ## App e LP: recomendação de repositórios
 
@@ -147,8 +148,8 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Dependências, identidade/Passe e mídia Kids validados localmente. Vínculo
-do responsável e retirada atômica validados localmente na entrega 5. Fechar
-escala/sala/evento e homologar aparelhos; depois integrar os cadastros legados, eliminar dados simulados
-e fazer QA físico do mobile. LP pode ter sua consolidação preparada como frente
-própria, sem antecipar publicação. Critérios detalhados no backlog ativo.
+Entrega 6 fecha localmente as entradas legadas de cadastro, sessões Kids e as
+frentes de dados reais documentadas. Seguem retenção/legados Kids, aparelhos,
+comprovantes privados, cobrança/cotas e comunicação real. Manter pacotes maiores
+conforme pedido do usuário, com percentual sustentado por evidência. Sem deploy
+ou extração do mobile/LP para outros repositórios.

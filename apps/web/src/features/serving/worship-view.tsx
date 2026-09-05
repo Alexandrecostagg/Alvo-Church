@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Music, Play, ExternalLink, Save } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { transposeChordsText } from "@alvo/domain";
 import type { WorshipSong } from "@alvo/types";
-import { MOCK_WORSHIP_SONGS } from "../../lib/mock-data";
+
 import { useAppAuth } from "../../../app/providers";
 import { fetchWorshipSongs, saveWorshipSong, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 
@@ -31,8 +31,8 @@ export function WorshipView() {
   // Carrega e sincroniza músicas do Firestore
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setSongs(MOCK_WORSHIP_SONGS);
-      setStatus("Exibindo louvores de demonstração offline.");
+      setSongs([]);
+      setStatus("Conecte-se para carregar o repertório.");
       return;
     }
 
@@ -44,29 +44,13 @@ export function WorshipView() {
         const dbSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
         if (cancelled) return;
 
-        if (dbSongs.length === 0) {
-          setStatus("Preparando repertório inicial...");
-          // Seed mock songs
-          await Promise.all(
-            MOCK_WORSHIP_SONGS.map(async (song) => {
-              const toSave = { ...song, organizationId };
-              await saveWorshipSong(firebaseConfig, { organizationId }, toSave);
-            })
-          );
-          if (cancelled) return;
-          const freshSongs = await fetchWorshipSongs(firebaseConfig, { organizationId });
-          if (cancelled) return;
-          setSongs(freshSongs);
-          setStatus("Repertório padrão inicializado.");
-        } else {
-          setSongs(dbSongs);
-          setStatus("Repertório carregado.");
-        }
+        setSongs(dbSongs);
+        setStatus(dbSongs.length ? "Repertório carregado." : "Nenhum louvor cadastrado. Adicione o primeiro.");
       } catch (error) {
         console.error(error);
         if (!cancelled) {
-          setSongs(MOCK_WORSHIP_SONGS);
-          setStatus("Erro ao conectar ao Firestore. Exibindo demonstração.");
+          setSongs([]);
+          setStatus("Não foi possível carregar o repertório.");
         }
       }
     }
@@ -108,7 +92,7 @@ export function WorshipView() {
 
     const added: WorshipSong = {
       id: `song_${Date.now()}`,
-      organizationId: organizationId || "org_alvo_demo",
+      organizationId,
       title: newSong.title,
       artist: newSong.artist,
       originalKey: newSong.originalKey,
@@ -119,6 +103,7 @@ export function WorshipView() {
       createdAt: new Date().toISOString()
     };
 
+    if (!configured || !firebaseReady || !user) { setStatus("Conecte-se para salvar o repertório."); return; }
     // Salva no Firestore
     if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setStatus("Salvando...");
@@ -127,7 +112,7 @@ export function WorshipView() {
         setStatus("Música salva.");
       } catch (err) {
         console.error(err);
-        setStatus("Não foi possível salvar. A alteração ficou apenas neste dispositivo.");
+        setStatus("Não foi possível salvar. O formulário foi preservado."); return;
       }
     }
 

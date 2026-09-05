@@ -1,0 +1,68 @@
+name: Validate platform
+on:
+  pull_request:
+  push:
+    branches: [main, "codex/**"]
+permissions:
+  contents: read
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @alvo/web exec next typegen
+      - run: corepack pnpm test
+      - run: corepack pnpm typecheck
+  builds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [web, lp, mobile]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - if: matrix.target == 'web'
+        run: node scripts/with-qa-env.mjs corepack pnpm build:cloudflare:web
+      - if: matrix.target == 'lp'
+        run: corepack pnpm --filter @alvo/lp build
+      - if: matrix.target == 'mobile'
+        run: corepack pnpm --filter @alvo/mobile exec expo export --platform ios --platform android --output-dir /tmp/alvo-mobile-export
+  authorization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm exec firebase emulators:exec --only auth,firestore,storage --project demo-alvo-qa 'node scripts/qa-ci.mjs'

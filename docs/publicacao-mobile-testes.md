@@ -71,3 +71,19 @@ No Google Play Console, adicione os e-mails dos testadores no canal **Teste inte
 - Cadastrar músicas no módulo **Louvor & Cifras** do painel e vincular uma setlist ao próximo evento: o aplicativo lê esse repertório real, sem usar os conteúdos de demonstração na tela.
 - Criar a política de privacidade e preencher os formulários de privacidade/dados das duas lojas de acordo com o comportamento real do app.
 - Preparar textos da loja, e-mail de suporte, categoria e capturas de tela. Declarar push apenas após comprovar recebimento em aparelho; registro do token sozinho não fecha o fluxo.
+
+
+## Atualização da entrega 6 — 05/09/2026
+
+Avanço global 76,65%; mobile estimado em 75%. Aplicativo usa sessões Kids
+confirmadas no painel (sala/evento/equipe/horário/capacidade), consultas do backend
+e reserva de vagas transacional; salas fictícias removidas. Operador que também
+é responsável conserva acesso aos crachás dos filhos. Hermes iOS/Android passou;
+CI de export foi versionado, sem execução remota ou build assinado.
+
+No QA físico, incluir operador escalado vs. outra sala, revogação durante a
+sessão, entrada na última vaga, horário encerrado, responsável sem conta,
+operador-responsável, câmera/foto e falha de rede. Sessão fechada não reabre.
+A seleção de criança cadastral está no painel; app mantém entrada avulsa.
+Não atribuir resultados físicos, recebimento de push ou distribuição nas lojas
+a um export de JavaScript. Retenção de fotos e preparação remota ainda pendentes.

@@ -27,7 +27,8 @@ async function run() {
   await org.set({ status: "active" });
   await org.collection("users").doc(admin).set({ organizationId: orgId, isActive: true, roles: ["church_admin"] });
   await org.collection("users").doc(member).set({ organizationId: orgId, isActive: true, roles: ["member"] });
-  const record = { organizationId: orgId, parentId: member, authorizedPickUpIds: [], status: "checked_in", securityToken: `KID-${randomUUID().replaceAll("-", "")}` };
+  await org.collection("kidsOperationSessions").doc("media-session").set({ organizationId: orgId, status: "open", operatorIds: [admin, member] });
+  const record = { sessionId: "media-session", organizationId: orgId, parentId: member, authorizedPickUpIds: [], status: "checked_in", securityToken: `KID-${randomUUID().replaceAll("-", "")}` };
   await doc.set(record);
   await org.collection("kidsCheckIns").doc("other").set({ ...record, parentId: "stranger" });
   equal((await api("qr?data=legacy-secret", undefined, undefined, "GET")).status, 410, "URL antiga desativada");

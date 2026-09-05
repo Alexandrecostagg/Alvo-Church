@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
+import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -25,7 +26,6 @@ import {
 } from "lucide-react";
 import {
   saveServiceAssignment,
-  savePersonProfile,
   fetchServiceAssignments,
   fetchServiceTeams,
   saveServiceTeam,
@@ -80,6 +80,9 @@ const DEFAULT_TEAMS: MinistryTeam[] = ministryTeams.map((t) => ({ code: t.code, 
 
 export function ServingView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const registrationAttempt = useRef(crypto.randomUUID());
+  const registrationBusy = useRef(false);
+  const [registrationSaving, setRegistrationSaving] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
   // Ministérios REAIS (ServiceTeams do Firestore). Começa com o template e é
   // substituído pelos times reais no carregamento (semeados na 1ª vez).
@@ -375,24 +378,20 @@ export function ServingView() {
       status: "active"
     };
 
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await savePersonProfile(firebaseConfig, { organizationId }, servant);
-        setStatus(`${getFullName(servant)} cadastrado como voluntário e escalado em ${selectedMinistry.name}.`);
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? "Cadastro feito aqui, mas não foi possível salvar. Verifique sua conexão."
-            : "Cadastro feito aqui, mas não foi possível salvar. Verifique sua conexão."
-        );
-      }
-    } else {
-      setStatus(`${getFullName(servant)} cadastrado localmente e escalado em ${selectedMinistry.name}.`);
-    }
-
-    setPeople((currentPeople) => [servant, ...currentPeople]);
-    await handleQuickAssign(servant, role);
-    setServantDraft({ email: "", name: "", phone: "", role: "Apoio" });
+    if (registrationBusy.current) return;
+    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para cadastrar e escalar."); return; }
+    registrationBusy.current = true; setRegistrationSaving(true);
+    try {
+      const serviceDate = `${selectedDateFilter}T08:30:00.000Z`;
+      const created = await registerPerson(user, { organizationId, requestId: registrationAttempt.current, workflow: "serving", person: servant, serving: { serviceTeamId: selectedMinistry.code, role, serviceDate } });
+      const saved = { ...servant, id: created.personId };
+      setPeople(current => [saved, ...current.filter(p => p.id !== saved.id)]);
+      setAssignments(current => [{ id: created.assignmentId!, organizationId, personId: saved.id, serviceTeamId: selectedMinistry.code, ministryCode: selectedMinistry.code, role, serviceDate, status: "pending", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, ...current.filter(a => a.id !== created.assignmentId)]);
+      registrationAttempt.current = crypto.randomUUID();
+      setServantDraft({ email: "", name: "", phone: "", role: "Apoio" });
+      setStatus(`${getFullName(saved)} cadastrado e escalado. Operação salva por completo.`);
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível cadastrar e escalar."); }
+    finally { registrationBusy.current = false; setRegistrationSaving(false); }
   }
 
   // Tribes mapping for smart suggestions
@@ -1081,7 +1080,7 @@ export function ServingView() {
               </label>
 
               <button 
-                type="submit"
+                type="submit" disabled={registrationSaving}
                 style={{ background: "var(--alvo-accent)", color: "white", border: "none", borderRadius: "10px", padding: "10px", fontWeight: 800, cursor: "pointer", marginTop: 6 }}
               >
                 Cadastrar e Escalar

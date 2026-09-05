@@ -24,17 +24,17 @@ import {
   CameraOff,
 } from "lucide-react";
 import Link from "next/link";
+import { kidsOperation } from "./kids-operations-client";
+import { KidsSessionManager } from "./kids-session-manager";
 import { KidsCustodyPanel } from "./kids-custody-panel";
 import { KidsPrivateImage } from "./kids-private-image";
 import { KidsPhotoEditor } from "./kids-photo-editor";
 import { useAppAuth } from "../../../app/providers";
 import {
-  fetchActiveKidsCheckIns,
-  fetchKidsCheckInByToken,
-  fetchKidsCheckInByCode,
+  fetchPeople,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
-import type { KidsCheckIn } from "@alvo/types";
+import type { KidsCheckIn, KidsOperationSession, Person } from "@alvo/types";
 
 interface KidRecord {
   source: KidsCheckIn;
@@ -73,9 +73,16 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
 }
 
 export function KidsLeaderView() {
-  const { user, configured, firebaseReady, firebaseConfig, organizationId } = useAppAuth();
+  const { user, configured, firebaseReady, firebaseConfig, organizationId, hasAnyRole } = useAppAuth();
 
   // Crianças com check-in ativo — carregadas do Firestore.
+  const [children, setChildren] = useState<Person[]>([]);
+  const [childId, setChildId] = useState("");
+  const canListChildren = hasAnyRole(["super_admin", "church_admin", "pastor", "secretary"]);
+  useEffect(() => { let active = true; setChildren([]); if (canListChildren) void fetchPeople(firebaseConfig, { organizationId }, 2000).then(rows => { if (active) setChildren(rows.filter(p => p.status === "active" && ["child", "teen"].includes(p.personType))); }).catch(() => {}); return () => { active = false; }; }, [canListChildren, firebaseConfig, organizationId]);
+  const loadVersion = useRef(0);
+  const [sessions, setSessions] = useState<KidsOperationSession[]>([]);
+  const [sessionId, setSessionId] = useState("");
   const [kidsList, setKidsList] = useState<KidRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -120,16 +127,26 @@ export function KidsLeaderView() {
   // Carrega os check-ins ativos reais do Firestore.
   const reloadKids = useCallback(async () => {
     if (!configured || !firebaseReady || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
+    const version = ++loadVersion.current;
     try {
-      const list = await fetchActiveKidsCheckIns(firebaseConfig, { organizationId });
+      const available = await kidsOperation(user, organizationId, { action: "sessions" });
+      if (version !== loadVersion.current) return;
+      setSessions(available.sessions);
+      const selected = available.sessions.some((s: KidsOperationSession) => s.id === sessionId) ? sessionId : available.sessions[0]?.id || "";
+      if (selected !== sessionId) setSessionId(selected);
+      if (!selected && !available.admin) { setKidsList([]); setLoadError(null); return; }
+      const { checkIns: list } = await kidsOperation(user, organizationId, { action: "list", sessionId: selected || undefined });
+      if (version !== loadVersion.current) return;
       setKidsList(list.map(toKidRecord));
       setLoadError(null);
     } catch {
+      if (version !== loadVersion.current) return;
+      setKidsList([]); setSessions([]);
       setLoadError("Não foi possível carregar os check-ins ativos. Verifique a conexão.");
     }
-  }, [configured, firebaseReady, firebaseConfig, organizationId]);
+  }, [configured, firebaseReady, firebaseConfig, organizationId, user, sessionId]);
 
-  useEffect(() => { void reloadKids(); }, [reloadKids]);
+  useEffect(() => { setKidsList([]); void reloadKids(); const timer = setInterval(() => void reloadKids(), 30000); return () => { ++loadVersion.current; clearInterval(timer); }; }, [reloadKids]);
 
   const filteredKids = kidsList.filter(k =>
     k.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -194,7 +211,7 @@ export function KidsLeaderView() {
         stopCamera();
         try {
           const checkIn = (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig))
-            ? await fetchKidsCheckInByToken(firebaseConfig, { organizationId }, token)
+            ? (await kidsOperation(user, organizationId, { action: "lookup", proof: token })).checkIn
             : null;
           if (checkIn && checkIn.status === "checked_in") {
             setScanSoundVisual(true);
@@ -226,7 +243,7 @@ export function KidsLeaderView() {
     if (local) { setProof(code); setScannedChild(local); setCodeInput(""); setView("checkout"); return; }
     try {
       if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        const found = await fetchKidsCheckInByCode(firebaseConfig, { organizationId }, code);
+        const found = (await kidsOperation(user, organizationId, { action: "lookup", proof: code })).checkIn;
         if (found) { setProof(code); setScannedChild(toKidRecord(found)); setCodeInput(""); setView("checkout"); return; }
       }
       setCodeError("Código não encontrado entre os check-ins ativos.");
@@ -245,7 +262,7 @@ export function KidsLeaderView() {
     let checkIn: KidsCheckIn;
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ action: "check_in", organizationId, requestId: createAttempt.current, childName: newKidDraft.name, guardianName: newKidDraft.parentName, guardianEmail, guardianPhone: newKidDraft.parentPhone, authorizedNames: newKidDraft.authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies: newKidDraft.allergies, securityRestrictions: newKidDraft.securityRestrictions, identityConfirmed }) });
+      const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ action: "check_in", organizationId, sessionId, childId: childId || undefined, requestId: createAttempt.current, childName: newKidDraft.name, guardianName: newKidDraft.parentName, guardianEmail, guardianPhone: newKidDraft.parentPhone, authorizedNames: newKidDraft.authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies: newKidDraft.allergies, securityRestrictions: newKidDraft.securityRestrictions, identityConfirmed }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       checkIn = data.checkIn;
@@ -263,9 +280,10 @@ export function KidsLeaderView() {
       ...prev
     ]);
     setNewKidDraft({ name: "", age: "", parentName: "", parentPhone: "", authorizedNames: "", allergies: "", securityRestrictions: "" });
-    setGuardianEmail(""); setIdentityConfirmed(false);
+    setGuardianEmail(""); setIdentityConfirmed(false); setChildId("");
     setJustCheckedIn({ id: checkIn.id, code: pickupCode, name: newKid.name });
     setView("list");
+    void reloadKids();
   };
 
   const activeCheckedInCount = kidsList.filter(k => k.status === "checked_in").length;
@@ -297,6 +315,9 @@ export function KidsLeaderView() {
         </div>
       </header>
 
+      <KidsSessionManager sessions={sessions} onChange={() => void reloadKids()} />
+      <label>Sessão de trabalho<select value={sessionId} onChange={e => { setKidsList([]); setScannedChild(null); setJustCheckedIn(null); setView("list"); setSessionId(e.target.value); }}><option value="">Selecione uma sessão</option>{sessions.map(s => <option key={s.id} value={s.id}>{s.roomName} · {s.eventName} · {s.occupancy}/{s.capacity} presentes</option>)}</select></label>
+      {!sessions.length && <p>Nenhuma sessão disponível para sua equipe. Peça à administração para confirmar sala, evento e escala.</p>}
       {/* CRACHÁ RECÉM-GERADO — QR + código pro operador entregar ao responsável */}
       {justCheckedIn && (
         <div
@@ -311,7 +332,7 @@ export function KidsLeaderView() {
             <CheckCircle2 size={48} style={{ color: "#10b981", margin: "0 auto 8px" }} />
             <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.35rem", fontWeight: 900, margin: "0 0 4px" }}>Check-in Confirmado</h2>
             <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", margin: "0 0 1.25rem" }}>
-              <strong style={{ color: "var(--alvo-ink)" }}>{justCheckedIn.name}</strong> está sob cuidado. Mostre o QR ao responsável para escanear no app.
+              <strong style={{ color: "var(--alvo-ink)" }}>{justCheckedIn.name}</strong> está sob cuidado. Entregue o código ao responsável para apresentação na retirada.
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <KidsPrivateImage checkInId={justCheckedIn.id} size={200} />
@@ -320,7 +341,7 @@ export function KidsLeaderView() {
               <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", textTransform: "uppercase", fontWeight: 700, display: "block" }}>Código de retirada (sem app)</span>
               <strong style={{ fontFamily: "monospace", fontSize: "1.5rem", letterSpacing: "0.1em", color: "var(--alvo-accent)" }}>{justCheckedIn.code}</strong>
               <p style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", margin: "6px 0 0" }}>
-                Anote no crachá impresso. Serve para retirar mesmo sem celular/bateria/internet.
+                Anote no crachá impresso. Serve para retirar mesmo sem celular ou bateria. A equipe precisa de conexão para confirmar a retirada.
               </p>
             </div>
             <KidsPhotoEditor key={justCheckedIn.id} checkInId={justCheckedIn.id} />
@@ -525,6 +546,7 @@ export function KidsLeaderView() {
                 <input 
                   required
                   placeholder="Nome completo"
+                  readOnly={Boolean(childId)}
                   value={newKidDraft.name}
                   onChange={e => setNewKidDraft(prev => ({ ...prev, name: e.target.value }))}
                   style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
@@ -532,6 +554,7 @@ export function KidsLeaderView() {
               </label>
 
               <div className="kids-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                {canListChildren && <label>Criança cadastrada (opcional)<select value={childId} onChange={e => { setChildId(e.target.value); const child = children.find(p => p.id === e.target.value); if (child) setNewKidDraft(d => ({ ...d, name: `${child.firstName} ${child.lastName}`.trim() })); }}><option value="">Entrada avulsa / visitante</option>{children.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select></label>}
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Idade
                   <input 
@@ -557,7 +580,7 @@ export function KidsLeaderView() {
               </div>
 
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                WhatsApp do Responsável <span style={{ fontWeight: 400 }}>(para autorizar retirada à distância)</span>
+                WhatsApp do Responsável <span style={{ fontWeight: 400 }}>(contato em caso de necessidade)</span>
                 <input
                   type="tel"
                   placeholder="Ex: (11) 99999-8888"
@@ -610,7 +633,7 @@ export function KidsLeaderView() {
                   disabled={saving || !identityConfirmed}
                   style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                 >
-                  Imprimir Crachá &amp; Check-in
+                  Gerar crachá e confirmar entrada
                 </button>
               </div>
             </form>

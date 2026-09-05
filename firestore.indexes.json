@@ -1,6 +1,22 @@
 {
   "indexes": [
     {
+      "collectionGroup": "kidsOperationSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "operatorIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "kidsCheckIns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "prayerRequests",
       "queryScope": "COLLECTION",
       "fields": [

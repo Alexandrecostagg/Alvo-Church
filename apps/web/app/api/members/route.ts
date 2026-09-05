@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseIdToken } from "../_lib/verify-auth";
+import { boundedJson, AccountError } from "../_lib/kids-media";
 import { registerMember, RegistrationError } from "../_lib/member-registration";
 
 export async function POST(req: NextRequest) {
@@ -10,28 +11,14 @@ export async function POST(req: NextRequest) {
       { status: 401 },
     );
   try {
-    const raw = await req.text();
-    if (new TextEncoder().encode(raw).length > 16000)
-      return NextResponse.json(
-        { error: "Cadastro muito grande." },
-        { status: 413 },
-      );
-    let body: unknown;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      return NextResponse.json(
-        { error: "Cadastro inválido." },
-        { status: 400 },
-      );
-    }
+    const body = await boundedJson(req, 16000);
     const result = await registerMember(body, uid);
     return NextResponse.json(result, {
       status: 200,
       headers: { "cache-control": "no-store" },
     });
   } catch (error) {
-    if (error instanceof RegistrationError)
+    if (error instanceof RegistrationError || error instanceof AccountError)
       return NextResponse.json(
         { error: error.message },
         { status: error.status },

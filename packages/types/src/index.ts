@@ -1194,6 +1194,8 @@ export interface KidsCheckIn {
   pickupPeople?: Array<{ id: string; name: string; userId: string }>;
   checkedInByUserId?: string;      // voluntário/uid que operou a entrada
   status: KidsCheckInStatus;
+  sessionId?: string;
+  eventId?: string;
   roomCode?: string;
   serviceTeamId?: string;          // sala kids (ServiceTeam) onde a criança está
   securityToken: string;           // payload do QR de retirada
@@ -1540,4 +1542,11 @@ export interface BannerHistoryEntry {
   // Preview + foto (data URLs JPEG compactos)
   thumbnailDataUrl: string;
   photoDataUrl?: string;
+}
+
+export interface KidsOperationSession {
+  id: string; organizationId: string; serviceTeamId: string; eventId: string;
+  roomName: string; eventName: string; operatorIds: string[];
+  startsAt: string; endsAt: string; capacity: number; occupancy: number;
+  status: "open" | "closed"; version: number;
 }

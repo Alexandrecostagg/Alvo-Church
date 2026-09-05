@@ -51,11 +51,11 @@ service cloud.firestore {
     // lista fechada. Coleção nova exige regra e revisão de segurança próprias.
     function isOperationalCollection(collection) {
       return [
-        "badges", "churchAttendance", "communityStoreModerationLogs",
-        "communityStores", "courses", "emergencySOS", "events", "families",
+        "badges", "churchAttendance",
+        "courses", "events", "families",
         "financeReports", "followUpTasks", "groupBanners", "groups",
-        "journeyProfiles", "leaderEmotionalPulse",
-        "memberTribeProfiles", "mentoringSessions", "partners", "partnerBenefits",
+        "journeyProfiles",
+        "memberTribeProfiles", "partners", "partnerBenefits",
         "scheduleSwapRequests", "serviceAssignments", "serviceTeams",
         "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests",
         "tribes", "visitorJourneys", "wellBeingResources", "weeklyThemes",
@@ -510,17 +510,16 @@ service cloud.firestore {
     match /organizations/{orgId}/people/{personId} {
       allow get: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
       allow list: if isTenantAdmin(orgId);
-      // Cadastro completo/CPF/Passe passam pelo backend transacional. Fluxos
-      // legados de recepção e escalas só podem criar pessoas sem esses campos.
-      allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId)
-        && request.resource.data.organizationId == orgId
-        && !("cpf" in request.resource.data)
-        && !("memberCardCode" in request.resource.data)
-        && (!("partnerBenefitsEnabled" in request.resource.data) || request.resource.data.partnerBenefitsEnabled == false);
+      // Every creation path uses the central transaction and the real count.
+      allow create: if false;
       allow update: if isTenantAdmin(orgId)
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt"]);
       allow delete: if isTenantAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/publicIntakeLimits/{id} {
+      allow read, write: if false;
     }
 
     match /organizations/{orgId}/memberRegistrations/{id} {
@@ -570,13 +569,26 @@ service cloud.firestore {
     // A lista completa é exclusiva da equipe Kids. Responsáveis fazem query
     // restrita aos próprios filhos/pessoas autorizadas e só leem esses docs.
     match /organizations/{orgId}/kidsCheckIns/{checkInId} {
-      allow get, list: if canOperateKids(orgId) || isKidsGuardianFor(orgId, resource.data);
+      allow get, list: if isTenantAdmin(orgId) || isKidsGuardianFor(orgId, resource.data);
       // Entrada, vínculo e retirada são transações autenticadas no backend.
       allow write: if false;
     }
 
+    match /organizations/{orgId}/kidsRoomLocks/{id} {
+      allow read, write: if false;
+    }
+
+    match /organizations/{orgId}/kidsChildPresence/{id} {
+      allow read, write: if false;
+    }
+
+    match /organizations/{orgId}/kidsOperationSessions/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+
     match /organizations/{orgId}/kidsCustodyAudit/{id} {
-      allow read: if canOperateKids(orgId);
+      allow read: if isTenantAdmin(orgId);
       allow write: if false;
     }
 
@@ -589,6 +601,49 @@ service cloud.firestore {
       allow create: if isTenantMember(orgId)
         && request.resource.data.responsiblePersonId == request.auth.uid;
       allow update, delete: if isTenantAdmin(orgId);
+    }
+
+    // Personal wellbeing records are visible to their author and pastoral staff.
+    match /organizations/{orgId}/leaderEmotionalPulse/{id} {
+      allow read: if isTenantAdmin(orgId) || (isTenantMember(orgId) && resource.data.leaderId == request.auth.uid);
+      allow create: if isTenantMember(orgId)
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.leaderId == request.auth.uid
+        && request.resource.data.energyLevel is number && request.resource.data.energyLevel >= 0 && request.resource.data.energyLevel <= 10
+        && request.resource.data.stressLevel is number && request.resource.data.stressLevel >= 0 && request.resource.data.stressLevel <= 10;
+      allow update, delete: if false;
+    }
+    match /organizations/{orgId}/emergencySOS/{id} {
+      allow read: if isTenantAdmin(orgId) || (isTenantMember(orgId) && resource.data.leaderId == request.auth.uid);
+      allow create: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
+        && request.resource.data.leaderId == request.auth.uid && request.resource.data.status == "active";
+      allow update: if isTenantAdmin(orgId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "leaderId"]);
+      allow delete: if false;
+    }
+    match /organizations/{orgId}/mentoringSessions/{id} {
+      allow read: if isTenantAdmin(orgId) || (isTenantMember(orgId) && resource.data.leaderId == request.auth.uid);
+      allow create: if isTenantAdmin(orgId) && request.resource.data.organizationId == orgId;
+      allow update: if isTenantAdmin(orgId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "leaderId"]);
+      allow delete: if isTenantAdmin(orgId);
+    }
+    match /organizations/{orgId}/communityStores/{id} {
+      allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || resource.data.status == "approved" || resource.data.ownerId == request.auth.uid);
+      allow create: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
+        && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending";
+      // Editing a published store by its owner sends it back for moderation.
+      allow update: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (isTenantAdmin(orgId) || (resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending"));
+      allow delete: if isTenantAdmin(orgId);
+      match /offers/{offerId} {
+        allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || (get(/databases/$(database)/documents/organizations/$(orgId)/communityStores/$(id)).data.status == "approved" && resource.data.status == "active"));
+        allow write: if isTenantAdmin(orgId);
+      }
+    }
+    match /organizations/{orgId}/communityStoreModerationLogs/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow create: if isTenantAdmin(orgId) && request.resource.data.organizationId == orgId && request.resource.data.moderatedBy == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // Coleções operacionais de primeiro nível. A lista fechada acima evita
