@@ -477,8 +477,24 @@ service cloud.firestore {
     // organizations/{orgId} é mantido pela própria app (savePersonProfile).
     match /organizations/{orgId}/people/{personId} {
       allow read: if isTenantMember(orgId);
-      allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId);
-      allow update, delete: if isTenantAdmin(orgId);
+      // Cadastro completo/CPF/Passe passam pelo backend transacional. Fluxos
+      // legados de recepção e escalas só podem criar pessoas sem esses campos.
+      allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId)
+        && request.resource.data.organizationId == orgId
+        && !("cpf" in request.resource.data)
+        && !("memberCardCode" in request.resource.data)
+        && (!("partnerBenefitsEnabled" in request.resource.data) || request.resource.data.partnerBenefitsEnabled == false);
+      allow update: if isTenantAdmin(orgId)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt"]);
+      allow delete: if isTenantAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/memberRegistrations/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/memberCpfClaims/{id} {
+      allow read, write: if false;
     }
 
     // Histórico de tribo do membro: auditoria de classificações (IA) e ajustes

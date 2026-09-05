@@ -19,6 +19,10 @@ local com as melhorias úteis das branches remotas e continuar nesta máquina.
 
 ## Integração
 
+**Retificação posterior:** a revisão em `auditoria-jules-kids-passe-2026-09-05.md`
+encontrou a correção de token Kids ausente no mobile. O relato abaixo sobre
+tokens criptográficos cobria o web; o mobile foi corrigido na revisão posterior.
+
 As 26 branches Jules continham 71 commits ausentes da main local, com vários
 patches duplicados e alterações incompatíveis de build. Foram integradas por
 conteúdo, com origem registrada abaixo, sem marcar branches incompletas como
@@ -105,4 +109,3 @@ para revisão própria. O aplicativo nativo ainda precisa de testes em aparelho.
 - Permanece um aviso não bloqueante do Next sobre migrar `middleware` para
   `proxy`; a migração não foi misturada à consolidação.
 - Testes nativos em aparelho, login real e regras Firestore não foram executados.
-

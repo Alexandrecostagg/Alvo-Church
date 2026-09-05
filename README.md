@@ -24,6 +24,8 @@ Outros comandos:
 Os arquivos `.env.local`, credenciais e backups locais ficam fora do Git.
 Para homologar login e membros sem tocar nos dados reais, use o
 [roteiro com emuladores e duas igrejas de teste](docs/homologacao-membros-2026-09-05.md).
+O comando `corepack pnpm qa:registration` verifica a
+[API transacional de cadastro e as regras Kids/Passe](docs/cadastro-transacional-2026-09-05.md).
 Para retomar em outra máquina, envie primeiro os commits da branch de trabalho
 ao remoto; `main` ainda não contém esta consolidação.
 

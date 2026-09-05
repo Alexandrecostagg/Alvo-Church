@@ -1,3 +1,19 @@
+export function isValidCpf(value: string) {
+  const cpf = value.replace(/\D/g, "");
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+  const calculateDigit = (slice: string, factor: number) => {
+    const total = [...slice].reduce((sum, digit, index) => sum + Number(digit) * (factor - index), 0);
+    const remainder = (total * 10) % 11;
+    return remainder === 10 ? 0 : remainder;
+  };
+
+  return (
+    calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) &&
+    calculateDigit(cpf.slice(0, 10), 11) === Number(cpf[10])
+  );
+}
+
 export function daysInMonth(year: string, month: string) {
   if (!year || !month) return 31;
   return new Date(Number(year), Number(month), 0).getDate();

@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
@@ -1847,7 +1848,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
 const DEFAULT_KIDS_ROOMS = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
 
 function newKidsToken() {
-  return `KID-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  return `KID-${Crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
 }
 
 // Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho

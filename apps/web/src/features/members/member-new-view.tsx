@@ -2,22 +2,10 @@
 
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import {
-  isFirebaseWebRuntimeConfigured,
-  saveFamilyMemberProfile,
-  saveFamilyProfile,
-  savePersonProfile,
-  countOrgMembers,
-  fetchPeople,
-} from "@alvo/firebase";
-import type { Family, FamilyMember, Person } from "@alvo/types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAppAuth } from "../../../app/providers";
-import { usePlan } from "../../../contexts/PlanContext";
-import { PLAN_LIMITS } from "@alvo/firebase";
-import { birthDateError, daysInMonth, lookupCep } from "../../lib/member-form";
+import { birthDateError, daysInMonth, isValidCpf, lookupCep } from "../../lib/member-form";
 import { invalidateOrgDataCache } from "../../lib/org-data-cache";
-import { saveLocalMemberProfile } from "../../lib/local-member-store";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -72,26 +60,11 @@ function formatCpf(value: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
-function isValidCpf(value: string) {
-  const cpf = digitsOnly(value);
-  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-
-  const calculateDigit = (slice: string, factor: number) => {
-    const total = [...slice].reduce((sum, digit, index) => sum + Number(digit) * (factor - index), 0);
-    const remainder = (total * 10) % 11;
-    return remainder === 10 ? 0 : remainder;
-  };
-
-  return (
-    calculateDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) &&
-    calculateDigit(cpf.slice(0, 10), 11) === Number(cpf[10])
-  );
-}
 
 
 export function MemberNewView() {
-  const { configured, user, organizationId, firebaseConfig } = useAppAuth();
-  const { plan } = usePlan();
+  const { configured, user, organizationId } = useAppAuth();
+  const pendingRequest = useRef<{ snapshot: string; id: string } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
 
@@ -215,134 +188,54 @@ export function MemberNewView() {
       return;
     }
 
-    if (normalizedCpf && configured && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        const people = await fetchPeople(firebaseConfig, { organizationId }, 1000);
-        const existingPerson = people.find((item) => digitsOnly(item.cpf ?? "") === normalizedCpf);
-        if (existingPerson) {
-          setStatus(`Já existe um cadastro para este CPF: ${existingPerson.firstName} ${existingPerson.lastName}.`);
-          setLastSavedMember(null);
-          return;
-        }
-      } catch (error) {
-        setStatus(friendlyError(error, "Não foi possível conferir o CPF agora. Tente novamente."));
-        setLastSavedMember(null);
-        return;
-      }
-    }
-
-    // Verificação de limite de membros por plano
-    const maxMembers = PLAN_LIMITS[plan].maxMembers;
-    if (isFinite(maxMembers) && configured) {
-      const currentCount = await countOrgMembers(firebaseConfig, { organizationId });
-      if (currentCount >= maxMembers) {
-        setStatus(
-          `⚠️ Limite de ${maxMembers} membros do plano ${plan === "free" ? "Gratuito" : "Comunidade"} atingido. Faça upgrade em Configurações → Plano.`
-        );
-        setLastSavedMember(null);
-        return;
-      }
-    }
-
-    const familyName = getFormValue(form, "familyName");
-    const familyId = familyName ? createId("family") : undefined;
-    const personId = createId("person");
-
-    const person: Person = {
-      id: personId,
-      organizationId,
-      primaryFamilyId: familyId,
-      firstName,
-      lastName,
-      preferredName: getFormValue(form, "preferredName") || undefined,
-      email: getFormValue(form, "email") || undefined,
-      mobilePhone: getFormValue(form, "mobilePhone") || undefined,
-      whatsappPhone: getFormValue(form, "whatsappPhone") || undefined,
-      birthDate,
-      cpf: normalizedCpf || undefined,
-      address,
-      consentLgpdAt: lgpdConsent ? new Date().toISOString() : undefined,
-      memberCardCode: partnerBenefitsEnabled
-        ? `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
-        : undefined,
-      partnerBenefitsEnabled,
-      personType: getFormValue(form, "personType") as Person["personType"],
-      memberStatus: memberStatus as Person["memberStatus"],
-      status: "active",
-    };
-    const family: Family | undefined =
-      familyId && familyName
-        ? {
-            id: familyId,
-            organizationId,
-            familyName,
-            displayName: familyName,
-            status: "active",
-            address,
-            notes: getFormValue(form, "familyNotes") || undefined
-          }
-        : undefined;
-    const familyMember: FamilyMember | undefined =
-      familyId && familyName
-        ? {
-            id: createId("family_member"),
-            organizationId,
-            familyId,
-            personId,
-            relationshipType: getFormValue(form, "relationshipType") as FamilyMember["relationshipType"],
-            isPrimaryContact: Boolean(form.get("isPrimaryContact")),
-            isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
-            isLegalGuardian: Boolean(form.get("isLegalGuardian"))
-          }
-        : undefined;
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      saveLocalMemberProfile({ family, familyMember, person });
-      setStatus(
-        `✓ ${fullName} foi cadastrado neste dispositivo.`
-      );
-      setLastSavedMember({
-        familyId,
-        fullName,
-        memberCardCode: person.memberCardCode,
-        personId
-      });
-      resetFormState(formElement);
+    if (!configured || !user) {
+      setStatus("Entre na sua conta para salvar o cadastro.");
       return;
     }
-
+    const familyName = getFormValue(form, "familyName");
+    const payload = {
+      organizationId,
+      person: {
+        firstName, lastName, preferredName: getFormValue(form, "preferredName"),
+        email: getFormValue(form, "email"), mobilePhone: getFormValue(form, "mobilePhone"),
+        whatsappPhone: getFormValue(form, "whatsappPhone"), birthDate, cpf: normalizedCpf,
+        address, partnerBenefitsEnabled, personType: getFormValue(form, "personType"), memberStatus,
+      },
+      consent: lgpdConsent,
+      family: familyName ? { familyName, notes: getFormValue(form, "familyNotes") } : null,
+      familyMember: familyName ? {
+        relationshipType: getFormValue(form, "relationshipType"),
+        isPrimaryContact: Boolean(form.get("isPrimaryContact")),
+        isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
+        isLegalGuardian: Boolean(form.get("isLegalGuardian")),
+      } : null,
+    };
+    const snapshot = JSON.stringify(payload);
+    if (pendingRequest.current?.snapshot !== snapshot) pendingRequest.current = { snapshot, id: crypto.randomUUID() };
     try {
-      if (family && familyMember) {
-        await saveFamilyProfile(firebaseConfig, { organizationId }, family);
-        await saveFamilyMemberProfile(firebaseConfig, { organizationId }, familyMember);
-      }
-
-      await savePersonProfile(firebaseConfig, { organizationId }, person);
-      invalidateOrgDataCache(organizationId);
-      setStatus(
-        familyId
-          ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.`
-          : `✓ ${fullName} salvo com sucesso.`
-      );
-      setLastSavedMember({
-        familyId,
-        fullName,
-        memberCardCode: person.memberCardCode,
-        personId
+      const token = await user.getIdToken();
+      const response = await fetch("/api/members", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...payload, requestId: pendingRequest.current.id }),
       });
-      
+      const result = await response.json();
+      if (!response.ok) {
+        setStatus(result.error || "Não foi possível salvar o cadastro.");
+        setLastSavedMember(null);
+        return;
+      }
+      invalidateOrgDataCache(organizationId);
+      setStatus(familyName ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.` : `✓ ${fullName} salvo com sucesso.`);
+      setLastSavedMember({ fullName, personId: result.personId, familyId: result.familyId, memberCardCode: result.memberCardCode });
+      pendingRequest.current = null;
       resetFormState(formElement);
     } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível salvar o membro."));
+      setStatus(friendlyError(error, "Não foi possível confirmar o cadastro. Tente salvar novamente."));
       setLastSavedMember(null);
     }
   }
 
-  // Provisional card code for real-time card visual preview
-  const provisionalCardCode = useMemo(() => {
-    if (!firstName) return "ESDRAS-XXX-0000";
-    return `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`;
-  }, [firstName]);
+  const provisionalCardCode = "GERADO AO SALVAR";
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1702,8 +1595,4 @@ export function MemberNewView() {
 
 function getFormValue(form: FormData, key: string) {
   return String(form.get(key) ?? "").trim();
-}
-
-function createId(prefix: string) {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Date.now().toString()}`;
 }

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { isLocalQaFirebase } from "./firebase-server-env";
 
 /**
  * Valida o Firebase ID token enviado no header Authorization: Bearer <token>.
@@ -136,7 +137,7 @@ async function verifyIdTokenRemotely(idToken: string): Promise<string | null> {
 
   try {
     const res = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      `${isLocalQaFirebase() ? "http://127.0.0.1:9099/identitytoolkit.googleapis.com" : "https://identitytoolkit.googleapis.com"}/v1/accounts:lookup?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

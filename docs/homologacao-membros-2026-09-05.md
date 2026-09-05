@@ -4,6 +4,10 @@ Sessão de 04/09/2026 em Belém, concluída em 05/09 UTC. Ambiente isolado
 `demo-alvo-qa`, Auth e Firestore emulados, painel em `http://localhost:3001`.
 Foram usados somente dados fictícios; não houve alteração em produção.
 
+Etapa posterior: o cadastro passou a usar o backend transacional e a emissão
+criptográfica do Passe. Veja `cadastro-transacional-2026-09-05.md`; as limitações
+ao fim deste registro descrevem o estado da homologação anterior.
+
 ## Como repetir
 
 É necessário Java 21 para os emuladores. Na raiz do repositório:

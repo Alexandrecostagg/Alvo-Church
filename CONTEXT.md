@@ -35,8 +35,16 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
   correções de datas/fuso, consultas de CEP e proteção contra envio simultâneo.
 - Dashboard e ficha agora deixam campos sem dados reais vazios ou indicados
   como indisponíveis. Outras telas ainda precisam da mesma revisão.
-- Próxima etapa: gravação atômica de pessoa/família/vínculo e garantias de CPF,
-  limite de plano e autorização de escrita no backend.
+- Cadastro completo agora usa `/api/members`: transação de pessoa/família/vínculo,
+  CPF reservado, idempotência, limite por contagem real e Passe criptográfico com
+  consentimento. Teste HTTP/emuladores e 167 testes unitários passaram.
+- A auditoria Jules encontrou token Kids mobile ainda com Math.random; corrigido
+  com UUID completo de Expo Crypto. Web já estava integrado. Não havia patch
+  funcional Jules específico do Esdras Passe nas branches disponíveis.
+- Consulte `docs/auditoria-jules-kids-passe-2026-09-05.md` e
+  `docs/cadastro-transacional-2026-09-05.md`. QR Kids em URL/cache, fotos privadas
+  e fluxo responsável/operador seguem pendentes. Recepção/escalas ainda precisam
+  migrar para a mesma API para fechar o limite global de pessoas.
 - Mobile usa Expo 57 e React Native 0.86, identidade `com.plataformaesdras.app`.
 - Segurança de tenant, dados simulados, armazenamento Kids e limites persistentes
   ainda exigem a estabilização descrita em `docs/plano-acao-seguranca-estabilizacao-2026-08-21.md`.
