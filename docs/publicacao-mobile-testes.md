@@ -1,14 +1,17 @@
 # Testes nas lojas — EsdrasApp
 
 Atualizado em **05/09/2026**. Estado: **implementação parcial, sem homologação
-em aparelhos comprovada nesta base**. Typecheck e export JS/Hermes iOS passaram;
+em aparelhos comprovada nesta base**. Typecheck e exports JS/Hermes iOS/Android passaram;
 isso não comprova build nativo assinado, instalação ou aprovação em loja.
 Contas EAS/lojas não foram inspecionadas nesta revisão.
 
-Antes do roteiro de distribuição abaixo, fechar dependências, vínculo conta/pessoa
-e Passe, QR/fotos Kids e papéis. Ver [backlog ativo](backlog-mvp-implementacao-v2.md).
+Antes do roteiro de distribuição abaixo, fechar QR/fotos Kids e papéis.
+Dependências e vínculo/Passe foram validados localmente nas entregas 1 e 3. Ver [backlog ativo](backlog-mvp-implementacao-v2.md).
 O app já tem registro de Expo Push Token; entrega de notificação em aparelho ainda
-precisa ser comprovada. A carteirinha Passe não está implementada no mobile.
+precisa ser comprovada. A carteirinha Passe está implementada no Perfil, com
+consulta autenticada, vínculo administrativo e estados sem acesso/sem rede.
+Testar suspensão/retomada, troca de conta, revogação, leitura do QR e ausência
+de cartão antigo após falha em aparelho; [evidências e limites](vinculo-passe-2026-09-05.md).
 
 Os perfis `preview` e `store-test` atualmente herdam configuração Firebase/API
 de produção de `eas.json`. Preparar um ambiente de homologação próprio antes de

@@ -54,7 +54,7 @@ service cloud.firestore {
         "badges", "churchAttendance", "communityStoreModerationLogs",
         "communityStores", "courses", "emergencySOS", "events", "families",
         "financeReports", "followUpTasks", "groupBanners", "groups",
-        "journeyProfiles", "leaderEmotionalPulse", "memberBenefitValidations",
+        "journeyProfiles", "leaderEmotionalPulse",
         "memberTribeProfiles", "mentoringSessions", "partners", "partnerBenefits",
         "scheduleSwapRequests", "serviceAssignments", "serviceTeams",
         "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests",
@@ -242,6 +242,7 @@ service cloud.firestore {
       // everyone else must be provisioned by an existing admin.
       allow create: if signedIn()
         && request.resource.data.organizationId == orgId
+        && (!("personId" in request.resource.data) || request.resource.data.personId == null)
         && (
           (request.auth.uid == userId && isOrgOwner(orgId))
           || canManageTenantUsers(orgId)
@@ -251,15 +252,46 @@ service cloud.firestore {
 
       // Users may edit their own profile but never their roles,
       // active flag or tenant binding.
-      allow update: if canManageTenantUsers(orgId)
-        || (
+      allow update: if !request.resource.data.diff(resource.data).affectedKeys().hasAny(["personId"])
+        && (canManageTenantUsers(orgId) || (
           signedIn()
           && request.auth.uid == userId
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(["roles", "isActive", "organizationId"])
-        );
+        ));
 
-      allow delete: if canManageTenantUsers(orgId);
+      allow delete: if canManageTenantUsers(orgId)
+        && !exists(/databases/$(database)/documents/organizations/$(orgId)/memberAccountLinks/$(userId));
+    }
+
+    // Only the authenticated backend establishes a verified one-to-one link.
+    // Old users.personId values alone are not proof of identity.
+    function ownsPerson(orgId, personId) {
+      let linkPath = /databases/$(database)/documents/organizations/$(orgId)/memberAccountLinks/$(request.auth.uid);
+      let claimPath = /databases/$(database)/documents/organizations/$(orgId)/memberAccountClaims/$(personId);
+      return isTenantMember(orgId) && exists(linkPath) && exists(claimPath)
+        && get(linkPath).data.personId == personId
+        && get(linkPath).data.organizationId == orgId
+        && get(linkPath).data.userId == request.auth.uid
+        && get(linkPath).data.verifiedBy is string
+        && get(claimPath).data.userId == request.auth.uid
+        && get(claimPath).data.organizationId == orgId
+        && get(claimPath).data.personId == personId
+        && tenantUserData(orgId).personId == personId;
+    }
+    match /organizations/{orgId}/memberAccountLinks/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/memberAccountClaims/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/memberAccountAudit/{id} {
+      allow read: if canManageTenantUsers(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/memberBenefitValidations/{id} {
+      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, resource.data.personId);
+      allow write: if isTenantAdmin(orgId);
     }
 
     // Assinatura e módulos são definidos no provisionamento e no processo de
@@ -476,7 +508,8 @@ service cloud.firestore {
     // Comunidade 300, Pastoral/Rede sem limite). O contador memberCount em
     // organizations/{orgId} é mantido pela própria app (savePersonProfile).
     match /organizations/{orgId}/people/{personId} {
-      allow read: if isTenantMember(orgId);
+      allow get: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
+      allow list: if isTenantAdmin(orgId);
       // Cadastro completo/CPF/Passe passam pelo backend transacional. Fluxos
       // legados de recepção e escalas só podem criar pessoas sem esses campos.
       allow create: if isTenantAdmin(orgId) && withinMemberLimit(orgId)

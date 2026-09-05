@@ -8,11 +8,15 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
 - Entrega 1 concluída: dependências corrigidas, 0 críticos/0 altos/1 moderado
   residual de ferramenta. Percentual após entrega 1: 64,20%; veja `docs/entregas-2026-09-05.md`.
 - Entrega 2 concluída: oferta de 50 na LP/cadastro, 22 arquivos redundantes
-  removidos e rota LP legada reutilizando a principal. Atual: 64,45% (~64,5%).
+  removidos e rota LP legada reutilizando a principal. Percentual: 64,45%.
+- Entrega 3 concluída: vínculo conta/pessoa confirmado pela administração,
+  regras de leitura individual e Passe no app. Atual: 66,35% (~66,4%).
+  192 testes, 78 verificações HTTP/regras, regressão 49→50, OpenNext e Hermes
+  iOS/Android passaram. Veja `docs/vinculo-passe-2026-09-05.md`.
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
   `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
   63,25% como linha de base (não prontidão de produção nem PRD completo).
-- Prioridade atual: identidade/Passe → QR/fotos
+- Prioridade atual: QR/fotos
   e fluxo Kids → limites/cadastros legados → dados reais e QA mobile.
 - Recomendação arquitetural: mobile no monorepo; LP com fonte e deploy próprios,
   candidata a repo separado após consolidação. Nenhuma migração foi executada.
@@ -61,9 +65,9 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
   com UUID completo de Expo Crypto. Web já estava integrado. Não havia patch
   funcional Jules específico do Esdras Passe nas branches disponíveis.
 - A inspeção posterior do Jules encontrou o plano da carteirinha mobile ainda
-  aguardando resposta. Implementar vínculo confiável conta/pessoa antes de
-  exibir o Passe: `personId` existe no tipo, mas não é devolvido ao perfil mobile
-  nem protegido contra alteração pelo próprio usuário nas regras atuais.
+  aguardando resposta. Resolvido localmente na entrega 3: o app consulta API
+  autenticada, o vínculo é transacional/privado e `personId` é protegido nas regras.
+  Vínculos legados exigem confirmação administrativa; parceiro/aparelhos por homologar.
 - Consulte `docs/auditoria-jules-kids-passe-2026-09-05.md` e
   `docs/cadastro-transacional-2026-09-05.md`. QR Kids em URL/cache, fotos privadas
   e fluxo responsável/operador seguem pendentes. Recepção/escalas ainda precisam

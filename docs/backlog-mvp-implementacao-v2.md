@@ -21,7 +21,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | Ordem | Item | Estado | Critério de aceite |
 | --- | --- | --- | --- |
 | P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
-| P0.2 | Conta → pessoa → Passe | Parcial | Vínculo atribuído por operação autorizada, autoalteração negada, busca restrita ao tenant, carteirinha só com consentimento/benefício/código válido; testar conta sem vínculo e vínculo incorreto. |
+| P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
 | P0.3 | QR e fotos Kids | Parcial | Segredo fora de URL/cache público, foto em armazenamento privado com acesso temporário; testar responsável, autorizado, operador e estranho. |
 | P0.4 | Fluxo Kids mobile | Pendente | Definir responsável solicitando versus operador confirmando, alinhar UI/regras; validar check-in/retirada e repetição em aparelho. |
 | P0.5 | Limites e proteção pública | Parcial | Recepção/escalas usam a política transacional de pessoas; limite persistente/anti-spam e mediação segura de comprovantes. |
@@ -38,7 +38,8 @@ pessoa/família/vínculo em transação, reserva CPF, trata idempotência e limi
 emite Passe criptográfico com consentimento. CEP, nascimento e ficha homologados.
 
 Falta convergir entradas de recepção/escalas; tratar deduplicação além de CPF;
-completar identidade conta/pessoa, timeline e vínculos de grupo/evento/cuidado.
+completar timeline e vínculos de grupo/evento/cuidado. Identidade conta/pessoa
+confirmada pela administração na entrega 3, com QA de exclusividade e permissões.
 Não inferir que `uid` e `personId` são intercambiáveis.
 
 ## Épico 2 — Recepção e Painel Pastor
@@ -80,8 +81,10 @@ criação de pessoas e não tratar a existência do tipo de troca como fluxo com
 
 **Parcial.** Loja, moderação e benefícios têm telas/repositórios. Há fallbacks
 fictícios, inclusive em detalhes/moderação. A emissão do Passe foi corrigida,
-mas a carteirinha mobile era apenas plano do Jules. Executar P0.2 e homologar
-validação em parceiro sem expor CPF/renda/histórico; revisar revogação e auditoria.
+e a carteirinha mobile/vínculo seguro foram implementados na entrega 3. Homologar
+validação em parceiro sem expor CPF/renda/histórico e em aparelhos; consulta do
+app revalida a cada 60 segundos, não invalida capturas antigas do código.
+Evidências: [entrega 3](vinculo-passe-2026-09-05.md).
 
 ## Épico 8 — SaaS, organizações e white-label
 

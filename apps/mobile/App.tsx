@@ -1,3 +1,4 @@
+import { MemberPassCard } from "./src/features/profile/member-pass-card";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
@@ -1329,6 +1330,8 @@ function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSign
         <Text style={s.cardTitle}>{orgName}</Text>
         <Text style={s.cardMeta}>{linkedOrg?.slug ? `Código: ${linkedOrg.slug}` : "Igreja não vinculada"}</Text>
       </View>
+
+      <MemberPassCard key={`${orgId}:${user.uid}`} user={user} organizationId={orgId} apiBaseUrl={WEB_API_URL} primary={primary} />
 
       <Text style={s.sectionTitle}>Meu Perfil</Text>
       <TouchableOpacity style={s.menuRow} onPress={onOpenMeuPerfil}>

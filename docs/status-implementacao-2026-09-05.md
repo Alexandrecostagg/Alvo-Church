@@ -1,8 +1,8 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 2: **64,45% (aproximadamente 64,5%)**. Dependências corrigidas,
-> oferta de 50 membros alinhada e 22 arquivos redundantes da LP removidos;
-> 0 críticos/0 altos/1 moderado residual. Ver [entregas e cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 3: **66,35% (aproximadamente 66,4%)**. Vínculo seguro
+> conta/pessoa e Passe no app implementados; 192 testes e 78 verificações HTTP/regras.
+> Regra de 50 preservada. Ver [entregas e cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base auditada: `ecc86b4`, branch `codex/consolidacao-local-2026-09-05`.
@@ -85,9 +85,9 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
 
 ## Achados que mudam o plano
 
-1. `fetchTenantUser` não entrega `personId` ao mobile; a regra de autoedição em
-   `firestore.rules` não impede alterar esse campo. Proteger/provisionar o vínculo
-   antes de usá-lo para mostrar o Passe de uma pessoa.
+1. Achado inicial resolvido localmente na entrega 3: vínculo privado e transacional
+   confirmado pela administração, `personId` protegido e Passe via API autenticada.
+   App implementado; homologação em aparelhos/parceiros continua pendente.
 2. `apps/web/app/api/kids/qr/route.ts` recebe o segredo por GET e permite cache
    público por um dia. UUID forte não resolve exposição do segredo.
 3. `reception-view`, `wellness-view`, `network-view` e telas do marketplace ainda
@@ -146,7 +146,7 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Fechar dependências e identidade/Passe, retirar a exposição do QR Kids e
+Dependências e identidade/Passe validados localmente. Retirar a exposição do QR Kids e
 homologar papéis; depois integrar os cadastros legados, eliminar dados simulados
 e fazer QA físico do mobile. LP pode ter sua consolidação preparada como frente
 própria, sem antecipar publicação. Critérios detalhados no backlog ativo.

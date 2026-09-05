@@ -22,19 +22,20 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
-| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Migrar recepção/escalas, rever cobertura por coleção e proteger vínculo conta/pessoa. |
+| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Migrar recepção/escalas, rever cobertura por coleção; vínculo conta/pessoa validado localmente na entrega 3. |
 | 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR por URL/cache, fotos privadas, mediação de comprovantes, rate limit persistente/anti-spam. |
 | 3 — Custo/cobrança | API principal de IA consome cota no servidor; PIX estático existe. | Cota uniforme de banners, idempotência de checkout, consentimento/opt-out e destinatários da comunicação. |
 | 4 — Dados/fluxos | Dashboard/ficha sem dados inventados; leitura Kids por responsável/operador testada. | Fallbacks em recepção, rede, marketplace, bem-estar e pastoral; falso sucesso Wi-Fi; fluxo Kids mobile. |
 | 5 — Validação | 167 testes, typecheck, QA transacional e export iOS registrados; build LP passou nesta revisão. | Dependências com advisories; homologação física Android/iOS; cobertura completa de papéis/coleções e integrações. |
 
-### Novo requisito explícito — identidade e Passe
+### Identidade e Passe — entrega 3 validada localmente
 
-`AuthUser.personId` existe como tipo, mas `fetchTenantUser` não o devolve ao app.
-As regras de autoedição em `users/{uid}` não o protegem. Antes de usar esse campo
-como prova de identidade, bloquear autoatribuição/troca, definir vinculação por
-operação autorizada e testar isolamento entre usuários/igrejas. A carteirinha
-deve respeitar consentimento e benefício ativo; não associar por nome/e-mail.
+Autoalteração de `users.personId` bloqueada. Vínculo é confirmado por admin em
+transação, com reserva exclusiva e auditoria privada. O app usa a API de Passe
+que deriva a identidade do token e verifica pessoa ativa, consentimento e benefício.
+Leitura alheia de pessoas/validações negada; legado não basta para comprovar vínculo.
+192 testes e 78 verificações HTTP/regras passaram. Ainda faltam aparelhos e fluxo
+integral do parceiro. [Detalhes](vinculo-passe-2026-09-05.md).
 
 ### Auditoria de dependências de 05/09
 
@@ -153,7 +154,7 @@ entregá-la apenas por armazenamento privado.
 ## Ordem de execução atualizada
 
 1. Corrigir dependências aplicáveis e validar os artefatos afetados.
-2. Fechar vínculo conta/pessoa e Passe; QR/fotos/fluxo Kids.
+2. Fechar QR/fotos/fluxo Kids; vínculo/Passe validado localmente na entrega 3.
 3. Migrar cadastros legados, proteger uploads e persistir limites/cotas.
 4. Remover dados simulados e homologar cobrança/comunicação.
 5. Ampliar testes de regras, homologar aparelhos/papéis e só então publicar.
