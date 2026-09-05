@@ -139,7 +139,7 @@ export function MembersView() {
   return (
     <main className="form-page directory-page animate-entrance">
       <section className="form-hero">
-        <Link className="back-link" href="/">
+        <Link className="back-link" href="/app">
           Voltar ao painel
         </Link>
         <p className="eyebrow">Base pastoral</p>

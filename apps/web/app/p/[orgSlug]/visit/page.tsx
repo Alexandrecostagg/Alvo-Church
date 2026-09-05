@@ -15,6 +15,7 @@ interface VisitorForm {
   firstVisit: string;
   howHeard: string;
   consent: boolean;
+  companyWebsite: string;
 }
 
 const HOW_HEARD_OPTIONS = [
@@ -39,6 +40,7 @@ export default function VisitorFormPage() {
     firstVisit: "yes",
     howHeard: "",
     consent: false,
+    companyWebsite: "",
   });
   const [state, setState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -81,6 +83,7 @@ export default function VisitorFormPage() {
         firstVisit: form.firstVisit === "yes",
         howHeard: form.howHeard || undefined,
         consent: form.consent,
+        companyWebsite: form.companyWebsite,
       }),
     });
 
@@ -116,6 +119,17 @@ export default function VisitorFormPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={formStyle}>
+          <div aria-hidden="true" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>
+            <label htmlFor="companyWebsite">Não preencha este campo</label>
+            <input
+              id="companyWebsite"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={form.companyWebsite}
+              onChange={(e) => set("companyWebsite", e.target.value)}
+            />
+          </div>
           <div style={fieldStyle}>
             <label style={labelStyle}>Nome completo *</label>
             <input

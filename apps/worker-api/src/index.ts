@@ -26,6 +26,10 @@ type WorkerEnv = {
   BRAND_ASSETS_BUCKET?: R2Bucket;
   PUBLIC_BRAND_BASE_URL?: string;
   UPLOAD_API_BEARER_TOKEN?: string;
+  // Segredo exclusivo do backend para comprovantes de evento. Enquanto não
+  // houver uma rota autenticada no web que faça a mediação, o navegador nunca
+  // deve chamar este endpoint diretamente.
+  EVENT_PROOF_UPLOAD_BEARER_TOKEN?: string;
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
   TWILIO_WHATSAPP_FROM?: string;
@@ -46,6 +50,24 @@ type WorkerEnv = {
 };
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
+
+const BRAND_ASSET_CONTENT_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/svg+xml", "image/x-icon"
+]);
+const BRAND_ASSET_KINDS = new Set<BrandAssetKind>(["logoLight", "logoDark", "icon", "favicon"]);
+const BRAND_ASSET_MAX_BYTES = 5 * 1024 * 1024;
+
+const EVENT_PROOF_MAX_BYTES = 8 * 1024 * 1024;
+const EVENT_PROOF_CONTENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp"
+]);
+
+function safeObjectSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "");
+}
 
 function jsonError(message: string, status = 400) {
   return new Response(JSON.stringify({ success: false, error: message }), {
@@ -96,13 +118,17 @@ app.post("/tenant-assets/upload", async (c) => {
   if (!organizationId || !assetKind || !(file instanceof File)) {
     return jsonError("organizationId, assetKind e file sao obrigatorios.", 422);
   }
+  if (!BRAND_ASSET_KINDS.has(assetKind) || !BRAND_ASSET_CONTENT_TYPES.has(file.type)) {
+    return jsonError("Tipo de asset ou arquivo não permitido.", 415);
+  }
+  if (file.size === 0 || file.size > BRAND_ASSET_MAX_BYTES) {
+    return jsonError("O asset deve ter no máximo 5 MB.", 413);
+  }
 
   const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
   // Fotos de criança (Segurança Kids) vivem sob um prefixo próprio, separado do
   // branding; as demais mantêm o caminho de branding.
-  const objectKey = assetKind === "kidsPhoto"
-    ? `organizations/${organizationId}/kids/${childId || "unknown"}/${Date.now()}-${fileName}`
-    : `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
+  const objectKey = `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
 
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
     httpMetadata: {
@@ -207,32 +233,58 @@ app.post("/wifi/intake", async (c) => {
   }
 });
 
-// Endpoint: upload comprovante (proof) for an event
+// Endpoint interno: upload de comprovante de evento.
+// O cliente deve enviar o arquivo ao backend web autenticado; ele valida a
+// permissão do usuário e chama este Worker com o bearer secreto. Assim não há
+// uma superfície pública de upload em R2.
 app.post("/events/:eventId/upload-proof", async (c) => {
+  const configuredToken = c.env.EVENT_PROOF_UPLOAD_BEARER_TOKEN ?? c.env.UPLOAD_API_BEARER_TOKEN;
+  const authorization = c.req.header("authorization");
+  if (!configuredToken) {
+    return jsonError("EVENT_PROOF_UPLOAD_BEARER_TOKEN nao configurado no Worker.", 503);
+  }
+  if (!authorization || !safeStringCompare(authorization, `Bearer ${configuredToken}`)) {
+    return jsonError("Nao autorizado para upload de comprovante.", 401);
+  }
+
   if (!c.env.BRAND_ASSETS_BUCKET) {
     return jsonError("BRAND_ASSETS_BUCKET nao configurado.", 503);
   }
 
-  const formData = await c.req.formData();
+  const formData = await c.req.formData().catch(() => null);
+  if (!formData) {
+    return jsonError("Formulario de upload invalido.", 422);
+  }
   const file = formData.get("file");
-  const eventId = String(c.req.param("eventId") ?? "");
-  const userId = String(formData.get("userId") ?? "anonymous");
+  const eventId = safeObjectSegment(String(c.req.param("eventId") ?? ""));
+  const userId = safeObjectSegment(String(formData.get("userId") ?? ""));
 
-  if (!eventId || !(file instanceof File)) {
-    return jsonError("eventId e file sao obrigatorios.", 422);
+  if (!eventId || !userId || !(file instanceof File)) {
+    return jsonError("eventId, userId e file sao obrigatorios.", 422);
+  }
+  if (!EVENT_PROOF_CONTENT_TYPES.has(file.type)) {
+    return jsonError("Envie apenas PDF, JPG, PNG ou WEBP.", 415);
+  }
+  if (file.size === 0 || file.size > EVENT_PROOF_MAX_BYTES) {
+    return jsonError("O comprovante deve ter no máximo 8 MB.", 413);
   }
 
-  const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
-  const objectKey = `events/${eventId}/proofs/${Date.now()}-${fileName}`;
+  const extension = file.type === "application/pdf"
+    ? "pdf"
+    : file.type === "image/png"
+      ? "png"
+      : file.type === "image/webp"
+        ? "webp"
+        : "jpg";
+  const objectKey = `events/${eventId}/proofs/${userId}/${crypto.randomUUID()}.${extension}`;
 
   await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type || "application/octet-stream" }
   });
 
-  const publicBaseUrl = c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ?? "https://assets.alvochurch.app";
-  const publicUrl = `${publicBaseUrl}/${objectKey}`;
-
-  return c.json({ success: true, objectKey, publicUrl, eventId, userId });
+  // Não devolvemos URL pública: comprovante contém dado financeiro. A leitura
+  // posterior deverá ser entregue por rota autenticada com URL temporária.
+  return c.json({ success: true, objectKey, eventId, userId });
 });
 
 // Endpoint: send WhatsApp message via Twilio

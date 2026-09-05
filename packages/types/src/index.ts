@@ -157,6 +157,9 @@ export interface GivingCampaign {
 
 export interface OrganizationSubscriptionSettings {
   organizationId: string;
+  // Campo canônico de acesso. Só o provisionamento e o processo de cobrança
+  // da plataforma podem alterá-lo.
+  plan?: "free" | "comunidade" | "pastoral" | "rede" | "enterprise";
   planCode: string;
   planTier: SubscriptionPlanTier;
   billingCycle: BillingCycle;
@@ -1534,4 +1537,3 @@ export interface BannerHistoryEntry {
   thumbnailDataUrl: string;
   photoDataUrl?: string;
 }
-

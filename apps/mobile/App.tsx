@@ -1,5 +1,8 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
+import * as Notifications from "expo-notifications";
+import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
@@ -42,6 +45,9 @@ import {
   fetchServiceAssignments,
   saveServiceAssignment,
   fetchMemberJourneyProfile,
+  fetchWorshipSongs,
+  fetchWorshipSetlistByEventId,
+  saveMobilePushToken,
   type FirebaseAuthUser
 } from "@alvo/firebase";
 import type { ServiceAssignment, ServiceAssignmentStatus, MemberJourneyProfile } from "@alvo/types";
@@ -123,6 +129,15 @@ const firebaseConfig = {
 const BRAND = "#d27836";
 const BRAND_DARK = "#1c2433";
 const SURFACE = "#f7f3ea";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false
+  })
+});
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -213,7 +228,7 @@ export default function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [dataReady, setDataReady] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
-  const notifListener = useRef<null>(null);
+  const [organizationReady, setOrganizationReady] = useState(false);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   // auth listener
@@ -231,9 +246,78 @@ export default function App() {
     return () => unsub();
   }, [configured]);
 
-  // push notifications — desabilitado no Expo Go (suporte removido no SDK 53)
-  // funciona em development build / produção
-  useEffect(() => { void 0; }, []);
+  // O vínculo é local apenas para abrir a organização correta; antes de usá-lo
+  // ele é sempre revalidado na coleção de usuários do tenant. Assim, remover
+  // alguém da igreja no painel corta o acesso também no aplicativo.
+  useEffect(() => {
+    if (!user || !configured) {
+      setLinkedOrg(null);
+      setOrganizationReady(true);
+      return;
+    }
+    let cancelled = false;
+    setOrganizationReady(false);
+    void (async () => {
+      try {
+        const raw = await SecureStore.getItemAsync(`esdras.organization.${user.uid}`);
+        const cached = raw ? JSON.parse(raw) as Organization : null;
+        if (!cached?.id) return;
+        const sdk = await import("@alvo/firebase");
+        const membership = await sdk.fetchTenantUser(firebaseConfig, { organizationId: cached.id, userId: user.uid });
+        if (membership?.isActive && !cancelled) setLinkedOrg(cached);
+        else await SecureStore.deleteItemAsync(`esdras.organization.${user.uid}`);
+      } catch {
+        // Sem vínculo válido, a tela seguinte orienta a informar o código da igreja.
+      } finally {
+        if (!cancelled) setOrganizationReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [configured, user?.uid]);
+
+  // Push funciona apenas em builds próprios (preview, TestFlight ou Play), não no Expo Go.
+  useEffect(() => {
+    if (!user || !linkedOrg?.id || !configured) return;
+    let cancelled = false;
+    const activeUser = user;
+    const organizationId = linkedOrg.id;
+
+    async function registerForPushNotifications() {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "Notificações",
+          importance: Notifications.AndroidImportance.DEFAULT
+        });
+      }
+
+      const currentPermission = await Notifications.getPermissionsAsync();
+      const permission = currentPermission.status === "granted"
+        ? currentPermission
+        : await Notifications.requestPermissionsAsync();
+
+      if (permission.status !== "granted") return;
+
+      const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
+      if (!projectId) return;
+
+      const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      await saveMobilePushToken(
+        firebaseConfig,
+        { organizationId },
+        activeUser.uid,
+        token,
+        Platform.OS === "ios" ? "ios" : "android"
+      );
+
+      if (!cancelled) setPushToken(token);
+    }
+
+    void registerForPushNotifications().catch((error) => {
+      if (__DEV__) console.warn("Não foi possível registrar notificações:", error);
+    });
+
+    return () => { cancelled = true; };
+  }, [configured, linkedOrg?.id, user?.uid]);
 
   // load tenant data
   useEffect(() => {
@@ -264,13 +348,28 @@ export default function App() {
     } catch {}
   }
 
+  async function handleLinkOrganization(org: Organization) {
+    if (!user) return;
+    await SecureStore.setItemAsync(`esdras.organization.${user.uid}`, JSON.stringify(org));
+    setLinkedOrg(org);
+    setAuthScreen("splash");
+  }
+
   // Auth screens
   if (!authReady || (!user && authScreen === "splash")) return <SplashScreen />;
+  if (user && !organizationReady) return <SplashScreen />;
+  if (user && !linkedOrg) {
+    return <LinkInstitutionScreen
+      configured={configured}
+      user={user}
+      onLink={handleLinkOrganization}
+      onSkip={() => { void handleSignOut(); }}
+    />;
+  }
   if (!user) {
     if (authScreen === "welcome") return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
     if (authScreen === "login") return <LoginScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("splash")} onRegister={() => setAuthScreen("register")} />;
     if (authScreen === "register") return <RegisterScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("link-institution")} onLogin={() => setAuthScreen("login")} />;
-    if (authScreen === "link-institution") return <LinkInstitutionScreen configured={configured} onLink={(org) => { setLinkedOrg(org); setAuthScreen("splash"); }} onSkip={() => setAuthScreen("splash")} />;
     return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
   }
 
@@ -295,7 +394,7 @@ function SplashScreen() {
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
       <View style={[s.fill, s.center, { backgroundColor: BRAND_DARK }]}>
-        <View style={s.logoMark}><Text style={s.logoText}>A</Text></View>
+        <Image source={require("./assets/generated/esdras-app-icon.png")} style={s.logoMarkImage} />
         <ActivityIndicator color={BRAND} style={{ marginTop: 32 }} />
       </View>
     </SafeAreaView>
@@ -310,7 +409,7 @@ function WelcomeScreen({ onLogin, onRegister }: { onLogin: () => void; onRegiste
       <StatusBar style="dark" />
       <View style={[s.fill, { backgroundColor: SURFACE }]}>
         <View style={s.welcomeHero}>
-          <View style={[s.logoMark, { backgroundColor: BRAND }]}><Text style={s.logoText}>A</Text></View>
+          <Image source={require("./assets/generated/esdras-app-icon.png")} style={s.logoMarkImage} />
           <Text style={s.welcomeTitle}>Bem-vindo{"\n"}à sua Igreja</Text>
           <Text style={s.welcomeSub}>Conecte-se, cresça e sirva com a sua comunidade de fé.</Text>
         </View>
@@ -354,7 +453,6 @@ function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Entrar</Text>
           <Text style={s.screenSub}>Acesse sua conta para continuar.</Text>
-          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
           <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
           <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="••••••••" />
           {error && <Text style={s.errorText}>{error}</Text>}
@@ -392,7 +490,6 @@ function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Criar conta</Text>
           <Text style={s.screenSub}>Preencha seus dados para começar.</Text>
-          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
           <Field label="Nome completo" value={name} onChange={setName} autoCapitalize="words" placeholder="Seu nome" />
           <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
           <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="Mínimo 6 caracteres" />
@@ -408,7 +505,7 @@ function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured
 
 // ─── Link Institution ─────────────────────────────────────────────────────────
 
-function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boolean; onLink: (org: Organization) => void; onSkip: () => void }) {
+function LinkInstitutionScreen({ configured, user, onLink, onSkip }: { configured: boolean; user: FirebaseAuthUser; onLink: (org: Organization) => void | Promise<void>; onSkip: () => void }) {
   const [slug, setSlug] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   async function search() {
     const value = slug.trim().toLowerCase().replace(/\s+/g, "-");
@@ -416,8 +513,14 @@ function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boo
     try { setLoading(true); setError(null);
       const org = await fetchOrganizationBySlug(firebaseConfig, value);
       if (!org) { setError("Igreja não encontrada. Verifique o código."); return; }
-      onLink(org);
-    } catch { setError("Erro ao buscar a igreja. Tente novamente."); } finally { setLoading(false); }
+      const sdk = await import("@alvo/firebase");
+      const membership = await sdk.fetchTenantUser(firebaseConfig, { organizationId: org.id, userId: user.uid });
+      if (!membership?.isActive) {
+        setError("Sua conta ainda não está vinculada a esta igreja. Peça à secretaria para adicionar seu e-mail e tente novamente.");
+        return;
+      }
+      await onLink(org);
+    } catch { setError("Não foi possível validar o vínculo. Verifique o código e tente novamente."); } finally { setLoading(false); }
   }
   return (
     <SafeAreaView style={s.fill}><StatusBar style="dark" />
@@ -425,12 +528,12 @@ function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boo
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <View style={s.center}><Text style={{ fontSize: 52, marginBottom: 20 }}>⛪</Text></View>
           <Text style={s.screenTitle}>Vincular Igreja</Text>
-          <Text style={s.screenSub}>Insira o código da sua igreja para conectar sua conta à comunidade.</Text>
+          <Text style={s.screenSub}>Informe o código da sua igreja. Sua conta precisa ter sido adicionada pela secretaria.</Text>
           <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>esdras-church</Text></Text></View>
           <Field label="Código da Igreja" value={slug} onChange={setSlug} autoCapitalize="none" placeholder="ex: minha-igreja" />
           {error && <Text style={s.errorText}>{error}</Text>}
           <Btn label="Buscar e vincular" onPress={search} loading={loading} disabled={!configured} />
-          <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Fazer isso depois</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Sair da conta</Text></TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -795,7 +898,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
+          {modal === "musica" && <MusicaScreen primary={primary} orgId={orgId} events={events} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
@@ -1777,16 +1880,18 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     try {
       const sdk = await import("@alvo/firebase");
       const ctx = { organizationId: orgId };
-      const [settings, tenantUser, checkIns] = await Promise.all([
+      const [settings, tenantUser] = await Promise.all([
         sdk.fetchKidsSettings(firebaseConfig, ctx).catch(() => null) as Promise<OrganizationKidsSettings | null>,
-        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null),
-        sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
+        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null)
       ]);
       const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
       const qrRoles = settings?.qrGeneratorRoles ?? [];
       const isAdmin = roles.some((r) => r === "super_admin" || r === "church_admin");
       const op = isAdmin || roles.some((r) => qrRoles.includes(r));
       setCanOperate(op);
+      const checkIns = op
+        ? await sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
+        : await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid).catch(() => [] as KidsCheckIn[]);
       setActive(checkIns);
       let rms: Array<{ id: string; name: string }> = [];
       if (settings?.kidsTeamIds?.length) {
@@ -2137,8 +2242,65 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
 
 // ─── Música Screen ────────────────────────────────────────────────────────────
 
-function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack: () => void; onOpenSong: (s: Song) => void }) {
+function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary: string; orgId: string; events: Event[]; onBack: () => void; onOpenSong: (s: Song) => void }) {
   const [view, setView] = useState<"repertorio" | "programacao">("repertorio");
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [programming, setProgramming] = useState<Array<{ order: number; type: string; description: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const nextEvent = events.find((event) => new Date(event.startsAt).getTime() >= Date.now()) ?? events[0];
+
+  useEffect(() => {
+    if (!orgId) return;
+    let cancelled = false;
+
+    async function loadWorship() {
+      try {
+        setLoading(true);
+        const worshipSongs = await fetchWorshipSongs(firebaseConfig, { organizationId: orgId });
+        const mobileSongs = worshipSongs.map((song) => ({
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          key: song.originalKey,
+          bpm: song.tempoBpm ?? 0,
+          chords: song.chordsLyrics ?? "",
+          lyrics: song.chordsLyrics ?? ""
+        }));
+
+        if (cancelled) return;
+        setSongs(mobileSongs);
+
+        if (!nextEvent) {
+          setProgramming([]);
+          return;
+        }
+
+        const setlist = await fetchWorshipSetlistByEventId(firebaseConfig, { organizationId: orgId }, nextEvent.id);
+        if (cancelled) return;
+
+        const bySongId = new Map(mobileSongs.map((song) => [song.id, song]));
+        setProgramming(
+          (setlist?.songs ?? [])
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .flatMap((item, index) => {
+              const song = bySongId.get(item.songId);
+              return song ? [{ order: index + 1, type: "Louvor", description: `${song.title} — ${item.selectedKey || song.key}` }] : [];
+            })
+        );
+      } catch (error) {
+        if (__DEV__) console.warn("Não foi possível carregar o repertório:", error);
+        if (!cancelled) {
+          setSongs([]);
+          setProgramming([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadWorship();
+    return () => { cancelled = true; };
+  }, [orgId, nextEvent?.id]);
 
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
@@ -2155,9 +2317,11 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
       {view === "repertorio" && (
         <ScrollView contentContainerStyle={s.tabContent}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
-            <Text style={s.infoText}>🎵  Repertório desta semana — {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+            <Text style={s.infoText}>🎵  Repertório cadastrado pela sua igreja</Text>
           </View>
-          {MOCK_SONGS.map(song => (
+          {loading ? <LoadingRow primary={primary} label="Carregando repertório..." /> : songs.length === 0 ? (
+            <EmptyState icon="🎵" title="Nenhuma música cadastrada" sub="A liderança pode cadastrar o repertório no painel." />
+          ) : songs.map(song => (
             <TouchableOpacity key={song.id} style={s.songRow} onPress={() => onOpenSong(song)}>
               <View style={[s.songKey, { backgroundColor: primary }]}>
                 <Text style={s.songKeyText}>{song.key}</Text>
@@ -2175,9 +2339,11 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
       {view === "programacao" && (
         <ScrollView contentContainerStyle={s.tabContent}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
-            <Text style={s.infoText}>📋  Ordem do culto — Domingo {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+            <Text style={s.infoText}>📋  {nextEvent ? `Repertório de ${nextEvent.name}` : "Selecione um próximo evento no painel"}</Text>
           </View>
-          {MOCK_PROGRAMMING.map(item => (
+          {loading ? <LoadingRow primary={primary} label="Carregando programação..." /> : programming.length === 0 ? (
+            <EmptyState icon="📋" title="Programação ainda não definida" sub="Vincule o repertório a um evento no painel da igreja." />
+          ) : programming.map(item => (
             <View key={item.order} style={s.progRow}>
               <View style={[s.progNum, { backgroundColor: primary }]}>
                 <Text style={s.progNumText}>{item.order}</Text>
@@ -2777,6 +2943,7 @@ const s = StyleSheet.create({
   // Splash / Logo
   logoMark: { width: 72, height: 72, borderRadius: 20, backgroundColor: BRAND, alignItems: "center", justifyContent: "center" },
   logoText: { color: "#fff", fontSize: 36, fontWeight: "800" },
+  logoMarkImage: { width: 72, height: 72, borderRadius: 20 },
 
   // Welcome
   welcomeHero: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 48 },

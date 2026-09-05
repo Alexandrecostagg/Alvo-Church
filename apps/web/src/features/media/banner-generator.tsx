@@ -658,9 +658,9 @@ function fallbackBgPrompt(form: FormState): string {
   return `professional cinematic poster background for a church event about "${form.tema}", ${mood}, rich vivid colors, volumetric light, luminous, highly detailed, no text, no letters, no words`;
 }
 
-function buildBgUrl(prompt: string, formato: FormState["formato"], seed: number): string {
+function buildBgUrl(prompt: string, formato: FormState["formato"], seed: number, organizationId: string): string {
   const h = formato === "story" ? 1920 : 1080;
-  return `/api/media/bg-proxy?prompt=${encodeURIComponent(prompt)}&w=1080&h=${h}&seed=${seed}`;
+  return `/api/media/bg-proxy?prompt=${encodeURIComponent(prompt)}&w=1080&h=${h}&seed=${seed}&organizationId=${encodeURIComponent(organizationId)}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -811,7 +811,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
   ): Promise<boolean> => {
     if (!user) throw new Error("Faça login para gerar banners");
     const idToken = await user.getIdToken();
-    const url = buildBgUrl(bgPrompt, formArg.formato, seedVal);
+    const url = buildBgUrl(bgPrompt, formArg.formato, seedVal, organizationId);
     let img: HTMLImageElement | null = null;
     for (let attempt = 0; attempt < 2 && !img; attempt++) {
       try {
@@ -826,7 +826,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     bgImgRef.current = img;
     renderCanvas(formArg, copyArg);
     return img !== null;
-  }, [user, renderCanvas]);
+  }, [user, organizationId, renderCanvas]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -853,6 +853,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
+          organizationId,
           tipo: form.tipo, tema: form.tema, pregador: form.pregador, data: form.data, estilo: form.estilo,
         }),
       });

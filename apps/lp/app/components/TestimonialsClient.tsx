@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-
 const TESTIMONIALS = [
   {
     name: "Pr. Carlos Mendes",
@@ -26,78 +22,24 @@ const TESTIMONIALS = [
   },
 ];
 
-const AUTOPLAY_MS = 5500;
-
 export function TestimonialsClient() {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-  const hovering = useRef(false);
-
-  function scrollToIndex(i: number) {
-    const track = trackRef.current;
-    if (!track) return;
-    const card = track.children[i] as HTMLElement | undefined;
-    if (card)
-      track.scrollTo({
-        left: card.offsetLeft - track.offsetLeft,
-        behavior: "smooth",
-      });
-    setIndex(i);
-  }
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (hovering.current) return;
-      setIndex((prev) => {
-        const next = (prev + 1) % TESTIMONIALS.length;
-        scrollToIndex(next);
-        return next;
-      });
-    }, AUTOPLAY_MS);
-    return () => clearInterval(id);
-  }, []);
-
   return (
-    <div className="lp-testimonials-wrap">
-      <div
-        className="lp-testimonials-grid"
-        ref={trackRef}
-        onMouseEnter={() => {
-          hovering.current = true;
-        }}
-        onMouseLeave={() => {
-          hovering.current = false;
-        }}
-      >
-        {TESTIMONIALS.map((t) => (
-          <div key={t.name} className="lp-testimonial-card">
-            <div className="lp-testimonial-metric">
-              <span className="lp-testimonial-metric-value">
-                {t.metric}
-              </span>
-            </div>
-            <p className="lp-testimonial-text">"{t.text}"</p>
-            <div className="lp-testimonial-author">
-              <div className="lp-testimonial-avatar">{t.avatar}</div>
-              <div>
-                <strong>{t.name}</strong>
-                <span>{t.church}</span>
-              </div>
+    <div className="lp-testimonials-grid">
+      {TESTIMONIALS.map((t) => (
+        <div key={t.name} className="lp-testimonial-card">
+          <div className="lp-testimonial-metric">
+            <span className="lp-testimonial-metric-value">{t.metric}</span>
+          </div>
+          <p className="lp-testimonial-text">"{t.text}"</p>
+          <div className="lp-testimonial-author">
+            <div className="lp-testimonial-avatar">{t.avatar}</div>
+            <div>
+              <strong>{t.name}</strong>
+              <span>{t.church}</span>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="lp-testimonials-dots">
-        {TESTIMONIALS.map((t, i) => (
-          <button
-            key={t.name}
-            type="button"
-            className={`lp-dot${i === index ? " active" : ""}`}
-            onClick={() => scrollToIndex(i)}
-            aria-label={`Ver depoimento de ${t.name}`}
-          />
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

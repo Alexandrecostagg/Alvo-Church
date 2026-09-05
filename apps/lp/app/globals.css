@@ -10458,6 +10458,59 @@ h1.page-title,
 .lp-pricing-note { text-align: center; font-size: 13px; color: #94a3b8; }
 .lp-pricing-note a { color: #f97316; text-decoration: none; }
 
+/* CONTACT */
+.lp-contact {
+  padding: 88px 0;
+  background: #fffaf5;
+}
+.lp-contact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: clamp(28px, 5vw, 52px);
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fff 0%, #fff7ed 100%);
+  border: 1px solid #fed7aa;
+  box-shadow: 0 20px 48px -32px rgba(124, 45, 18, 0.35);
+}
+.lp-contact-eyebrow {
+  margin: 0 0 10px;
+  color: #ea580c;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.lp-contact h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(26px, 3.4vw, 38px);
+  letter-spacing: -0.025em;
+}
+.lp-contact p:not(.lp-contact-eyebrow) {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.lp-contact-email {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: #f97316;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 20px -10px rgba(234, 88, 12, 0.55);
+}
+.lp-contact-email:hover { background: #ea580c; }
+
 /* FINAL CTA */
 .lp-final-cta {
   background: #0f172a;
@@ -10658,6 +10711,9 @@ h1.page-title,
   .lp-faq-header h2 { font-size: 28px; }
   .lp-faq-question { padding: 16px 18px; font-size: 14.5px; }
   .lp-final-cta h2 { font-size: 28px; }
+  .lp-contact { padding: 64px 0; }
+  .lp-contact-card { align-items: flex-start; flex-direction: column; gap: 24px; }
+  .lp-contact-email { width: 100%; }
 }
 
 /* ═══════════════════════════════════════════════
@@ -11272,31 +11328,3 @@ h1.page-title,
 }
 .lp-plan-price strong { display: inline-block; transition: opacity 0.2s; }
 .lp-plan-annual-note { font-size: 12px; color: #94a3b8; margin: -12px 0 16px; }
-
-/* Testimonials carousel */
-.lp-testimonials-wrap { display: flex; flex-direction: column; gap: 20px; }
-.lp-testimonials-grid {
-  display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  padding-bottom: 4px;
-}
-.lp-testimonials-grid::-webkit-scrollbar { display: none; }
-.lp-testimonials-grid .lp-testimonial-card {
-  scroll-snap-align: start;
-  flex: 0 0 min(340px, 86vw);
-}
-.lp-testimonials-dots { display: flex; justify-content: center; gap: 8px; }
-.lp-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(15,23,42,0.14);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background 0.2s, transform 0.2s;
-}
-.lp-dot.active { background: #f97316; transform: scale(1.3); }

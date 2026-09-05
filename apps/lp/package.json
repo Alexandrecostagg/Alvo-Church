@@ -4,7 +4,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "deploy": "opennextjs-cloudflare build && wrangler deploy"
+    "deploy": "next build && wrangler deploy"
   },
   "dependencies": {
     "next": "^16.2.4",

@@ -15,6 +15,14 @@ function firestoreBaseUrl(): string {
   return `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents`;
 }
 
+function firestoreDatabaseUrl(): string {
+  return `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)`;
+}
+
+function firestoreDocumentName(path: string): string {
+  return `projects/${projectId()}/databases/(default)/documents/${path}`;
+}
+
 type FirestoreValue =
   | { stringValue: string }
   | { integerValue: string }
@@ -68,4 +76,62 @@ export async function adminGetDocument(path: string): Promise<Record<string, unk
     else if ("booleanValue" in value) plain[key] = value.booleanValue;
   }
   return plain;
+}
+
+// Consome uma unidade da cota somente quando ela ainda está disponível. A
+// transação do Firestore impede que duas requisições concorrentes leiam o mesmo
+// contador e ultrapassem o limite. Esta função roda exclusivamente no servidor
+// com service account; o cliente não recebe permissão de escrita em aiUsage.
+export async function adminConsumeAiQuota(
+  path: string,
+  limit: number
+): Promise<{ allowed: boolean; used: number }> {
+  const document = firestoreDocumentName(path);
+  const headers = (token: string) => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const token = await getGoogleAccessToken(FIRESTORE_SCOPE);
+    const begin = await fetch(`${firestoreDatabaseUrl()}/documents:beginTransaction`, {
+      method: "POST", headers: headers(token), body: JSON.stringify({}), signal: AbortSignal.timeout(8000)
+    });
+    if (!begin.ok) throw new Error(`Não foi possível iniciar a transação de cota (${await begin.text()})`);
+    const { transaction } = await begin.json() as { transaction?: string };
+    if (!transaction) throw new Error("Transação de cota inválida.");
+
+    const read = await fetch(`${firestoreDatabaseUrl()}/documents:batchGet`, {
+      method: "POST",
+      headers: headers(token),
+      body: JSON.stringify({ documents: [document], transaction }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!read.ok) throw new Error(`Não foi possível consultar a cota (${await read.text()})`);
+    const rows = (await read.text()).trim().split("\n").filter(Boolean).map((row) => JSON.parse(row) as {
+      found?: { fields?: { count?: { integerValue?: string } } };
+    });
+    const used = Number(rows.find((row) => row.found)?.found?.fields?.count?.integerValue ?? 0);
+    if (used >= limit) return { allowed: false, used };
+
+    const commit = await fetch(`${firestoreDatabaseUrl()}/documents:commit`, {
+      method: "POST",
+      headers: headers(token),
+      body: JSON.stringify({
+        transaction,
+        writes: [{
+          transform: {
+            document,
+            fieldTransforms: [
+              { fieldPath: "count", increment: { integerValue: "1" } },
+              { fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }
+            ]
+          }
+        }]
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (commit.ok) return { allowed: true, used: used + 1 };
+    // Conflito de transação é esperado sob concorrência: repete a leitura.
+    if (commit.status === 409) continue;
+    throw new Error(`Não foi possível registrar o consumo de IA (${await commit.text()})`);
+  }
+  throw new Error("A cota de IA está concorrida. Tente novamente.");
 }

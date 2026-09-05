@@ -7,24 +7,28 @@ import { UsersView } from "./users-view";
 import { PlanoView } from "./plano-view";
 import { KidsSettingsView } from "./kids-settings-view";
 import { OrganizationNewView } from "../saas/organization-new-view";
+import { useAppAuth } from "../../../app/providers";
 
 // Configurações, Organizações, Usuários e Plano viviam em 4 itens de menu
 // separados — juntos aqui como abas de uma página só ("Configurações").
 export function SettingsWithAdminTabsView() {
   const [tab, setTab] = useState<"settings" | "org" | "users" | "plano" | "kids">("settings");
+  const { hasRole } = useAppAuth();
+  const isPlatformAdmin = hasRole("super_admin");
+  const canManageUsers = hasRole("super_admin") || hasRole("church_admin");
 
   return (
     <div>
       <div style={{ display: "flex", gap: 4, padding: "16px 20px 0", flexWrap: "wrap" }}>
         <TabButton active={tab === "settings"} onClick={() => setTab("settings")} icon={Settings} label="Geral" />
-        <TabButton active={tab === "org"} onClick={() => setTab("org")} icon={Building2} label="Organizações" />
-        <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={UsersRound} label="Usuários" />
+        {isPlatformAdmin && <TabButton active={tab === "org"} onClick={() => setTab("org")} icon={Building2} label="Organizações" />}
+        {canManageUsers && <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={UsersRound} label="Usuários" />}
         <TabButton active={tab === "plano"} onClick={() => setTab("plano")} icon={Layers} label="Plano" />
         <TabButton active={tab === "kids"} onClick={() => setTab("kids")} icon={ShieldCheck} label="Segurança Kids" />
       </div>
       {tab === "settings" && <SettingsView />}
-      {tab === "org" && <OrganizationNewView />}
-      {tab === "users" && <UsersView />}
+      {isPlatformAdmin && tab === "org" && <OrganizationNewView />}
+      {canManageUsers && tab === "users" && <UsersView />}
       {tab === "plano" && <PlanoView />}
       {tab === "kids" && <div style={{ padding: "20px" }}><KidsSettingsView /></div>}
     </div>

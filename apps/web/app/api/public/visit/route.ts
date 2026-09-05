@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RateLimiter } from "../../_lib/rate-limiter";
+import { adminPatchDocument } from "../../_lib/firestore-admin";
 
-// Formulário público de visitantes: cria SOMENTE um visitorIntake com os
-// dados do formulário, via API REST do Firestore (o SDK client não roda bem
-// no runtime do Cloudflare Worker). A conversão para um registro em `people`
-// (com dedup por telefone) é feita pela equipe de recepção, autenticada.
-// As regras do Firestore validam campos, tipos e tamanhos deste create.
+// Formulário público de visitantes: recebe somente pela API. A gravação usa a
+// credencial do servidor, não uma regra pública do Firestore — assim uma
+// requisição direta ao banco não consegue contornar o limite e a validação.
+// A conversão para people continua sendo feita pela recepção autenticada.
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
 
@@ -14,17 +14,6 @@ const VISIT_RATE_LIMITER = new RateLimiter({ max: 5, windowMs: 60_000 });
 
 function firestoreUrl(path: string) {
   return `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`;
-}
-
-type FirestoreValue =
-  | { stringValue: string }
-  | { booleanValue: boolean }
-  | { nullValue: null }
-  | { timestampValue: string };
-
-function str(value: string): FirestoreValue { return { stringValue: value }; }
-function optStr(value: string | undefined | null, max: number): FirestoreValue {
-  return value ? { stringValue: value.slice(0, max) } : { nullValue: null };
 }
 
 export async function POST(req: NextRequest) {
@@ -50,12 +39,22 @@ export async function POST(req: NextRequest) {
       firstVisit: boolean;
       howHeard?: string;
       consent: boolean;
+      // Honeypot: campo invisível para pessoas reais; bots costumam preenchê-lo.
+      companyWebsite?: string;
     };
 
-    const { orgSlug, name, phone, firstVisit, howHeard, consent, email, birthDate, neighborhood } = body;
+    const { orgSlug, name, phone, firstVisit, howHeard, consent, email, birthDate, neighborhood, companyWebsite } = body;
+
+    if (companyWebsite?.trim()) {
+      // Resposta neutra para não ensinar o bot a contornar a proteção.
+      return NextResponse.json({ ok: true });
+    }
 
     if (!orgSlug || !name || !phone) {
       return NextResponse.json({ error: "orgSlug, name e phone são obrigatórios." }, { status: 400 });
+    }
+    if (!/^[a-z0-9][a-z0-9-]{1,118}$/i.test(orgSlug)) {
+      return NextResponse.json({ error: "Organização inválida." }, { status: 400 });
     }
 
     if (typeof name !== "string" || name.trim().length < 2 || name.length > 120) {
@@ -82,44 +81,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Organização não encontrada." }, { status: 404 });
     }
 
-    const createRes = await fetch(
-      firestoreUrl(`organizations/${encodeURIComponent(organizationId)}/visitorIntakes`),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(8000),
-        body: JSON.stringify({
-          fields: {
-            organizationId: str(organizationId),
-            name: str(name.trim()),
-            phone: str(digits),
-            email: optStr(email?.trim(), 160),
-            birthDate: optStr(birthDate, 10),
-            neighborhood: optStr(neighborhood?.trim(), 120),
-            firstVisit: { booleanValue: Boolean(firstVisit) },
-            howHeard: optStr(howHeard, 200),
-            consentMarketing: { booleanValue: Boolean(consent) },
-            source: str("public_form"),
-            status: str("captured"),
-            orgSlug: str(orgSlug),
-            createdAt: { timestampValue: new Date().toISOString() },
-          } satisfies Record<string, FirestoreValue>,
-        }),
-      }
-    );
-
-    if (!createRes.ok) {
-      const errText = await createRes.text();
-      console.error("[public/visit] firestore create failed:", createRes.status, errText);
-      return NextResponse.json({ error: "Não foi possível registrar a visita." }, { status: 502 });
-    }
-
-    const created = (await createRes.json()) as { name?: string };
-    const intakeId = created.name?.split("/").pop() ?? "";
+    const intakeId = crypto.randomUUID();
+    await adminPatchDocument(`organizations/${organizationId}/visitorIntakes/${intakeId}`, {
+      organizationId,
+      name: name.trim(),
+      phone: digits,
+      email: email?.trim().slice(0, 160) || null,
+      birthDate: birthDate?.slice(0, 10) || null,
+      neighborhood: neighborhood?.trim().slice(0, 120) || null,
+      firstVisit: Boolean(firstVisit),
+      howHeard: howHeard?.slice(0, 200) || null,
+      consentMarketing: Boolean(consent),
+      source: "public_form",
+      status: "captured",
+      orgSlug,
+      createdAt: new Date().toISOString()
+    });
 
     return NextResponse.json({ ok: true, intakeId });
   } catch (err) {
-    console.error("[public/visit] error:", err);
+    console.error("[public/visit] error:", err instanceof Error ? err.message : "unknown");
     return NextResponse.json({ error: "Erro interno." }, { status: 500 });
   }
 }

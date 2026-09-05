@@ -137,6 +137,7 @@ export default function SignupPage() {
   const [adminName, setAdminName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [taxId, setTaxId] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -247,6 +248,10 @@ export default function SignupPage() {
       setError(pwIssue);
       return;
     }
+    if (password !== passwordConfirmation) {
+      setError("As senhas não conferem.");
+      return;
+    }
 
     setError(null);
     setIsSubmitting(true);
@@ -292,7 +297,7 @@ export default function SignupPage() {
       });
 
       switchOrganization(organizationId);
-      router.replace("/");
+      router.replace("/app");
     } catch (nextError) {
       setError(
         nextError instanceof Error
@@ -384,13 +389,13 @@ export default function SignupPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 12 }}>
             <label style={labelStyle}>
-              Endereço (rua, quadra, setoretc.)
+              Endereço
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 style={inputStyle}
-                placeholder="Ex: SQS 204 Bloco A, Rua 5, Quadra 10"
+                placeholder="Ex: Rua das Flores"
                 autoComplete="address-line1"
                 required
               />
@@ -421,61 +426,49 @@ export default function SignupPage() {
               />
             </label>
             <label style={labelStyle}>
-              Bairro / Vizinho
+              Bairro
               <input
                 type="text"
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
                 style={inputStyle}
-                placeholder="Bairro"
+                placeholder="Ex: Centro"
                 autoComplete="address-level2"
               />
             </label>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <label style={labelStyle}>
-              Setor
-              <input
-                type="text"
-                value={addressSector}
-                onChange={(e) => setAddressSector(e.target.value)}
-                style={inputStyle}
-                placeholder="Setor"
-              />
-            </label>
-            <label style={labelStyle}>
-              Quadra
-              <input
-                type="text"
-                value={addressQuadra}
-                onChange={(e) => setAddressQuadra(e.target.value)}
-                style={inputStyle}
-                placeholder="Quadra"
-              />
-            </label>
-            <label style={labelStyle}>
-              Lote
-              <input
-                type="text"
-                value={addressLote}
-                onChange={(e) => setAddressLote(e.target.value)}
-                style={inputStyle}
-                placeholder="Lote"
-              />
-            </label>
-          </div>
-
-          <label style={labelStyle}>
-            Ponto de referência
-            <input
-              type="text"
-              value={addressReference}
-              onChange={(e) => setAddressReference(e.target.value)}
-              style={inputStyle}
-              placeholder="Ex: Próximo à praça, depois da igreja, etc."
-            />
-          </label>
+          <details style={{ color: "#4b5563", fontSize: 13 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              Adicionar detalhes do endereço (opcional)
+            </summary>
+            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <label style={labelStyle}>
+                  Setor
+                  <input type="text" value={addressSector} onChange={(e) => setAddressSector(e.target.value)} style={inputStyle} />
+                </label>
+                <label style={labelStyle}>
+                  Quadra
+                  <input type="text" value={addressQuadra} onChange={(e) => setAddressQuadra(e.target.value)} style={inputStyle} />
+                </label>
+                <label style={labelStyle}>
+                  Lote
+                  <input type="text" value={addressLote} onChange={(e) => setAddressLote(e.target.value)} style={inputStyle} />
+                </label>
+              </div>
+              <label style={labelStyle}>
+                Ponto de referência
+                <input
+                  type="text"
+                  value={addressReference}
+                  onChange={(e) => setAddressReference(e.target.value)}
+                  style={inputStyle}
+                  placeholder="Ex: Próximo à praça"
+                />
+              </label>
+            </div>
+          </details>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={labelStyle}>
@@ -565,6 +558,20 @@ export default function SignupPage() {
               required
             />
             <span style={{ fontSize: 11, color: "#9ca3af" }}>Mínimo 8 caracteres, com letras e números.</span>
+          </label>
+          <label style={labelStyle}>
+            Confirmar senha
+            <input
+              type="password"
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+              style={inputStyle}
+              autoComplete="new-password"
+              required
+            />
+            {passwordConfirmation && password !== passwordConfirmation && (
+              <span style={{ fontSize: 11, color: "#b42318" }}>As senhas não conferem.</span>
+            )}
           </label>
 
           <button type="submit" style={buttonStyle} disabled={isSubmitting || !configured}>

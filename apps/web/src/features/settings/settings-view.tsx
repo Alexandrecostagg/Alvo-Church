@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   Copy, Check, QrCode, ExternalLink,
   Bot, CalendarRange, GraduationCap, Handshake,
   HeartHandshake, Landmark, Map as MapIcon, MessageSquareText,
   ShieldCheck, Store, Tent, Users, Waypoints, CheckCircle, XCircle,
-  Save, Loader2, Info, Building2, Layers,
+  Save, Loader2, Building2,
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures, type GroupsModelType, type OrgTier } from "../../../contexts/OrgFeaturesContext";
-import { saveOrganizationFeaturesSettings, saveOrganizationBrandingSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
-import type { OrganizationFeaturesSettings } from "@alvo/types";
+import { planHasModule, saveOrganizationBrandingSettings, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import type { ModuleKey } from "@alvo/domain";
+import { usePlan } from "../../../contexts/PlanContext";
 
 const GROUPS_MODEL_OPTIONS: { value: GroupsModelType; label: string; desc: string }[] = [
   { value: "cell",       label: "Células",    desc: "Grupos geográficos semanais — modelo de célula clássico" },
@@ -21,12 +21,12 @@ const GROUPS_MODEL_OPTIONS: { value: GroupsModelType; label: string; desc: strin
   { value: "generic",    label: "Grupos",     desc: "Nomenclatura genérica sem vínculo a modelo específico" },
 ];
 
-const ORG_TIER_OPTIONS: { value: OrgTier; label: string; desc: string; icon: React.ElementType }[] = [
-  { value: "solo",         label: "Igreja Solo",   desc: "Igreja independente — simples, sem hierarquia",                icon: Building2 },
-  { value: "campus",       label: "Multi-campus",  desc: "Uma sede com múltiplos campi sob a mesma liderança",           icon: Layers },
-  { value: "network",      label: "Rede",          desc: "Instituição com igrejas afiliadas — visão consolidada",        icon: Layers },
-  { value: "denomination", label: "Denominação",   desc: "Estrutura formal com hierarquia nacional e múltiplos níveis",  icon: Layers },
-];
+const ORG_TIER_LABELS: Record<OrgTier, string> = {
+  solo: "Igreja Solo",
+  campus: "Multi-campus",
+  network: "Rede",
+  denomination: "Denominação",
+};
 
 /* ── QR helper ──────────────────────────────────────────────────────────── */
 function QRCodeDisplay({ size = 180 }: { size?: number }) {
@@ -65,35 +65,12 @@ const MODULE_DEFS: ModuleDef[] = [
   { key: "publicForms",   label: "Formulários Públicos",   desc: "QR Codes para visitantes e links de cadastro sem login",           icon: GraduationCap,     color: "#84cc16" },
 ];
 
-/* ── Toggle switch ───────────────────────────────────────────────────────── */
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!enabled)}
-      style={{
-        width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-        background: enabled ? "var(--alvo-accent)" : "var(--alvo-line)",
-        position: "relative", flexShrink: 0, transition: "background 0.2s",
-      }}
-      aria-checked={enabled}
-      role="switch"
-    >
-      <span style={{
-        position: "absolute", top: 3, left: enabled ? 23 : 3,
-        width: 18, height: 18, borderRadius: "50%", background: "white",
-        transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-      }} />
-    </button>
-  );
-}
-
 /* ── Main view ───────────────────────────────────────────────────────────── */
 export function SettingsView() {
   const { organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
-  const { features, ready, orgTier, groupsModelType } = useOrgFeatures();
+  const { orgTier } = useOrgFeatures();
+  const { plan } = usePlan();
   const [copied, setCopied] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [pixKey, setPixKey] = useState(tenantRuntime?.settings?.branding?.pixKey ?? "");
   const [pixName, setPixName] = useState(tenantRuntime?.settings?.branding?.pixReceiverName ?? "");
   const [pixWhatsapp, setPixWhatsapp] = useState(tenantRuntime?.settings?.branding?.givingWhatsappNumber ?? "");
@@ -115,49 +92,6 @@ export function SettingsView() {
   );
   const [groupsSaving, setGroupsSaving] = useState(false);
   const [groupsSaved, setGroupsSaved] = useState(false);
-  // Org tier
-  const [selectedTier, setSelectedTier] = useState<OrgTier>(orgTier);
-  const [tierSaving, setTierSaving] = useState(false);
-  const [tierSaved, setTierSaved] = useState(false);
-
-  // Local module state — initialized from Firestore or all-enabled fallback
-  const [moduleState, setModuleState] = useState<Record<ModuleKey, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    for (const def of MODULE_DEFS) {
-      initial[def.key] = features?.modules?.[def.key]?.enabled ?? true;
-    }
-    return initial as Record<ModuleKey, boolean>;
-  });
-
-  const toggleModule = useCallback((key: ModuleKey, value: boolean) => {
-    setModuleState(prev => ({ ...prev, [key]: value }));
-    setSaved(false);
-  }, []);
-
-  async function saveModules() {
-    if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
-    setSaving(true);
-    try {
-      const modules = {} as OrganizationFeaturesSettings["modules"];
-      for (const def of MODULE_DEFS) {
-        (modules as Record<string, unknown>)[def.key] = { enabled: moduleState[def.key] };
-      }
-      // core is always enabled
-      (modules as Record<string, unknown>).core = { enabled: true };
-
-      const updated: OrganizationFeaturesSettings = {
-        organizationId: organizationId ?? "",
-        modules,
-      };
-      await saveOrganizationFeaturesSettings(firebaseConfig, updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (e) {
-      console.error("Failed to save features:", e);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   // Branding base para salvar: usa o doc existente ou cria um mínimo válido
   // (orgs novas/demo podem não ter settings/branding ainda — sem isso, salvar
@@ -214,24 +148,6 @@ export function SettingsView() {
     }
   }
 
-  async function saveTierConfig() {
-    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.organization) return;
-    setTierSaving(true);
-    try {
-      const { saveOrganizationProfile } = await import("@alvo/firebase");
-      await saveOrganizationProfile(firebaseConfig, {
-        ...tenantRuntime.organization,
-        organizationTier: selectedTier,
-      });
-      setTierSaved(true);
-      setTimeout(() => setTierSaved(false), 3000);
-    } catch (e) {
-      console.error("Failed to save tier:", e);
-    } finally {
-      setTierSaving(false);
-    }
-  }
-
   const orgSlug = organizationId;
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -247,7 +163,7 @@ export function SettingsView() {
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const enabledCount = Object.values(moduleState).filter(Boolean).length;
+  const enabledCount = MODULE_DEFS.filter((module) => planHasModule(plan, module.key)).length;
 
   // Estado do botão PIX: já configurado? há alterações não salvas?
   const pixConfigured = pixBaseline.key.length > 0;
@@ -261,7 +177,7 @@ export function SettingsView() {
       <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Configurações</h1>
-          <p className="page-subtitle">Gerencie módulos ativos, links públicos e personalizações da organização</p>
+          <p className="page-subtitle">Consulte os recursos do seu plano e personalize as configurações da organização</p>
         </div>
       </header>
 
@@ -271,36 +187,18 @@ export function SettingsView() {
           <div>
             <h2 className="section-title">Módulos do Sistema</h2>
             <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
-              {enabledCount} de {MODULE_DEFS.length} módulos ativos — controle o que aparece no menu de navegação
+              {enabledCount} de {MODULE_DEFS.length} módulos incluídos no plano contratado
             </p>
           </div>
-          <button
-            onClick={saveModules}
-            disabled={saving || !isFirebaseWebRuntimeConfigured(firebaseConfig)}
-            className="btn-primary btn-sm"
-            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
-          >
-            {saving ? (
-              <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</>
-            ) : saved ? (
-              <><CheckCircle size={14} /> Salvo!</>
-            ) : (
-              <><Save size={14} /> Salvar</>
-            )}
-          </button>
+          <a href="/settings/plano" className="btn-primary btn-sm" style={{ minWidth: 120, textAlign: "center" }}>
+            Ver plano
+          </a>
         </div>
-
-        {!isFirebaseWebRuntimeConfigured(firebaseConfig) && (
-          <div className="settings-demo-banner">
-            <Info size={14} style={{ color: "#d97706", flexShrink: 0 }} />
-            <span>Modo demonstração — as alterações de módulos não serão salvas</span>
-          </div>
-        )}
 
         <div className="modules-grid">
           {MODULE_DEFS.map(def => {
             const Icon = def.icon;
-            const enabled = moduleState[def.key];
+            const enabled = planHasModule(plan, def.key);
             return (
               <div
                 key={def.key}
@@ -321,7 +219,9 @@ export function SettingsView() {
                     <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{def.desc}</span>
                   </div>
                 </div>
-                <Toggle enabled={enabled} onChange={v => toggleModule(def.key, v)} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: enabled ? "#16a34a" : "var(--alvo-ink-soft)", whiteSpace: "nowrap" }}>
+                  {enabled ? "Incluído" : "Não incluído"}
+                </span>
               </div>
             );
           })}
@@ -394,58 +294,26 @@ export function SettingsView() {
           <div>
             <h2 className="section-title">Tipo de Organização</h2>
             <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "2px 0 0" }}>
-              Define a estrutura institucional e desbloqueia funcionalidades específicas por porte
+              A abrangência é definida na contratação e protegida pela administração da Plataforma Esdras
             </p>
           </div>
-          <button
-            onClick={saveTierConfig}
-            disabled={tierSaving || !isFirebaseWebRuntimeConfigured(firebaseConfig) || !tenantRuntime?.organization}
-            className="btn-primary btn-sm"
-            style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120, justifyContent: "center" }}
-          >
-            {tierSaving ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Salvando…</> :
-             tierSaved   ? <><CheckCircle size={14} /> Salvo!</> :
-                           <><Save size={14} /> Salvar</>}
-          </button>
+          <a href="/settings/plano" className="btn-primary btn-sm" style={{ minWidth: 150, textAlign: "center" }}>
+            Consultar plano
+          </a>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 640 }}>
-          {ORG_TIER_OPTIONS.map(opt => {
-            const Icon = opt.icon;
-            const isSelected = selectedTier === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => { setSelectedTier(opt.value); setTierSaved(false); }}
-                style={{
-                  textAlign: "left", padding: "16px", borderRadius: 12, cursor: "pointer",
-                  border: `1.5px solid ${isSelected ? "var(--alvo-accent)" : "var(--alvo-line)"}`,
-                  background: isSelected ? "var(--alvo-accent-soft)" : "var(--alvo-surface)",
-                  display: "flex", flexDirection: "column", gap: 8, transition: "all 0.15s",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Icon size={16} style={{ color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink-soft)" }} />
-                  <strong style={{ fontSize: 13, color: isSelected ? "var(--alvo-accent-dark)" : "var(--alvo-ink)" }}>
-                    {opt.label}
-                  </strong>
-                  {isSelected && <CheckCircle size={13} style={{ color: "var(--alvo-accent)", marginLeft: "auto" }} />}
-                </div>
-                <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>{opt.desc}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {(selectedTier === "network" || selectedTier === "denomination") && (
-          <div className="settings-demo-banner" style={{ marginTop: 12 }}>
-            <Info size={14} style={{ color: "#3b82f6", flexShrink: 0 }} />
-            <span>
-              <strong style={{ color: "var(--alvo-ink)" }}>Painel de Rede</strong> será habilitado no menu lateral —
-              gerencie igrejas afiliadas e visualize métricas consolidadas
-            </span>
+        <div style={{ maxWidth: 640, padding: 16, borderRadius: 12, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface)", display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="module-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent)" }}>
+            <Building2 size={18} />
           </div>
-        )}
+          <div>
+            <span style={{ display: "block", fontSize: 12, color: "var(--alvo-ink-soft)" }}>Abrangência contratada</span>
+            <strong style={{ fontSize: 15, color: "var(--alvo-ink)" }}>{ORG_TIER_LABELS[orgTier]}</strong>
+            <p style={{ margin: "4px 0 0", fontSize: 12, lineHeight: 1.45, color: "var(--alvo-ink-soft)" }}>
+              Para migrar a estrutura, solicite a alteração do plano. Os recursos serão liberados após a validação comercial.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ── PIX ──────────────────────────────────────────────────────── */}

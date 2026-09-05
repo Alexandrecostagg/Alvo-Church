@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrandTheme } from "@alvo/ui";
 import {
-  createTenantUploadApiBaseUrlFromEnv,
   createFirebaseWebRuntimeConfigFromEnv,
   isFirebaseWebRuntimeConfigured,
   saveOrganizationBrandingSettings,
   saveOrganizationFeaturesSettings,
   saveOrganizationProfile,
-  saveOrganizationSubscriptionSettings,
-  uploadOrganizationBrandAsset
+  saveOrganizationSubscriptionSettings
 } from "@alvo/firebase";
 import type {
   Organization,
@@ -106,17 +104,6 @@ export function TenantAdminSettings() {
       }),
     []
   );
-  const uploadApiBaseUrl = useMemo(
-    () =>
-      createTenantUploadApiBaseUrlFromEnv(
-        {
-          NEXT_PUBLIC_UPLOAD_API_BASE_URL: process.env.NEXT_PUBLIC_UPLOAD_API_BASE_URL
-        },
-        "NEXT_PUBLIC"
-      ),
-    []
-  );
-
   useEffect(() => {
     if (tenantRuntime?.settings) {
       setDraft(cloneSettings(tenantRuntime.settings));
@@ -244,11 +231,6 @@ export function TenantAdminSettings() {
       return;
     }
 
-    if (!uploadApiBaseUrl) {
-      setError("Cloudflare upload API nao configurada.");
-      return;
-    }
-
     if (!user) {
       setError("Sessao do usuario nao encontrada para assinar o upload.");
       return;
@@ -260,13 +242,19 @@ export function TenantAdminSettings() {
       setStatus(null);
       const currentUser = user;
 
-      const uploaded = await uploadOrganizationBrandAsset({
-        uploadApiBaseUrl,
-        organizationId: draft.branding.organizationId,
-        assetKind,
-        file,
-        authToken: await currentUser.getIdToken()
+      const formData = new FormData();
+      formData.set("organizationId", draft.branding.organizationId);
+      formData.set("assetKind", assetKind);
+      formData.set("file", file);
+      const response = await fetch("/api/assets/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await currentUser.getIdToken()}` },
+        body: formData
       });
+      const uploaded = await response.json() as { success?: boolean; publicUrl?: string; error?: string };
+      if (!response.ok || !uploaded.success || !uploaded.publicUrl) {
+        throw new Error(uploaded.error ?? "Não foi possível enviar o asset.");
+      }
 
       const nextBranding =
         assetKind === "logoLight"
@@ -473,32 +461,26 @@ export function TenantAdminSettings() {
             />
           </div>
           <div style={assetGridStyle}>
-            {!uploadApiBaseUrl ? (
-              <div style={assetHintStyle}>
-                Configure <code>NEXT_PUBLIC_UPLOAD_API_BASE_URL</code> para ativar upload via
-                Cloudflare Worker. Enquanto isso, as URLs podem ser preenchidas manualmente.
-              </div>
-            ) : null}
             <AssetUploadField
-              disabled={!uploadApiBaseUrl}
+              disabled={false}
               busy={uploadingAsset === "logoLight"}
               label="Upload logo clara"
               onSelect={(file) => void handleAssetUpload("logoLight", file)}
             />
             <AssetUploadField
-              disabled={!uploadApiBaseUrl}
+              disabled={false}
               busy={uploadingAsset === "logoDark"}
               label="Upload logo escura"
               onSelect={(file) => void handleAssetUpload("logoDark", file)}
             />
             <AssetUploadField
-              disabled={!uploadApiBaseUrl}
+              disabled={false}
               busy={uploadingAsset === "icon"}
               label="Upload icone"
               onSelect={(file) => void handleAssetUpload("icon", file)}
             />
             <AssetUploadField
-              disabled={!uploadApiBaseUrl}
+              disabled={false}
               busy={uploadingAsset === "favicon"}
               label="Upload favicon"
               onSelect={(file) => void handleAssetUpload("favicon", file)}

@@ -59,7 +59,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
     {
       title: "Geral",
       items: [
-        { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
+        { label: "Dashboard", icon: LayoutDashboard, href: "/app", match: (pathname) => pathname === "/app" },
         { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname) => pathname.startsWith("/reception") },
         { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") || pathname.startsWith("/care-radar") },
         { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },

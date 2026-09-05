@@ -172,7 +172,7 @@ export function ReceptionView() {
             )
           );
         }
-        setStatus(`${nextIntakes.length} entrada(s) e ${nextJourneys.length} jornada(s) sincronizadas.`);
+        setStatus("Informações atualizadas.");
       } catch (error) {
         if (!cancelled) {
           setStatus("Exibindo dados simulados de recepção.");
@@ -203,7 +203,7 @@ export function ReceptionView() {
     setLastCreated(localVisitor);
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Visitante cadastrado localmente no painel de recepção.");
+      setStatus("Visitante registrado. O salvamento será concluído quando a conexão estiver disponível.");
       return localVisitor;
     }
 
@@ -224,17 +224,17 @@ export function ReceptionView() {
         id: created.intakeId,
         journeyId: created.journeyId,
         personId: created.personId,
-        status: "Sincronizado no Firestore"
+        status: "Cadastro concluído"
       };
 
       setCapturedVisitors((current) =>
         current.map((v) => (v.id === localVisitor.id ? savedVisitor : v))
       );
       setLastCreated(savedVisitor);
-      setStatus("Visitante salvo no Firestore com fluxo de jornada iniciado!");
+      setStatus("Visitante registrado e jornada de acolhimento iniciada!");
       return savedVisitor;
     } catch (error) {
-      setStatus("Cadastrado localmente.");
+      setStatus("Cadastro registrado. Tente novamente em instantes caso a atualização não apareça.");
       return localVisitor;
     }
   }
@@ -317,7 +317,7 @@ export function ReceptionView() {
           updatedByUserId: user.uid
         });
       } catch (error) {
-        setStatus("WhatsApp preparado localmente. Não foi possível atualizar o status na nuvem agora.");
+        setStatus("WhatsApp preparado. Não foi possível concluir a atualização agora.");
         setActiveTemplateVisitor(null);
         return;
       }
@@ -357,8 +357,8 @@ export function ReceptionView() {
       } catch (error) {
         setStatus(
           visitor
-            ? `${visitor.name} foi marcado localmente, mas a nuvem não atualizou agora.`
-            : "Visitante marcado localmente, mas a nuvem não atualizou agora."
+            ? `${visitor.name} foi marcado, mas não foi possível concluir a atualização agora.`
+            : "Visitante marcado, mas não foi possível concluir a atualização agora."
         );
         return;
       }
@@ -736,7 +736,7 @@ export function ReceptionView() {
       {/* Main Header */}
       <header className="reception-header-container">
         <div className="reception-header-top-row">
-          <Link className="back-link-premium" href="/">
+          <Link className="back-link-premium" href="/app">
             ← Voltar ao painel
           </Link>
         </div>
@@ -790,7 +790,7 @@ export function ReceptionView() {
             {totalVisitorCount}
           </strong>
           <small className="reception-kpi-desc text-green">
-             {cloudVisitorCount ? `${cloudVisitorCount} sincronizados na nuvem` : `${localVisitorCount} no painel local`}
+             {cloudVisitorCount ? `${cloudVisitorCount} registros atualizados` : `${localVisitorCount} registros recentes`}
           </small>
         </div>
         <div className="reception-kpi-card">
@@ -817,7 +817,7 @@ export function ReceptionView() {
             {visitorJourneys.length}
           </strong>
           <small className="reception-kpi-desc text-green">
-             {firebaseConnected ? "Sincronizadas no Firebase" : "Aguardando conexão Firebase"}
+             {firebaseConnected ? "Atualizadas" : "Aguardando atualização"}
           </small>
         </div>
       </section>
@@ -939,8 +939,8 @@ export function ReceptionView() {
               <div className="success-content">
                 <strong style={{ color: "var(--alvo-ink)" }}>{lastCreated.name}</strong>
                 <p style={{ color: "var(--alvo-ink-soft)" }}>
-                  {lastCreated.status === "Sincronizado no Firestore" 
-                    ? "Jornada pastoral iniciada com sucesso no banco de dados!" 
+                  {lastCreated.status === "Cadastro concluído" 
+                    ? "Jornada pastoral iniciada com sucesso!" 
                     : lastCreated.status}
                 </p>
                 {lastCreated.personId ? (
@@ -948,7 +948,7 @@ export function ReceptionView() {
                     Ver Perfil Completo
                   </Link>
                 ) : (
-                  <span className="soft-pill">Sincronizado localmente</span>
+                  <span className="soft-pill">Aguardando confirmação</span>
                 )}
               </div>
             </div>
@@ -1030,15 +1030,15 @@ export function ReceptionView() {
         </div>
       </section>
 
-      {/* Sincronização do Banco de Dados Real */}
+      {/* Entradas e jornadas de acolhimento */}
       <section className="reception-live-grid">
         
-        {/* Entradas Reais do Firestore */}
+        {/* Entradas recentes */}
         <article className="directory-panel">
           <div className="section-heading" style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1rem" }}>
             <div>
-              <p className="eyebrow" style={{ color: "#0ea5e9" }}>Nuvem Firestore</p>
-              <h2 style={{ color: "var(--alvo-ink)" }}>Entradas em Tempo Real</h2>
+              <p className="eyebrow" style={{ color: "#0ea5e9" }}>Recepção</p>
+              <h2 style={{ color: "var(--alvo-ink)" }}>Entradas recentes</h2>
             </div>
             <span className="soft-pill">{visitorIntakes.length} cadastradas</span>
           </div>
@@ -1054,13 +1054,13 @@ export function ReceptionView() {
                     <p style={{ color: "var(--alvo-ink-soft)" }}>{intake.source} - {intake.status || "Ativo"}</p>
                     <small style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>{intake.greeting ?? "Acolhimento pastoral pendente"}</small>
                   </div>
-                  <span style={{ fontSize: "0.75rem", background: "rgba(16,185,129,0.15)", color: "#10b981", padding: "4px 8px", borderRadius: 8 }}>Firestore</span>
+                  <span style={{ fontSize: "0.75rem", background: "rgba(16,185,129,0.15)", color: "#10b981", padding: "4px 8px", borderRadius: 8 }}>Registrado</span>
                 </div>
               ))
             ) : (
               <div className="empty-state" style={{ padding: "3rem 1rem" }}>
-                <strong style={{ color: "var(--alvo-ink-soft)", display: "block", marginBottom: 4 }}>Nenhuma Entrada Cloud Encontrada</strong>
-                <p style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>O simulador local está pronto. Conecte o Firebase para carregar registros dinâmicos.</p>
+                <strong style={{ color: "var(--alvo-ink-soft)", display: "block", marginBottom: 4 }}>Nenhum visitante registrado</strong>
+                <p style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>Os próximos visitantes aparecerão aqui.</p>
               </div>
             )}
           </div>

@@ -11,7 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user) router.replace("/");
+    if (user) router.replace("/app");
   }, [user, router]);
 
   return (

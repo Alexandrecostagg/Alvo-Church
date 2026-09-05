@@ -17,6 +17,7 @@ import {
 } from "@alvo/ai";
 import { PLAN_LIMITS, planTierToPlanId, type PlanId } from "@alvo/firebase";
 import { verifyFirebaseIdToken } from "../_lib/verify-auth";
+import { adminConsumeAiQuota } from "../_lib/firestore-admin";
 
 type AiTask =
   | "cell_script"
@@ -65,14 +66,13 @@ async function hasPastoralRole(idToken: string, organizationId: string, uid: str
 // chamou — respeita as Firestore rules normais (settings/aiUsage exigem
 // isTenantMember), sem precisar de service account aqui.
 //
-// As duas leituras (subscription e aiUsage) são independentes e rodam em
-// paralelo. O incremento NÃO acontece aqui: quem chama recebe `consume()`
-// e dispara o registro em paralelo com a geração do LLM, tirando a escrita
-// do caminho crítico da resposta.
+// A assinatura é lida com o token do próprio usuário (respeitando membership)
+// e o consumo é gravado pelo servidor em transação. Assim o cliente não pode
+// alterar contadores nem duas chamadas simultâneas passam da mesma cota.
 async function checkAiQuota(
   idToken: string,
   organizationId: string
-): Promise<{ allowed: boolean; plan: PlanId; used: number; limit: number; consume: () => Promise<void> }> {
+): Promise<{ allowed: boolean; plan: PlanId; used: number; limit: number; consume: () => Promise<{ allowed: boolean; used: number }> }> {
   const headers = { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" };
   const month = currentAiMonth();
 
@@ -102,28 +102,13 @@ async function checkAiQuota(
     : 0;
 
   if (used >= limit) {
-    return { allowed: false, plan, used, limit, consume: async () => {} };
+    return { allowed: false, plan, used, limit, consume: async () => ({ allowed: false, used }) };
   }
 
-  // Incrementa de forma otimista (lê + grava; não é uma transação atômica,
-  // mas o volume de chamadas simultâneas por organização é baixo o
-  // suficiente pra essa margem de erro ser aceitável aqui).
-  const consume = async () => {
-    await fetch(`${firestoreDocUrl(`organizations/${organizationId}/aiUsage/${month}`)}?updateMask.fieldPaths=count&updateMask.fieldPaths=updatedAt`, {
-      method: "PATCH",
-      headers,
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({
-        fields: {
-          count: { integerValue: String(used + 1) },
-          updatedAt: { stringValue: new Date().toISOString() }
-        }
-      })
-    }).catch(() => {
-      // Falha ao registrar o uso não deve impedir a resposta já gerada —
-      // na pior hipótese a cota fica levemente subcontada neste mês.
-    });
-  };
+  const consume = () => adminConsumeAiQuota(
+    `organizations/${organizationId}/aiUsage/${month}`,
+    limit
+  );
 
   return { allowed: true, plan, used: used + 1, limit, consume };
 }
@@ -204,9 +189,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // O registro de consumo roda em paralelo com a geração — a escrita no
-    // Firestore não bloqueia o início da chamada ao LLM nem a resposta.
-    const consumePromise = quota.consume();
+    const consumption = await quota.consume();
+    if (!consumption.allowed) {
+      return NextResponse.json(
+        { error: `Cota de IA do mês esgotada (${consumption.used}/${quota.limit} consultas no plano atual).` },
+        { status: 429 }
+      );
+    }
 
     let result;
 
@@ -233,11 +222,9 @@ export async function POST(req: NextRequest) {
         result = await classifyTribe(keys, input as TribeClassifyInput);
         break;
       default:
-        await consumePromise;
         return NextResponse.json({ error: `Tarefa desconhecida: ${task}` }, { status: 400 });
     }
 
-    await consumePromise;
     return NextResponse.json({ ok: true, content: result.content, model: result.model });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido";

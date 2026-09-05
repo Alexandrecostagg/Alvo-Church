@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAppAuth } from "../../../app/providers";
-import { fetchActiveKidsCheckIns, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import { fetchMyActiveKidsCheckIns, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import type { KidsCheckIn } from "@alvo/types";
 
 export function KidsSecurityView() {
@@ -27,9 +27,7 @@ export function KidsSecurityView() {
       return;
     }
     try {
-      const active = await fetchActiveKidsCheckIns(firebaseConfig, { organizationId });
-      // Só os check-ins do próprio responsável (segurança: pai não vê filhos de outros).
-      const mine = active.filter((c) => c.parentId === user.uid || c.authorizedPickUpIds?.includes(user.uid));
+      const mine = await fetchMyActiveKidsCheckIns(firebaseConfig, { organizationId }, user.uid);
       setMyCheckIns(mine);
     } catch {
       setMyCheckIns([]);

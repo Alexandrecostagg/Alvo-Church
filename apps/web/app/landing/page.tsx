@@ -398,6 +398,7 @@ function LPFooter() {
           <a href="#modulos">Módulos</a>
           <a href="#planos">Planos</a>
           <a href="#perguntas">Perguntas frequentes</a>
+          <Link href="/privacy">Privacidade</Link>
           <Link href="/login">Entrar</Link>
         </div>
         <p className="lp-footer-copy">

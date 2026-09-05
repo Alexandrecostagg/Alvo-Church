@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callChatWithFallback } from "@alvo/ai";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
+import { hasAnyRoleInOrg, TENANT_ADMIN_ROLES } from "../../_lib/tenant-role";
 
 export interface BannerCopyInput {
   tipo: string;      // Culto Domingo, Evento, Célula, etc.
@@ -22,9 +23,26 @@ export interface BannerCopy {
 }
 
 export async function POST(req: NextRequest) {
+  const authorization = req.headers.get("authorization") ?? "";
+  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const uid = await verifyFirebaseIdToken(req);
-  if (!uid) {
+  if (!uid || !idToken) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null) as (BannerCopyInput & { organizationId?: string }) | null;
+  if (!body) {
+    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+  }
+  const organizationId = body?.organizationId?.trim() ?? "";
+  if (!organizationId) {
+    return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
+  }
+  if (!await hasAnyRoleInOrg(idToken, organizationId, uid, TENANT_ADMIN_ROLES)) {
+    return NextResponse.json({ error: "Você não tem permissão para gerar banners desta organização." }, { status: 403 });
+  }
+  if (!body.tipo?.trim() || !body.tema?.trim() || body.tipo.length > 100 || body.tema.length > 500) {
+    return NextResponse.json({ error: "Tipo e tema são obrigatórios e devem ter tamanho válido." }, { status: 422 });
   }
 
   // Cascata de provedores: DeepSeek (principal) → Groq (fallback). Basta uma
@@ -37,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY)." }, { status: 500 });
   }
 
-  const input: BannerCopyInput = await req.json();
+  const input: BannerCopyInput = body;
 
   const prompt = `Você é um diretor de arte criando um banner de divulgação para redes sociais de uma igreja evangélica.
 

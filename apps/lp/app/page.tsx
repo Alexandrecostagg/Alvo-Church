@@ -43,6 +43,7 @@ export default function LandingPage() {
       <Testimonials />
       <Pricing />
       <FAQClient />
+      <Contact />
       <FinalCTA />
       <LPFooter />
     </div>
@@ -69,6 +70,9 @@ function LPNav() {
           </a>
           <a href="#perguntas" className="lp-nav-link" data-section="perguntas">
             FAQ
+          </a>
+          <a href="#contato" className="lp-nav-link" data-section="contato">
+            Contato
           </a>
         </nav>
         <div className="lp-nav-ctas">
@@ -387,6 +391,29 @@ function FinalCTA() {
   );
 }
 
+function Contact() {
+  return (
+    <section className="lp-contact" id="contato">
+      <div className="lp-container">
+        <Reveal>
+          <div className="lp-contact-card">
+            <div>
+              <p className="lp-contact-eyebrow">FALE CONOSCO</p>
+              <h2>Precisa de ajuda ou quer saber mais?</h2>
+              <p>
+                Nossa equipe está pronta para orientar sua igreja e tirar suas dúvidas sobre a Plataforma Esdras.
+              </p>
+            </div>
+            <a className="lp-contact-email" href="mailto:contato@plataformaesdras.com.br">
+              contato@plataformaesdras.com.br
+            </a>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 function LPFooter() {
   return (
     <footer className="lp-footer">
@@ -399,6 +426,7 @@ function LPFooter() {
           <a href="#modulos">Módulos</a>
           <a href="#planos">Planos</a>
           <a href="#perguntas">Perguntas frequentes</a>
+          <a href="#contato">Fale conosco</a>
           <a href={`${WEB_APP_URL}/login`}>Entrar</a>
         </div>
         <p className="lp-footer-copy">

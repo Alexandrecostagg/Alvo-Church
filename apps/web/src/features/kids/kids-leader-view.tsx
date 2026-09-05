@@ -342,7 +342,7 @@ export function KidsLeaderView() {
       {/* HEADER TOPBAR (Futuristic Security Style) */}
       <header className="kids-operation-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <Link href="/" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
+          <Link href="/app" style={{ color: "var(--alvo-accent)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 800 }}>
             ← Voltar ao painel principal
           </Link>
           <p className="eyebrow" style={{ color: "var(--alvo-accent)", marginTop: "1rem" }}>Lounge Kids &amp; Segurança Ativa</p>

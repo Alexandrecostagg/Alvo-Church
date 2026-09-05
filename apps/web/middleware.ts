@@ -28,7 +28,7 @@ const CSP_VALUE = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://servicodados.ibge.gov.br",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://brasilapi.com.br https://servicodados.ibge.gov.br",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -43,6 +43,15 @@ export function withSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export function middleware(request: NextRequest) {
+  // O runtime OpenNext no Cloudflare falha ao materializar a rota estática
+  // raiz neste projeto. Encaminhar antes da renderização evita o erro 500 e
+  // mantém a URL pública apontando para a landing oficial.
+  if (request.nextUrl.pathname === "/") {
+    return withSecurityHeaders(
+      NextResponse.redirect(new URL("/landing", request.url)),
+    );
+  }
+
   const response = NextResponse.next();
   return withSecurityHeaders(response);
 }

@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
         const res = await fetch(`${WORKER_API_BASE_URL.replace(/\/$/, "")}/notify/whatsapp`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearerToken}` },
-          body: JSON.stringify({ to, message }),
+          // O Worker repete a validação do destinatário dentro do tenant.
+          // Sem organizationId ele não consegue aplicar esta segunda camada.
+          body: JSON.stringify({ to, message, organizationId }),
           // Um destinatário pendurado não pode segurar o lote inteiro — o
           // Promise.all só resolve quando o mais lento termina.
           signal: AbortSignal.timeout(15000)

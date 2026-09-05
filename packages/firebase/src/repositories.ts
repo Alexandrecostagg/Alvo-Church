@@ -1067,6 +1067,7 @@ export async function provisionSelfServeOrganization(
 
   const subscription: OrganizationSubscriptionSettings = {
     organizationId,
+    plan: "free",
     planCode: "gratuito",
     planTier: "base",
     billingCycle: "monthly",
@@ -1087,8 +1088,8 @@ export async function provisionSelfServeOrganization(
     modules: {
       core: mod(true, "plan"),
       visitors: mod(true, "plan"),
-      groups: mod(true, "plan"),
-      events: mod(true, "plan"),
+      groups: mod(false, "plan"),
+      events: mod(false, "plan"),
       children: mod(false, "manual"),
       youth: mod(false, "addon"),
       volunteers: mod(false, "addon"),
@@ -1107,10 +1108,6 @@ export async function provisionSelfServeOrganization(
     saveOrganizationBrandingSettings(config, branding),
     saveOrganizationSubscriptionSettings(config, subscription),
     saveOrganizationFeaturesSettings(config, features),
-    // Grava o campo `plan` explicitamente — é o que fetchOrgPlan/PlanGuard
-    // realmente leem para liberar Tribos/Finanças/IA Pastoral. Sem isso a
-    // organização fica presa no tier "free" mesmo cadastrada no plano certo.
-    setOrgPlan(config, { organizationId }, "free")
   ]);
 }
 
@@ -2877,6 +2874,25 @@ export async function fetchWorshipSetlistByEventId(
   return toWorshipSetlist(snap.id, snap.data());
 }
 
+export async function saveMobilePushToken(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  userId: string,
+  token: string,
+  platform: "android" | "ios"
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getTenantUserDocumentPath(context, userId)),
+    {
+      expoPushToken: token,
+      expoPushTokenPlatform: platform,
+      expoPushTokenUpdatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
+}
+
 export async function saveWorshipSetlist(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -3439,6 +3455,27 @@ export async function fetchActiveKidsCheckIns(
     query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("status", "==", "checked_in"))
   );
   return snap.docs.map((d) => toKidsCheckIn(d.id, d.data()));
+}
+
+// Check-ins ativos visíveis para um responsável. Não use a consulta geral e
+// filtre no cliente: as rules devem impedir que dados de outras crianças
+// atravessem a rede.
+export async function fetchMyActiveKidsCheckIns(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  userId: string
+): Promise<KidsCheckIn[]> {
+  const firestore = getFirebaseFirestore(config);
+  const ref = collection(firestore, getKidsCheckInsCollectionPath(context));
+  const [asParent, asAuthorized] = await Promise.all([
+    getDocs(query(ref, where("status", "==", "checked_in"), where("parentId", "==", userId))),
+    getDocs(query(ref, where("status", "==", "checked_in"), where("authorizedPickUpIds", "array-contains", userId)))
+  ]);
+  const byId = new Map<string, KidsCheckIn>();
+  for (const snapshot of [asParent, asAuthorized]) {
+    for (const document of snapshot.docs) byId.set(document.id, toKidsCheckIn(document.id, document.data()));
+  }
+  return [...byId.values()];
 }
 
 // Resolve um check-in pelo token do QR (usado na retirada).

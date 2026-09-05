@@ -409,7 +409,7 @@ export function PastoralAiView() {
             Transforme recepção, WhatsApp, pedidos de oração e presença de células em uma fila clara de acompanhamento pastoral.
           </p>
           <div className="pastoral-ai-hero-actions">
-            <Link href="/" className="pastoral-ai-nav-action">
+            <Link href="/app" className="pastoral-ai-nav-action">
               Dashboard
             </Link>
             <Link href="/reception" className="pastoral-ai-nav-action is-active">

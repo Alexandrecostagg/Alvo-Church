@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
+import { hasAnyRoleInOrg, TENANT_ADMIN_ROLES } from "../../_lib/tenant-role";
 
 function clampInt(value: string | null, fallback: number, min: number, max: number): number {
   const n = Number.parseInt(value ?? "", 10);
@@ -20,15 +21,27 @@ function hashSeed(input: string): number {
 // Proxies Pollinations.ai image generation to avoid CORS issues with Canvas API.
 // Pollinations is completely free, no API key required.
 export async function GET(req: NextRequest) {
+  const authorization = req.headers.get("authorization") ?? "";
+  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const uid = await verifyFirebaseIdToken(req);
-  if (!uid) {
+  if (!uid || !idToken) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
   const { searchParams } = req.nextUrl;
-  const prompt = searchParams.get("prompt") ?? "church worship abstract background";
-  const w = clampInt(searchParams.get("w"), 1080, 256, 2048);
-  const h = clampInt(searchParams.get("h"), 1080, 256, 2048);
+  const organizationId = searchParams.get("organizationId")?.trim() ?? "";
+  if (!organizationId) {
+    return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
+  }
+  if (!await hasAnyRoleInOrg(idToken, organizationId, uid, TENANT_ADMIN_ROLES)) {
+    return NextResponse.json({ error: "Você não tem permissão para gerar imagens desta organização." }, { status: 403 });
+  }
+  const prompt = searchParams.get("prompt")?.trim() ?? "";
+  if (!prompt || prompt.length > 600) {
+    return NextResponse.json({ error: "Prompt inválido." }, { status: 422 });
+  }
+  const w = clampInt(searchParams.get("w"), 1080, 256, 1536);
+  const h = clampInt(searchParams.get("h"), 1080, 256, 1536);
   // Sem seed explícito, deriva um seed estável do prompt em vez de sortear:
   // a mesma URL passa a produzir sempre a mesma imagem, então o Cache-Control
   // abaixo vira cache de verdade (antes cada request era uma URL "nova" no
@@ -58,7 +71,9 @@ export async function GET(req: NextRequest) {
   return new NextResponse(imgRes.body, {
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, immutable",
+      // Resposta depende de autenticação e pode derivar de um pedido interno.
+      // Não permitir cache compartilhado entre usuários/organizações.
+      "Cache-Control": "private, no-store",
     },
   });
 }

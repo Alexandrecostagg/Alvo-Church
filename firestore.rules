@@ -35,6 +35,34 @@ service cloud.firestore {
         ]);
     }
 
+    // Administração de acessos é mais restrita que operação do tenant.
+    // Pastores e secretaria podem operar módulos compatíveis com o cargo,
+    // mas não concedem nem removem permissões de outras pessoas.
+    function canManageTenantUsers(orgId) {
+      return isTenantMember(orgId)
+        && tenantUserData(orgId).roles.hasAny([
+          "super_admin",
+          "church_admin"
+        ]);
+    }
+
+    // Coleções operacionais conhecidas. O Firestore não tem "deny" que
+    // sobreponha outro allow: por isso o catch-all abaixo só pode liberar uma
+    // lista fechada. Coleção nova exige regra e revisão de segurança próprias.
+    function isOperationalCollection(collection) {
+      return [
+        "badges", "churchAttendance", "communityStoreModerationLogs",
+        "communityStores", "courses", "emergencySOS", "events", "families",
+        "financeReports", "followUpTasks", "groupBanners", "groups",
+        "journeyProfiles", "leaderEmotionalPulse", "memberBenefitValidations",
+        "memberTribeProfiles", "mentoringSessions", "partners", "partnerBenefits",
+        "scheduleSwapRequests", "serviceAssignments", "serviceTeams",
+        "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests",
+        "tribes", "visitorJourneys", "wellBeingResources", "weeklyThemes",
+        "worshipSetlists", "worshipSongs"
+      ].hasAny([collection]);
+    }
+
     // Segurança Kids: quem pode operar o check-in/out (gravar kidsCheckIns).
     // Honra a config do admin (settings/kids.qrGeneratorRoles); se ausente,
     // cai para os admins do tenant. Boundary grosseiro no servidor — o app
@@ -50,6 +78,17 @@ service cloud.firestore {
     function canOperateKids(orgId) {
       return isTenantMember(orgId)
         && (isTenantAdmin(orgId) || tenantUserData(orgId).roles.hasAny(kidsQrRoles(orgId)));
+    }
+
+    // Check-ins de crianças carregam dados de menor (foto, alergias e
+    // restrições). Fora da equipe Kids, o responsável só pode acessar os
+    // registros em que está listado como pai/mãe ou pessoa autorizada.
+    function isKidsGuardianFor(orgId, checkIn) {
+      return isTenantMember(orgId)
+        && (
+          checkIn.parentId == request.auth.uid
+          || checkIn.authorizedPickUpIds.hasAny([request.auth.uid])
+        );
     }
 
     function orgDocPath(orgId) {
@@ -163,10 +202,37 @@ service cloud.firestore {
       allow list: if isPlatformAdmin();
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isTenantAdmin(orgId)
-        && (
-          !("ownerUid" in resource.data)
-          || request.resource.data.ownerUid == resource.data.ownerUid
+      // Plano, abrangência e contadores são dados de cobrança/provisionamento.
+      // Um administrador do tenant pode atualizar os dados cadastrais, mas
+      // jamais trocar organização solo por rede, liberar uma modalidade ou
+      // manipular os contadores usados para aplicar limites do plano.
+      allow update: if isPlatformAdmin()
+        || (
+          isTenantAdmin(orgId)
+          && (
+            !("ownerUid" in resource.data)
+            || request.resource.data.ownerUid == resource.data.ownerUid
+          )
+          && (
+            !("organizationTier" in resource.data)
+              ? !("organizationTier" in request.resource.data)
+              : request.resource.data.organizationTier == resource.data.organizationTier
+          )
+          && (
+            !("organizationType" in resource.data)
+              ? !("organizationType" in request.resource.data)
+              : request.resource.data.organizationType == resource.data.organizationType
+          )
+          && (
+            !("memberCount" in resource.data)
+              ? !("memberCount" in request.resource.data)
+              : request.resource.data.memberCount == resource.data.memberCount
+          )
+          && (
+            !("affiliateCount" in resource.data)
+              ? !("affiliateCount" in request.resource.data)
+              : request.resource.data.affiliateCount == resource.data.affiliateCount
+          )
         );
       allow delete: if false;
     }
@@ -178,14 +244,14 @@ service cloud.firestore {
         && request.resource.data.organizationId == orgId
         && (
           (request.auth.uid == userId && isOrgOwner(orgId))
-          || isTenantAdmin(orgId)
+          || canManageTenantUsers(orgId)
         );
 
-      allow read: if signedIn() && (request.auth.uid == userId || isTenantAdmin(orgId));
+      allow read: if signedIn() && (request.auth.uid == userId || canManageTenantUsers(orgId));
 
       // Users may edit their own profile but never their roles,
       // active flag or tenant binding.
-      allow update: if isTenantAdmin(orgId)
+      allow update: if canManageTenantUsers(orgId)
         || (
           signedIn()
           && request.auth.uid == userId
@@ -193,21 +259,53 @@ service cloud.firestore {
             .hasAny(["roles", "isActive", "organizationId"])
         );
 
-      allow delete: if isTenantAdmin(orgId);
+      allow delete: if canManageTenantUsers(orgId);
+    }
+
+    // Assinatura e módulos são definidos no provisionamento e no processo de
+    // cobrança da Esdras. Um administrador da igreja pode ler, mas não pode
+    // liberar recursos nem alterar o plano por chamada direta ao Firestore.
+    match /organizations/{orgId}/settings/subscription {
+      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      // A primeira assinatura vem exclusivamente do cadastro público e deve
+      // iniciar no plano gratuito. Alterações posteriores passam pelo backend
+      // de cobrança (Admin SDK) ou por um administrador da plataforma.
+      allow create: if isPlatformAdmin()
+        || (isOrgOwner(orgId)
+          && request.resource.data.organizationId == orgId
+          && request.resource.data.plan == "free");
+      // O checkout pode apenas vincular os IDs retornados pelo gateway; nunca
+      // troca plano, status ou limites diretamente no cliente.
+      allow update: if isPlatformAdmin()
+        || (isTenantAdmin(orgId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["asaasCustomerId", "asaasSubscriptionId"]));
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /organizations/{orgId}/settings/features {
+      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      // O documento inicial é criado junto da organização. Depois disso,
+      // somente a administração Esdras pode ajustar disponibilidade técnica.
+      allow create: if isPlatformAdmin() || isOrgOwner(orgId);
+      allow update, delete: if isPlatformAdmin();
     }
 
     match /organizations/{orgId}/settings/{documentId} {
       allow read: if isTenantMember(orgId) || isPlatformAdmin();
-      allow write: if isTenantAdmin(orgId);
+      // Mantém configurações operacionais permitidas (marca, PIX, Kids etc.)
+      // nas mãos da igreja, sem reabrir subscription/features por este match.
+      allow write: if documentId != "subscription"
+        && documentId != "features"
+        && (isTenantAdmin(orgId) || isPlatformAdmin());
     }
 
-    // AI usage counters (organizations/{orgId}/aiUsage/{yyyy-mm}): qualquer
-    // membro ativo pode incrementar (é ele quem consome a cota ao usar as
-    // ferramentas de IA, ex: líder de célula no app); platform admin lê
-    // entre todas as orgs pro painel cross-tenant.
+    // Contadores de IA são escritos somente pelo backend com service account,
+    // dentro de transação. Permitir escrita pelo cliente permitiria burlar a
+    // cota ou corromper o consumo da organização.
     match /organizations/{orgId}/aiUsage/{documentId} {
       allow read: if isTenantMember(orgId) || isPlatformAdmin();
-      allow write: if isTenantMember(orgId);
+      allow write: if false;
     }
 
     // Financial records: a member can only read their own contributions.
@@ -262,41 +360,31 @@ service cloud.firestore {
     }
 
     // Mídia — histórico de banners gerados (thumbnail + inputs para reabrir).
-    // Material de divulgação, não sensível. O catch-all abaixo já deixa membro
-    // ler e admin escrever; este bloco (via OR) libera create/update para
-    // QUALQUER membro — a equipe de mídia que gera banner nem sempre é admin.
-    // Apagar continua restrito a admin.
+    // Qualquer membro lê e cria o próprio histórico; não pode editar registros
+    // de outro membro nem trocar autor/organização. Administração mantém a
+    // moderação completa, inclusive exclusão.
     match /organizations/{orgId}/bannerHistory/{bannerId} {
       allow read: if isTenantMember(orgId);
       allow create: if isTenantMember(orgId)
-        && request.resource.data.organizationId == orgId;
-      allow update: if isTenantMember(orgId);
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.createdByUserId == request.auth.uid;
+      allow update: if isTenantAdmin(orgId)
+        || (
+          isTenantMember(orgId)
+          && resource.data.createdByUserId == request.auth.uid
+          && request.resource.data.createdByUserId == resource.data.createdByUserId
+          && request.resource.data.organizationId == resource.data.organizationId
+        );
       allow delete: if isTenantAdmin(orgId);
     }
 
-    // Public visitor form: unauthenticated create with strict shape and
-    // size validation. Reads/updates stay restricted to the tenant team.
+    // Visitor intake público entra exclusivamente pelo backend (com limite de
+    // IP e honeypot). Não permitir create direto impede contornar as proteções
+    // da API por REST/SDK do Firestore.
     match /organizations/{orgId}/visitorIntakes/{intakeId} {
-      allow create: if request.resource.data.source == "public_form"
-        && request.resource.data.status == "captured"
-        && request.resource.data.organizationId == orgId
-        && request.resource.data.keys().hasOnly([
-          "organizationId", "name", "phone", "email", "birthDate",
-          "neighborhood", "firstVisit", "howHeard", "consentMarketing",
-          "source", "status", "orgSlug", "createdAt"
-        ])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() >= 10
-        && request.resource.data.phone.size() <= 14
-        && request.resource.data.firstVisit is bool
-        && request.resource.data.consentMarketing is bool
-        && (request.resource.data.email == null || (request.resource.data.email is string && request.resource.data.email.size() <= 160))
-        && (request.resource.data.birthDate == null || (request.resource.data.birthDate is string && request.resource.data.birthDate.size() <= 10))
-        && (request.resource.data.neighborhood == null || (request.resource.data.neighborhood is string && request.resource.data.neighborhood.size() <= 120))
-        && (request.resource.data.howHeard == null || (request.resource.data.howHeard is string && request.resource.data.howHeard.size() <= 200));
+      // Recepção autenticada continua podendo registrar atendimento interno;
+      // o visitante público só entra pela API server-side.
+      allow create: if isTenantAdmin(orgId);
       allow read: if isTenantMember(orgId);
       allow update, delete: if isTenantAdmin(orgId);
     }
@@ -430,11 +518,10 @@ service cloud.firestore {
     }
 
     // Segurança Kids: check-in/out de crianças (dado sensível de menor).
-    // Leitura por membro do tenant (o responsável precisa ver o check-in
-    // ativo do filho p/ exibir o QR de retirada); escrita só por quem pode
-    // operar a sala (admin + papéis configurados em settings/kids).
+    // A lista completa é exclusiva da equipe Kids. Responsáveis fazem query
+    // restrita aos próprios filhos/pessoas autorizadas e só leem esses docs.
     match /organizations/{orgId}/kidsCheckIns/{checkInId} {
-      allow read: if isTenantMember(orgId);
+      allow get, list: if canOperateKids(orgId) || isKidsGuardianFor(orgId, resource.data);
       allow write: if canOperateKids(orgId);
     }
 
@@ -449,49 +536,19 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId);
     }
 
-    // Generic tenant collections (one level deep), excluding the
-    // privacy-sensitive collections handled above.
+    // Coleções operacionais de primeiro nível. A lista fechada acima evita
+    // que uma coleção nova herde acesso por acidente.
     match /organizations/{orgId}/{collection}/{documentId} {
-      allow read: if isTenantMember(orgId)
-        && collection != "contributions"
-        && collection != "contributionReceipts"
-        && collection != "financialTransactions"
-        && collection != "communicationLog"
-        && collection != "communicationTemplates"
-        && collection != "users"
-        && collection != "prayerRequests";
-      allow write: if isTenantAdmin(orgId)
-        && collection != "users"
-        && collection != "prayerRequests"
-        && collection != "people"
-        && collection != "affiliates"
-        && collection != "programEntitlements";
+      allow read: if isTenantMember(orgId) && isOperationalCollection(collection);
+      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection);
     }
 
-    // Nested subcollections (groups/{id}/members, events/{id}/tickets, ...).
-    // {document=**} também casa com ZERO segmentos extras — ou seja, esse
-    // bloco reabre (via OR) qualquer coleção de 2 segmentos que outro match
-    // acima tenha restringido, com nenhuma das condições extras deles. Por
-    // isso as mesmas exclusões de nome de coleção valem aqui também — foi
-    // exatamente esse bug que deixava passar cadastro de membro acima do
-    // limite do plano (people não tinha "&& document.size() > 0" nem
-    // exclusão, e essa regra tinha "allow write: if isTenantAdmin(orgId)"
-    // sem checar limite nenhum).
+    // Subcoleções dos módulos operacionais da lista fechada. Coleções sensíveis
+    // (people, users, contribuições, kids, assinatura) têm regras específicas
+    // e não podem ser reabertas por este match via OR.
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
-      allow read: if isTenantMember(orgId)
-        && collection != "contributions"
-        && collection != "contributionReceipts"
-        && collection != "financialTransactions"
-        && collection != "communicationLog"
-        && collection != "communicationTemplates"
-        && collection != "users"
-        && collection != "prayerRequests";
-      allow write: if isTenantAdmin(orgId)
-        && collection != "users"
-        && collection != "prayerRequests"
-        && collection != "people"
-        && collection != "affiliates"
-        && collection != "programEntitlements";
+      allow read: if isTenantMember(orgId) && isOperationalCollection(collection);
+      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection);
     }
   }
 }

@@ -1,11 +1,11 @@
 {
   "cli": {
-    "version": ">= 12.0.0",
-    "appVersionSource": "local"
+    "version": ">= 16.18.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "base": {
-      "node": "20.18.0",
+      "node": "22.13.0",
       "env": {
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBe9StFXtahsJb_AMSMNLrvdOImi9YRBu4",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "alvo-church.firebaseapp.com",
@@ -23,15 +23,24 @@
         "buildType": "apk"
       }
     },
+    "store-test": {
+      "extends": "base",
+      "distribution": "store",
+      "autoIncrement": true
+    },
     "production": {
       "extends": "base",
-      "autoIncrement": true,
-      "android": {
-        "buildType": "app-bundle"
-      }
+      "distribution": "store",
+      "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "store-test": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {}
+    }
   }
 }

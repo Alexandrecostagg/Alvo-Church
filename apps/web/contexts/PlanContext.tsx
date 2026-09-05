@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { PlanId, PlanFeatureKey, AiQuotaStatus } from "@alvo/firebase";
-import { fetchOrgBillingInfo, getAiQuotaStatus, incrementAiUsage, planHasFeature } from "@alvo/firebase";
+import { fetchOrgBillingInfo, getAiQuotaStatus, planHasFeature } from "@alvo/firebase";
 import { useAppAuth } from "../app/providers";
 
 type BillingStatus = "active" | "overdue" | "suspended";
@@ -64,10 +64,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     if (!aiQuota) {
       await refreshAiQuota();
     }
+    await refreshAiQuota();
     const current = aiQuota;
     if (!current || !current.allowed) return false;
-    await incrementAiUsage(firebaseConfig, context);
-    await refreshAiQuota();
     return true;
   }
 

@@ -11,8 +11,8 @@ import { BillingGate } from "./billing-gate";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
-    <OrgFeaturesProvider>
-      <PlanProvider>
+    <PlanProvider>
+      <OrgFeaturesProvider>
         <ToastProvider>
           <AuthGate>
             <div className="app-shell">
@@ -29,7 +29,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
             <NetworkSyncLoader />
           </AuthGate>
         </ToastProvider>
-      </PlanProvider>
-    </OrgFeaturesProvider>
+      </OrgFeaturesProvider>
+    </PlanProvider>
   );
 }

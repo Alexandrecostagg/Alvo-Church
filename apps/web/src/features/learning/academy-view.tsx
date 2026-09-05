@@ -282,7 +282,7 @@ export function AcademyView() {
   if (courses.length === 0 || !selectedCourse) {
     return (
       <main className="page-root academy-page animate-entrance">
-        <Link className="back-link" href="/" style={{ display: "inline-flex", marginBottom: 12 }}>
+        <Link className="back-link" href="/app" style={{ display: "inline-flex", marginBottom: 12 }}>
           Voltar ao painel
         </Link>
         <header className="page-header">
@@ -521,7 +521,7 @@ export function AcademyView() {
       )}
 
       {/* Cabeçalho padrão */}
-      <Link className="back-link" href="/" style={{ display: "inline-flex", marginBottom: 12 }}>
+      <Link className="back-link" href="/app" style={{ display: "inline-flex", marginBottom: 12 }}>
         Voltar ao painel
       </Link>
       <header className="page-header">

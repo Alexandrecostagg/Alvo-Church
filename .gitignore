@@ -1,4 +1,7 @@
 .DS_Store
+.local-backups/
+.pnpm-store/
+*.tsbuildinfo
 node_modules
 .turbo
 .next

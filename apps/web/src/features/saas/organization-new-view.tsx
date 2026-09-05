@@ -22,8 +22,7 @@ import {
   saveOrganizationBrandingSettings,
   saveOrganizationFeaturesSettings,
   saveOrganizationProfile,
-  saveOrganizationSubscriptionSettings,
-  setOrgPlan
+  saveOrganizationSubscriptionSettings
 } from "@alvo/firebase";
 import type {
   Organization,
@@ -121,6 +120,7 @@ export function OrganizationNewView() {
     };
     const subscription: OrganizationSubscriptionSettings = {
       organizationId,
+      plan: planTierToPlanId(selectedPlanTier),
       planCode: `esdras-${selectedPlanTier}`,
       planTier: selectedPlanTier,
       billingCycle,
@@ -176,10 +176,6 @@ export function OrganizationNewView() {
       await saveOrganizationBrandingSettings(firebaseConfig, branding);
       await saveOrganizationSubscriptionSettings(firebaseConfig, subscription);
       await saveOrganizationFeaturesSettings(firebaseConfig, features);
-      // fetchOrgPlan/PlanGuard leem o campo `plan`, não `planTier` — sem
-      // isto a organização fica presa no tier gratuito mesmo com o plano
-      // pago selecionado aqui.
-      await setOrgPlan(firebaseConfig, { organizationId }, planTierToPlanId(selectedPlanTier));
 
       setStatus(`${displayName} criada em organizations/${organizationId}.`);
       formElement.reset();
@@ -196,7 +192,7 @@ export function OrganizationNewView() {
     <div className="page-root saas-form-page">
       <header className="page-header">
         <div className="page-header-left">
-          <Link className="back-link" href="/">
+          <Link className="back-link" href="/app">
             ← Voltar ao painel
           </Link>
           <h1 className="page-title">Nova Organização</h1>

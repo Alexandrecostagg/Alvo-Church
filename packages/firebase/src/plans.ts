@@ -42,6 +42,32 @@ export function planHasFeature(plan: PlanId, feature: PlanFeatureKey): boolean {
   return features.includes("all") || features.includes(feature);
 }
 
+// A disponibilidade dos módulos operacionais é determinada pelo plano
+// contratado. O documento `settings/features` pode guardar metadados de
+// implantação, mas nunca deve conceder um módulo que o plano não inclua.
+const MODULE_PLAN_FEATURE: Record<string, PlanFeatureKey | null> = {
+  core: null,
+  visitors: "members",
+  groups: "groups",
+  events: "events",
+  children: "kids",
+  youth: "all",
+  volunteers: "serving",
+  tribes: "tribes",
+  journeys: "journeys",
+  communication: "communication",
+  marketplace: "marketplace",
+  giving: "giving",
+  publicForms: "members",
+  finance: "finance",
+  ai: "pastoral-ai",
+};
+
+export function planHasModule(plan: PlanId, module: string): boolean {
+  const feature = MODULE_PLAN_FEATURE[module];
+  return feature === null || (feature !== undefined && planHasFeature(plan, feature));
+}
+
 // Dias de carência entre a fatura vencer (billingStatus "overdue") e o
 // acesso ser efetivamente suspenso ("suspended") — dá tempo do pagamento
 // via PIX/boleto compensar antes de travar o sistema do cliente.

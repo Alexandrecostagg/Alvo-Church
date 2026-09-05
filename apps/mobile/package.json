@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs expo start",
     "build": "node ../../scripts/with-workspace-env.mjs expo export --platform all",
+    "eas:preview": "node ../../scripts/with-workspace-env.mjs npx eas-cli@latest build --profile preview --platform all",
+    "eas:store-test": "node ../../scripts/with-workspace-env.mjs npx eas-cli@latest build --profile store-test --platform all",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --check ."
@@ -14,19 +16,25 @@
     "@alvo/firebase": "workspace:*",
     "@alvo/types": "workspace:*",
     "@alvo/ui": "workspace:*",
+    "@expo/dom-webview": "~57.0.1",
     "@expo/vector-icons": "^15.1.1",
-    "expo": "~56.0.16",
-    "expo-camera": "~56.0.8",
-    "expo-font": "~56.0.7",
-    "expo-image-picker": "~56.0.21",
-    "expo-splash-screen": "~56.0.13",
-    "expo-status-bar": "~56.0.4",
+    "expo": "~57.0.15",
+    "expo-build-properties": "~57.0.0",
+    "expo-camera": "~57.0.4",
+    "expo-constants": "~57.0.13",
+    "expo-font": "~57.0.1",
+    "expo-image-picker": "~57.0.12",
+    "expo-notifications": "~57.0.13",
+    "expo-secure-store": "^57.0.1",
+    "expo-splash-screen": "~57.0.7",
+    "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.85.3"
+    "react-dom": "19.2.3",
+    "react-native": "0.86.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.2"
+    "typescript": "^6.0.3"
   }
 }
