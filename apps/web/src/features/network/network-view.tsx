@@ -14,6 +14,7 @@ import {
   saveNetworkAffiliate,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
+import { generateSecureCode } from "@alvo/utils";
 import type { NetworkAffiliate, NetworkSnapshot } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
@@ -74,7 +75,7 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
   const [saving, setSaving] = useState(false);
   const { firebaseConfig } = useAppAuth();
 
-  const code = useMemo(() => Math.random().toString(36).slice(2, 8).toUpperCase(), []);
+  const code = useMemo(() => generateSecureCode(6), []);
 
   async function handleCreate() {
     if (!name.trim()) return;

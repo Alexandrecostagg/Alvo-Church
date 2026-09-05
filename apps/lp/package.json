@@ -4,7 +4,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "deploy": "next build && wrangler deploy"
+    "deploy": "next build && wrangler deploy",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "next": "^16.2.4",

@@ -1,3 +1,5 @@
+export { generateSecureCode } from "./secure-code";
+
 export function toSlug(value: string) {
   return value
     .toLowerCase()

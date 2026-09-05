@@ -33,6 +33,7 @@ import {
   saveKidsCheckIn,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { generateSecureCode } from "@alvo/utils";
 import type { KidsCheckIn } from "@alvo/types";
 
 interface KidRecord {
@@ -73,10 +74,7 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
 
 // Gera um código curto de retirada legível (sem 0/O/1/I).
 function genPickupCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return `KD-${s}`;
+  return `KD-${generateSecureCode(4)}`;
 }
 
 export function KidsLeaderView() {
@@ -282,12 +280,12 @@ export function KidsLeaderView() {
     if (!newKidDraft.name || !newKidDraft.parentName) return;
 
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const token = `kids_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const token = `kids_${crypto.randomUUID().replace(/-/g, '')}`;
     const pickupCode = genPickupCode();
     const authorizedPickupNames = newKidDraft.authorizedNames
       .split(",").map(n => n.trim()).filter(Boolean);
     const checkIn: KidsCheckIn = {
-      id: `kc_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+      id: `kc_${crypto.randomUUID().replace(/-/g, '')}`,
       organizationId,
       childId: `quick_${token}`,
       parentId: user?.uid ?? "",

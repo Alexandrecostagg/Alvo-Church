@@ -1,6 +1,29 @@
-# Getro Church / Alvo Church
+# Plataforma Esdras / Alvo Church
 
-Monorepo do produto Getro Church / Alvo Church.
+Monorepo da Plataforma Esdras (nome técnico dos pacotes: `@alvo/*`).
+
+## Desenvolvimento nesta máquina
+
+Base de trabalho consolidada em `codex/consolidacao-local-2026-09-05`.
+Veja [o registro da consolidação](docs/consolidacao-git-2026-09-05.md) para a
+origem das alterações, decisões de integração e pendências.
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev:web
+```
+
+Outros comandos:
+
+- `corepack pnpm dev:mobile`: Expo com variáveis locais do workspace.
+- `corepack pnpm test`: testes unitários de domínio, caminhos Firebase e utilitários.
+- `corepack pnpm typecheck`: tipos do painel, LP, mobile, API e pacotes.
+- `corepack pnpm --filter @alvo/web build`: build Next.js do painel.
+- `corepack pnpm build:cloudflare:web`: gera o Worker OpenNext, sem publicar.
+
+Os arquivos `.env.local`, credenciais e backups locais ficam fora do Git.
+Para retomar em outra máquina, envie primeiro os commits da branch de trabalho
+ao remoto; `main` ainda não contém esta consolidação.
 
 ## Stack
 
@@ -16,6 +39,8 @@ apps/
   web/
   mobile/
   worker-api/
+  lp/
+  lp-worker/
 packages/
   ai/
   analytics/
@@ -128,8 +153,8 @@ corepack pnpm --filter @alvo/mobile dev
 
 No Firebase Console, registre tambem os apps nativos no mesmo projeto:
 
-- Android package: `com.getrochurch.app`
-- iOS bundle identifier: `com.getrochurch.app`
+- Android package: `com.plataformaesdras.app`
+- iOS bundle identifier: `com.plataformaesdras.app`
 
 ## Firestore Rules do tenant
 
@@ -221,4 +246,4 @@ Documentos de produto e arquitetura:
 
 ## Status
 
-Base inicial do monorepo criada a partir da arquitetura definida em [docs/arquitetura-tecnica-monorepo-alvo-church.md](docs/arquitetura-tecnica-monorepo-alvo-church.md).
+Base funcional em estabilização. O estado local atual e a triagem das branches estão em [docs/consolidacao-git-2026-09-05.md](docs/consolidacao-git-2026-09-05.md). Os documentos de agosto são históricos e podem conter pendências já implementadas.

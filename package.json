@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.6.3",
   "scripts": {
     "build": "corepack pnpm -r build",
-    "build:cloudflare:web": "cd apps/web && corepack pnpm install --frozen-lockfile && corepack pnpm build && npx @cloudflare/next-on-pages",
+    "build:cloudflare:web": "corepack pnpm --filter @alvo/web build:cloudflare",
     "dev": "corepack pnpm --parallel --filter @alvo/web --filter @alvo/mobile --filter @alvo/worker-api dev",
     "lint": "corepack pnpm -r lint",
     "typecheck": "corepack pnpm -r typecheck",
@@ -13,7 +13,11 @@
     "seed:capacitacao": "tsx scripts/seed-capacitacao.ts",
     "seed:catalogo-final": "tsx scripts/seed-catalogo-final.ts",
     "dev:emulator": "firebase emulators:start",
-    "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts"
+    "db:seed:local": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 FIREBASE_PROJECT_ID=alvo-church tsx scripts/seed-firebase.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:web": "corepack pnpm --filter @alvo/web dev",
+    "dev:mobile": "corepack pnpm --filter @alvo/mobile dev"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
@@ -21,7 +25,8 @@
     "firebase-tools": "^15.16.0",
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {

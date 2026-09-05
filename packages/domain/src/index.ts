@@ -1,5 +1,6 @@
 export function calculateProgress(completed: number, total: number) {
   if (total <= 0) return 0;
+  if (completed >= total) return 100;
   return Math.round((completed / total) * 100);
 }
 import type {
@@ -991,7 +992,7 @@ const FLATS  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
 // Normaliza o tom para encontrar a nota base (remove menor 'm', números, etc.)
 function getBaseNote(chord: string): { base: string; suffix: string } {
   // Regex para extrair notas como C#, Db, F#, Bb, C, D, etc.
-  const match = chord.match(/^([A-G]#?|[A-G]b?)(.*)$/);
+  const match = chord.match(/^([A-G][#b]?)(.*)$/);
   if (!match) return { base: chord, suffix: "" };
   return { base: match[1], suffix: match[2] };
 }

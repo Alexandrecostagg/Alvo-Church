@@ -161,11 +161,10 @@ export function CareRadarView() {
     void load();
   }, [load]);
 
-  const personById = useMemo(() => {
-    const map = new Map<string, Person>();
-    people.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [people]);
+  const personById = useMemo(
+    () => new Map(people.map((person) => [person.id, person])),
+    [people],
+  );
 
   // ── Q1: sumiu da igreja (sem check-in de culto nos últimos 45 dias) ──────
   const missingFromChurch = useMemo<InsightItem[]>(() => {
@@ -199,12 +198,14 @@ export function CareRadarView() {
       meetingsByGroup.set(m.groupId, list);
     });
 
+    meetingsByGroup.forEach((list) => {
+      list.sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+    });
+
     const results: InsightItem[] = [];
 
     groupMembers.forEach((member) => {
-      const meetings = (meetingsByGroup.get(member.groupId) ?? [])
-        .slice()
-        .sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+      const meetings = meetingsByGroup.get(member.groupId) ?? [];
       if (!meetings.length) return;
 
       const presentMeeting = meetings.find((meeting) =>
