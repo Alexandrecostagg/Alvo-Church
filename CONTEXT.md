@@ -15,6 +15,9 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
   CEP, CPF, família, ficha e leitura isolada entre duas igrejas foram verificados
   em emuladores. Veja `docs/homologacao-membros-2026-09-05.md`.
 - Consulte `docs/consolidacao-git-2026-09-05.md` para a triagem e validação.
+- Jules encerrado operacionalmente neste repositório: sete sessões pausadas,
+  CI Auto-Fixer e Suggestions desligados, sem tarefas agendadas. Histórico
+  preservado; veja `docs/encerramento-jules-2026-09-05.md`.
 
 ## Rodar e validar
 
@@ -41,6 +44,10 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
 - A auditoria Jules encontrou token Kids mobile ainda com Math.random; corrigido
   com UUID completo de Expo Crypto. Web já estava integrado. Não havia patch
   funcional Jules específico do Esdras Passe nas branches disponíveis.
+- A inspeção posterior do Jules encontrou o plano da carteirinha mobile ainda
+  aguardando resposta. Implementar vínculo confiável conta/pessoa antes de
+  exibir o Passe: `personId` existe no tipo, mas não é devolvido ao perfil mobile
+  nem protegido contra alteração pelo próprio usuário nas regras atuais.
 - Consulte `docs/auditoria-jules-kids-passe-2026-09-05.md` e
   `docs/cadastro-transacional-2026-09-05.md`. QR Kids em URL/cache, fotos privadas
   e fluxo responsável/operador seguem pendentes. Recepção/escalas ainda precisam

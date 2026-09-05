@@ -47,3 +47,11 @@ escrita direta indevida e leitura Kids por responsável/operador. Consulte
 O bundle iOS com Expo Crypto e o typecheck passaram; não houve teste em aparelho.
 
 Não foram publicados app, painel ou regras durante esta conferência.
+
+## Complemento: inspeção do Jules aberto no Safari
+
+A conversa da sessão `13564739735121763111` continha um plano ainda aguardando
+resposta para exibir o Passe em `MeuPerfilScreen`. Não havia implementação
+publicada dessa proposta. As sete sessões em andamento foram pausadas e as
+automações do repositório desligadas; veja
+`encerramento-jules-2026-09-05.md` para as pendências e a retomada local.
