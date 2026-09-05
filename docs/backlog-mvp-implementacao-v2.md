@@ -27,7 +27,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.5 | Limites e proteção pública | Parcial | Recepção/escalas usam a política transacional de pessoas; limite persistente/anti-spam e mediação segura de comprovantes. |
 | P1.1 | Verdade dos dados | Parcial | Remover fallbacks de recepção, pastoral, rede, marketplace e bem-estar; vazio/erro não inventa registros; Wi-Fi não confirma falha. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
-| P1.3 | Consolidação da LP | Pendente | Fonte única em apps/lp, oferta compatível com plano vigente, CTAs/SEO/privacidade e preview aprovados; deploy independente. |
+| P1.3 | Consolidação da LP | Parcial — entrega 2 | Oferta de 50 corrigida; 22 arquivos redundantes removidos, alias /landing validado em preview. Falta convergir LP ativa do painel, provas comerciais, SEO/privacidade e migração de domínio. |
 | P1.4 | Cobrança, comunicação e IA | Parcial | Idempotência de checkout, validação de tenant/destinatários, opt-out e cota/rate limit uniformes; homologação sandbox. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 

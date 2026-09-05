@@ -325,7 +325,7 @@ export default function SignupPage() {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Criar sua conta</h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
-            Grátis até 100 membros. Sem cartão de crédito.
+            Grátis até 50 membros. Sem cartão de crédito.
           </p>
         </div>
 

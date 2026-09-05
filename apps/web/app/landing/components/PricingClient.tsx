@@ -10,7 +10,7 @@ const PLANS = [
     priceMonthly: 0,
     desc: "Para igrejas começando",
     features: [
-      "Até 100 membros",
+      "Até 50 membros",
       "Recepção & visitantes",
       "Cadastro completo",
       "Dashboard básico",

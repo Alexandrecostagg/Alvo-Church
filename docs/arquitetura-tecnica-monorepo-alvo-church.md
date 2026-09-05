@@ -21,7 +21,11 @@ O [diagnóstico atual](status-implementacao-2026-09-05.md) registra as evidênci
   filtros. Não há workflow GitHub Actions versionado nesta base; a configuração
   remota do Cloudflare não foi auditada nesta revisão.
 
-Essa é uma recomendação documentada; não houve extração de código, criação de
+Entrega 2: removidos componentes duplicados/sem uso de `apps/lp`; a rota
+`/landing` passou a reutilizar a página principal. A landing do painel e o
+roteador de domínio continuam ativos até migração.
+
+Essa é uma recomendação documentada; não houve extração para outro repo, criação de
 repo, mudança de DNS ou deploy. A sequência de migração/rollback da LP está no
 diagnóstico. Separar Git não implica separar banco ou duplicar regras de negócio.
 

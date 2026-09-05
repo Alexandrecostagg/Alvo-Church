@@ -15,7 +15,7 @@ apps/mobile/dist
 apps/web/.next
 apps/web/.cloudflare-bin
 apps/web/.open-next
-apps/web/.wrangler
+.wrangler/
 *.log
 .env
 .env.local

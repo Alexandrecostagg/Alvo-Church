@@ -6,7 +6,9 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
 - Regra do usuário: manter 50 membros no gratuito, atualizar percentual/planos e
   fazer commit ao fim de cada entrega; descartar cópias comprovadamente sem uso.
 - Entrega 1 concluída: dependências corrigidas, 0 críticos/0 altos/1 moderado
-  residual de ferramenta. Percentual atual: 64,20%; veja `docs/entregas-2026-09-05.md`.
+  residual de ferramenta. Percentual após entrega 1: 64,20%; veja `docs/entregas-2026-09-05.md`.
+- Entrega 2 concluída: oferta de 50 na LP/cadastro, 22 arquivos redundantes
+  removidos e rota LP legada reutilizando a principal. Atual: 64,45% (~64,5%).
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
   `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
   63,25% como linha de base (não prontidão de produção nem PRD completo).

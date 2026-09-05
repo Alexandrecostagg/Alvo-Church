@@ -13,7 +13,7 @@ import { NavActive } from "./components/NavActive";
 export const metadata: Metadata = {
   title: "Plataforma Esdras — Gestão para Igrejas e Redes",
   description:
-    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado. Grátis até 100 membros, sem cartão de crédito.",
+    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado. Grátis até 50 membros, sem cartão de crédito.",
   openGraph: {
     title: "Plataforma Esdras — Gestão para Igrejas e Redes",
     description:
@@ -108,7 +108,7 @@ function Hero() {
           </a>
         </div>
         <p className="lp-hero-note">
-          Grátis até 100 membros. Sem cartão de crédito.
+          Grátis até 50 membros. Sem cartão de crédito.
           {" · "}
           <a
             href="https://wa.me/5562993330336?text=Ol%C3%A1!%20Somos%20uma%20rede%20de%20igrejas%20e%20quero%20saber%20mais%20sobre%20a%20Plataforma%20Esdras."

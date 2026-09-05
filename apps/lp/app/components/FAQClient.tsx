@@ -9,7 +9,7 @@ const FAQS = [
   },
   {
     q: "Quantos membros cabem no plano Gratuito?",
-    a: "Até 100 membros cadastrados. É suficiente para igrejas que estão começando a organizar a gestão. Conforme a comunidade cresce, basta upgrade.",
+    a: "Até 50 membros cadastrados. É suficiente para igrejas que estão começando a organizar a gestão. Conforme a comunidade cresce, basta upgrade.",
   },
   {
     q: "A IA Pastoral substitui o pastor?",

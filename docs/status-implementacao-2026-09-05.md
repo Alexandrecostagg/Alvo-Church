@@ -1,6 +1,7 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 1: **64,20%**. Dependências corrigidas e verificadas;
+> Atualização após entrega 2: **64,45% (aproximadamente 64,5%)**. Dependências corrigidas,
+> oferta de 50 membros alinhada e 22 arquivos redundantes da LP removidos;
 > 0 críticos/0 altos/1 moderado residual. Ver [entregas e cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
@@ -95,7 +96,7 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
    confirmação bancária nem doação recorrente automática.
 5. O app registra Expo Push Token, mas a tela de comunicação ainda anuncia push
    e email como “em breve”. Registro de token não comprova entrega de campanha.
-6. A LP anuncia **100 membros** gratuitos; `packages/firebase/src/plans.ts`
+6. Achado inicial, corrigido na entrega 2: a LP anunciava **100 membros** gratuitos; `packages/firebase/src/plans.ts`
    e o teste de limite aplicam **50**. Corrigir conteúdo conforme o plano vigente
    ou alterar o produto por decisão comercial explícita; não aumentar limite
    silenciosamente para acompanhar a propaganda.
