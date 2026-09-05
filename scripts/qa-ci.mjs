@@ -52,6 +52,7 @@ try {
     "qa:kids-custody",
     "qa:kids-media",
     "qa:delivery6",
+    "qa:delivery7",
   ])
     await run([task]);
 } finally {

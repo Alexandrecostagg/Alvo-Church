@@ -32,6 +32,10 @@ service firebase.storage {
     }
 
     // Backend-only Kids media; no Firebase download tokens are issued.
+    match /finance-private/{allPaths=**} {
+      allow read, write: if false;
+    }
+
     match /kids-private/{allPaths=**} {
       allow read, write: if false;
     }

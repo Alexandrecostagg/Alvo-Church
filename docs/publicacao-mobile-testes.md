@@ -87,3 +87,23 @@ operador-responsável, câmera/foto e falha de rede. Sessão fechada não reabre
 A seleção de criança cadastral está no painel; app mantém entrada avulsa.
 Não atribuir resultados físicos, recebimento de push ou distribuição nas lojas
 a um export de JavaScript. Retenção de fotos e preparação remota ainda pendentes.
+
+
+## Atualização da entrega 7 — 05/09/2026
+
+Avanço global 83,70%; mobile estimado em 80%. Declaração de doação usa API
+idempotente, identidade confirmada, comprovante privado JPEG/PNG até 500 KB e
+estado pendente. Erro não é apresentado como pagamento concluído. PIX depende
+da configuração real da igreja. Export Hermes não equivale a teste em aparelho.
+
+Acrescentar ao aceite físico:
+
+- Declarar com/sem comprovante e repetir o toque após queda de rede: uma contribuição.
+- Recusar imagem inválida/grande, revogar conta e trocar de igreja sem expor comprovante.
+- Confirmar no painel: um lançamento; rejeitar: nenhum lançamento de receita.
+- Testar prévia/remoção de foto Kids após retirada e reconsulta no app.
+- Coordenar nova versão do app com APIs, regras e índices: versões antigas que
+  gravam finanças diretamente passarão a ser recusadas. Definir versão mínima
+  e migração antes de publicar, sem habilitar produção por este export.
+
+Sandbox Asaas real, fotos legadas, aparelhos e distribuição continuam pendentes.

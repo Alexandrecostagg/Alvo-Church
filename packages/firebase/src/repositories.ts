@@ -154,7 +154,6 @@ import {
   getMemberBadgesCollectionPath,
   getWeeklyThemesCollectionPath,
   getMemberContributionsCollectionPath,
-  getContributionReceiptsCollectionPath,
   getMemberTribeHistoryCollectionPath,
   getChurchAttendanceCollectionPath,
   getPrayerRequestsCollectionPath
@@ -3094,6 +3093,8 @@ function toFinancialTransaction(documentId: string, data: DocumentData): Financi
   return {
     id: documentId,
     organizationId: String(data.organizationId ?? ""),
+    status: data.status,
+    contributionId: data.contributionId || undefined,
     kind: (data.kind as FinancialTransaction["kind"]) ?? "expense",
     label: String(data.label ?? ""),
     amount: Number(data.amount ?? 0),
@@ -3104,22 +3105,7 @@ function toFinancialTransaction(documentId: string, data: DocumentData): Financi
   };
 }
 
-export async function addFinancialTransaction(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  tx: Omit<FinancialTransaction, "id" | "organizationId" | "createdAt">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getFinancialTransactionsCollectionPath(context)));
-  const record: FinancialTransaction = {
-    ...tx,
-    id: ref.id,
-    organizationId: context.organizationId,
-    createdAt: new Date().toISOString()
-  };
-  await setDoc(ref, cleanFirestoreData(record));
-  return ref.id;
-}
+
 
 export async function fetchFinancialTransactions(
   config: FirebaseWebRuntimeConfig,
@@ -3133,14 +3119,7 @@ export async function fetchFinancialTransactions(
   return snap.docs.map((d) => toFinancialTransaction(d.id, d.data()));
 }
 
-export async function deleteFinancialTransaction(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  transactionId: string
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getFinancialTransactionsCollectionPath(context), transactionId));
-}
+
 
 // ─── Doação pública sem-app (leads/intenções) ─────────────────────────────────
 
@@ -3152,53 +3131,12 @@ function toGivingIntent(documentId: string, data: DocumentData): GivingIntent {
     whatsapp: String(data.whatsapp ?? ""),
     amount: Number(data.amount ?? 0),
     source: "public_give",
-    status: "captured",
+    status: data.status ?? "captured",
+    campaignId: data.campaignId || undefined,
     orgSlug: data.orgSlug ? String(data.orgSlug) : undefined,
     consentContact: Boolean(data.consentContact),
     createdAt: String(data.createdAt ?? "")
   };
-}
-
-// Create PÚBLICO (não autenticado) — a rule valida o shape estrito. Só os
-// campos permitidos vão no doc (nada de undefined, p/ casar com keys().hasOnly).
-export async function saveGivingIntent(
-  config: FirebaseWebRuntimeConfig,
-  intent: Omit<GivingIntent, "id">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getGivingIntentsCollectionPath({ organizationId: intent.organizationId })));
-  const data: Record<string, string | number | boolean> = {
-    organizationId: intent.organizationId,
-    name: intent.name,
-    whatsapp: intent.whatsapp,
-    amount: intent.amount,
-    source: "public_give",
-    status: "captured",
-    consentContact: intent.consentContact,
-    createdAt: intent.createdAt
-  };
-  if (intent.orgSlug) data.orgSlug = intent.orgSlug;
-  if (intent.campaignId) data.campaignId = intent.campaignId;
-  await setDoc(ref, data);
-  return ref.id;
-}
-
-// "Já paguei" no link público: cria o comprovante (create público, shape estrito
-// pela rule). Só os campos permitidos, sem undefined.
-export async function saveGivingReceipt(
-  config: FirebaseWebRuntimeConfig,
-  receipt: { organizationId: string; intentId: string; imageBase64?: string; createdAt?: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getGivingReceiptsCollectionPath({ organizationId: receipt.organizationId })));
-  const data: Record<string, string> = {
-    organizationId: receipt.organizationId,
-    intentId: receipt.intentId,
-    createdAt: receipt.createdAt ?? new Date().toISOString(),
-  };
-  if (receipt.imageBase64) data.imageBase64 = receipt.imageBase64;
-  await setDoc(ref, data);
-  return ref.id;
 }
 
 export async function fetchGivingReceipts(
@@ -3240,7 +3178,7 @@ export async function saveGivingCampaign(
     description: campaign.description,
     category: campaign.category,
     goalAmount: campaign.goalAmount,
-    raisedAmount: campaign.raisedAmount,
+    ...(campaign.id ? {} : { raisedAmount: 0 }),
     status: campaign.status,
     createdByUserId: campaign.createdByUserId,
     createdAt: campaign.createdAt ?? now,
@@ -3793,19 +3731,6 @@ export async function setOrgPlan(
   await setDoc(ref, { plan }, { merge: true });
 }
 
-// Grava os IDs do Asaas assim que o checkout é criado — não depende do
-// webhook (que só confirma quando o pagador de fato paga) pra já sabermos
-// qual assinatura consultar no histórico de faturas.
-export async function linkAsaasSubscription(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  ids: { asaasCustomerId: string; asaasSubscriptionId: string }
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
-  await setDoc(ref, ids, { merge: true });
-}
-
 export interface OrgBillingInfo {
   plan: PlanId;
   billingStatus: "active" | "overdue" | "suspended";
@@ -3913,51 +3838,7 @@ export async function fetchMemberContributionsByPersonId(
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function addMemberContribution(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  contribution: Omit<MemberContribution, "id">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getMemberContributionsCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData(contribution));
-  return ref.id;
-}
 
-// Salva o comprovante como imagem base64 num doc separado (não usa Storage, que
-// não está provisionado no projeto). Retorna o id do doc pra referenciar na
-// contribuição. Doc separado evita bloatar a query de contributions.
-// Falha aqui não deve bloquear o registro do valor (chamador ignora o erro).
-export async function saveContributionReceipt(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  receipt: { organizationId: string; imageBase64: string; contentType?: string; createdByUserId: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getContributionReceiptsCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData({
-    organizationId: receipt.organizationId,
-    imageBase64: receipt.imageBase64,
-    contentType: receipt.contentType ?? "image/jpeg",
-    createdByUserId: receipt.createdByUserId,
-    createdAt: new Date().toISOString(),
-  }));
-  return ref.id;
-}
-
-// Lê o comprovante (admin, ao conferir). Retorna data URI pronto p/ <img src>.
-export async function fetchContributionReceipt(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  receiptId: string
-): Promise<{ dataUri: string } | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDoc(doc(firestore, getContributionReceiptsCollectionPath(context), receiptId));
-  if (!snap.exists()) return null;
-  const data = snap.data() as { imageBase64?: string; contentType?: string };
-  if (!data.imageBase64) return null;
-  return { dataUri: `data:${data.contentType ?? "image/jpeg"};base64,${data.imageBase64}` };
-}
 
 // Visão de admin: todas as contribuições da organização (não só as de um
 // membro), usado pelo painel de Finanças. As Firestore rules já permitem
@@ -3976,23 +3857,6 @@ export async function fetchAllContributions(
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemberContribution));
-}
-
-// Confirma uma contribuição autodeclarada pelo membro (status "pending",
-// criada via PIX no app) depois da liderança conferir o comprovante/extrato.
-export async function confirmMemberContribution(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  contributionId: string,
-  confirmedByUid: string
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, getMemberContributionsCollectionPath(context), contributionId);
-  await updateDoc(ref, {
-    status: "confirmed",
-    confirmedBy: confirmedByUid,
-    confirmedAt: new Date().toISOString()
-  });
 }
 
 // ─── Radar Pastoral: presença em culto ─────────────────────────────────────

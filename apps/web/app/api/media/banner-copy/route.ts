@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callChatWithFallback } from "@alvo/ai";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
-import { hasAnyRoleInOrg, TENANT_ADMIN_ROLES } from "../../_lib/tenant-role";
+import {
+  AccountError,
+  boundedJson,
+  privateHeaders,
+} from "../../_lib/kids-media";
+import { aiGate, completeAi } from "../../_lib/ai-quota";
+import { textField } from "../../_lib/finance-operations";
 
 export interface BannerCopyInput {
-  tipo: string;      // Culto Domingo, Evento, Célula, etc.
+  tipo: string; // Culto Domingo, Evento, Célula, etc.
   tema: string;
   pregador?: string;
   data?: string;
-  estilo?: string;   // "impactante" | "acolhedor" | "reverente"
+  estilo?: string; // "impactante" | "acolhedor" | "reverente"
 }
 
 export interface BannerCopy {
@@ -23,41 +29,58 @@ export interface BannerCopy {
 }
 
 export async function POST(req: NextRequest) {
-  const authorization = req.headers.get("authorization") ?? "";
-  const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  const uid = await verifyFirebaseIdToken(req);
-  if (!uid || !idToken) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
+  let ticket: { auditId: string } | undefined;
+  let orgId = "";
+  try {
+    const authorization = req.headers.get("authorization") ?? "";
+    const idToken = authorization.startsWith("Bearer ")
+      ? authorization.slice(7)
+      : "";
+    const uid = await verifyFirebaseIdToken(req);
+    if (!uid || !idToken) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
 
-  const body = await req.json().catch(() => null) as (BannerCopyInput & { organizationId?: string }) | null;
-  if (!body) {
-    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
-  }
-  const organizationId = body?.organizationId?.trim() ?? "";
-  if (!organizationId) {
-    return NextResponse.json({ error: "organizationId é obrigatório" }, { status: 400 });
-  }
-  if (!await hasAnyRoleInOrg(idToken, organizationId, uid, TENANT_ADMIN_ROLES)) {
-    return NextResponse.json({ error: "Você não tem permissão para gerar banners desta organização." }, { status: 403 });
-  }
-  if (!body.tipo?.trim() || !body.tema?.trim() || body.tipo.length > 100 || body.tema.length > 500) {
-    return NextResponse.json({ error: "Tipo e tema são obrigatórios e devem ter tamanho válido." }, { status: 422 });
-  }
+    const body = (await boundedJson(req, 4096)) as
+      | (BannerCopyInput & { organizationId?: string })
+      | null;
+    if (!body) {
+      return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+    }
+    const organizationId = body?.organizationId?.trim() ?? "";
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: "organizationId é obrigatório" },
+        { status: 400 },
+      );
+    }
+    textField(body.tipo, "Tipo", 100);
+    textField(body.tema, "Tema", 500);
+    textField(body.pregador, "Pregador", 120, true);
+    textField(body.data, "Data", 100, true);
+    textField(body.estilo, "Estilo", 100, true);
+    await aiGate(organizationId, uid, "banner_copy", false);
+    // Cascata de provedores: DeepSeek (principal) → Groq (fallback). Basta uma
+    // das chaves estar configurada — a troca de provedor acontece no @alvo/ai.
+    const keys = {
+      deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      groqApiKey: process.env.GROQ_API_KEY,
+    };
+    if (!keys.deepseekApiKey && !keys.groqApiKey) {
+      return NextResponse.json(
+        {
+          error:
+            "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY).",
+        },
+        { status: 500 },
+      );
+    }
 
-  // Cascata de provedores: DeepSeek (principal) → Groq (fallback). Basta uma
-  // das chaves estar configurada — a troca de provedor acontece no @alvo/ai.
-  const keys = {
-    deepseekApiKey: process.env.DEEPSEEK_API_KEY,
-    groqApiKey: process.env.GROQ_API_KEY,
-  };
-  if (!keys.deepseekApiKey && !keys.groqApiKey) {
-    return NextResponse.json({ error: "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY)." }, { status: 500 });
-  }
+    ticket = await aiGate(organizationId, uid, "banner_copy");
+    orgId = organizationId;
+    const input: BannerCopyInput = body;
 
-  const input: BannerCopyInput = body;
-
-  const prompt = `Você é um diretor de arte criando um banner de divulgação para redes sociais de uma igreja evangélica.
+    const prompt = `Você é um diretor de arte criando um banner de divulgação para redes sociais de uma igreja evangélica.
 
 Tipo de evento: ${input.tipo}
 Tema: ${input.tema}
@@ -75,31 +98,55 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
   "imagemPrompt": "descrição EM INGLÊS de uma imagem de FUNDO cinematográfica e VIBRANTE que represente o tema visualmente para um cartaz de igreja. Descreva a cena, elementos simbólicos, iluminação (ex: warm golden light, volumetric god rays, glowing embers) e paleta de cores ricas. Deve ser luminosa e cheia de vida, NUNCA escura/apagada. NÃO inclua texto, letras, palavras ou pessoas com rosto reconhecível. Exemplo: 'two human hands reaching toward each other over glowing golden fire, warm amber and orange tones, volumetric light rays from above, dramatic cinematic poster art, luminous, rich vivid colors, ultra detailed'"
 }`;
 
-  // DeepSeek (principal) → cascata Groq (fallback). response_format json
-  // elimina fences de markdown e retries por JSON malformado; o JSON de copy
-  // tem ~300 tokens, então o modelo rápido já basta.
-  let raw: string;
-  try {
-    const result = await callChatWithFallback(keys, [{ role: "user", content: prompt }], {
-      maxTokens: 500,
-      temperature: 0.8,
-      jsonMode: true,
-    });
-    raw = result.content || "{}";
+    // DeepSeek (principal) → cascata Groq (fallback). response_format json
+    // elimina fences de markdown e retries por JSON malformado; o JSON de copy
+    // tem ~300 tokens, então o modelo rápido já basta.
+    let raw: string;
+    try {
+      const result = await callChatWithFallback(
+        keys,
+        [{ role: "user", content: prompt }],
+        {
+          maxTokens: 500,
+          temperature: 0.8,
+          jsonMode: true,
+        },
+      );
+      raw = result.content || "{}";
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Erro desconhecido";
+      throw new AccountError(
+        502,
+        "Falha ao gerar o texto. A tentativa iniciada permanece na cota.",
+      );
+    }
+
+    // strip accidental markdown fences
+    const cleaned = raw
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+
+    let copy: BannerCopy;
+    try {
+      copy = JSON.parse(cleaned) as BannerCopy;
+    } catch {
+      throw new AccountError(502, "Resposta de IA inválida.");
+    }
+
+    await completeAi(orgId, ticket.auditId, "completed");
+    return NextResponse.json({ ok: true, copy }, { headers: privateHeaders });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Erro desconhecido";
-    return NextResponse.json({ error: `IA: ${message}` }, { status: 502 });
+    if (ticket)
+      await completeAi(orgId, ticket.auditId, "failed").catch(() => {});
+    return NextResponse.json(
+      {
+        error: e instanceof AccountError ? e.message : "Geração indisponível.",
+      },
+      {
+        status: e instanceof AccountError ? e.status : 503,
+        headers: { ...privateHeaders, "Retry-After": "60" },
+      },
+    );
   }
-
-  // strip accidental markdown fences
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-  let copy: BannerCopy;
-  try {
-    copy = JSON.parse(cleaned) as BannerCopy;
-  } catch {
-    return NextResponse.json({ error: "Resposta da IA inválida", raw }, { status: 502 });
-  }
-
-  return NextResponse.json({ ok: true, copy });
 }

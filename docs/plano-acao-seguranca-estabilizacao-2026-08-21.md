@@ -6,6 +6,17 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Entrega ampliada 7 — 05/09
+
+**83,70% estimados (+7,05 pontos)**. Finanças mediadas por API, comprovantes
+privados, conferência/auditoria/ledger atômicos e CSV mensal; cobrança vinculada
+à ordem com repetição segura; texto/banner/imagem na mesma cota; retenção Kids
+assistida. [Evidências e limites](entrega-ampliada-7-2026-09-05.md).
+Antes de publicar: migrar referências de cobrança legadas, homologar Asaas real,
+inventariar mídias antigas e coordenar backend/regras/índices/versão mobile.
+Referência legada de igreja conhecida agora retorna 409 para revisão, sem
+ativar plano por inferência. Não publicar esse comportamento sem migração.
+
 ## Entrega ampliada 6 — 05/09
 
 **76,65% estimados (+7,20 pontos)**. Cadastros legados centralizados, limite 50
@@ -30,11 +41,11 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
-| 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Recepção/escalas migradas na entrega 6; rever demais coleções; vínculo conta/pessoa validado localmente na entrega 3. |
-| 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR/fotos validados na entrega 4; faltam publicação/IAM, legado/retenção, mediação de comprovantes e rate limit persistente/anti-spam. |
-| 3 — Custo/cobrança | API principal de IA consome cota no servidor; PIX estático existe. | Cota uniforme de banners, idempotência de checkout, consentimento/opt-out e destinatários da comunicação. |
-| 4 — Dados/fluxos | Dashboard/ficha sem dados inventados; leitura Kids por responsável/operador testada. | Fallbacks em recepção, rede, marketplace, bem-estar e pastoral; falso sucesso Wi-Fi; fluxo Kids mobile. |
-| 5 — Validação | 167 testes, typecheck, QA transacional e export iOS registrados; build LP passou nesta revisão. | Dependências com advisories; homologação física Android/iOS; cobertura completa de papéis/coleções e integrações. |
+| 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem. | Revisar demais coleções, provisionamento e migração de referências antigas. |
+| 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. | Publicação/IAM, inventário legado, relação familiar, aparelhos e Turnstile. |
+| 3 — Custo/cobrança | Cota compartilhada de IA e rate limit persistente; checkout/webhook idempotentes com provedor simulado. | Sandbox real, recuperação/migração assistida, destinatários e envio de comunicação. |
+| 4 — Dados/fluxos | Frentes da entrega 6 revisadas; finanças sem receita fictícia, ledger auditado e CSV na entrega 7. | EAD/eventos e demais operações ainda precisam de auditoria; integração bancária pendente. |
+| 5 — Validação | 301 testes, 444 checks numerados mais cadastro; QA no navegador e builds locais. | Aparelhos, integrações externas, execução remota de CI e publicação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 
@@ -45,14 +56,14 @@ Leitura alheia de pessoas/validações negada; legado não basta para comprovar 
 192 testes e 78 verificações HTTP/regras passaram. Ainda faltam aparelhos e fluxo
 integral do parceiro. [Detalhes](vinculo-passe-2026-09-05.md).
 
-### Auditoria de dependências de 05/09
+### Auditoria inicial de dependências de 05/09 (histórico anterior à entrega 1)
 
 `pnpm audit --prod` retornou 3 críticos, 50 altos, 51 moderados e 5 baixos no
 resumo do scanner. O inventário possui 105 advisories distintos; não confundir
 com quantidade de falhas exploráveis no produto. Inclui cadeias de ferramentas
 do Expo. [Inventário](auditoria-dependencias-2026-09-05.json).
 
-Next instalado ainda é 16.2.4; o mínimo antigo abaixo não deve virar garantia
+Na auditoria inicial, Next era 16.2.4; o mínimo antigo abaixo não deve virar garantia
 permanente de segurança. Selecionar versões compatíveis que resolvam **todos os
 avisos aplicáveis atuais**, incluindo Hono e transitivos, com auditoria após o
 lockfile atualizado. Os críticos reportados envolvem protobufjs, shell-quote e

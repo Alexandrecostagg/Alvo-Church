@@ -335,33 +335,24 @@ service cloud.firestore {
     // Contadores de IA são escritos somente pelo backend com service account,
     // dentro de transação. Permitir escrita pelo cliente permitiria burlar a
     // cota ou corromper o consumo da organização.
+    match /organizations/{orgId}/aiRateLimits/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/aiAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
     match /organizations/{orgId}/aiUsage/{documentId} {
       allow read: if isTenantMember(orgId) || isPlatformAdmin();
       allow write: if false;
     }
 
-    // Financial records: a member can only read their own contributions.
-    // Admin lança contribuição já confirmada manualmente a qualquer momento.
-    // Membro comum só pode criar a PRÓPRIA contribuição, e só como "pending"
-    // (autodeclarada via PIX real pelo app) — igreja confirma depois de
-    // conferir o comprovante/extrato, mesmo espírito de moderação usado em
-    // prayerRequests abaixo. Depois de criada, só admin edita/confirma.
+    // Financial writes are server transactions; members read only their own declarations.
     match /organizations/{orgId}/contributions/{contributionId} {
       allow read: if isTenantAdmin(orgId)
         || (isTenantMember(orgId) && resource.data.userId == request.auth.uid);
 
-      allow create: if isTenantAdmin(orgId)
-        || (
-          isTenantMember(orgId)
-          && request.resource.data.organizationId == orgId
-          && request.resource.data.userId == request.auth.uid
-          && request.resource.data.registeredBy == request.auth.uid
-          && request.resource.data.status == "pending"
-          && request.resource.data.amount is number
-          && request.resource.data.amount > 0
-        );
-
-      allow update, delete: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Promoções do marketplace (nível flat da org): membro lê (feed/notificação
@@ -380,15 +371,9 @@ service cloud.firestore {
       allow read, write: if isTenantAdmin(orgId);
     }
 
-    // Comprovantes de contribuição (imagem base64). O membro cria o próprio ao
-    // autodeclarar o PIX; só admin lê (dado financeiro) — por isso também está
-    // excluído dos catch-alls de leitura abaixo.
+    // Receipt metadata and legacy media are available only through the private API.
     match /organizations/{orgId}/contributionReceipts/{receiptId} {
-      allow read: if isTenantAdmin(orgId);
-      allow create: if isTenantMember(orgId)
-        && request.resource.data.organizationId == orgId
-        && request.resource.data.createdByUserId == request.auth.uid;
-      allow update, delete: if isTenantAdmin(orgId);
+      allow read, write: if false;
     }
 
     // Mídia — histórico de banners gerados (thumbnail + inputs para reabrir).
@@ -427,51 +412,46 @@ service cloud.firestore {
     match /organizations/{orgId}/givingCampaigns/{campaignId} {
       allow get: if true;
       allow list: if isTenantMember(orgId);
-      allow write: if isTenantAdmin(orgId);
+      allow create: if isTenantAdmin(orgId) && request.resource.data.organizationId == orgId && request.resource.data.raisedAmount == 0;
+      allow update: if isTenantAdmin(orgId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "raisedAmount"]);
+      allow delete: if isTenantAdmin(orgId) && resource.data.raisedAmount == 0;
     }
 
-    // Comprovante de doação pública ("Já paguei" no link): create não autenticado
-    // com shape estrito (imagem base64 até ~1MB). Só admin lê.
+    // Public declarations are mediated by a scoped, expiring capability.
     match /organizations/{orgId}/givingReceipts/{receiptId} {
       allow read: if isTenantAdmin(orgId);
-      allow create: if request.resource.data.organizationId == orgId
-        && request.resource.data.keys().hasOnly(["organizationId", "intentId", "imageBase64", "createdAt"])
-        && request.resource.data.intentId is string
-        && (!("imageBase64" in request.resource.data) || request.resource.data.imageBase64.size() < 1500000);
+      allow write: if false;
     }
 
-    // Doação pública sem-app (/p/{slug}/give): create não autenticado com shape
-    // estrito. NÃO envolve dinheiro (só o lead/intenção) — o PIX é da própria
-    // igreja. Leitura/gestão só do time do tenant.
+    // Donor contacts are private; public writes cannot bypass backend quotas.
     match /organizations/{orgId}/givingIntents/{intentId} {
-      allow create: if request.resource.data.source == "public_give"
-        && request.resource.data.status == "captured"
-        && request.resource.data.organizationId == orgId
-        && request.resource.data.keys().hasOnly([
-          "organizationId", "name", "whatsapp", "amount",
-          "source", "status", "orgSlug", "campaignId", "consentContact", "createdAt"
-        ])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.whatsapp is string
-        && request.resource.data.whatsapp.size() >= 8
-        && request.resource.data.whatsapp.size() <= 20
-        && request.resource.data.amount is number
-        && request.resource.data.amount > 0
-        && request.resource.data.amount <= 1000000
-        && request.resource.data.consentContact is bool
-        && request.resource.data.createdAt is string
-        && request.resource.data.createdAt.size() <= 40
-        && (request.resource.data.orgSlug == null || (request.resource.data.orgSlug is string && request.resource.data.orgSlug.size() <= 120));
-      allow read: if isTenantMember(orgId);
-      allow update, delete: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Ledger financeiro (lançamentos de entrada/saída/missões): dado sensível —
     // só a liderança administrativa lê e escreve.
     match /organizations/{orgId}/financialTransactions/{transactionId} {
-      allow read, write: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+
+    match /organizations/{orgId}/billingOrders/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/billingEvents/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/financeAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/financeReferences/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/givingLimits/{id} {
+      allow read, write: if false;
     }
 
     // Prayer requests: any signed-in tenant member can submit one (from the

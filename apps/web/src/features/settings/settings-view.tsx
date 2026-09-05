@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Copy, Check, QrCode, ExternalLink,
   Bot, CalendarRange, GraduationCap, Handshake,
@@ -29,15 +29,13 @@ const ORG_TIER_LABELS: Record<OrgTier, string> = {
 };
 
 /* ── QR helper ──────────────────────────────────────────────────────────── */
-function QRCodeDisplay({ size = 180 }: { size?: number }) {
-  return (
-    <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
-      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--alvo-accent-dark)" }} />
-      <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
-        Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
-      </span>
-    </div>
-  );
+function QRCodeDisplay({ url, size = 180 }: { url: string; size?: number }) {
+  const [image, setImage] = useState("");
+  useEffect(() => { let cancelled = false; setImage("");
+    import("qrcode").then(qr => qr.toDataURL(url, { width:size, margin:2 })).then(data => { if (!cancelled) setImage(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [url,size]);
+  return image ? <img src={image} width={size} height={size} alt="QR Code do link público" /> : <p>Use o link abaixo enquanto o QR Code é preparado.</p>;
 }
 
 /* ── Module definitions ──────────────────────────────────────────────────── */
@@ -148,14 +146,14 @@ export function SettingsView() {
     }
   }
 
-  const orgSlug = organizationId;
+  const orgSlug = tenantRuntime?.organization?.slug || "";
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  const publicLinks = [
+  const publicLinks = orgSlug ? [
     { key: "visit",  label: "Formulário de Visitante", desc: "Exiba este QR Code na entrada do culto", path: `/p/${orgSlug}/visit`, highlight: true },
     { key: "give",   label: "Link de Doação",          desc: "Compartilhe para receber dízimos e ofertas", path: `/p/${orgSlug}/give`, highlight: false },
     { key: "portal", label: "Portal Público",          desc: "Página pública da organização", path: `/p/${orgSlug}`, highlight: false },
-  ];
+  ] : [];
 
   async function copyLink(url: string, key: string) {
     await navigator.clipboard.writeText(url);
@@ -396,6 +394,7 @@ export function SettingsView() {
           <h2 className="section-title">Links Públicos &amp; QR Codes</h2>
         </div>
         <div style={{ display: "grid", gap: 16, maxWidth: 720 }}>
+          {!orgSlug && <p>A organização ainda não possui um endereço público configurado.</p>}
           {publicLinks.map(link => {
             const fullUrl = `${baseUrl}${link.path}`;
             return (
@@ -414,7 +413,7 @@ export function SettingsView() {
                     <ExternalLink size={14} />
                   </a>
                 </div>
-                {link.highlight && <div style={{ display: "flex", justifyContent: "center" }}><QRCodeDisplay size={160} /></div>}
+                {<div style={{ display: "flex", justifyContent: "center" }}><QRCodeDisplay url={fullUrl} size={160} /></div>}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", overflow: "hidden" }}>
                   <code style={{ flex: 1, fontSize: 12, color: "var(--alvo-ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fullUrl}</code>
                   <button

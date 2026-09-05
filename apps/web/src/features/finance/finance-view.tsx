@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { 
   ReceiptText, 
   TrendingUp, 
@@ -31,12 +31,11 @@ import { useAppAuth } from "../../../app/providers";
 import type { MemberContribution, FinancialTransaction } from "@alvo/types";
 import {
   fetchAllContributions,
-  confirmMemberContribution,
-  fetchContributionReceipt,
   fetchFinancialTransactions,
-  addFinancialTransaction,
-  deleteFinancialTransaction
+  fetchGivingCampaigns
 } from "@alvo/firebase";
+
+import { financeRequest } from "../../lib/finance-client";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -55,27 +54,40 @@ export interface GivingGoal {
   category: string;
 }
 
-const initialGivingGoals: GivingGoal[] = [
-  {
-    id: "goal_temple",
-    title: "Reforma & Ampliação do Templo",
-    description: "Meta para ampliação das galerias laterais do auditório e modernização do sistema de som.",
-    targetAmount: 100000,
-    raisedAmount: 64500,
-    category: "Obras"
-  },
-  {
-    id: "goal_social",
-    title: "Ação Social Cesta Solidária",
-    description: "Arrecadação mensal de mantimentos e kits de higiene para famílias vulneráveis.",
-    targetAmount: 12000,
-    raisedAmount: 9800,
-    category: "Social"
-  }
-];
-
 export function FinanceView() {
   const { configured, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
+  const [decision, setDecision] = useState<{id:string;action:"confirm"|"reject"|"void"}|null>(null);
+  const [decisionReason, setDecisionReason] = useState("");
+  const [statementChecked, setStatementChecked] = useState(false);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  function openDecision(id: string, action: "confirm"|"reject"|"void") { setDecision({id,action}); setDecisionReason(""); setStatementChecked(false); setError(""); }
+  async function submitDecision(e: React.FormEvent) {
+    e.preventDefault(); if (!user || !decision || operationBusy.current || !decisionReason.trim()) return;
+    if (decision.action === "confirm" && !statementChecked) return;
+    operationBusy.current = true; setDecisionBusy(true); setError("");
+    try {
+      await financeRequest(user, { action:decision.action, organizationId, contributionId:decision.id, transactionId:decision.id, reference:decisionReason, reason:decisionReason });
+      setContributions(await fetchAllContributions(firebaseConfig,{organizationId},200)); await reloadTransactions(); setDecision(null);
+    } catch(e) { setError(e instanceof Error ? e.message : "Não foi possível concluir."); }
+    finally { operationBusy.current = false; setDecisionBusy(false); }
+  }
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0,7));
+  const [reportSummary, setReportSummary] = useState("");
+  async function exportMonth() {
+    if (!user || operationBusy.current) return; operationBusy.current = true; setError("");
+    try {
+      const report = await financeRequest(user, { action: "report", organizationId, month: reportMonth });
+      if (currentOrg.current !== organizationId) return;
+      const url = URL.createObjectURL(new Blob([report.csv], {type:"text/csv;charset=utf-8"}));
+      const a = document.createElement("a"); a.href = url; a.download = `financas-${reportMonth}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+      setReportSummary(`${report.entries.length} lançamentos. Entradas: ${formatCurrency(report.incomeCents/100)}; saídas: ${formatCurrency(report.expenseCents/100)}; saldo do mês: ${formatCurrency(report.balanceCents/100)}.`);
+    } catch(e) { setError(e instanceof Error ? e.message : "Não foi possível exportar."); }
+    finally { operationBusy.current = false; }
+  }
+  const [error, setError] = useState("");
+  const operationBusy = useRef(false);
+  const manualRequest = useRef("");
+  const currentOrg = useRef(organizationId); currentOrg.current = organizationId;
   const orgSlug = tenantRuntime?.organization?.slug ?? "";
 
   // Contribuições reais vindas do app (PIX autodeclarado) — os relatórios
@@ -91,13 +103,13 @@ export function FinanceView() {
   const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
 
   async function openReceipt(receiptId: string) {
-    if (!organizationId) return;
+    if (!organizationId || !user) return;
     setLoadingReceiptId(receiptId);
     try {
-      const r = await fetchContributionReceipt(firebaseConfig, { organizationId }, receiptId);
-      if (r) setReceiptModal(r.dataUri);
+      const r = await financeRequest(user, { action: "receipt", organizationId, receiptId });
+      if (currentOrg.current === organizationId) setReceiptModal(r.dataUrl);
     } catch (e) {
-      console.error("Falha ao carregar comprovante:", e);
+      setError(e instanceof Error ? e.message : "Comprovante indisponível.");
     } finally {
       setLoadingReceiptId(null);
     }
@@ -106,28 +118,16 @@ export function FinanceView() {
   useEffect(() => {
     if (!configured || !organizationId) { setContribLoading(false); return; }
     let cancelled = false;
+    setContributions([]); setReceiptModal(null); setContribLoading(true);
     fetchAllContributions(firebaseConfig, { organizationId }, 200)
       .then((list) => { if (!cancelled) setContributions(list); })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setError("Não foi possível carregar contribuições."); })
       .finally(() => { if (!cancelled) setContribLoading(false); });
     return () => { cancelled = true; };
   }, [configured, organizationId, firebaseConfig]);
 
-  async function handleConfirmContribution(id: string) {
-    if (!organizationId || !user) return;
-    setConfirmingId(id);
-    try {
-      await confirmMemberContribution(firebaseConfig, { organizationId }, id, user.uid);
-      setContributions((prev) => prev.map((c) => c.id === id ? { ...c, status: "confirmed", confirmedBy: user.uid, confirmedAt: new Date().toISOString() } : c));
-    } catch {
-      // silencioso — admin pode tentar de novo pelo botão
-    } finally {
-      setConfirmingId(null);
-    }
-  }
-
   const pendingContributions = contributions.filter((c) => c.status === "pending");
-  const confirmedContributions = contributions.filter((c) => c.status === "confirmed");
+  const confirmedContributions = contributions.filter((c) => (c.status === "confirmed" || !c.status) && !c.ledgerId);
 
   // Ledger real: lançamentos individuais (entradas/saídas/missões).
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
@@ -135,16 +135,20 @@ export function FinanceView() {
     if (!configured || !organizationId) return;
     try {
       const list = await fetchFinancialTransactions(firebaseConfig, { organizationId }, 500);
-      setTransactions(list);
-    } catch { /* silencioso */ }
+      if (currentOrg.current === organizationId) setTransactions(list);
+    } catch { if (currentOrg.current === organizationId) setError("Não foi possível carregar os lançamentos."); }
   }, [configured, organizationId, firebaseConfig]);
-  useEffect(() => { void reloadTransactions(); }, [reloadTransactions]);
+  useEffect(() => { setTransactions([]); setReceiptModal(null); setDecision(null); setReportSummary(""); manualRequest.current = ""; void reloadTransactions(); }, [reloadTransactions]);
 
   const [filterQuery, setFilterQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"chart" | "distribution" | "goals">("chart");
 
-  // Metas de Arrecadação (ainda estático — real fica p/ fase futura)
-  const [givingGoals] = useState<GivingGoal[]>(initialGivingGoals);
+  // Metas reais das campanhas; somente valores conferidos.
+  const [givingGoals, setGivingGoals] = useState<GivingGoal[]>([]);
+  useEffect(() => { let cancelled = false; setGivingGoals([]);
+    if (organizationId && configured) fetchGivingCampaigns(firebaseConfig, { organizationId }).then(list => { if (!cancelled) setGivingGoals(list.map(c => ({ id: c.id, title: c.title, description: c.description || "", targetAmount: c.goalAmount, raisedAmount: c.raisedAmount, category: c.category || "Campanha" }))); }).catch(() => { if (!cancelled) setError("Não foi possível carregar as campanhas."); });
+    return () => { cancelled = true; };
+  }, [organizationId, configured, firebaseConfig]);
 
   // Modais
   const [showAddModal, setShowAddModal] = useState(false);
@@ -172,14 +176,14 @@ export function FinanceView() {
     };
 
     const entries = [
-      ...transactions.map((t) => ({
+      ...transactions.filter(t => t.status !== "voided").map((t) => ({
         id: t.id,
         category: kindToCategory[t.kind],
         label: t.label,
         amount: t.amount,
         note: t.note ?? "",
         createdAt: t.date,
-        source: "tx" as const
+        source: t.contributionId ? "contrib" as const : "tx" as const
       })),
       ...confirmedContributions.map((c) => ({
         id: c.id,
@@ -257,14 +261,16 @@ export function FinanceView() {
   // Lançamento Manual — persiste de verdade no ledger (financialTransactions).
   const handleCreateEntry = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (operationBusy.current || !user) return;
     const amountVal = parseFloat(newEntry.amount);
     if (!newEntry.label || isNaN(amountVal) || amountVal <= 0) return;
     if (!configured || !organizationId) { setShowAddModal(false); return; }
 
     const kind: FinancialTransaction["kind"] =
       newEntry.category === "Entrada" ? "income" : newEntry.category === "Saída" ? "expense" : "missions";
+    operationBusy.current = true; manualRequest.current ||= crypto.randomUUID();
     try {
-      await addFinancialTransaction(firebaseConfig, { organizationId }, {
+      await financeRequest(user, { action: "manual", organizationId, requestId: manualRequest.current,
         kind,
         label: newEntry.label.trim(),
         amount: amountVal,
@@ -273,26 +279,37 @@ export function FinanceView() {
         createdByUserId: user?.uid
       });
       await reloadTransactions();
+      manualRequest.current = "";
       setNewEntry({ category: "Entrada", label: "", amount: "", note: "" });
       setShowAddModal(false);
-    } catch {
-      // mantém o modal aberto para o admin tentar de novo
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Falha ao salvar lançamento."); }
+    finally { operationBusy.current = false; }
   };
 
   // Excluir lançamento (só os manuais; contribuições PIX se gerenciam no painel próprio).
-  const handleDeleteEntry = async (id: string, source: "tx" | "contrib") => {
-    if (source !== "tx" || !configured || !organizationId) return;
-    if (!window.confirm("Excluir este lançamento do ledger?")) return;
-    try {
-      await deleteFinancialTransaction(firebaseConfig, { organizationId }, id);
-      await reloadTransactions();
-    } catch { /* silencioso */ }
-  };
+  const handleDeleteEntry = (id: string, source: "tx" | "contrib") => { if (source === "tx") openDecision(id,"void"); };
 
   return (
     <main className="finance-workbench animate-entrance">
+      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
       
+      <section style={{ padding: 16 }}>
+        <label>Mês do relatório <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} /></label>{" "}
+        <button className="btn-secondary" onClick={exportMonth}>Baixar CSV do mês</button>
+        {reportSummary && <p role="status">{reportSummary}</p>}
+        <p>O painel abaixo mostra até 500 lançamentos recentes e 200 contribuições. O CSV consulta o mês completo, com limite explícito de 1.000 registros por origem.</p>
+      </section>
+      {decision && <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(15,23,42,.7)",display:"grid",placeItems:"center",padding:16}}>
+        <form role="dialog" aria-modal="true" aria-label="Conferência financeira" onSubmit={submitDecision} style={{background:"white",color:"#0f172a",padding:24,borderRadius:16,maxWidth:480,width:"100%",display:"grid",gap:16}}>
+          <h2>{decision.action === "confirm" ? "Conferir recebimento" : decision.action === "reject" ? "Rejeitar declaração" : "Anular lançamento manual"}</h2>
+          <p>{decision.action === "confirm" ? "Verifique o crédito no extrato bancário. A imagem do comprovante, sozinha, não confirma o recebimento." : "O histórico e a auditoria serão preservados."}</p>
+          <label>{decision.action === "confirm" ? "Referência única do extrato" : "Motivo"}<input required maxLength={decision.action === "confirm" ? 160 : 500} value={decisionReason} onChange={e=>setDecisionReason(e.target.value)} style={{width:"100%",padding:10}} /></label>
+          {decision.action === "confirm" && <label><input type="checkbox" checked={statementChecked} onChange={e=>setStatementChecked(e.target.checked)} /> Conferi o valor recebido no extrato bancário.</label>}
+          {error && <p role="alert" style={{color:"#b91c1c"}}>{error}</p>}
+          <button className="btn-primary" disabled={decisionBusy || !decisionReason.trim() || (decision.action === "confirm" && !statementChecked)}>{decisionBusy ? "Salvando..." : "Registrar decisão"}</button>
+          <button type="button" className="btn-secondary" disabled={decisionBusy} onClick={()=>setDecision(null)}>Cancelar</button>
+        </form>
+      </div>}
       {/* Estilo e Folha de Impressão Contábil */}
       <style jsx global>{`
         @media print {
@@ -504,7 +521,7 @@ export function FinanceView() {
                   <strong style={{ display: "block", fontSize: "1.25rem", color: "#dc2626", marginTop: 4 }}>{formatCurrency(currentReport.expenses)}</strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>Fundo Missionário Alocado</span>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>Entradas de missões registradas</span>
                   <strong style={{ display: "block", fontSize: "1.25rem", color: "#2563eb", marginTop: 4 }}>{formatCurrency(currentReport.missions)}</strong>
                 </div>
               </div>
@@ -572,7 +589,7 @@ export function FinanceView() {
         </div>
         <div className="topbar-actions">
            <button onClick={() => setShowPrintStatement(true)} className="ghost-button compact" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}>
-             <Download size={16} /> Exportar Relatório
+             <Download size={16} /> Imprimir visão atual
            </button>
            <button onClick={() => setShowAddModal(true)} className="primary-button compact" style={{ backgroundColor: "#f97316", color: "white", borderRadius: 12 }}>
              <Plus size={16} /> Lançamento Manual
@@ -596,7 +613,7 @@ export function FinanceView() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
               <Smartphone size={18} style={{ color: "#f97316" }} />
-              Contribuições via PIX (app)
+              Contribuições para conferência
             </h3>
             {pendingContributions.length > 0 && (
               <span style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24", background: "rgba(251,191,36,0.12)", padding: "4px 10px", borderRadius: 100 }}>
@@ -630,7 +647,7 @@ export function FinanceView() {
                       <span style={{ marginLeft: 8, fontSize: 14, color: "#22c55e", fontWeight: 700 }}>{formatCurrency(c.amount)}</span>
                     </div>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                      {c.type} · {new Date(c.date).toLocaleDateString("pt-BR")}
+                      {c.type} · {new Date(c.date.length === 10 ? `${c.date}T12:00:00` : c.date).toLocaleDateString("pt-BR")}
                       {c.receiptId && (
                         <> · <button
                           onClick={() => openReceipt(c.receiptId!)}
@@ -641,7 +658,7 @@ export function FinanceView() {
                     </span>
                   </div>
                   <button
-                    onClick={() => handleConfirmContribution(c.id)}
+                    onClick={() => openDecision(c.id,"confirm")}
                     disabled={confirmingId === c.id}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
@@ -652,8 +669,9 @@ export function FinanceView() {
                     }}
                   >
                     <Check size={14} />
-                    {confirmingId === c.id ? "Confirmando..." : "Confirmar recebimento"}
+                    {confirmingId === c.id ? "Confirmando..." : "Conferir recebimento"}
                   </button>
+                  <button disabled={Boolean(confirmingId)} className="btn-secondary" onClick={() => openDecision(c.id,"reject")}>Rejeitar</button>
                 </div>
               ))}
             </div>
@@ -674,21 +692,21 @@ export function FinanceView() {
                  <Calendar size={18} style={{ color: "#f97316" }} />
                  <strong>{currentReport.month}</strong>
                </div>
-               <div className="status-pill published">Painel de Transparência Ativo</div>
+               <div className="status-pill published">Visão administrativa</div>
             </div>
             
             <div className="main-metrics">
               <div className="metric-primary">
-                <span>Arrecadação Total (Entradas)</span>
+                <span>Entradas registradas no mês</span>
                 <strong style={{ color: "white" }}>{formatCurrency(currentReport.income)}</strong>
                 <div className="trend up">
-                  <ArrowUpRight size={14} /> 12.8% vs mês anterior
+                  Registros conferidos
                 </div>
               </div>
               <div className="metric-primary">
-                <span>Saldo em Caixa</span>
+                <span>Saldo dos registros exibidos</span>
                 <strong style={{ color: "#f97316" }}>{formatCurrency(currentReport.balance)}</strong>
-                <p style={{ opacity: 0.6, fontSize: "0.85rem", marginTop: 4 }}>Saldo operacional líquido disponível</p>
+                <p style={{ opacity: 0.6, fontSize: "0.85rem", marginTop: 4 }}>Não substitui o saldo do extrato bancário</p>
               </div>
             </div>
 
@@ -710,7 +728,7 @@ export function FinanceView() {
                <div className="mini-stat">
                  <Wallet size={16} color="#10b981" />
                  <div>
-                   <small>Reserva de Contingência (10%)</small>
+                   <small>Referência de planejamento (10%)</small>
                    <b>{formatCurrency(currentReport.income * 0.1)}</b>
                  </div>
                </div>
@@ -949,7 +967,7 @@ export function FinanceView() {
                             {entry.source === "contrib" ? "📱 PIX (app)" : "✏️ Lançamento"}
                           </span>
                           {entry.source === "tx" && (
-                            <button type="button" onClick={() => handleDeleteEntry(entry.id, entry.source)} title="Excluir lançamento" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 4 }}>
+                            <button type="button" onClick={() => handleDeleteEntry(entry.id, entry.source)} title="Anular lançamento manual" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 4 }}>
                               <X size={15} />
                             </button>
                           )}

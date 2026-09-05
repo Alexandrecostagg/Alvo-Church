@@ -91,8 +91,7 @@ export function resolveBillingStatus(
 }
 
 export function currentAiMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return new Date().toISOString().slice(0, 7); // same UTC window as the backend
 }
 
 // A ficha de assinatura (OrganizationSubscriptionSettings) usa uma taxonomia

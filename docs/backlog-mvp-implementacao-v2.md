@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **05/09/2026**, após a entrega ampliada 6: **76,65% (+7,20 pontos)**.
+Atualizado em **05/09/2026**, após a entrega ampliada 7: **83,70% (+7,05 pontos)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -22,13 +22,13 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | --- | --- | --- | --- |
 | P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
 | P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
-| P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Publicação/IAM, legado e retenção pendentes. |
-| P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Falta relação familiar cadastral, legados remotos, retenção e aparelho. |
-| P0.5 | Limites e proteção pública | Parcial — entrega 6 | Recepção/dashboard/escalas agora usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência e conversão única. Faltam Turnstile e comprovantes privados. |
+| P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
+| P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
+| P0.5 | Limites e proteção pública | Parcial — entrega 7 | Recepção/dashboard/escalas agora usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência e conversão única. Comprovantes privados e giving pelo servidor validados na entrega 7; falta Turnstile. |
 | P1.1 | Verdade dos dados | Parcial — entrega 6 | Recepção, pastoral, rede, lojas/ofertas/moderação, bem-estar e repertório revisados; Wi-Fi sem falso sucesso. Falta auditar EAD/eventos e demais rotas; não declarar todo o produto limpo. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 2 | Oferta de 50 corrigida; 22 arquivos redundantes removidos, alias /landing validado em preview. Falta convergir LP ativa do painel, provas comerciais, SEO/privacidade e migração de domínio. |
-| P1.4 | Cobrança, comunicação e IA | Parcial | Idempotência de checkout, validação de tenant/destinatários, opt-out e cota/rate limit uniformes; homologação sandbox. |
+| P1.4 | Cobrança, comunicação e IA | Parcial — entrega 7 | Checkout/webhook idempotentes e vinculados, IA com cota/rate limit compartilhados e auditoria; opt-out de giving preservado. Faltam sandbox Asaas real, migração de referências legadas e envio/entrega de comunicação. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 
 ## Épico 1 — Pessoas, famílias, identidade e jornadas
@@ -52,10 +52,12 @@ pastorais não podem ser projetadas ao público.
 
 ## Épico 3 — Finanças e PIX
 
-**Parcial.** Lançamentos e contribuições têm repositórios; regras financeiras
-exigem administração. PIX estático real está implementado em `/api/giving/pix`.
-Faltam conciliação, auditoria imutável, relatórios/exportação completos e QA de
-permissões. Gerar QR não comprova recebimento do dinheiro.
+**Parcial — entrega 7 validada localmente.** Declaração privada, conferência
+administrativa com referência única, ledger/auditoria atômicos e anulação manual
+com histórico. CSV mensal agrega centavos sem duplicar contribuições confirmadas
+e rejeita mais de 1.000 registros por origem; painel tem escopo limitado explícito.
+Faltam integração bancária, relatórios contábeis completos e inventário dos legados.
+Gerar PIX ou anexar comprovante não comprova recebimento do dinheiro.
 
 ## Épico 4 — Kids Security
 
@@ -64,16 +66,18 @@ e Storage privado validados na entrega 4. App restringe registro de entrada à
 equipe. Responsável separado do operador,
 lista confirmada e retirada atômica validados na entrega 5. Entrega 6 acrescenta
 sala/evento/equipe, janela de entrada, ocupação e criança cadastrada com presença
-exclusiva. Faltam relação familiar, legado remoto, retenção e QA físico.
+exclusiva. Entrega 7 permite remover fotos antigas após retirada, com prévia e
+auditoria. Faltam relação familiar, inventário legado remoto e QA físico.
 [Evidências](entrega-ampliada-6-2026-09-05.md).
 Aceite conforme P0.3/P0.4; teste unitário não substitui retirada em aparelho.
 
 ## Épico 5 — IA Pastoral
 
-**Parcial.** APIs autenticadas e cota transacional principal existem; painel
-teve pedidos demonstrativos removidos na entrega 6. Unificar banner/texto/imagem na mesma política de
-custo, limite persistente e auditoria mínima; manter revisão humana das ações
-sensíveis. Homologar sinais reais e falha dos provedores.
+**Parcial — entrega 7.** Texto, banner e imagem compartilham cota mensal UTC,
+limites persistentes por igreja/usuário, autorização e auditoria sem prompts.
+Tentativa iniciada consome cota mesmo em falha; concorrência na última unidade
+validada sem chamar provedor real. Manter revisão humana e homologar geração
+real, custos e sinais pastorais antes de ampliar o uso.
 
 ## Épico 6 — Louvor e escalas
 
@@ -95,7 +99,9 @@ Evidências: [entrega 3](vinculo-passe-2026-09-05.md).
 **Parcial.** Tenant, branding, planos, módulos e checkout existem. Gestão de
 usuários restringe papéis, e a assinatura está protegida nas regras. Revisar
 todas as coleções, limites por todos os pontos de entrada, provisionamento,
-unicidade de slug/domínio e idempotência de cobrança. Confirmar configuração
+unicidade de slug/domínio. Checkout e webhook vinculados à ordem foram validados
+com provedor simulado na entrega 7; migrar cobranças legadas e homologar sandbox
+real, troca/cancelamento de plano e recuperação assistida. Confirmar configuração
 remota apenas na etapa de homologação/deploy.
 
 ## Épico 9 — Limpeza técnica, rotas e releases
@@ -109,15 +115,18 @@ rotas/LPs sobrepostas; registrar destinos e critérios de promoção/rollback.
 
 **Parcial, não mais “novo”.** Portal `/p/[orgSlug]`, `/visit` e API
 `/api/public/visit` existem; visitante público passa pelo servidor, com honeypot,
-limites persistentes e idempotência desde a entrega 6. Faltam Turnstile, QA integral do acolhimento
+limites persistentes e idempotência desde a entrega 6. Giving usa slug real,
+capacidade secreta de 48 horas e projeção pública mínima desde a entrega 7;
+configurações exibem links e QR reais. Faltam Turnstile, QA integral do acolhimento
 e recorte de check-in adulto/página pública por evento. Não remover essas rotas
 ao separar a LP institucional: pertencem à operação da plataforma.
 
 ## Épico 11 — Giving recorrente e doações
 
 **Parcial, não mais “novo”.** `/p/[orgSlug]/give`, campanhas, intenção,
-comprovante e PIX estático estão presentes. Faltam pagamento dinâmico confirmado,
-recorrência de doação, lançamento reconciliado e carta fiscal, conforme recorte
+comprovante e PIX estático estão presentes. Na entrega 7, comprovante privado,
+declaração idempotente, opt-out e lançamento conferido/auditado foram validados.
+Faltam pagamento dinâmico confirmado, recorrência de doação e carta fiscal, conforme recorte
 comercial. Assinatura SaaS em Asaas não equivale a doação recorrente da igreja.
 
 ## Épico 12 — Comunicação multicanal
@@ -137,7 +146,8 @@ API, paridade mobile e alterações de plano. Esconder menu não é autorizaçã
 
 **Misto: implementações parciais e expansão futura.** Scoring de tribos possui
 testes; jornadas, cursos e rede têm telas e repositórios. Marketplace/rede revisados na entrega 6; loja pendente/aprovada e privacidade
-homologadas. Falta validar demais operações e remover demos de EAD/eventos. Jovens, workflows, analytics avançado, missões
+homologadas. Entrega 7 vincula acesso ao curso à ordem de cobrança e revoga
+após reembolso (provedor simulado); não fecha o EAD. Falta validar demais operações e remover demos de EAD/eventos. Jovens, workflows, analytics avançado, missões
 e capacitação ampla em rede devem receber histórias e aceite antes de entrar
 na estimativa. Não anunciar toda a Camada 2 como entregue.
 

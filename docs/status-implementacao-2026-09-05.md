@@ -1,9 +1,9 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 6 ampliada: **76,65% (aproximadamente 76,7%)**, ganho
-> de **7,20 pontos**. Cadastros/50, público persistente, sessões Kids, dados reais,
-> privacidade e CI versionado. 263 testes e 308 verificações numeradas de integração.
-> Ver [evidências](entrega-ampliada-6-2026-09-05.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 7 ampliada: **83,70% (aproximadamente 83,7%)**, ganho
+> de **7,05 pontos**. Doação privada/conferência/CSV, cobrança vinculada à ordem,
+> cota única de IA e retenção assistida Kids. 301 testes e 444 verificações numeradas.
+> Ver [evidências e limites](entrega-ampliada-7-2026-09-05.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base auditada: `ecc86b4`, branch `codex/consolidacao-local-2026-09-05`.
@@ -26,7 +26,7 @@ O backlog sem `v2` e o contexto de agosto são históricos. Em caso de divergên
 de status, usar este diagnóstico e o backlog ativo. PRD e documentos de módulos
 descrevem intenção de produto, não comprovam entrega.
 
-## Percentual: aproximadamente 63% do escopo operacional avaliado
+## Linha de base histórica: aproximadamente 63% do escopo avaliado
 
 Estimativa gerencial, com confiança moderada. A margem de julgamento é de cerca
 de 10 pontos percentuais para mais ou para menos, não um intervalo estatístico.

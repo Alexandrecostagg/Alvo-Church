@@ -26,7 +26,8 @@
     "qa:member-pass": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-member-pass.ts",
     "qa:kids-media": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-kids-media.ts",
     "qa:kids-custody": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-kids-custody.ts",
-    "qa:delivery6": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery6.ts"
+    "qa:delivery6": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery6.ts",
+    "qa:delivery7": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery7.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

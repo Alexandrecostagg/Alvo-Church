@@ -1589,6 +1589,8 @@ const mpStyles = StyleSheet.create({
 function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
 }) {
+  const givingRequestId = useRef<string>("");
+  const givingBusy = useRef(false);
   const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
   const [method, setMethod] = useState<"pix" | "cartao">("pix");
@@ -1613,7 +1615,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
       const b64 = result.assets[0].base64 ?? null;
       // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
       // Recorte a imagem se for grande demais.
-      if (b64 && b64.length > 1_300_000) {
+      if (b64 && b64.length > 680000) {
         Alert.alert("Imagem muito grande", "Recorte só o comprovante ou tire uma foto mais fechada e tente de novo.");
         return;
       }
@@ -1638,7 +1640,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     if (method !== "pix" || !finalAmountNumber || finalAmountNumber <= 0) { setPix(null); return; }
     let cancelled = false;
     async function loadPix() {
-      setPixLoading(true); setPixError(null);
+      setPix(null); setPixLoading(true); setPixError(null);
       try {
         const idToken = await user.getIdToken();
         const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
@@ -1660,45 +1662,21 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   }, [method, finalAmountNumber, orgId, type]);
 
   async function confirmContribution() {
+    if (givingBusy.current) return;
     if (!finalAmountNumber || finalAmountNumber <= 0) { Alert.alert("Selecione um valor"); return; }
-    if (method === "pix" && !pix) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
-    setSubmitting(true);
+    if (method === "pix" && (!pix || pixLoading || pixError)) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
+    givingBusy.current = true; setSubmitting(true);
     try {
-      const { addMemberContribution, saveContributionReceipt } = await import("@alvo/firebase");
-      // Salva o comprovante primeiro (doc separado); se falhar, registra a
-      // contribuição mesmo assim — não travar o registro do valor.
-      let receiptId: string | undefined;
-      if (receiptBase64) {
-        try {
-          receiptId = await saveContributionReceipt(firebaseConfig, { organizationId: orgId }, {
-            organizationId: orgId,
-            imageBase64: receiptBase64,
-            createdByUserId: user.uid,
-          });
-        } catch (e: any) {
-          if (__DEV__) console.warn("salvar comprovante falhou:", e?.code || e?.message || e);
-        }
-      }
-      await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
-        organizationId: orgId,
-        userId: user.uid,
-        contributorName: user.displayName ?? user.email ?? "Membro",
-        amount: finalAmountNumber,
-        type,
-        date: new Date().toISOString().slice(0, 10),
-        description: `Contribuição via app${receiptId ? " (com comprovante)" : ""}`,
-        registeredBy: user.uid,
-        registeredAt: new Date().toISOString(),
-        status: "pending",
-        method: "pix",
-        receiptId
-      });
+      givingRequestId.current ||= Crypto.randomUUID();
+      const response = await fetch(`${WEB_API_URL}/api/finance`, { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}`, "content-type": "application/json" }, body: JSON.stringify({ action: "declare", organizationId: orgId, requestId: givingRequestId.current, amount: finalAmountNumber, type, dataUrl: receiptBase64 ? `data:image/jpeg;base64,${receiptBase64}` : undefined }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível registrar.");
       setSubmitted(true);
     } catch (e: any) {
       if (__DEV__) console.warn("addMemberContribution falhou:", e?.code || e?.message || e);
-      Alert.alert("Não foi possível registrar", "Sua contribuição via PIX foi feita normalmente, mas não conseguimos salvar o registro aqui. Avise a secretaria.");
+      Alert.alert("Não foi possível registrar", e instanceof Error ? e.message : "Não conseguimos salvar o registro. Confira o pagamento no banco e tente novamente.");
     } finally {
-      setSubmitting(false);
+      givingBusy.current = false; setSubmitting(false);
     }
   }
 

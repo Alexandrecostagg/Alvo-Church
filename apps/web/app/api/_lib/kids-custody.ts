@@ -124,7 +124,7 @@ export async function releaseKids(raw: any, uid: string) {
       tx.remove(claimPath);
     }
     const at = new Date().toISOString();
-    tx.patch(`organizations/${organizationId}/kidsCheckIns/${id}`, { status: "checked_out", checkedOutAt: at, checkedOutByUserId: uid, checkedOutByParentId: receiver.userId || null, releasedTo: receiver.name, releaseNote: note, checkoutReceiverId: receiverId, checkoutRequestId: attempt, checkoutFingerprint: fingerprint });
+    tx.patch(`organizations/${organizationId}/kidsCheckIns/${id}`, { status: "checked_out", photoRetentionPending: Boolean(current.photoPath || current.photoUrl), checkedOutAt: at, checkedOutByUserId: uid, checkedOutByParentId: receiver.userId || null, releasedTo: receiver.name, releaseNote: note, checkoutReceiverId: receiverId, checkoutRequestId: attempt, checkoutFingerprint: fingerprint });
     tx.set(`organizations/${organizationId}/kidsCustodyAudit/${crypto.randomUUID()}`, { checkInId: id, action: "check_out", actorId: uid, receiverId, receiverUserId: receiver.userId || null, receiverName: receiver.name, guardianVersion: current.guardianVersion, identityConfirmed: true, note, at });
     return { replayed: false, receiverName: receiver.name };
   });

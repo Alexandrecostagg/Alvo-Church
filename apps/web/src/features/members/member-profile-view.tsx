@@ -1,10 +1,10 @@
 "use client";
+import { financeRequest } from "../../lib/finance-client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
-  addMemberContribution,
   createFirebaseWebRuntimeConfigFromEnv,
   fetchFamilyById,
   fetchFamilyMembers,
@@ -105,6 +105,8 @@ const S = {
 };
 
 export function MemberProfileView() {
+  const contributionAttempt = useRef("");
+  const contributionBusy = useRef(false);
   const params = useParams<{ personId?: string }>();
   const personId = typeof params.personId === "string" ? params.personId : "";
   const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
@@ -269,34 +271,20 @@ export function MemberProfileView() {
     const amountVal = parseFloat(newAmount);
     if (isNaN(amountVal) || amountVal <= 0) return;
 
-    const nowIso = new Date().toISOString();
-    const entry: MemberContribution = {
-      id: `contribution_${Date.now()}`,
-      organizationId,
-      userId: "",
-      personId,
-      amount: amountVal,
-      type: newCategory,
-      date: nowIso.slice(0, 10),
-      description: "Registrado diretamente na ficha do membro",
-      registeredBy: user?.uid ?? "",
-      registeredAt: nowIso
-    };
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        const { id: _localId, ...payload } = entry;
-        const savedId = await addMemberContribution(firebaseConfig, { organizationId }, payload);
-        entry.id = savedId;
-      } catch {
-        setStatus("Não foi possível salvar a contribuição. Verifique sua conexão e tente novamente.");
-        return;
-      }
-    }
+    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para registrar."); return; }
+    if (contributionBusy.current) return;
+    contributionBusy.current = true; contributionAttempt.current ||= crypto.randomUUID();
+    let entry: MemberContribution;
+    try {
+      const result = await financeRequest(user, { action: "declare", organizationId, personId, requestId: contributionAttempt.current, amount: amountVal, type: newCategory });
+      entry = { ...result.contribution, id: result.contributionId };
+      contributionAttempt.current = "";
+    } catch (e) { setStatus(e instanceof Error ? e.message : "Não foi possível registrar."); return; }
+    finally { contributionBusy.current = false; }
 
     setContributions(prev => [entry, ...prev]);
     setNewAmount("");
-    setStatus(`Contribuição de R$ ${amountVal.toFixed(2)} cadastrada com sucesso!`);
+    setStatus(`Contribuição de R$ ${amountVal.toFixed(2)} registrada para conferência financeira.`);
   };
 
   return (

@@ -6,7 +6,6 @@ import { Check, Sparkles, Lock, Zap, Loader2, Receipt, AlertTriangle } from "luc
 import { usePlan } from "../../../contexts/PlanContext";
 import { useAppAuth } from "../../../app/providers";
 import type { PlanId } from "@alvo/firebase";
-import { linkAsaasSubscription } from "@alvo/firebase";
 
 const SALES_WHATSAPP = "5562993330336";
 
@@ -179,12 +178,6 @@ export function PlanoView() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível iniciar o checkout.");
-      if (data.asaasCustomerId && data.asaasSubscriptionId) {
-        await linkAsaasSubscription(firebaseConfig, { organizationId }, {
-          asaasCustomerId: data.asaasCustomerId,
-          asaasSubscriptionId: data.asaasSubscriptionId
-        }).catch(() => undefined);
-      }
       window.location.href = data.checkoutUrl;
     } catch (e) {
       setCheckoutError(friendlyError(e, "Erro ao iniciar checkout."));
@@ -237,7 +230,7 @@ export function PlanoView() {
               <div style={{ width: 1, height: 16, background: "var(--color-border-tertiary)" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Sparkles size={14} style={{ color: "#f59e0b" }} />
-                IA: <strong style={{ fontWeight: 500 }}>{aiQuota.used}</strong>/{aiQuota.limit} consultas em {aiQuota.month}
+                IA: <strong style={{ fontWeight: 500 }}>{aiQuota.used}</strong>/{aiQuota.limit} gerações (texto e imagem) em {aiQuota.month}
                 {!aiQuota.allowed && (
                   <span style={{ color: "var(--color-text-danger)", fontSize: 12 }}>— cota esgotada</span>
                 )}

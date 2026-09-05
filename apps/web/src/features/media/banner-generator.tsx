@@ -804,7 +804,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
 
   // Carrega o fundo (determinístico pelo seed + prompt) e desenha. NUNCA
   // derruba a composição: o Pollinations é instável (5xx/timeout esporádico),
-  // então tentamos 2x e, se falhar, desenhamos com o gradiente de fallback.
+  // então uma falha usa gradiente; nova tentativa depende de ação do usuário.
   // Retorna true se o fundo de IA carregou; false se caiu no gradiente.
   const composeWithBg = useCallback(async (
     formArg: FormState, copyArg: BannerCopy, seedVal: number, bgPrompt: string
@@ -813,14 +813,14 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     const idToken = await user.getIdToken();
     const url = buildBgUrl(bgPrompt, formArg.formato, seedVal, organizationId);
     let img: HTMLImageElement | null = null;
-    for (let attempt = 0; attempt < 2 && !img; attempt++) {
+    for (let attempt = 0; attempt < 1 && !img; attempt++) {
       try {
         const obj = await fetchBgAsObjectUrl(url, idToken);
         if (bgObjectUrlRef.current) URL.revokeObjectURL(bgObjectUrlRef.current);
         bgObjectUrlRef.current = obj;
         img = await loadImage(obj);
       } catch {
-        img = null; // tenta de novo; na 2ª falha cai pro gradiente
+        img = null; // nova tentativa consome cota e depende do usuário
       }
     }
     bgImgRef.current = img;
@@ -990,7 +990,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
       <div className="banner-gen-form">
         <h2 className="banner-gen-title">Gerador de Banner</h2>
         <p className="banner-gen-desc">
-          Crie banners de <strong>{brand.churchName}</strong> para redes sociais em segundos — texto e arte gerados por IA.
+          Crie banners de <strong>{brand.churchName}</strong>. Texto e imagem consomem, cada um, uma unidade da cota mensal de IA. Tentativas iniciadas no provedor também contam em caso de falha.
         </p>
 
         <div className="banner-field">
@@ -1160,7 +1160,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
           <>
             {bgWarning && (
               <p className="banner-bg-warning">
-                O gerador de arte (Pollinations) não respondeu — usei um fundo gradiente.
+                A geração de imagem ficou indisponível ou atingiu a cota — foi usado um fundo gradiente.
                 Clique em <strong>Novo fundo</strong> para tentar de novo.
               </p>
             )}
@@ -1179,7 +1179,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
         )}
 
         <p className="banner-credit">
-          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>IA (DeepSeek)</strong> · sem custo
+          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>IA (DeepSeek)</strong> · conforme a cota do plano
         </p>
       </div>
 

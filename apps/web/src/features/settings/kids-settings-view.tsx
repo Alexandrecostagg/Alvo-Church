@@ -1,4 +1,5 @@
 "use client";
+import { KidsRetentionPanel } from "../kids/kids-retention-panel";
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, ShieldCheck, Save, Check } from "lucide-react";
@@ -131,6 +132,7 @@ export function KidsSettingsView() {
         {saving ? <Loader2 size={16} className="spin" /> : saved ? <Check size={16} /> : <Save size={16} />}
         {saved ? "Salvo" : "Salvar configuração"}
       </button>
+      <KidsRetentionPanel />
     </div>
   );
 }

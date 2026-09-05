@@ -9,7 +9,7 @@ function encode(value: any): Data {
   if (value === null) return { nullValue: null };
   if (typeof value === "string") return { stringValue: value };
   if (typeof value === "boolean") return { booleanValue: value };
-  if (typeof value === "number") return { integerValue: String(value) };
+  if (typeof value === "number") return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(encode) } };
   return { mapValue: { fields: Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined).map(([k, v]) => [k, encode(v)])) } };
 }
@@ -17,10 +17,10 @@ function decode(value: Data): any {
   if (value.mapValue) return Object.fromEntries(Object.entries(value.mapValue.fields ?? {}).map(([k, v]) => [k, decode(v as Data)]));
   if (value.arrayValue) return (value.arrayValue.values ?? []).map(decode);
   if (value.integerValue !== undefined) return Number(value.integerValue);
-  return value.stringValue ?? value.booleanValue ?? null;
+  return value.doubleValue ?? value.timestampValue ?? value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
-  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "ARRAY_CONTAINS", limit?: number, and?: { field: string; value: unknown }) => Promise<Data[]>;
+  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }) => Promise<Data[]>;
   usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
   set: (path: string, data: Data) => void;
@@ -59,7 +59,7 @@ export async function accountTransaction<T>(work: (tx: AccountTransaction) => Pr
       const result = await work({
         query: async (parent, collection, field, value, op = "EQUAL", limit = 200, and) => {
           const filters = field ? [{ fieldFilter: { field: { fieldPath: field }, op, value: encode(value) } }] : [];
-          if (and) filters.push({ fieldFilter: { field: { fieldPath: and.field }, op: "EQUAL", value: encode(and.value) } });
+          if (and) filters.push({ fieldFilter: { field: { fieldPath: and.field }, op: and.op || "EQUAL", value: encode(and.value) } });
           const rows: Data[] = await call(`/${parent}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: collection }], ...(filters.length ? { where: filters.length === 1 ? filters[0] : { compositeFilter: { op: "AND", filters } } } : {}), limit } });
           return rows.filter(row => row.document).map(row => ({ ...decode({ mapValue: { fields: row.document.fields } }), id: row.document.name.split("/").at(-1) }));
         },

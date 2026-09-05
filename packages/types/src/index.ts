@@ -121,7 +121,7 @@ export interface GivingIntent {
   whatsapp: string;
   amount: number;
   source: "public_give";
-  status: "captured";
+  status: "captured" | "declared" | "confirmed" | "rejected";
   orgSlug?: string;
   campaignId?: string; // vincula a doação a uma campanha de oferta
   consentContact: boolean;
@@ -129,12 +129,13 @@ export interface GivingIntent {
 }
 
 // Comprovante de doação pública: o doador clica "Já paguei" no link público e
-// (opcionalmente) anexa a foto. Doc separado (imagem base64) linkado à intenção.
+// (opcionalmente) anexa uma foto privada. Metadados vinculados à intenção.
 export interface GivingReceipt {
   id: string;
   organizationId: string;
   intentId: string;
-  imageBase64?: string;
+  imageBase64?: string; // legacy only
+  receiptId?: string;
   createdAt: string;
 }
 
@@ -712,6 +713,8 @@ export interface FinancialTransaction {
   id: string;
   organizationId: string;
   kind: FinancialTransactionKind;
+  status?: "posted" | "voided";
+  contributionId?: string;
   label: string;
   amount: number;              // sempre positivo; o kind define o sinal
   note?: string;
@@ -1437,7 +1440,7 @@ export interface WeeklyTheme {
 
 export type ContributionType = "dizimo" | "oferta" | "campanha" | "missao" | "outro";
 
-export type ContributionStatus = "pending" | "confirmed";
+export type ContributionStatus = "pending" | "confirmed" | "rejected";
 export type ContributionMethod = "pix" | "manual" | "cash" | "card";
 
 export interface MemberContribution {
@@ -1460,8 +1463,9 @@ export interface MemberContribution {
   // confirmados, mesmo comportamento de antes).
   status?: ContributionStatus;
   method?: ContributionMethod;
-  receiptId?: string;       // id do doc de comprovante (imagem base64 em contributionReceipts)
-  receiptUrl?: string;      // (futuro) URL do comprovante quando migrar p/ Storage
+  receiptId?: string;       // referência privada; leitura autenticada pela API
+  ledgerId?: string;
+  receiptUrl?: string;      // legado; novos comprovantes não têm URL pública
   confirmedBy?: string;     // userId do admin que confirmou o pending
   confirmedAt?: string;     // ISO datetime da confirmação
 }
