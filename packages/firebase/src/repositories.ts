@@ -3403,6 +3403,9 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     authorizedPickUpIds: Array.isArray(data.authorizedPickUpIds) ? data.authorizedPickUpIds.map(String) : [],
     checkedInAt: String(data.checkedInAt ?? ""),
     checkedOutAt: data.checkedOutAt ? String(data.checkedOutAt) : undefined,
+    checkedOutByUserId: data.checkedOutByUserId ? String(data.checkedOutByUserId) : undefined,
+    guardianVersion: typeof data.guardianVersion === "number" ? data.guardianVersion : undefined,
+    pickupPeople: Array.isArray(data.pickupPeople) ? data.pickupPeople.map((p: any) => ({ id: String(p.id), name: String(p.name), userId: String(p.userId ?? "") })) : undefined,
     checkedOutByParentId: data.checkedOutByParentId ? String(data.checkedOutByParentId) : undefined,
     checkedInByUserId: data.checkedInByUserId ? String(data.checkedInByUserId) : undefined,
     status: (data.status as KidsCheckIn["status"]) ?? "checked_in",
@@ -3410,6 +3413,7 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     serviceTeamId: data.serviceTeamId ? String(data.serviceTeamId) : undefined,
     securityToken: String(data.securityToken ?? ""),
     childName: data.childName ? String(data.childName) : undefined,
+    guardianAccountEmail: data.guardianAccountEmail ? String(data.guardianAccountEmail) : undefined,
     guardianName: data.guardianName ? String(data.guardianName) : undefined,
     guardianPhone: data.guardianPhone ? String(data.guardianPhone) : undefined,
     authorizedPickupNames: Array.isArray(data.authorizedPickupNames) ? data.authorizedPickupNames.map(String) : undefined,
@@ -3430,19 +3434,6 @@ function toKidsSettings(data: DocumentData): OrganizationKidsSettings {
     kidsTeamIds: Array.isArray(data.kidsTeamIds) ? data.kidsTeamIds.map(String) : [],
     updatedAt: data.updatedAt ? String(data.updatedAt) : undefined
   };
-}
-
-export async function saveKidsCheckIn(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  checkIn: KidsCheckIn
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getKidsCheckInsCollectionPath(context), checkIn.id),
-    cleanFirestoreData(checkIn),
-    { merge: true }
-  );
 }
 
 // Check-ins ativos (crianças presentes) da organização.
@@ -3509,28 +3500,6 @@ export async function fetchKidsCheckInByCode(
   );
   const d = snap.docs[0];
   return d ? toKidsCheckIn(d.id, d.data()) : null;
-}
-
-// Retirada: marca checked_out registrando quem retirou + auditoria (releasedTo/releaseNote).
-export async function checkoutKidsCheckIn(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  checkInId: string,
-  byParentId: string,
-  audit?: { releasedTo?: string; releaseNote?: string }
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getKidsCheckInsCollectionPath(context), checkInId),
-    cleanFirestoreData({
-      status: "checked_out",
-      checkedOutAt: new Date().toISOString(),
-      checkedOutByParentId: byParentId,
-      releasedTo: audit?.releasedTo,
-      releaseNote: audit?.releaseNote
-    }),
-    { merge: true }
-  );
 }
 
 /* ── Gerador de Banner: histórico ──────────────────────────────────────── */

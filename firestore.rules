@@ -571,11 +571,13 @@ service cloud.firestore {
     // restrita aos próprios filhos/pessoas autorizadas e só leem esses docs.
     match /organizations/{orgId}/kidsCheckIns/{checkInId} {
       allow get, list: if canOperateKids(orgId) || isKidsGuardianFor(orgId, resource.data);
-      allow create: if canOperateKids(orgId)
-        && !request.resource.data.keys().hasAny(["photoUrl", "photoPath", "photoConsentAt", "photoUploadedBy"]);
-      allow update: if canOperateKids(orgId)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["photoUrl", "photoPath", "photoConsentAt", "photoUploadedBy"]);
-      allow delete: if canOperateKids(orgId);
+      // Entrada, vínculo e retirada são transações autenticadas no backend.
+      allow write: if false;
+    }
+
+    match /organizations/{orgId}/kidsCustodyAudit/{id} {
+      allow read: if canOperateKids(orgId);
+      allow write: if false;
     }
 
     // Inscrição em evento: o membro cria a PRÓPRIA inscrição (responsiblePersonId

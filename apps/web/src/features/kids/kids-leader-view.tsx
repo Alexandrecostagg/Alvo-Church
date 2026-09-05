@@ -24,6 +24,7 @@ import {
   CameraOff,
 } from "lucide-react";
 import Link from "next/link";
+import { KidsCustodyPanel } from "./kids-custody-panel";
 import { KidsPrivateImage } from "./kids-private-image";
 import { KidsPhotoEditor } from "./kids-photo-editor";
 import { useAppAuth } from "../../../app/providers";
@@ -31,14 +32,12 @@ import {
   fetchActiveKidsCheckIns,
   fetchKidsCheckInByToken,
   fetchKidsCheckInByCode,
-  checkoutKidsCheckIn,
-  saveKidsCheckIn,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
-import { generateSecureCode } from "@alvo/utils";
 import type { KidsCheckIn } from "@alvo/types";
 
 interface KidRecord {
+  source: KidsCheckIn;
   id: string;                 // = id do KidsCheckIn (usado no checkout)
   name: string;
   age?: number;               // não persiste no check-in; presente só no walk-in local
@@ -57,6 +56,7 @@ interface KidRecord {
 // KidsCheckIn (Firestore) -> KidRecord (view).
 function toKidRecord(c: KidsCheckIn): KidRecord {
   return {
+    source: c,
     id: c.id,
     name: c.childName ?? "Criança",
     status: c.status === "checked_out" ? "checked_out" : "checked_in",
@@ -70,11 +70,6 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
     guardianPhone: c.guardianPhone,
     authorizedPickupNames: c.authorizedPickupNames,
   };
-}
-
-// Gera um código curto de retirada legível (sem 0/O/1/I).
-function genPickupCode(): string {
-  return `KD-${generateSecureCode(4)}`;
 }
 
 export function KidsLeaderView() {
@@ -91,7 +86,11 @@ export function KidsLeaderView() {
   const [search, setSearch] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scannedChild, setScannedChild] = useState<KidRecord | null>(null);
-  const [checkoutStatus, setCheckoutStatus] = useState<"pending" | "success" | "error" | null>(null);
+  const [proof, setProof] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const createAttempt = useRef(crypto.randomUUID());
 
   // Real QR camera refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -115,8 +114,6 @@ export function KidsLeaderView() {
   // Crachá recém-gerado (mostra QR + código pro operador entregar ao responsável).
   const [justCheckedIn, setJustCheckedIn] = useState<{ id: string; code: string; name: string } | null>(null);
   // Retirada: quem está retirando + observação (auditoria) + código digitado (fallback).
-  const [releasedTo, setReleasedTo] = useState("");
-  const [releaseNote, setReleaseNote] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
@@ -201,7 +198,7 @@ export function KidsLeaderView() {
             : null;
           if (checkIn && checkIn.status === "checked_in") {
             setScanSoundVisual(true);
-            setScannedChild(toKidRecord(checkIn));
+            setScannedChild(toKidRecord(checkIn)); setProof(token);
             setTimeout(() => setScanSoundVisual(false), 1000);
           } else if (checkIn && checkIn.status === "checked_out") {
             setCameraError(`Ingresso já utilizado — ${checkIn.childName ?? "a criança"} já foi retirado(a).`);
@@ -220,54 +217,17 @@ export function KidsLeaderView() {
     return () => { active = false; stopCamera(); };
   }, [view, isScanning, stopCamera, configured, firebaseReady, organizationId, firebaseConfig]);
 
-  // Retirada. `overrideNote` é preenchido quando quem retira NÃO está na lista
-  // (autorização por WhatsApp ou override do operador) — vira registro auditável.
-  const handleCheckout = async (overrideNote?: string) => {
-    if (!scannedChild) return;
-    const who = releasedTo.trim() || scannedChild.parentName;
-    setCheckoutStatus("pending");
-    try {
-      if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        await checkoutKidsCheckIn(
-          firebaseConfig,
-          { organizationId },
-          scannedChild.id,
-          scannedChild.parentId ?? user?.uid ?? "",
-          { releasedTo: who, releaseNote: overrideNote || releaseNote.trim() || undefined }
-        );
-      }
-    } catch {
-      setCheckoutStatus("error");
-      return;
-    }
-    setCheckoutStatus("success");
-    setKidsList(prev => prev.filter(k => k.id !== scannedChild.id));
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const note = overrideNote || releaseNote.trim();
-    setSecurityLogs(prev => [
-      { time: timeString, text: `Retirada: ${scannedChild.name} entregue a ${who}${note ? ` — ${note}` : ""}.`, type: "success" },
-      ...prev
-    ]);
-    setTimeout(() => {
-      setView("list");
-      setScannedChild(null);
-      setCheckoutStatus(null);
-      setReleasedTo("");
-      setReleaseNote("");
-    }, 1500);
-  };
-
   // Retirada pelo CÓDIGO curto (fallback: sem app/bateria/visitante).
   const handleCodeLookup = async () => {
     const code = codeInput.trim().toUpperCase();
     if (!code) return;
     setCodeError(null);
     const local = kidsList.find(k => (k.pickupCode ?? "").toUpperCase() === code);
-    if (local) { setScannedChild(local); setCodeInput(""); setView("checkout"); return; }
+    if (local) { setProof(code); setScannedChild(local); setCodeInput(""); setView("checkout"); return; }
     try {
       if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
         const found = await fetchKidsCheckInByCode(firebaseConfig, { organizationId }, code);
-        if (found) { setScannedChild(toKidRecord(found)); setCodeInput(""); setView("checkout"); return; }
+        if (found) { setProof(code); setScannedChild(toKidRecord(found)); setCodeInput(""); setView("checkout"); return; }
       }
       setCodeError("Código não encontrado entre os check-ins ativos.");
     } catch {
@@ -279,60 +239,41 @@ export function KidsLeaderView() {
     e.preventDefault();
     if (!newKidDraft.name || !newKidDraft.parentName) return;
 
+    if (!user || saving || !identityConfirmed) return;
+    setSaving(true); setLoadError(null);
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const token = `kids_${crypto.randomUUID().replace(/-/g, '')}`;
-    const pickupCode = genPickupCode();
-    const authorizedPickupNames = newKidDraft.authorizedNames
-      .split(",").map(n => n.trim()).filter(Boolean);
-    const checkIn: KidsCheckIn = {
-      id: `kc_${crypto.randomUUID().replace(/-/g, '')}`,
-      organizationId,
-      childId: `quick_${token}`,
-      parentId: user?.uid ?? "",
-      authorizedPickUpIds: [],
-      checkedInAt: new Date().toISOString(),
-      status: "checked_in",
-      securityToken: token,
-      pickupCode,
-      childName: newKidDraft.name,
-      guardianName: newKidDraft.parentName,
-      guardianPhone: newKidDraft.parentPhone.replace(/\D/g, "") || undefined,
-      authorizedPickupNames: authorizedPickupNames.length ? authorizedPickupNames : undefined,
-      allergies: newKidDraft.allergies || undefined,
-      securityRestrictions: newKidDraft.securityRestrictions || undefined,
-      checkedInByUserId: user?.uid,
-    };
-
+    let checkIn: KidsCheckIn;
     try {
-      if (configured && firebaseReady && organizationId && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        await saveKidsCheckIn(firebaseConfig, { organizationId }, checkIn);
-      } else {
-        throw new Error("offline");
-      }
-    } catch {
-      setLoadError("Não foi possível salvar o check-in. Verifique a conexão e tente novamente.");
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ action: "check_in", organizationId, requestId: createAttempt.current, childName: newKidDraft.name, guardianName: newKidDraft.parentName, guardianEmail, guardianPhone: newKidDraft.parentPhone, authorizedNames: newKidDraft.authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies: newKidDraft.allergies, securityRestrictions: newKidDraft.securityRestrictions, identityConfirmed }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      checkIn = data.checkIn;
+      createAttempt.current = crypto.randomUUID();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Não foi possível confirmar a entrada.");
       return;
-    }
-
+    } finally { setSaving(false); }
+    const pickupCode = checkIn.pickupCode ?? "";
     const newKid = toKidRecord(checkIn);
     newKid.age = newKidDraft.age ? parseInt(newKidDraft.age) : undefined;
     setKidsList(prev => [newKid, ...prev]);
     setSecurityLogs(prev => [
-      { time: timeString, text: `Check-in: ${newKid.name} (código ${pickupCode}) autorizado por ${newKid.parentName}.`, type: "success" },
+      { time: timeString, text: `Check-in: ${newKid.name} autorizado por ${newKid.parentName}.`, type: "success" },
       ...prev
     ]);
     setNewKidDraft({ name: "", age: "", parentName: "", parentPhone: "", authorizedNames: "", allergies: "", securityRestrictions: "" });
+    setGuardianEmail(""); setIdentityConfirmed(false);
     setJustCheckedIn({ id: checkIn.id, code: pickupCode, name: newKid.name });
     setView("list");
   };
 
   const activeCheckedInCount = kidsList.filter(k => k.status === "checked_in").length;
-  const checkedOutCount = kidsList.filter(k => k.status === "checked_out").length;
+  const checkedOutCount = securityLogs.filter(log => log.text.startsWith("Retirada:")).length;
   const alertCount = kidsList.filter(k => k.status === "checked_in" && (
     (k.allergies && k.allergies !== "Nenhuma") ||
     (k.securityRestrictions && k.securityRestrictions !== "Nenhuma")
   )).length;
-  const roomCapacity = 15;
 
   return (
     <main className="kids-leader-workbench" style={{ minHeight: "100vh", padding: "2rem" }}>
@@ -365,7 +306,7 @@ export function KidsLeaderView() {
           <div
             onClick={e => e.stopPropagation()}
             className="panel"
-            style={{ padding: "2rem", maxWidth: 420, width: "100%", textAlign: "center", background: "white", borderRadius: 24 }}
+            style={{ padding: "2rem", maxWidth: 420, width: "100%", maxHeight: "calc(100dvh - 3rem)", overflowY: "auto", boxSizing: "border-box", textAlign: "center", background: "white", borderRadius: 24 }}
           >
             <CheckCircle2 size={48} style={{ color: "#10b981", margin: "0 auto 8px" }} />
             <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.35rem", fontWeight: 900, margin: "0 0 4px" }}>Check-in Confirmado</h2>
@@ -406,9 +347,9 @@ export function KidsLeaderView() {
             </div>
             
             <div className="panel kids-stat-card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Vagas das Salas</span>
-              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{roomCapacity - activeCheckedInCount}</strong>
-              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>{checkedOutCount} retirada(s) concluída(s) hoje</p>
+              <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem", textTransform: "uppercase" }}>Retiradas confirmadas</span>
+              <strong style={{ fontSize: "2rem", color: "var(--alvo-ink)" }}>{checkedOutCount}</strong>
+              <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem" }}>nesta sessão de trabalho</p>
             </div>
 
             <div className="panel kids-stat-card kids-alert-stat" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 4 }}>
@@ -518,10 +459,11 @@ export function KidsLeaderView() {
                       </div>
 
                       <div>
+                        {kid.status === "checked_in" && <button onClick={() => setJustCheckedIn({ id: kid.id, code: kid.pickupCode ?? "", name: kid.name })} style={{ marginRight: 8 }}>Ver crachá</button>}
                         {kid.status === "checked_in" ? (
                           <button 
                             onClick={() => {
-                              setScannedChild(kid);
+                              setProof(""); setScannedChild(kid);
                               setView("checkout");
                             }}
                             style={{ background: "var(--alvo-accent)", border: "none", color: "white", padding: "6px 12px", borderRadius: "10px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
@@ -573,6 +515,11 @@ export function KidsLeaderView() {
             </p>
 
             <form onSubmit={handleCheckinSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <label style={{ display: "block" }}>E-mail da conta do responsável (vazio para visitante sem conta)
+                <input type="email" value={guardianEmail} onChange={e => setGuardianEmail(e.target.value)} style={{ display: "block", width: "100%", padding: 10 }} />
+              </label>
+              <label style={{ display: "block" }}><input type="checkbox" checked={identityConfirmed} onChange={e => setIdentityConfirmed(e.target.checked)} /> Confirmei a identidade do responsável, o vínculo da conta informada e os autorizados a retirar.</label>
+              {loadError && <p role="alert">{loadError}</p>}
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Nome da Criança
                 <input 
@@ -660,6 +607,7 @@ export function KidsLeaderView() {
                 </button>
                 <button 
                   type="submit"
+                  disabled={saving || !identityConfirmed}
                   style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                 >
                   Imprimir Crachá &amp; Check-in
@@ -748,170 +696,7 @@ export function KidsLeaderView() {
         </section>
       )}
 
-      {/* VIEW: PROTOCOLO DE RETIRADA RIGIDO (CHECKOUT) */}
-      {view === "checkout" && scannedChild && (
-        <section style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-          <div className="panel kids-flow-panel" style={{ padding: "2.5rem", width: "100%", maxWidth: "550px" }}>
-            
-            <div style={{ textAlign: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1.5rem", marginBottom: "1.5rem" }}>
-              <ShieldCheck size={40} style={{ color: "var(--alvo-accent)", margin: "0 auto 8px" }} />
-              <h2 style={{ color: "var(--alvo-ink)", fontSize: "1.5rem", fontWeight: 900, margin: 0 }}>Protocolo de Retirada Rígido</h2>
-              {scannedChild.pickupCode && (
-                <span style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)" }}>
-                  Código de retirada: <strong style={{ fontFamily: "monospace", color: "var(--alvo-accent)" }}>{scannedChild.pickupCode}</strong>
-                </span>
-              )}
-            </div>
-
-            {/* Entity Child summary */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Criança</span>
-              <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px 16px", borderRadius: "16px", display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
-                <Baby size={28} style={{ color: "var(--alvo-accent)" }} />
-                <div>
-                  <strong style={{ color: "var(--alvo-ink)", display: "block" }}>{scannedChild.name}</strong>
-                  <KidsPhotoEditor key={scannedChild.id} checkInId={scannedChild.id} />
-                  <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem" }}>{scannedChild.age ? `${scannedChild.age} anos • ` : ""}Sala Kids</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Responsáveis autorizados — do cadastro do check-in */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Autorizados a retirar</span>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: 6 }}>
-                <div style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
-                  <UserCheck size={16} style={{ color: "#10b981" }} />
-                  <div>
-                    <strong>{scannedChild.parentName}</strong>
-                    <span style={{ display: "block", fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>Responsável que fez o check-in</span>
-                  </div>
-                </div>
-                {(scannedChild.authorizedPickupNames ?? []).map((n, i) => (
-                  <div key={i} style={{ background: "rgba(15, 23, 42, 0.03)", border: "1px solid var(--alvo-line)", padding: "12px", borderRadius: "16px", display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink)", fontSize: "0.9rem" }}>
-                    <UserCheck size={16} style={{ color: "#10b981" }} />
-                    <strong>{n}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quem está retirando agora? */}
-            <div style={{ marginBottom: "1.25rem" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                Quem está retirando?
-                <input
-                  placeholder="Nome de quem está na porta"
-                  value={releasedTo}
-                  onChange={e => setReleasedTo(e.target.value)}
-                  style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
-                />
-              </label>
-              <p style={{ fontSize: "0.72rem", color: "var(--alvo-ink-soft)", margin: "6px 0 0" }}>
-                Deixe em branco se for o responsável principal. Se for outra pessoa, confirme a identidade antes de liberar.
-              </p>
-            </div>
-
-            {/* Autorização à distância por WhatsApp — quando quem retira não está na lista */}
-            {scannedChild.guardianPhone && (
-              <div style={{ background: "rgba(37, 211, 102, 0.06)", border: "1px solid rgba(37, 211, 102, 0.25)", padding: "1rem", borderRadius: "16px", marginBottom: "1.25rem" }}>
-                <span style={{ color: "#128C7E", fontSize: "0.75rem", fontWeight: 800, display: "block", marginBottom: 6 }}>
-                  Pessoa não listada? Confirme com o responsável
-                </span>
-                <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.78rem", margin: "0 0 10px" }}>
-                  Peça pelo WhatsApp que o responsável confirme quem pode retirar. Registre a confirmação abaixo antes de liberar.
-                </p>
-                <a
-                  href={`https://wa.me/55${scannedChild.guardianPhone}?text=${encodeURIComponent(`Olá! Aqui é da sala Kids. Podemos liberar ${scannedChild.name} para ${releasedTo.trim() || "a pessoa que está aqui"}? Por favor, confirme respondendo SIM.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366", color: "white", padding: "8px 16px", borderRadius: "10px", fontWeight: 700, fontSize: "0.8rem", textDecoration: "none" }}
-                >
-                  Chamar responsável no WhatsApp
-                </a>
-              </div>
-            )}
-
-            {/* Observação / override auditado */}
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)", marginBottom: "1.5rem" }}>
-              Observação da retirada <span style={{ fontWeight: 400 }}>(obrigatória se não estiver na lista)</span>
-              <input
-                placeholder="Ex: Mãe confirmou por WhatsApp às 10h32"
-                value={releaseNote}
-                onChange={e => setReleaseNote(e.target.value)}
-                style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
-              />
-            </label>
-
-            {/* Medical details or warnings */}
-            {scannedChild.allergies && scannedChild.allergies !== "Nenhuma" && (
-              <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
-                <span style={{ color: "#ef4444", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>ATENÇÃO MÉDICA CRÍTICA:</span>
-                <p style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.allergies}</p>
-              </div>
-            )}
-
-            {/* Security restrictions or alerts */}
-            {scannedChild.securityRestrictions && scannedChild.securityRestrictions !== "Nenhuma" && (
-              <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.15)", padding: "1rem", borderRadius: "16px", marginBottom: "1.5rem" }}>
-                <span style={{ color: "#f59e0b", fontSize: "0.75rem", fontWeight: 800, display: "block" }}>RESTRIÇÃO DE SEGURANÇA ATIVA:</span>
-                <p style={{ color: "var(--alvo-ink)", fontSize: "0.8rem", margin: "4px 0 0" }}>{scannedChild.securityRestrictions}</p>
-              </div>
-            )}
-
-            {/* Action panel */}
-            <div>
-              {checkoutStatus === "success" ? (
-                <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid #10b981", borderRadius: "16px", padding: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#10b981", fontWeight: 900 }}>
-                  <CheckCircle2 size={20} />
-                  Criança entregue ao responsável com sucesso!
-                </div>
-              ) : (
-                (() => {
-                  const who = releasedTo.trim();
-                  const authorized = [scannedChild.parentName, ...(scannedChild.authorizedPickupNames ?? [])]
-                    .map(n => n.trim().toLowerCase());
-                  // Retirando não listado → exige observação (override auditado).
-                  const isListed = who === "" || authorized.includes(who.toLowerCase());
-                  const needsNote = !isListed && releaseNote.trim() === "";
-                  return (
-                    <div>
-                      {!isListed && (
-                        <div style={{ background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "10px 14px", borderRadius: "12px", marginBottom: "1rem", fontSize: "0.78rem", color: "#b45309", display: "flex", alignItems: "center", gap: 8 }}>
-                          <AlertTriangle size={16} />
-                          <strong>{who}</strong> não está na lista de autorizados. Registre a observação para liberar sob responsabilidade do operador.
-                        </div>
-                      )}
-                      <div style={{ display: "flex", gap: "1rem" }}>
-                        <button
-                          onClick={() => {
-                            setView("list");
-                            setScannedChild(null);
-                            setReleasedTo("");
-                            setReleaseNote("");
-                          }}
-                          style={{ flex: 1, padding: "12px", border: "1px solid var(--alvo-line)", background: "white", color: "var(--alvo-ink)", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          Cancelar
-                        </button>
-
-                        <button
-                          onClick={() => void handleCheckout()}
-                          disabled={checkoutStatus === "pending" || needsNote}
-                          style={{ flex: 1, padding: "12px", background: needsNote ? "var(--alvo-line)" : "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: needsNote ? "not-allowed" : "pointer", opacity: needsNote ? 0.7 : 1 }}
-                        >
-                          {checkoutStatus === "pending" ? "Registrando..." : isListed ? "Confirmar Liberação" : "Liberar com Override"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()
-              )}
-            </div>
-
-          </div>
-        </section>
-      )}
+      {view === "checkout" && scannedChild && <KidsCustodyPanel key={scannedChild.id} record={scannedChild.source} initialProof={proof} onClose={releasedTo => { if (releasedTo) setSecurityLogs(logs => [{ time: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }), text: `Retirada: ${scannedChild.name} entregue a ${releasedTo}.`, type: "success" }, ...logs]); setScannedChild(null); setView("list"); void reloadKids(); }} />}
 
     </main>
   );

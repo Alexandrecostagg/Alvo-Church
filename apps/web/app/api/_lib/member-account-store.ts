@@ -20,6 +20,7 @@ function decode(value: Data): any {
   return value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
+  usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
   set: (path: string, data: Data) => void;
   patch: (path: string, data: Data) => void;
@@ -55,6 +56,10 @@ export async function accountTransaction<T>(work: (tx: AccountTransaction) => Pr
       if (!transaction) throw new Error("Transação ausente.");
       const writes: Data[] = [];
       const result = await work({
+        usersByEmail: async (orgId, email) => {
+          const rows: Data[] = await call(`/organizations/${orgId}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "email" }, op: "EQUAL", value: { stringValue: email } } }, limit: 2 } });
+          return rows.filter(row => row.document).map(row => ({ ...decode({ mapValue: { fields: row.document.fields } }), id: row.document.name.split("/").at(-1) }));
+        },
         read: async (...paths) => {
           if (!paths.length) return [];
           const rows: Data[] = await call(":batchGet", { documents: [...new Set(paths.map(name))], transaction });

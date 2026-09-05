@@ -1,8 +1,8 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 4: **68,15% (aproximadamente 68,2%)**. QR e fotos Kids
-> com acesso autenticado e Storage privado; 222 testes e 62 verificações de mídia.
-> Regra de 50 preservada. Ver [entregas e cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 5: **69,45% (aproximadamente 69,5%)**. Responsável
+> separado do operador e retirada Kids transacional; 235 testes, 77 verificações
+> de custódia e 62 de mídia. Regra de 50 preservada. Ver [entregas e cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base auditada: `ecc86b4`, branch `codex/consolidacao-local-2026-09-05`.
@@ -147,7 +147,8 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Dependências, identidade/Passe e mídia Kids validados localmente. Fechar vínculo
-do responsável, retirada atômica e homologar papéis; depois integrar os cadastros legados, eliminar dados simulados
+Dependências, identidade/Passe e mídia Kids validados localmente. Vínculo
+do responsável e retirada atômica validados localmente na entrega 5. Fechar
+escala/sala/evento e homologar aparelhos; depois integrar os cadastros legados, eliminar dados simulados
 e fazer QA físico do mobile. LP pode ter sua consolidação preparada como frente
 própria, sem antecipar publicação. Critérios detalhados no backlog ativo.

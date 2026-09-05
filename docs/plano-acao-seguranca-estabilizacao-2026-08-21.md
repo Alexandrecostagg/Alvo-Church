@@ -175,3 +175,14 @@ consentimento protegidos de escrita direta; upload limitado, substituição e
 remoção. 222 testes e 62 verificações HTTP/Firestore/Storage passaram. Vínculo do
 responsável/retirada, retenção, legado/cache remoto e IAM por fechar antes de
 produção. [Evidências e limites](kids-midias-privadas-2026-09-05.md).
+
+
+## Entrega 5 — entrada e retirada Kids
+
+Escritas diretas de check-in removidas: backend autentica operador, resolve conta
+do responsável dentro da igreja e registra visitante sem UID inventado. Lista
+confirmada e versão do vínculo, QR/código e conferência de identidade são exigidos
+para retirada transacional; override livre removido. Regularização de legados
+exige motivo/confirmação e auditoria. 77 verificações de custódia, regressões de
+mídia/50 membros, 235 testes e builds passaram. Escala/sala/evento, criança
+cadastral e aparelhos ainda por fechar. [Evidências](kids-custodia-2026-09-05.md).

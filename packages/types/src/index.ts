@@ -1184,11 +1184,14 @@ export interface KidsCheckIn {
   organizationId: string;
   campusId?: string;
   childId: string;                 // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
-  parentId: string;                // responsável que fez o check-in
+  parentId: string;                // conta do responsável; vazio quando sem conta, nunca o operador por padrão
   authorizedPickUpIds: string[];   // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
   checkedInAt: string;
   checkedOutAt?: string;
   checkedOutByParentId?: string;
+  checkedOutByUserId?: string;
+  guardianVersion?: number;
+  pickupPeople?: Array<{ id: string; name: string; userId: string }>;
   checkedInByUserId?: string;      // voluntário/uid que operou a entrada
   status: KidsCheckInStatus;
   roomCode?: string;
@@ -1196,6 +1199,7 @@ export interface KidsCheckIn {
   securityToken: string;           // payload do QR de retirada
   // Denormalizado p/ exibição (essencial quando a criança é cadastro rápido, sem Person):
   childName?: string;
+  guardianAccountEmail?: string;
   guardianName?: string;
   guardianPhone?: string;          // WhatsApp de quem deixou (só dígitos c/ DDI) — p/ autorizar retirada
   authorizedPickupNames?: string[];// nomes livres autorizados a retirar (além do responsável)

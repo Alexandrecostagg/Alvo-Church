@@ -15,12 +15,17 @@ Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
   iOS/Android passaram. Veja `docs/vinculo-passe-2026-09-05.md`.
 - Entrega 4: QR autenticado, foto em Storage privado, upload/remoção no painel
   e leitura web/app; 222 testes, 62 verificações HTTP/regras/Storage, regressão
-  49→50, OpenNext e Hermes passaram. Atual: 68,15% (~68,2%).
+  49→50, OpenNext e Hermes passaram. Percentual: 68,15%.
   Veja `docs/kids-midias-privadas-2026-09-05.md`; sem publicação/teste físico.
+- Entrega 5: entrada/retirada Kids no backend, responsável separado do operador,
+  autorização nominal e confirmação de identidade; transações impedem duplicação
+  e dupla retirada. Legados exigem confirmação no painel. 235 testes, 77 checks
+  de custódia, 62 de mídia, regressão 49→50, OpenNext e Hermes passaram.
+  Atual: 69,45% (~69,5%); veja `docs/kids-custodia-2026-09-05.md`.
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
   `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
   63,25% como linha de base (não prontidão de produção nem PRD completo).
-- Prioridade atual: fluxo Kids → limites/cadastros legados → dados reais e QA mobile.
+- Prioridade atual: escala/sala/evento Kids e QA físico → limites/cadastros legados → dados reais e QA mobile.
 - Recomendação arquitetural: mobile no monorepo; LP com fonte e deploy próprios,
   candidata a repo separado após consolidação. Nenhuma migração foi executada.
 - Revisão documental: 167 testes e typecheck passaram novamente; build estático
@@ -73,7 +78,8 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
   Vínculos legados exigem confirmação administrativa; parceiro/aparelhos por homologar.
 - Consulte `docs/auditoria-jules-kids-passe-2026-09-05.md` e
   `docs/cadastro-transacional-2026-09-05.md`. QR e fotos privadas implementados localmente na entrega 4;
-  vínculo responsável/operador, retirada atômica e retenção seguem pendentes. Recepção/escalas ainda precisam
+  vínculo responsável/operador e retirada atômica validados localmente na entrega 5.
+  Escala/sala/evento, retenção e QA físico seguem pendentes. Recepção/escalas ainda precisam
   migrar para a mesma API para fechar o limite global de pessoas.
 - Mobile usa Expo 57.0.20 e React Native 0.86.3, identidade `com.plataformaesdras.app`.
 - Segurança de tenant, dados simulados, armazenamento Kids e limites persistentes

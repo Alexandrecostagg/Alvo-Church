@@ -1851,10 +1851,6 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
 
 const DEFAULT_KIDS_ROOMS = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
 
-function newKidsToken() {
-  return `KID-${Crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
-}
-
 // A equipe registra a entrada; responsáveis consultam crachás já vinculados.
 // O vínculo com o responsável e a retirada transacional seguem no próximo marco Kids.
 function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
@@ -1866,6 +1862,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
   // form de check-in (responsável)
   const [childName, setChildName] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [authorizedNames, setAuthorizedNames] = useState("");
+  const [guardianConfirmed, setGuardianConfirmed] = useState(false);
+  const createAttempt = useRef(Crypto.randomUUID());
   const [room, setRoom] = useState<{ id: string; name: string } | null>(null);
   const [allergies, setAllergies] = useState("");
   const [restrictions, setRestrictions] = useState("");
@@ -1877,7 +1878,13 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState<KidsCheckIn | null>(null);
+  const [createdBadge, setCreatedBadge] = useState<KidsCheckIn | null>(null);
   const scanLock = useRef(false);
+  const checkoutAttempt = useRef(Crypto.randomUUID());
+  const [checkoutProof, setCheckoutProof] = useState("");
+  const [receiverId, setReceiverId] = useState("");
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const [releasing, setReleasing] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -1921,32 +1928,17 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
   async function doCheckIn() {
     if (!canOperate) { Alert.alert("A entrada deve ser registrada pela equipe Kids."); return; }
+    if (!guardianName.trim() || !guardianConfirmed) { Alert.alert("Confira o responsável e as autorizações antes de registrar."); return; }
     if (!childName.trim() || !room) { Alert.alert("Preencha o nome da criança e a sala."); return; }
     if (photo && !consent) { Alert.alert("Marque o consentimento para usar a foto."); return; }
     setSaving(true);
     try {
-      const sdk = await import("@alvo/firebase");
-      const token = newKidsToken();
-      const nowIso = new Date().toISOString();
-      const checkIn: KidsCheckIn = {
-        id: `kc_${Crypto.randomUUID()}`,
-        organizationId: orgId,
-        childId: `quick_${token}`,
-        parentId: user.uid,
-        authorizedPickUpIds: [user.uid],
-        checkedInAt: nowIso,
-        checkedInByUserId: user.uid,
-        status: "checked_in",
-        serviceTeamId: room.id.startsWith("room_") ? undefined : room.id,
-        roomCode: room.name,
-        securityToken: token,
-        childName: childName.trim(),
-        guardianName: user.displayName ?? user.email ?? undefined,
-        allergies: allergies.trim() || undefined,
-        securityRestrictions: restrictions.trim() || undefined,
-
-      };
-      await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId }, checkIn);
+      const token = await user.getIdToken();
+      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_in", organizationId: orgId, requestId: createAttempt.current, childName, roomCode: room.name, guardianName, guardianEmail, authorizedNames: authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies, securityRestrictions: restrictions, identityConfirmed: guardianConfirmed }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      const checkIn: KidsCheckIn = data.checkIn;
+      createAttempt.current = Crypto.randomUUID();
       if (photo) {
         try {
           const idToken = await user.getIdToken();
@@ -1954,9 +1946,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
           if (!response.ok) throw new Error((await response.json()).error);
         } catch { Alert.alert("Entrada registrada, foto não salva", "Peça à equipe para anexar a foto pelo painel. Não refaça o check-in."); }
       }
+      setCreatedBadge(checkIn);
       setActive((p) => [checkIn, ...p]);
+      setGuardianName(""); setGuardianEmail(""); setAuthorizedNames(""); setGuardianConfirmed(false);
       setChildName(""); setRoom(null); setAllergies(""); setRestrictions(""); setPhoto(null); setConsent(false);
-      Alert.alert("Check-in feito!", "O crachá com o QR está disponível abaixo. Mostre-o na retirada.");
+      Alert.alert("Check-in feito!", "O responsável com conta vinculada verá o crachá no aplicativo. Para responsável sem conta, entregue o código: " + checkIn.pickupCode);
     } catch (e) {
       Alert.alert("Erro ao registrar", e instanceof Error ? e.message : "Tente novamente.");
     } finally {
@@ -1973,7 +1967,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
       setScanning(false);
       if (!ci) { Alert.alert("QR inválido", "Nenhum check-in encontrado para este código."); }
       else if (ci.status !== "checked_in") { Alert.alert("Já retirada", "Esta criança não está com check-in ativo."); }
-      else setScanned(ci);
+      else { setScanned(ci); setCheckoutProof(data.trim()); setReceiverId(""); setIdentityConfirmed(false); checkoutAttempt.current = Crypto.randomUUID(); }
     } catch {
       Alert.alert("Erro", "Não foi possível ler o check-in.");
     } finally {
@@ -1982,16 +1976,18 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   }
 
   async function confirmCheckout() {
-    if (!scanned) return;
+    if (!scanned || releasing || !identityConfirmed || !receiverId) return;
+    setReleasing(true);
     try {
-      const sdk = await import("@alvo/firebase");
-      await sdk.checkoutKidsCheckIn(firebaseConfig, { organizationId: orgId }, scanned.id, user.uid);
-      setActive((p) => p.filter((c) => c.id !== scanned.id));
-      setScanned(null);
-      Alert.alert("Retirada confirmada", "Criança liberada com sucesso.");
-    } catch (e) {
-      Alert.alert("Erro", e instanceof Error ? e.message : "Tente novamente.");
-    }
+      const token = await user.getIdToken();
+      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_out", organizationId: orgId, checkInId: scanned.id, requestId: checkoutAttempt.current, proof: checkoutProof, receiverId, identityConfirmed, expectedGuardianVersion: scanned.guardianVersion ?? 0 }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setCreatedBadge(null);
+      setActive(p => p.filter(c => c.id !== scanned.id)); setScanned(null);
+      Alert.alert("Retirada confirmada", "A entrega foi registrada com o operador e a pessoa autorizada.");
+    } catch (error) { Alert.alert("Retirada não confirmada", error instanceof Error ? error.message : "Confira a conexão e tente novamente."); }
+    finally { setReleasing(false); }
   }
 
   if (loading) {
@@ -2001,11 +1997,17 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Segurança Kids" onBack={onBack} />
+      {createdBadge && <View style={s.card}>
+        <Text style={s.cardTitle}>Entrada registrada: {createdBadge.childName}</Text>
+        <KidsPrivateImage user={user} organizationId={orgId} checkInId={createdBadge.id} kind="qr" apiBaseUrl={WEB_API_URL} size={150} />
+        <Text selectable style={s.cardMeta}>Código para o responsável: {createdBadge.pickupCode}</Text>
+        <Btn label="Fechar crachá" onPress={() => setCreatedBadge(null)} variant="outline" color={primary} />
+      </View>}
 
       {canOperate && (
         <View style={s.segControl}>
           <Pressable style={[s.seg, mode === "guardian" && { backgroundColor: primary }]} onPress={() => setMode("guardian")}>
-            <Text style={[s.segText, mode === "guardian" && { color: "#fff" }]}>Responsável</Text>
+            <Text style={[s.segText, mode === "guardian" && { color: "#fff" }]}>Entrada / crachás</Text>
           </Pressable>
           <Pressable style={[s.seg, mode === "volunteer" && { backgroundColor: primary }]} onPress={() => setMode("volunteer")}>
             <Text style={[s.segText, mode === "volunteer" && { color: "#fff" }]}>Voluntário (sala)</Text>
@@ -2034,6 +2036,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
           {!canOperate ? <Text style={s.cardMeta}>Procure a equipe Kids para registrar a entrada. Seus crachás ativos aparecem acima.</Text> : <>
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Fazer check-in</Text>
+          <Field label="Nome do responsável" value={guardianName} onChange={setGuardianName} autoCapitalize="words" />
+          <Field label="E-mail da conta na igreja (opcional)" value={guardianEmail} onChange={setGuardianEmail} autoCapitalize="none" keyboardType="email-address" />
+          <Text style={s.cardMeta}>Deixe o e-mail vazio se o responsável não tiver conta. O operador não será vinculado como responsável automaticamente.</Text>
+          <Field label="Outros autorizados (nomes separados por vírgula)" value={authorizedNames} onChange={setAuthorizedNames} />
+          <View style={s.row}><Switch value={guardianConfirmed} onValueChange={setGuardianConfirmed} /><Text style={[s.cardMeta, s.fill]}>Conferi a identidade, o vínculo da conta informada e a autorização destas pessoas.</Text></View>
           <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
           {rooms.map((r) => (
@@ -2070,8 +2077,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
               <Text style={s.cardMeta}>Responsável: {scanned.guardianName ?? "—"}</Text>
               {scanned.allergies ? <Text style={[s.cardMeta, { color: "#dc2626", marginTop: 4 }]}>⚠️ Alergias: {scanned.allergies}</Text> : null}
               {scanned.securityRestrictions ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>⚠️ {scanned.securityRestrictions}</Text> : null}
-              <Text style={[s.cardMeta, { textAlign: "center", marginTop: 10 }]}>Confira a foto e o responsável antes de liberar.</Text>
-              <Btn label="Confirmar retirada" onPress={confirmCheckout} color="#16a34a" style={{ marginTop: 14, alignSelf: "stretch" }} />
+              {!scanned.guardianVersion && <Text style={s.cardMeta}>Check-in antigo: a equipe deve confirmar os responsáveis pelo painel antes da retirada.</Text>}
+              <Text style={s.label}>Quem está retirando?</Text>
+              {(scanned.pickupPeople ?? []).map(person => <Pressable key={person.id} style={s.roomRow} disabled={releasing} onPress={() => { setReceiverId(person.id); setIdentityConfirmed(false); }}><Text>{receiverId === person.id ? "◉ " : "○ "}{person.name}</Text></Pressable>)}
+              <View style={s.row}><Switch disabled={releasing} value={identityConfirmed} onValueChange={setIdentityConfirmed} /><Text style={[s.cardMeta, s.fill]}>Conferi a identidade de quem retira, a foto disponível e as restrições.</Text></View>
+              <Btn label="Confirmar retirada" disabled={!scanned.guardianVersion || !receiverId || !identityConfirmed} loading={releasing} onPress={confirmCheckout} color="#16a34a" style={{ marginTop: 14, alignSelf: "stretch" }} />
               <Btn label="Cancelar" onPress={() => setScanned(null)} variant="outline" color={primary} style={{ marginTop: 8, alignSelf: "stretch" }} />
             </View>
           ) : scanning ? (

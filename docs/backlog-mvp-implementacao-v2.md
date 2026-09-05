@@ -23,7 +23,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
 | P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Publicação/IAM, legado e retenção pendentes. |
-| P0.4 | Fluxo Kids mobile | Pendente | Definir responsável solicitando versus operador confirmando, alinhar UI/regras; validar check-in/retirada e repetição em aparelho. |
+| P0.4 | Fluxo Kids mobile | Parcial — entrega 5 | Entrada por operador com responsável real/visitante; retirada transacional, lista confirmada, legado e concorrência validados localmente (77 checks). Falta fechar escala/sala/evento, criança cadastral e QA em aparelho. |
 | P0.5 | Limites e proteção pública | Parcial | Recepção/escalas usam a política transacional de pessoas; limite persistente/anti-spam e mediação segura de comprovantes. |
 | P1.1 | Verdade dos dados | Parcial | Remover fallbacks de recepção, pastoral, rede, marketplace e bem-estar; vazio/erro não inventa registros; Wi-Fi não confirma falha. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
@@ -60,8 +60,10 @@ permissões. Gerar QR não comprova recebimento do dinheiro.
 
 **Parcial e bloqueador.** UUID criptográfico web/mobile integrado; mídia autenticada
 e Storage privado validados na entrega 4. App restringe registro de entrada à
-equipe. Falta fechar identidade do responsável, escala/sala, retirada atômica,
-retenção e QA físico. [Evidências](kids-midias-privadas-2026-09-05.md).
+equipe. Responsável separado do operador,
+lista confirmada e retirada atômica validados na entrega 5. Faltam escala/sala/evento,
+identidade cadastral da criança, retenção e QA físico.
+[Evidências](kids-custodia-2026-09-05.md).
 Aceite conforme P0.3/P0.4; teste unitário não substitui retirada em aparelho.
 
 ## Épico 5 — IA Pastoral
