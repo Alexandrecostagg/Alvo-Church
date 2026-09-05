@@ -28,9 +28,10 @@ interface ServiceAccountJson {
   private_key: string;
 }
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+const cachedTokens = new Map<string, { value: string; expiresAt: number }>();
 
 export async function getGoogleAccessToken(scope: string): Promise<string> {
+  const cachedToken = cachedTokens.get(scope);
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.value;
   }
@@ -87,6 +88,6 @@ export async function getGoogleAccessToken(scope: string): Promise<string> {
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  cachedTokens.set(scope, { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 });
   return data.access_token;
 }

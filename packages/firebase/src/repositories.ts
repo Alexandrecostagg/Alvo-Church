@@ -3416,7 +3416,7 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     pickupCode: data.pickupCode ? String(data.pickupCode) : undefined,
     allergies: data.allergies ? String(data.allergies) : undefined,
     securityRestrictions: data.securityRestrictions ? String(data.securityRestrictions) : undefined,
-    photoUrl: data.photoUrl ? String(data.photoUrl) : undefined,
+    // Legacy inline/public photos are never returned to Kids clients.
     photoConsentAt: data.photoConsentAt ? String(data.photoConsentAt) : undefined,
     releasedTo: data.releasedTo ? String(data.releasedTo) : undefined,
     releaseNote: data.releaseNote ? String(data.releaseNote) : undefined,

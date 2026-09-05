@@ -1202,7 +1202,7 @@ export interface KidsCheckIn {
   pickupCode?: string;             // código curto de retirada (fallback ao QR: sem app/bateria/visitante)
   allergies?: string;
   securityRestrictions?: string;
-  photoUrl?: string;               // foto tirada na hora
+  photoUrl?: string;               // legado; não escrever/exibir. Mídia Kids usa API autenticada.
   photoConsentAt?: string;         // consentimento LGPD do responsável (timestamp)
   releasedTo?: string;             // quem retirou (nome) — auditoria
   releaseNote?: string;            // observação da liberação (ex.: "autorizado por [mãe] via WhatsApp")

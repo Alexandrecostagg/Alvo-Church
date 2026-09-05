@@ -1,7 +1,7 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 3: **66,35% (aproximadamente 66,4%)**. Vínculo seguro
-> conta/pessoa e Passe no app implementados; 192 testes e 78 verificações HTTP/regras.
+> Atualização após entrega 4: **68,15% (aproximadamente 68,2%)**. QR e fotos Kids
+> com acesso autenticado e Storage privado; 222 testes e 62 verificações de mídia.
 > Regra de 50 preservada. Ver [entregas e cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
@@ -88,8 +88,9 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
 1. Achado inicial resolvido localmente na entrega 3: vínculo privado e transacional
    confirmado pela administração, `personId` protegido e Passe via API autenticada.
    App implementado; homologação em aparelhos/parceiros continua pendente.
-2. `apps/web/app/api/kids/qr/route.ts` recebe o segredo por GET e permite cache
-   público por um dia. UUID forte não resolve exposição do segredo.
+2. Achado inicial resolvido localmente na entrega 4: GET do QR desativado,
+   consulta autenticada e foto privada. Publicação coordenada e revisão do
+   cache/legado remoto ainda pendentes.
 3. `reception-view`, `wellness-view`, `network-view` e telas do marketplace ainda
    têm dados simulados/fallbacks. `/wifi` transforma falha de requisição em sucesso.
 4. `/api/giving/pix` gera BR Code estático. Isso não é gateway de PIX dinâmico,
@@ -146,7 +147,7 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Dependências e identidade/Passe validados localmente. Retirar a exposição do QR Kids e
-homologar papéis; depois integrar os cadastros legados, eliminar dados simulados
+Dependências, identidade/Passe e mídia Kids validados localmente. Fechar vínculo
+do responsável, retirada atômica e homologar papéis; depois integrar os cadastros legados, eliminar dados simulados
 e fazer QA físico do mobile. LP pode ter sua consolidação preparada como frente
 própria, sem antecipar publicação. Critérios detalhados no backlog ativo.

@@ -5,8 +5,10 @@ em aparelhos comprovada nesta base**. Typecheck e exports JS/Hermes iOS/Android 
 isso não comprova build nativo assinado, instalação ou aprovação em loja.
 Contas EAS/lojas não foram inspecionadas nesta revisão.
 
-Antes do roteiro de distribuição abaixo, fechar QR/fotos Kids e papéis.
-Dependências e vínculo/Passe foram validados localmente nas entregas 1 e 3. Ver [backlog ativo](backlog-mvp-implementacao-v2.md).
+Antes do roteiro de distribuição abaixo, fechar fluxo Kids (responsável/retirada) e papéis.
+Dependências, vínculo/Passe e mídia Kids foram validados localmente nas entregas
+1, 3 e 4. QR/foto agora usam POST autenticado e Storage privado; validar câmera,
+fotos, suspensão e rede em aparelho. [Entrega 4](kids-midias-privadas-2026-09-05.md). Ver [backlog ativo](backlog-mvp-implementacao-v2.md).
 O app já tem registro de Expo Push Token; entrega de notificação em aparelho ainda
 precisa ser comprovada. A carteirinha Passe está implementada no Perfil, com
 consulta autenticada, vínculo administrativo e estados sem acesso/sem rede.

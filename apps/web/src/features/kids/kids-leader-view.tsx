@@ -24,6 +24,8 @@ import {
   CameraOff,
 } from "lucide-react";
 import Link from "next/link";
+import { KidsPrivateImage } from "./kids-private-image";
+import { KidsPhotoEditor } from "./kids-photo-editor";
 import { useAppAuth } from "../../../app/providers";
 import {
   fetchActiveKidsCheckIns,
@@ -40,7 +42,6 @@ interface KidRecord {
   id: string;                 // = id do KidsCheckIn (usado no checkout)
   name: string;
   age?: number;               // não persiste no check-in; presente só no walk-in local
-  photo: string;
   status: "checked_in" | "checked_out";
   checkInTime: string;
   parentName: string;
@@ -58,7 +59,6 @@ function toKidRecord(c: KidsCheckIn): KidRecord {
   return {
     id: c.id,
     name: c.childName ?? "Criança",
-    photo: c.photoUrl ?? "",
     status: c.status === "checked_out" ? "checked_out" : "checked_in",
     checkInTime: c.checkedInAt ? new Date(c.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "",
     parentName: c.guardianName ?? "Responsável",
@@ -113,7 +113,7 @@ export function KidsLeaderView() {
 
   const [scanSoundVisual, setScanSoundVisual] = useState(false);
   // Crachá recém-gerado (mostra QR + código pro operador entregar ao responsável).
-  const [justCheckedIn, setJustCheckedIn] = useState<{ token: string; code: string; name: string } | null>(null);
+  const [justCheckedIn, setJustCheckedIn] = useState<{ id: string; code: string; name: string } | null>(null);
   // Retirada: quem está retirando + observação (auditoria) + código digitado (fallback).
   const [releasedTo, setReleasedTo] = useState("");
   const [releaseNote, setReleaseNote] = useState("");
@@ -322,7 +322,7 @@ export function KidsLeaderView() {
       ...prev
     ]);
     setNewKidDraft({ name: "", age: "", parentName: "", parentPhone: "", authorizedNames: "", allergies: "", securityRestrictions: "" });
-    setJustCheckedIn({ token, code: pickupCode, name: newKid.name });
+    setJustCheckedIn({ id: checkIn.id, code: pickupCode, name: newKid.name });
     setView("list");
   };
 
@@ -373,11 +373,7 @@ export function KidsLeaderView() {
               <strong style={{ color: "var(--alvo-ink)" }}>{justCheckedIn.name}</strong> está sob cuidado. Mostre o QR ao responsável para escanear no app.
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <img
-                src={`/api/kids/qr?data=${encodeURIComponent(justCheckedIn.token)}`}
-                alt={`QR de retirada de ${justCheckedIn.name}`}
-                style={{ width: 200, height: 200, borderRadius: 12, border: "1px solid var(--alvo-line)" }}
-              />
+              <KidsPrivateImage checkInId={justCheckedIn.id} size={200} />
             </div>
             <div style={{ marginTop: "1.25rem", padding: "0.85rem", background: "rgba(249, 115, 22, 0.08)", border: "1px dashed rgba(249, 115, 22, 0.35)", borderRadius: 16 }}>
               <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", textTransform: "uppercase", fontWeight: 700, display: "block" }}>Código de retirada (sem app)</span>
@@ -386,6 +382,7 @@ export function KidsLeaderView() {
                 Anote no crachá impresso. Serve para retirar mesmo sem celular/bateria/internet.
               </p>
             </div>
+            <KidsPhotoEditor key={justCheckedIn.id} checkInId={justCheckedIn.id} />
             <button
               onClick={() => setJustCheckedIn(null)}
               style={{ marginTop: "1.5rem", width: "100%", padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}
@@ -773,6 +770,7 @@ export function KidsLeaderView() {
                 <Baby size={28} style={{ color: "var(--alvo-accent)" }} />
                 <div>
                   <strong style={{ color: "var(--alvo-ink)", display: "block" }}>{scannedChild.name}</strong>
+                  <KidsPhotoEditor key={scannedChild.id} checkInId={scannedChild.id} />
                   <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.75rem" }}>{scannedChild.age ? `${scannedChild.age} anos • ` : ""}Sala Kids</span>
                 </div>
               </div>

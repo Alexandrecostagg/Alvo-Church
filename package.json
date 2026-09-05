@@ -18,12 +18,13 @@
     "test:watch": "vitest",
     "dev:web": "corepack pnpm --filter @alvo/web dev",
     "dev:mobile": "corepack pnpm --filter @alvo/mobile dev",
-    "qa:emulators": "corepack pnpm exec firebase emulators:start --only auth,firestore --project demo-alvo-qa",
+    "qa:emulators": "corepack pnpm exec firebase emulators:start --only auth,firestore,storage --project demo-alvo-qa",
     "qa:seed": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/seed-qa.ts",
     "qa:verify": "node scripts/with-qa-env.mjs node scripts/verify-qa-members.mjs",
     "qa:registration": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-registration.ts",
     "qa:web": "node scripts/with-qa-env.mjs corepack pnpm --filter @alvo/web exec next dev --webpack --hostname 127.0.0.1 --port 3001",
-    "qa:member-pass": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-member-pass.ts"
+    "qa:member-pass": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-member-pass.ts",
+    "qa:kids-media": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-kids-media.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

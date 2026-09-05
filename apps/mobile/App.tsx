@@ -1,3 +1,4 @@
+import { KidsPrivateImage } from "./src/features/kids/kids-private-image";
 import { MemberPassCard } from "./src/features/profile/member-pass-card";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -1854,9 +1855,8 @@ function newKidsToken() {
   return `KID-${Crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
 }
 
-// Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho
-// (gera o crachá digital com QR no celular dele, com foto e consentimento) e o
-// voluntário escalado escaneia o QR na retirada para validar e dar baixa.
+// A equipe registra a entrada; responsáveis consultam crachás já vinculados.
+// O vínculo com o responsável e a retirada transacional seguem no próximo marco Kids.
 function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [canOperate, setCanOperate] = useState(false);
@@ -1890,7 +1890,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
       ]);
       const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
       const qrRoles = settings?.qrGeneratorRoles ?? [];
-      const isAdmin = roles.some((r) => r === "super_admin" || r === "church_admin");
+      const isAdmin = roles.some((r) => ["super_admin", "church_admin", "pastor", "secretary"].includes(r));
       const op = isAdmin || roles.some((r) => qrRoles.includes(r));
       setCanOperate(op);
       const checkIns = op
@@ -1920,6 +1920,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   }
 
   async function doCheckIn() {
+    if (!canOperate) { Alert.alert("A entrada deve ser registrada pela equipe Kids."); return; }
     if (!childName.trim() || !room) { Alert.alert("Preencha o nome da criança e a sala."); return; }
     if (photo && !consent) { Alert.alert("Marque o consentimento para usar a foto."); return; }
     setSaving(true);
@@ -1928,7 +1929,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
       const token = newKidsToken();
       const nowIso = new Date().toISOString();
       const checkIn: KidsCheckIn = {
-        id: token,
+        id: `kc_${Crypto.randomUUID()}`,
         organizationId: orgId,
         childId: `quick_${token}`,
         parentId: user.uid,
@@ -1943,10 +1944,16 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
         guardianName: user.displayName ?? user.email ?? undefined,
         allergies: allergies.trim() || undefined,
         securityRestrictions: restrictions.trim() || undefined,
-        photoUrl: photo ?? undefined,
-        photoConsentAt: photo && consent ? nowIso : undefined
+
       };
       await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId }, checkIn);
+      if (photo) {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch(`${WEB_API_URL}/api/kids/photo`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ organizationId: orgId, checkInId: checkIn.id, dataUrl: photo, consent }) });
+          if (!response.ok) throw new Error((await response.json()).error);
+        } catch { Alert.alert("Entrada registrada, foto não salva", "Peça à equipe para anexar a foto pelo painel. Não refaça o check-in."); }
+      }
       setActive((p) => [checkIn, ...p]);
       setChildName(""); setRoom(null); setAllergies(""); setRestrictions(""); setPhoto(null); setConsent(false);
       Alert.alert("Check-in feito!", "O crachá com o QR está disponível abaixo. Mostre-o na retirada.");
@@ -2014,21 +2021,18 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
               <Text style={[s.label, { marginBottom: 8 }]}>Crachás ativos</Text>
               {myKids.map((c) => (
                 <View key={c.id} style={[s.card, { alignItems: "center", marginBottom: 12 }]}>
-                  {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 64, height: 64, borderRadius: 32, marginBottom: 8 }} /> : null}
+                  <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="photo" apiBaseUrl={WEB_API_URL} size={64} />
                   <Text style={s.cardTitle}>{c.childName}</Text>
                   <Text style={s.cardMeta}>{c.roomCode}</Text>
                   {c.allergies ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>Alergias: {c.allergies}</Text> : null}
-                  <Image source={{ uri: `${WEB_API_URL}/api/kids/qr?data=${encodeURIComponent(c.securityToken)}` }} style={{ width: 180, height: 180, marginTop: 10 }} />
-                  <View style={[s.codeBox, { borderColor: primary, marginTop: 8 }]}>
-                    <Text style={s.codeLabel}>Código</Text>
-                    <Text style={[s.codeValue, { color: primary }]}>{c.securityToken}</Text>
-                  </View>
+                  <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="qr" apiBaseUrl={WEB_API_URL} size={180} />
                   <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>Mostre este QR ao voluntário na retirada.</Text>
                 </View>
               ))}
             </>
           )}
 
+          {!canOperate ? <Text style={s.cardMeta}>Procure a equipe Kids para registrar a entrada. Seus crachás ativos aparecem acima.</Text> : <>
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Fazer check-in</Text>
           <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
@@ -2046,11 +2050,12 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
             <Btn label={photo ? "Refazer foto" : "Tirar foto da criança"} onPress={takePhoto} variant="outline" color={primary} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
               <Switch value={consent} onValueChange={setConsent} trackColor={{ true: primary }} />
-              <Text style={[s.cardMeta, { flex: 1 }]}>Autorizo a captura e o uso da foto do meu filho(a) para fins de segurança (LGPD).</Text>
+              <Text style={[s.cardMeta, { flex: 1 }]}>O responsável autorizou o uso da foto para identificação neste check-in.</Text>
             </View>
           </View>
 
           <Btn label="Registrar entrada" onPress={doCheckIn} loading={saving} color={primary} style={{ marginTop: 16 }} />
+          </>}
         </ScrollView>
       )}
 
@@ -2059,7 +2064,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
         <ScrollView contentContainerStyle={s.tabContent}>
           {scanned ? (
             <View style={[s.card, { alignItems: "center" }]}>
-              {scanned.photoUrl ? <Image source={{ uri: scanned.photoUrl }} style={{ width: 120, height: 120, borderRadius: 60, marginBottom: 10 }} /> : null}
+              <KidsPrivateImage user={user} organizationId={orgId} checkInId={scanned.id} kind="photo" apiBaseUrl={WEB_API_URL} size={120} />
               <Text style={s.cardTitle}>{scanned.childName}</Text>
               <Text style={s.cardMeta}>{scanned.roomCode}</Text>
               <Text style={s.cardMeta}>Responsável: {scanned.guardianName ?? "—"}</Text>
@@ -2098,7 +2103,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
               {active.map((c) => (
                 <View key={c.id} style={[s.card, { marginBottom: 8 }]}>
                   <View style={s.row}>
-                    {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10 }} /> : null}
+                    <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="photo" apiBaseUrl={WEB_API_URL} size={64} />
                     <View style={s.fill}>
                       <Text style={s.cardTitle}>{c.childName}</Text>
                       <Text style={s.cardMeta}>{c.roomCode}{c.allergies ? ` · ⚠️ ${c.allergies}` : ""}</Text>

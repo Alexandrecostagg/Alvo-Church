@@ -31,6 +31,11 @@ service firebase.storage {
         ]);
     }
 
+    // Backend-only Kids media; no Firebase download tokens are issued.
+    match /kids-private/{allPaths=**} {
+      allow read, write: if false;
+    }
+
     match /organizations/{orgId}/branding/{assetKind}/{fileName} {
       allow read: if isTenantMember(orgId);
       allow write: if isTenantAdmin(orgId);

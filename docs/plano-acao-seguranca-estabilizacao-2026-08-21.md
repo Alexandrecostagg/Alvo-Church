@@ -23,7 +23,7 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
 | 1 — Acesso/assinatura | Gestão de usuários restrita; campos de assinatura/abrangência protegidos; cadastro completo transacional com limite real. | Migrar recepção/escalas, rever cobertura por coleção; vínculo conta/pessoa validado localmente na entrega 3. |
-| 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR por URL/cache, fotos privadas, mediação de comprovantes, rate limit persistente/anti-spam. |
+| 2 — APIs/Kids | Upload de marca mediado por API; coleção genérica limitada a lista fechada; token Kids criptográfico no web e mobile. | QR/fotos validados na entrega 4; faltam publicação/IAM, legado/retenção, mediação de comprovantes e rate limit persistente/anti-spam. |
 | 3 — Custo/cobrança | API principal de IA consome cota no servidor; PIX estático existe. | Cota uniforme de banners, idempotência de checkout, consentimento/opt-out e destinatários da comunicação. |
 | 4 — Dados/fluxos | Dashboard/ficha sem dados inventados; leitura Kids por responsável/operador testada. | Fallbacks em recepção, rede, marketplace, bem-estar e pastoral; falso sucesso Wi-Fi; fluxo Kids mobile. |
 | 5 — Validação | 167 testes, typecheck, QA transacional e export iOS registrados; build LP passou nesta revisão. | Dependências com advisories; homologação física Android/iOS; cobertura completa de papéis/coleções e integrações. |
@@ -154,7 +154,7 @@ entregá-la apenas por armazenamento privado.
 ## Ordem de execução atualizada
 
 1. Corrigir dependências aplicáveis e validar os artefatos afetados.
-2. Fechar QR/fotos/fluxo Kids; vínculo/Passe validado localmente na entrega 3.
+2. Fechar fluxo Kids, retenção e publicação coordenada; QR/fotos validados na entrega 4; vínculo/Passe validado localmente na entrega 3.
 3. Migrar cadastros legados, proteger uploads e persistir limites/cotas.
 4. Remover dados simulados e homologar cobrança/comunicação.
 5. Ampliar testes de regras, homologar aparelhos/papéis e só então publicar.
@@ -165,3 +165,13 @@ Cada item só é concluído após revisão de código, teste do caminho permitid
 tentativa comprovadamente bloqueada do caminho indevido. Alterações de regras
 ou backend são publicadas apenas junto de uma validação no ambiente de
 homologação.
+
+
+## Entrega 4 — mídias Kids
+
+QR por GET/cache público desativado. API autenticada consulta check-in ativo,
+foto em Storage privado sem URL/token de download permanente. Referências e
+consentimento protegidos de escrita direta; upload limitado, substituição e
+remoção. 222 testes e 62 verificações HTTP/Firestore/Storage passaram. Vínculo do
+responsável/retirada, retenção, legado/cache remoto e IAM por fechar antes de
+produção. [Evidências e limites](kids-midias-privadas-2026-09-05.md).
