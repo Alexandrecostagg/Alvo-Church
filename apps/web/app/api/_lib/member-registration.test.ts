@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { validateRegistration } from "./member-registration";
+import { registerMember, validateRegistration } from "./member-registration";
 import { isLocalQaFirebase } from "./firebase-server-env";
 
 const payload = () => ({
@@ -89,5 +89,38 @@ describe("emulator boundary", () => {
     expect(isLocalQaFirebase()).toBe(true);
     vi.stubEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "real-project");
     expect(isLocalQaFirebase()).toBe(false);
+  });
+});
+
+describe("registration transaction contention", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+  it("releases aborted transactions, identifies retries and stops after five attempts", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "demo-alvo-qa");
+    vi.stubEnv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8080");
+    vi.stubEnv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9099");
+    let attempts = 0;
+    const released: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (url.endsWith(":beginTransaction")) {
+        expect(released).toHaveLength(attempts);
+        if (attempts > 0)
+          expect(body.options.readWrite.retryTransaction).toBe(`transaction-${attempts}`);
+        return Response.json({ transaction: `transaction-${++attempts}` });
+      }
+      if (url.endsWith(":rollback")) {
+        released.push(body.transaction);
+        return Response.json({});
+      }
+      expect(url.endsWith(":batchGet")).toBe(true);
+      return Response.json({ error: { status: "ABORTED" } }, { status: 409 });
+    }));
+    await expect(registerMember(payload(), "user-qa")).rejects.toMatchObject({ status: 409 });
+    expect(attempts).toBe(5);
+    expect(released).toHaveLength(5);
   });
 });

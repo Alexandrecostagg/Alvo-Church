@@ -3,10 +3,14 @@
 Atualizado em 05/09/2026 (UTC; sessão iniciada em 04/09 no horário de Belém).
 
 - Produto: Plataforma Esdras / EsdrasApp; monorepo Alvo Church.
+- Regra do usuário: manter 50 membros no gratuito, atualizar percentual/planos e
+  fazer commit ao fim de cada entrega; descartar cópias comprovadamente sem uso.
+- Entrega 1 concluída: dependências corrigidas, 0 críticos/0 altos/1 moderado
+  residual de ferramenta. Percentual atual: 64,20%; veja `docs/entregas-2026-09-05.md`.
 - Planos revisados em 05/09: `docs/backlog-mvp-implementacao-v2.md` é a fila ativa;
   `docs/status-implementacao-2026-09-05.md` concentra evidências e estimativa de
-  cerca de 63% do escopo operacional (não prontidão de produção nem PRD completo).
-- Prioridade atual: dependências com advisories → identidade/Passe → QR/fotos
+  63,25% como linha de base (não prontidão de produção nem PRD completo).
+- Prioridade atual: identidade/Passe → QR/fotos
   e fluxo Kids → limites/cadastros legados → dados reais e QA mobile.
 - Recomendação arquitetural: mobile no monorepo; LP com fonte e deploy próprios,
   candidata a repo separado após consolidação. Nenhuma migração foi executada.
@@ -62,7 +66,7 @@ Credenciais e arquivos `.env*` locais não devem ser versionados.
   `docs/cadastro-transacional-2026-09-05.md`. QR Kids em URL/cache, fotos privadas
   e fluxo responsável/operador seguem pendentes. Recepção/escalas ainda precisam
   migrar para a mesma API para fechar o limite global de pessoas.
-- Mobile usa Expo 57 e React Native 0.86, identidade `com.plataformaesdras.app`.
+- Mobile usa Expo 57.0.20 e React Native 0.86.3, identidade `com.plataformaesdras.app`.
 - Segurança de tenant, dados simulados, armazenamento Kids e limites persistentes
   ainda exigem a estabilização descrita em `docs/plano-acao-seguranca-estabilizacao-2026-08-21.md`.
 - Testes unitários não substituem testes de regras Firestore nem homologação

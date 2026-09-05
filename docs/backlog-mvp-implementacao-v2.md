@@ -20,7 +20,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 
 | Ordem | Item | Estado | Critério de aceite |
 | --- | --- | --- | --- |
-| P0.1 | Dependências de produção | Pendente | Tratar advisories por alcance/versão, repetir audit, testes, types e build web/LP/mobile; nenhum crítico/alto aplicável sem resolução. Ver inventário de 05/09. |
+| P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
 | P0.2 | Conta → pessoa → Passe | Parcial | Vínculo atribuído por operação autorizada, autoalteração negada, busca restrita ao tenant, carteirinha só com consentimento/benefício/código válido; testar conta sem vínculo e vínculo incorreto. |
 | P0.3 | QR e fotos Kids | Parcial | Segredo fora de URL/cache público, foto em armazenamento privado com acesso temporário; testar responsável, autorizado, operador e estranho. |
 | P0.4 | Fluxo Kids mobile | Pendente | Definir responsável solicitando versus operador confirmando, alinhar UI/regras; validar check-in/retirada e repetição em aparelho. |

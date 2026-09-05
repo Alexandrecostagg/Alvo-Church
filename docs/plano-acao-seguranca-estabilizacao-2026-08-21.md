@@ -6,6 +6,13 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Correção posterior — entrega 1 de 05/09
+
+Dependências e repetição concorrente do cadastro corrigidas: auditoria agora com **0 críticos, 0 altos e 1 moderado**
+residual em ferramenta Xcode, avaliado sem alcance no chamador v4. Testes,
+builds web/LP/API, bundles iOS/Android, pods e QA passaram. O inventário abaixo
+descreve o estado anterior; ver [entrega e evidências](entregas-2026-09-05.md).
+
 ## Situação consolidada em 05/09
 
 Os andamentos e IDs de publicação de agosto, preservados abaixo, são históricos.

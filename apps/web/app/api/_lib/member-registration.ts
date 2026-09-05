@@ -231,12 +231,21 @@ export async function registerMember(raw: unknown, uid: string) {
     }
     return response.json();
   }
+  let retryTransaction: string | undefined;
   for (let attempt = 0; attempt < 5; attempt++) {
+    // Release the previous transaction in finally before waiting. Jitter
+    // prevents concurrent registrations from repeatedly acquiring locks together.
+    if (attempt > 0)
+      await new Promise((resolve) =>
+        setTimeout(resolve, 100 * 2 ** (attempt - 1) * (0.5 + Math.random())),
+      );
     let transaction: string | undefined;
     let committed = false;
     try {
       transaction = (
-        await call(":beginTransaction", { options: { readWrite: {} } })
+        await call(":beginTransaction", {
+          options: { readWrite: retryTransaction ? { retryTransaction } : {} },
+        })
       ).transaction;
       if (!transaction) throw new Error("Transação ausente.");
       const paths = [
@@ -410,8 +419,10 @@ export async function registerMember(raw: unknown, uid: string) {
         error.status === 409 &&
         error.message.startsWith("Conflito") &&
         attempt < 4
-      )
+      ) {
+        retryTransaction = transaction;
         continue;
+      }
       throw error;
     } finally {
       if (transaction && !committed)
