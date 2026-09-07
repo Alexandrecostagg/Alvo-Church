@@ -6,6 +6,7 @@ export async function initializeFirebase() {
 
 export * from "./client";
 export * from "./repositories";
+export * from "./organization-directory";
 export * from "./orgFeatures";
 export * from "./plans";
 export * from "./paths";

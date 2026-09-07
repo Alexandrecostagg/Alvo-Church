@@ -16,6 +16,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -31,8 +32,10 @@ import {
 } from "react-native";
 import {
   addPrayerRequest,
-  fetchOrganizationBySlug,
+  fetchOrganizationById,
+  fetchOrganizationDirectory,
   fetchPublicPrayerWall,
+  fetchTenantUser,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
   fetchGroups,
@@ -52,6 +55,7 @@ import {
   saveMobilePushToken,
   type FirebaseAuthUser
 } from "@alvo/firebase";
+import type { OrganizationDirectoryEntry } from "@alvo/firebase";
 import type { ServiceAssignment, ServiceAssignmentStatus, MemberJourneyProfile } from "@alvo/types";
 import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
@@ -508,35 +512,142 @@ function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured
 // ─── Link Institution ─────────────────────────────────────────────────────────
 
 function LinkInstitutionScreen({ configured, user, onLink, onSkip }: { configured: boolean; user: FirebaseAuthUser; onLink: (org: Organization) => void | Promise<void>; onSkip: () => void }) {
-  const [slug, setSlug] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
-  async function search() {
-    const value = slug.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!value || loading) return;
-    try { setLoading(true); setError(null);
-      const org = await fetchOrganizationBySlug(firebaseConfig, value);
-      if (!org) { setError("Igreja não encontrada. Verifique o código."); return; }
-      const sdk = await import("@alvo/firebase");
-      const membership = await sdk.fetchTenantUser(firebaseConfig, { organizationId: org.id, userId: user.uid });
+  const [institutions, setInstitutions] = useState<OrganizationDirectoryEntry[]>([]);
+  const [filter, setFilter] = useState("");
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [loadingDirectory, setLoadingDirectory] = useState(true);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [membershipHelpName, setMembershipHelpName] = useState<string | null>(null);
+
+  async function loadDirectory() {
+    if (!configured) return;
+    try {
+      setLoadingDirectory(true);
+      setError(null);
+      setMembershipHelpName(null);
+      setInstitutions(await fetchOrganizationDirectory(firebaseConfig));
+    } catch {
+      setError("Não foi possível carregar as instituições. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLoadingDirectory(false);
+    }
+  }
+
+  useEffect(() => { void loadDirectory(); }, [configured]);
+
+  async function chooseInstitution(entry: OrganizationDirectoryEntry) {
+    if (linkingId) return;
+    try {
+      setLinkingId(entry.organizationId);
+      setError(null);
+      setMembershipHelpName(null);
+      const membership = await fetchTenantUser(firebaseConfig, {
+        organizationId: entry.organizationId,
+        userId: user.uid,
+      });
       if (!membership?.isActive) {
-        setError("Sua conta ainda não está vinculada a esta igreja. Peça à secretaria para adicionar seu e-mail e tente novamente.");
+        setSelectorOpen(false);
+        setError(`Sua conta não está cadastrada como membro ativo de ${entry.displayName}.`);
+        setMembershipHelpName(entry.displayName);
         return;
       }
-      await onLink(org);
-    } catch { setError("Não foi possível validar o vínculo. Verifique o código e tente novamente."); } finally { setLoading(false); }
+      const organization = await fetchOrganizationById(firebaseConfig, entry.organizationId);
+      if (!organization) throw new Error("Instituição indisponível");
+      await onLink(organization);
+    } catch {
+      setSelectorOpen(false);
+      setError("Não foi possível vincular esta instituição. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLinkingId(null);
+    }
   }
+
+  const normalizedFilter = filter.trim().toLocaleLowerCase("pt-BR");
+  const visibleInstitutions = normalizedFilter
+    ? institutions.filter((entry) => entry.displayName.toLocaleLowerCase("pt-BR").includes(normalizedFilter))
+    : institutions;
+
   return (
     <SafeAreaView style={s.fill}><StatusBar style="dark" />
       <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <View style={s.center}><Text style={{ fontSize: 52, marginBottom: 20 }}>⛪</Text></View>
           <Text style={s.screenTitle}>Vincular Igreja</Text>
-          <Text style={s.screenSub}>Informe o código da sua igreja. Sua conta precisa ter sido adicionada pela secretaria.</Text>
-          <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>esdras-church</Text></Text></View>
-          <Field label="Código da Igreja" value={slug} onChange={setSlug} autoCapitalize="none" placeholder="ex: minha-igreja" />
+          <Text style={s.screenSub}>Escolha a instituição em que sua conta está cadastrada como membro.</Text>
+          <View style={[s.infoBox, { marginBottom: 16 }]}><Text style={s.infoText}>Use a mesma conta de e-mail cadastrada na instituição. O vínculo é feito automaticamente após a escolha.</Text></View>
+          <Btn
+            label={loadingDirectory ? "Carregando instituições..." : "Escolher instituição"}
+            onPress={() => { setFilter(""); setSelectorOpen(true); }}
+            loading={loadingDirectory}
+            disabled={!configured || institutions.length === 0}
+          />
+          {!loadingDirectory && institutions.length === 0 && !error && <Text style={s.errorText}>Nenhuma instituição disponível.</Text>}
           {error && <Text style={s.errorText}>{error}</Text>}
-          <Btn label="Buscar e vincular" onPress={search} loading={loading} disabled={!configured} />
+          {membershipHelpName && (
+            <View style={s.membershipHelpBox}>
+              <Text style={s.membershipHelpTitle}>Como resolver</Text>
+              <Text style={s.membershipHelpText}>1. Confirme se entrou com o mesmo e-mail informado no cadastro de membro.</Text>
+              <Text style={s.membershipHelpText}>2. Procure a secretaria ou liderança de {membershipHelpName} para conferir se seu cadastro e acesso estão ativos.</Text>
+              <Text style={s.membershipHelpText}>3. Se os dados estiverem corretos e o acesso continuar bloqueado, fale com o suporte do EsdrasApp.</Text>
+              <Pressable
+                style={s.supportLink}
+                onPress={() => void Linking.openURL("mailto:contato@plataformaesdras.com.br?subject=Ajuda%20para%20vincular%20igreja%20no%20EsdrasApp")}
+                accessibilityRole="link"
+                accessibilityLabel="Enviar e-mail ao suporte do EsdrasApp"
+              >
+                <Ionicons name="mail-outline" size={18} color={BRAND} />
+                <Text style={s.supportLinkText}>contato@plataformaesdras.com.br</Text>
+              </Pressable>
+            </View>
+          )}
+          {error?.startsWith("Não foi possível carregar") && <Btn label="Tentar novamente" onPress={loadDirectory} variant="outline" />}
           <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Sair da conta</Text></TouchableOpacity>
         </ScrollView>
+
+        <Modal visible={selectorOpen} transparent animationType="slide" onRequestClose={() => setSelectorOpen(false)}>
+          <View style={s.institutionModalRoot}>
+            <Pressable style={s.institutionBackdrop} onPress={() => setSelectorOpen(false)} accessibilityLabel="Fechar lista de instituições" />
+            <View style={s.institutionSheet}>
+              <View style={s.institutionHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.institutionTitle}>Escolha sua instituição</Text>
+                  <Text style={s.institutionSubtitle}>{institutions.length} {institutions.length === 1 ? "instituição cadastrada" : "instituições cadastradas"}</Text>
+                </View>
+                <Pressable onPress={() => setSelectorOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar">
+                  <Ionicons name="close" size={26} color={BRAND_DARK} />
+                </Pressable>
+              </View>
+              <TextInput
+                style={[s.input, { marginBottom: 12 }]}
+                value={filter}
+                onChangeText={setFilter}
+                placeholder="Buscar pelo nome"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="words"
+              />
+              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24 }}>
+                {visibleInstitutions.map((entry) => (
+                  <Pressable
+                    key={entry.organizationId}
+                    style={({ pressed }) => [s.institutionRow, pressed && { backgroundColor: "#f7f3ea" }]}
+                    onPress={() => void chooseInstitution(entry)}
+                    disabled={Boolean(linkingId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Selecionar ${entry.displayName}`}
+                  >
+                    <View style={s.institutionIcon}><Ionicons name="business" size={20} color={BRAND} /></View>
+                    <Text style={s.institutionName}>{entry.displayName}</Text>
+                    {linkingId === entry.organizationId
+                      ? <ActivityIndicator color={BRAND} />
+                      : <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
+                  </Pressable>
+                ))}
+                {visibleInstitutions.length === 0 && <Text style={s.institutionEmpty}>Nenhuma instituição encontrada.</Text>}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -2951,6 +3062,21 @@ const s = StyleSheet.create({
   warnText: { fontSize: 13, color: "#92400e" },
   infoBox: { backgroundColor: `${BRAND}14`, borderRadius: 8, padding: 14 },
   infoText: { fontSize: 14, color: BRAND_DARK, lineHeight: 20 },
+  institutionModalRoot: { flex: 1, justifyContent: "flex-end" },
+  institutionBackdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(15, 27, 45, 0.45)" },
+  institutionSheet: { backgroundColor: "#fff", borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 18, maxHeight: "78%" },
+  institutionHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  institutionTitle: { fontSize: 20, fontWeight: "800", color: BRAND_DARK },
+  institutionSubtitle: { fontSize: 13, color: "#6b7280", marginTop: 3 },
+  institutionRow: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: "#f0f1f3", paddingVertical: 10 },
+  institutionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: `${BRAND}14`, alignItems: "center", justifyContent: "center" },
+  institutionName: { flex: 1, fontSize: 15, fontWeight: "700", color: BRAND_DARK },
+  institutionEmpty: { color: "#6b7280", textAlign: "center", paddingVertical: 32 },
+  membershipHelpBox: { borderWidth: 1, borderColor: "#f3c8ad", backgroundColor: "#fff8f3", borderRadius: 12, padding: 14, marginBottom: 4 },
+  membershipHelpTitle: { color: BRAND_DARK, fontSize: 15, fontWeight: "800", marginBottom: 8 },
+  membershipHelpText: { color: "#4b5563", fontSize: 13, lineHeight: 19, marginBottom: 6 },
+  supportLink: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, paddingVertical: 6 },
+  supportLinkText: { color: BRAND, fontSize: 13, fontWeight: "700" },
 
   // Main app
   mainHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },

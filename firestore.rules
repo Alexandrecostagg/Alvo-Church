@@ -179,11 +179,13 @@ service cloud.firestore {
       return orgCounter(orgId, "affiliateCount") < branchOrgLimit(orgId);
     }
 
-    // Slug lookup for public forms: single-doc get only (no listing),
-    // exposes just the slug -> organizationId mapping.
+    // Diretório mínimo de instituições. Visitantes públicos só consultam um
+    // slug conhecido; usuários autenticados podem listar nome, slug e orgId
+    // para escolher sua instituição no app. A criação abaixo restringe os
+    // documentos exatamente a esses três dados públicos.
     match /org_slugs/{slug} {
       allow get: if true;
-      allow list: if false;
+      allow list: if signedIn();
       // Only the owner of the organization being pointed to may claim a
       // slug, and only once (Firestore rejects create if the doc already
       // exists) — prevents hijacking another church's public form.
