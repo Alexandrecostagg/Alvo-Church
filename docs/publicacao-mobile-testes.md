@@ -1,9 +1,10 @@
 # Testes nas lojas — EsdrasApp
 
-Atualizado em **05/09/2026**. Estado: **implementação parcial, sem homologação
-em aparelhos comprovada nesta base**. Typecheck e exports JS/Hermes iOS/Android passaram;
-isso não comprova build nativo assinado, instalação ou aprovação em loja.
-Contas EAS/lojas não foram inspecionadas nesta revisão.
+Atualizado em **07/09/2026**. Estado: **Android distribuível em teste interno e
+versão 10 em nova revisão; sem homologação em aparelho comprovada**. A conta EAS,
+os AABs 8–10 e o Play Console foram inspecionados. O AAB 10 foi aceito pelo
+console; a recusa era causada por uma declaração de recursos financeiros
+incompatível com o comportamento do app. Ver [entrega 11](entrega-ampliada-11-google-play-2026-09-07.md).
 
 Antes do roteiro de distribuição abaixo, fechar escala/sala/evento Kids e papéis.
 Dependências, vínculo/Passe e mídia Kids foram validados localmente nas entregas
@@ -19,7 +20,21 @@ de cartão antigo após falha em aparelho; [evidências e limites](vinculo-passe
 Os perfis `preview` e `store-test` atualmente herdam configuração Firebase/API
 de produção de `eas.json`. Preparar um ambiente de homologação próprio antes de
 testar novos fluxos com dados sensíveis. Não confundir perfil de distribuição
-interna com isolamento de dados. Este documento não autoriza envio às lojas.
+interna com isolamento de dados. O envio Android autorizado em 07/09 ficou
+restrito às faixas de teste; produção pública não foi solicitada.
+
+## Estado do Google Play em 07/09/2026
+
+- Teste interno ativo com a versão 8 e as duas listas existentes selecionadas
+  (26 cadastros brutos, limite de cem participantes).
+- Acesso ao teste interno: `https://play.google.com/apps/internaltest/4701732869010871749`.
+- Versão 10 (`1.0.0`) na faixa fechada `Esdras 1`, reenviada e **em análise**.
+- Acesso ao teste fechado após aprovação: `https://play.google.com/apps/testing/com.plataformaesdras.app`.
+- Titularidade, tipo da conta, proprietário e permissões administrativas
+  permaneceram intactos.
+
+O testador precisa abrir o link com uma conta Google presente em uma das listas,
+aceitar a participação e usar a mesma conta na Play Store do aparelho.
 
 O app mobile usa Expo/EAS e está preparado para os dois formatos de teste:
 
