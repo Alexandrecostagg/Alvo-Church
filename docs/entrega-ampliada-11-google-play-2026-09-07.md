@@ -37,12 +37,13 @@ transferência, crédito, investimento ou outro produto financeiro.
 | Teste interno | ativo; versão 8 disponível para testadores internos |
 | Teste fechado `Esdras 1` | versão 10 em análise |
 | Testadores | duas listas selecionadas, 26 cadastros brutos |
+| Participação verificada | conta Google atualmente conectada aceitou o convite interno |
 | Link do teste interno | `https://play.google.com/apps/internaltest/4701732869010871749` |
 | Link do teste fechado | `https://play.google.com/apps/testing/com.plataformaesdras.app` |
 
-O número de cadastros pode incluir endereços repetidos entre listas. Participação
-efetiva e instalação continuam em 0 até que cada testador aceite o convite com a
-mesma conta Google usada no aparelho.
+O número de cadastros pode incluir endereços repetidos entre listas. A conta
+Google conectada aceitou o convite e recebeu o link **Download test app**;
+instalação e execução em aparelho ainda não foram comprovadas.
 
 ## Evidências e limites
 
@@ -53,6 +54,8 @@ mesma conta Google usada no aparelho.
 - A revisão pode levar até sete dias segundo o aviso apresentado pelo console.
 - O teste interno já permite instalação da versão 8. A versão 10 só fica disponível
   na faixa fechada depois que o Google concluir a análise.
+- O convite do teste interno foi aceito pela conta Google conectada ao console e
+  a página confirmou o estado de testador.
 - Nenhuma instalação ou execução em aparelho foi realizada nesta entrega.
 
 Política oficial consultada: [Requisitos do Play Console](https://support.google.com/googleplay/android-developer/answer/10788890).

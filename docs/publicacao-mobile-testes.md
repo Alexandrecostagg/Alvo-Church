@@ -34,7 +34,8 @@ restrito às faixas de teste; produção pública não foi solicitada.
   permaneceram intactos.
 
 O testador precisa abrir o link com uma conta Google presente em uma das listas,
-aceitar a participação e usar a mesma conta na Play Store do aparelho.
+aceitar a participação e usar a mesma conta na Play Store do aparelho. A conta
+Google conectada em 07/09 já aceitou o convite e recebeu o link de download.
 
 O app mobile usa Expo/EAS e está preparado para os dois formatos de teste:
 
