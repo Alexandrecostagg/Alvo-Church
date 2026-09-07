@@ -21,21 +21,14 @@ import {
   Settings
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { MOCK_COURSES, MOCK_COURSE_MODULES, MOCK_LESSONS, MOCK_MEMBER_COURSE_PROGRESS } from "../../lib/mock-data";
 import { useAppAuth } from "../../../app/providers";
 import { 
   fetchCourses, 
   fetchCourseModules, 
   fetchCourseLessons, 
-  fetchMemberCourseProgress, 
-  saveMemberCourseProgress, 
-  saveCourse, 
-  saveCourseModule, 
-  saveLesson, 
-  saveMemberBadge, 
   isFirebaseWebRuntimeConfigured 
 } from "@alvo/firebase";
-import type { Course, CourseModule, Lesson, MemberCourseProgress, MemberBadge } from "@alvo/types";
+import type { Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 export function AcademyView() {
   const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
@@ -46,22 +39,34 @@ export function AcademyView() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [status, setStatus] = useState("Carregando cursos...");
   const [progress, setProgress] = useState<MemberCourseProgress>({
-    id: `progress_temp`,
-    organizationId: "demo",
-    memberId: "person_1",
-    courseId: "course_1",
+    id: "progress_pending",
+    organizationId,
+    memberId: "",
+    courseId: "",
     completedLessons: [],
     isCompleted: false,
     updatedAt: new Date().toISOString()
   });
 
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("course_1");
-  const [selectedLessonId, setSelectedLessonId] = useState<string>("les_1");
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [selectedLessonId, setSelectedLessonId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"about" | "materials" | "notes" | "instructor" | "certificate">("about");
   const [lessonNote, setLessonNote] = useState<string>("");
   const [showBadgeUnlock, setShowBadgeUnlock] = useState(false);
   const [unlockedBadge, setUnlockedBadge] = useState<{ id: string; title: string } | null>(null);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
+
+  async function progressRequest(body: Record<string, unknown>) {
+    if (!user) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/learning/progress", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({})) as Record<string, any>;
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Não foi possível atualizar o progresso.");
+    return data;
+  }
 
   useEffect(() => {
     if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
@@ -78,32 +83,19 @@ export function AcademyView() {
       if (!user) return;
       try {
         setStatus("Carregando cursos...");
-        let dbCourses = await fetchCourses(firebaseConfig, { organizationId });
+        const dbCourses = (await fetchCourses(firebaseConfig, { organizationId })).filter((course) => course.isActive);
         if (cancelled) return;
 
         if (dbCourses.length === 0) {
-          setStatus("Preparando cursos iniciais...");
-          // Seed EAD courses, modules, and lessons
-          await Promise.all(
-            MOCK_COURSES.map(async (c) => {
-              await saveCourse(firebaseConfig, { organizationId }, { ...c, organizationId });
-            })
-          );
-          await Promise.all(
-            MOCK_COURSE_MODULES.map(async (m) => {
-              await saveCourseModule(firebaseConfig, { organizationId }, { ...m, organizationId });
-            })
-          );
-          await Promise.all(
-            MOCK_LESSONS.map(async (l) => {
-              await saveLesson(firebaseConfig, { organizationId }, { ...l, organizationId });
-            })
-          );
-
-          if (cancelled) return;
-          dbCourses = await fetchCourses(firebaseConfig, { organizationId });
-          if (cancelled) return;
+          setCourses([]);
+          setModules([]);
+          setLessons([]);
+          setStatus("Nenhum curso publicado pela igreja.");
+          return;
         }
+
+        const courseId = dbCourses.some((course) => course.id === selectedCourseId) ? selectedCourseId : dbCourses[0].id;
+        if (courseId !== selectedCourseId) setSelectedCourseId(courseId);
 
         const [dbModules, dbLessons] = await Promise.all([
           Promise.all(dbCourses.map(c => fetchCourseModules(firebaseConfig, { organizationId }, c.id))),
@@ -115,28 +107,18 @@ export function AcademyView() {
         setCourses(dbCourses);
         setModules(dbModules.flat());
         setLessons(dbLessons.flat());
+        const firstLesson = dbLessons.flat().find((lesson) => lesson.courseId === courseId);
+        if (firstLesson && !dbLessons.flat().some((lesson) => lesson.id === selectedLessonId && lesson.courseId === courseId)) setSelectedLessonId(firstLesson.id);
 
-        // Load progress for selected course
-        const dbProgress = await fetchMemberCourseProgress(firebaseConfig, { organizationId }, user.uid, selectedCourseId);
+        const result = await progressRequest({ action: "read", organizationId, courseId });
         if (cancelled) return;
-
-        if (dbProgress) {
-          setProgress(dbProgress);
+        if (result.status === "unlinked") {
+          setProgress({ id: courseId, organizationId, memberId: "", courseId, completedLessons: [], isCompleted: false, updatedAt: new Date().toISOString() });
+          setStatus("Sua conta precisa ser vinculada ao cadastro de pessoa pela administração para salvar progresso e certificados.");
         } else {
-          // Initialize empty progress for this course
-          const initialProg: MemberCourseProgress = {
-            id: `progress_${user.uid}_${selectedCourseId}`,
-            organizationId,
-            memberId: user.uid,
-            courseId: selectedCourseId,
-            completedLessons: [],
-            isCompleted: false,
-            updatedAt: new Date().toISOString()
-          };
-          setProgress(initialProg);
+          setProgress(result.progress);
+          setStatus("Progresso sincronizado com seu cadastro.");
         }
-
-        setStatus("EAD Sincronizado.");
       } catch (err) {
         console.error(err);
         if (!cancelled) {
@@ -217,58 +199,24 @@ export function AcademyView() {
 
   // Alterna conclusão da aula e checa se destrava Badge/Certificado
   const handleToggleLesson = async (lessonId: string) => {
-    const isCompleted = progress.completedLessons.includes(lessonId);
-    let nextCompleted = [...progress.completedLessons];
-
-    if (isCompleted) {
-      nextCompleted = nextCompleted.filter(id => id !== lessonId);
-    } else {
-      nextCompleted.push(lessonId);
+    if (!configured || !firebaseReady || !user || !progress.memberId) {
+      setStatus("Vincule sua conta a um cadastro de pessoa para registrar o progresso.");
+      return;
     }
-
-    const courseLessons = lessons.filter(l => l.courseId === selectedCourse.id);
-    const completedInCourse = courseLessons.filter(l => nextCompleted.includes(l.id)).length;
-    const allCompleted = completedInCourse === courseLessons.length;
-
-    const nextProgress: MemberCourseProgress = {
-      ...progress,
-      completedLessons: nextCompleted,
-      isCompleted: allCompleted,
-      updatedAt: new Date().toISOString()
-    };
-
-    setProgress(nextProgress);
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await saveMemberCourseProgress(firebaseConfig, { organizationId }, nextProgress);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    // Se completou 100% e não estava marcado como concluído antes, destrava animação da Badge!
-    if (allCompleted && !progress.isCompleted && selectedCourse.badgeUnlockedId) {
+    try {
+      const result = await progressRequest({ action: "toggle", organizationId, courseId: selectedCourse.id, lessonId, requestId: crypto.randomUUID() });
+      const nextProgress = result.progress as MemberCourseProgress;
+      setProgress(nextProgress);
+      setStatus("Progresso salvo.");
+      if (nextProgress.isCompleted && !progress.isCompleted && selectedCourse.badgeUnlockedId) {
       setUnlockedBadge({
         id: selectedCourse.badgeUnlockedId,
         title: selectedCourse.title
       });
       setShowBadgeUnlock(true);
-
-      if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        try {
-          const badgeToAward: MemberBadge = {
-            id: `mb_${user.uid}_${selectedCourse.badgeUnlockedId}`,
-            organizationId,
-            personId: user.uid,
-            badgeId: selectedCourse.badgeUnlockedId,
-            awardedAt: new Date().toISOString()
-          };
-          await saveMemberBadge(firebaseConfig, { organizationId }, badgeToAward);
-        } catch (err) {
-          console.error("Failed to save member badge:", err);
-        }
       }
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : "Não foi possível salvar o progresso.");
     }
   };
 

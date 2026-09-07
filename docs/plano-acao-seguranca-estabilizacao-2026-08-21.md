@@ -1,10 +1,19 @@
 # Plano de ação — segurança e estabilização
 
-Atualizado em **05/09/2026**; nome do arquivo preservado para manter os links.
+Atualizado em **07/09/2026**; nome do arquivo preservado para manter os links.
 Este plano organiza os achados da varredura técnica
 para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
+
+## Entrega ampliada 8 — 07/09
+
+**88,05% estimados (+4,35 pontos)**. WhatsApp manual com opt-out, destinatários
+resolvidos no servidor e confirmação explícita; EAD por vínculo conta/pessoa e
+entitlement; inscrição, pagamento e check-in de eventos transacionais e auditados.
+Regras fecharam as escritas diretas correspondentes. 318 testes, 43 checks novos,
+regressões e builds passaram. [Evidências](entrega-ampliada-8-2026-09-07.md).
+Sem provedor real, aparelho, push ou deploy nesta entrega.
 
 ## Entrega ampliada 7 — 05/09
 
@@ -43,9 +52,9 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | --- | --- | --- |
 | 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem. | Revisar demais coleções, provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. | Publicação/IAM, inventário legado, relação familiar, aparelhos e Turnstile. |
-| 3 — Custo/cobrança | Cota compartilhada de IA e rate limit persistente; checkout/webhook idempotentes com provedor simulado. | Sandbox real, recuperação/migração assistida, destinatários e envio de comunicação. |
-| 4 — Dados/fluxos | Frentes da entrega 6 revisadas; finanças sem receita fictícia, ledger auditado e CSV na entrega 7. | EAD/eventos e demais operações ainda precisam de auditoria; integração bancária pendente. |
-| 5 — Validação | 301 testes, 444 checks numerados mais cadastro; QA no navegador e builds locais. | Aparelhos, integrações externas, execução remota de CI e publicação coordenada. |
+| 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
+| 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos da 8 revisados sem demos ou sucesso falso. | Demais operações e exclusão atômica de cursos; integração bancária. |
+| 5 — Validação | 318 testes, 43 checks novos, regressões, navegador e builds locais. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 

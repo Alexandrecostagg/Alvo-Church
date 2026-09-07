@@ -14,6 +14,7 @@ import {
   fetchGroups,
   fetchGroupMembers,
   fetchServiceAssignments,
+  savePersonProfile,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import {
@@ -116,6 +117,7 @@ export function MemberProfileView() {
   const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
   const [status, setStatus] = useState("Carregando ficha do membro...");
   const [personGroup, setPersonGroup] = useState<Group | null>(null);
+  const [communicationBusy, setCommunicationBusy] = useState(false);
 
   const [activeStage, setActiveStage] = useState("contact");
   const [activeTab, setActiveTab] = useState<"cell" | "finance" | "academy" | "serving">("cell");
@@ -124,6 +126,26 @@ export function MemberProfileView() {
   const [assignments, setAssignments] = useState<ServiceAssignment[]>([]);
   const [newAmount, setNewAmount] = useState("");
   const [newCategory, setNewCategory] = useState<ContributionType>("dizimo");
+
+  async function toggleWhatsappOptOut() {
+    if (!person || communicationBusy) return;
+    setCommunicationBusy(true);
+    const optedOut = person.communicationOptOut === true;
+    const updated: Person = {
+      ...person,
+      communicationOptOut: !optedOut,
+      whatsappOptOutAt: optedOut ? undefined : new Date().toISOString(),
+    };
+    try {
+      await savePersonProfile(firebaseConfig, { organizationId }, updated);
+      setPerson(updated);
+      setStatus(optedOut ? "WhatsApp autorizado para próximas campanhas." : "Opt-out de WhatsApp registrado.");
+    } catch {
+      setStatus("Não foi possível alterar a preferência de WhatsApp.");
+    } finally {
+      setCommunicationBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!personId) {
@@ -352,6 +374,9 @@ export function MemberProfileView() {
                 {person.consentLgpdAt ? "Confirmado" : "Pendente"}
               </strong>
               <p style={S.hint}>{person.consentLgpdAt ? "Termo de consentimento assinado" : "Termo de consentimento ainda não assinado"}</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => void toggleWhatsappOptOut()} disabled={communicationBusy} style={{ marginTop: 10 }}>
+                {person.communicationOptOut ? "Reautorizar WhatsApp" : "Registrar opt-out do WhatsApp"}
+              </button>
             </article>
 
             <Link href="/tribes" style={{ textDecoration: "none" }}>

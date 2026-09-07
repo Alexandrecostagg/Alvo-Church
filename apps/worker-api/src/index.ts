@@ -30,13 +30,6 @@ type WorkerEnv = {
   // houver uma rota autenticada no web que faça a mediação, o navegador nunca
   // deve chamar este endpoint diretamente.
   EVENT_PROOF_UPLOAD_BEARER_TOKEN?: string;
-  TWILIO_ACCOUNT_SID?: string;
-  TWILIO_AUTH_TOKEN?: string;
-  TWILIO_WHATSAPP_FROM?: string;
-  // Segredo compartilhado só com o backend do web (apps/web/app/api/communication/*)
-  // — nunca deve ser embutido em código de cliente. É a única coisa que
-  // protege esse endpoint de virar um disparador de WhatsApp aberto ao público.
-  NOTIFY_API_BEARER_TOKEN?: string;
   // Segredo compartilhado com a infraestrutura Wi-Fi (MikroTik/UniFi). O SSID
   // configurado no roteador deve corresponder a uma chave deste mapa para que
   // a intake seja vinculada a uma organização.
@@ -285,97 +278,6 @@ app.post("/events/:eventId/upload-proof", async (c) => {
   // Não devolvemos URL pública: comprovante contém dado financeiro. A leitura
   // posterior deverá ser entregue por rota autenticada com URL temporária.
   return c.json({ success: true, objectKey, eventId, userId });
-});
-
-// Endpoint: send WhatsApp message via Twilio
-app.post("/notify/whatsapp", async (c) => {
-  // Este endpoint dispara mensagem (e custo) pela conta Twilio da plataforma —
-  // só pode ser chamado pelo backend do web, nunca direto por um cliente.
-  const configuredToken = c.env.NOTIFY_API_BEARER_TOKEN;
-  const authorization = c.req.header("authorization");
-  if (!configuredToken) {
-    return jsonError("NOTIFY_API_BEARER_TOKEN nao configurado no Worker.", 503);
-  }
-  const expectedNotify = `Bearer ${configuredToken}`;
-  if (!authorization || !safeStringCompare(authorization, expectedNotify)) {
-    return jsonError("Nao autorizado para notificacao.", 401);
-  }
-
-  const body = await c.req.json().catch(() => ({}));
-  const to = String(body.to ?? "");
-  const message = String(body.message ?? "");
-  const mediaUrl = body.mediaUrl ? String(body.mediaUrl) : undefined;
-  const organizationId = String(body.organizationId ?? "");
-
-  const sid = c.env.TWILIO_ACCOUNT_SID;
-  const token = c.env.TWILIO_AUTH_TOKEN;
-  const from = c.env.TWILIO_WHATSAPP_FROM;
-
-  if (!sid || !token || !from) {
-    return jsonError("Twilio credentials (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM) nao configuradas.", 503);
-  }
-
-  if (!to || !message) {
-    return jsonError("to e message sao obrigatorios.", 422);
-  }
-
-  // Destinatário deve ser membro ativo da organização. Impede que o endpoint
-  // seja usado para disparar mensagens a números externos, mesmo com bearer
-  // token comprometido.
-  if (organizationId) {
-    const digits = String(to).replace(/\D/g, "");
-    const normalized = `whatsapp:+${digits}`;
-    const projectId = c.env.FIREBASE_PROJECT_ID ?? "";
-    const queryRes = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations/${encodeURIComponent(organizationId)}/users?filter=fields.isActive.booleanValue==true`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (queryRes.ok) {
-      const queryData = (await queryRes.json()) as {
-        documents?: Array<{ fields?: { phone?: { stringValue?: string } } }>;
-      };
-      const memberPhones = new Set(
-        (queryData.documents ?? [])
-          .map((d) => {
-            const raw = d.fields?.phone?.stringValue ?? "";
-            if (!raw) return "";
-            return `whatsapp:+${String(raw).replace(/\D/g, "")}`;
-          })
-          .filter((p) => p.length > 0)
-      );
-      if (!memberPhones.has(normalized)) {
-        return jsonError(
-          `Destinatário ${to} não é membro ativo da organização ${organizationId}.`,
-          403
-        );
-      }
-    }
-  }
-
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
-  const params = new URLSearchParams();
-  params.set("To", `whatsapp:${to}`);
-  params.set("From", `whatsapp:${from}`);
-  params.set("Body", message);
-  if (mediaUrl) params.set("MediaUrl", mediaUrl);
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: params.toString(),
-    signal: AbortSignal.timeout(15000)
-  }).catch((err) => ({ ok: false, status: 500, text: async () => String(err) }));
-
-  if (!resp || !(resp as Response).ok) {
-    const text = resp && typeof (resp as Response).text === "function" ? await (resp as Response).text() : "unknown error";
-    return jsonError(`Falha ao enviar via Twilio: ${text}`, 502);
-  }
-
-  const data = await (resp as Response).json().catch(() => ({}));
-  return c.json({ success: true, provider: "twilio", result: data });
 });
 
 export default {

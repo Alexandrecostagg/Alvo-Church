@@ -1479,16 +1479,3 @@ export const MOCK_TRAINING_LESSONS = SOURCE_LESSONS.map((l) => ({
   durationMinutes: l.durationMinutes,
   sortOrder: l.sortOrder
 }));
-
-// --- ESCOLA EAD (interna, org-scoped) ---
-// Seed VAZIO de propósito: cada igreja cria os próprios cursos para seus
-// servidores em "Gerenciar Cursos". (Antes semeávamos os 12 acima aqui, mas eles
-// pertencem à Loja de Capacitação da plataforma, não à EAD da igreja.)
-export const MOCK_COURSES: typeof SOURCE_COURSES = [];
-export const MOCK_COURSE_MODULES: typeof SOURCE_MODULES = [];
-export const MOCK_LESSONS: typeof SOURCE_LESSONS = [];
-export const MOCK_MEMBER_COURSE_PROGRESS: {
-  id: string; organizationId: string; memberId: string; courseId: string;
-  completedLessons: string[]; isCompleted: boolean; updatedAt: string;
-}[] = [];
-

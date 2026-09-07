@@ -1,12 +1,14 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 7 ampliada: **83,70% (aproximadamente 83,7%)**, ganho
-> de **7,05 pontos**. Doação privada/conferência/CSV, cobrança vinculada à ordem,
-> cota única de IA e retenção assistida Kids. 301 testes e 444 verificações numeradas.
-> Ver [evidências e limites](entrega-ampliada-7-2026-09-05.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 8 ampliada: **88,05% (aproximadamente 88,1%)**, ganho
+> de **4,35 pontos**. Comunicação manual auditável, EAD por identidade/entitlement
+> e presença de eventos mediada pelo servidor. 318 testes, 43 verificações novas
+> e regressões das entregas 6 e 7.
+> Ver [evidências e limites](entrega-ampliada-8-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Entrega publicada: `e92452c`, branch `codex/consolidacao-local-2026-09-05`.
+Última entrega publicada: `e92452c`, branch `codex/consolidacao-local-2026-09-05`.
+Entrega 8 validada localmente e ainda sem push/deploy.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
 o deploy. O app não foi enviado às lojas e as integrações externas continuam com
 os limites registrados no documento da entrega. A branch foi enviada ao remoto;
@@ -93,12 +95,14 @@ de CI nesta revisão. Configuração de build não comprova distribuição nas l
 2. Achado inicial resolvido localmente na entrega 4: GET do QR desativado,
    consulta autenticada e foto privada. Publicação coordenada e revisão do
    cache/legado remoto ainda pendentes.
-3. Achado inicial corrigido nas frentes revisadas na entrega 6: recepção, cuidado,
-   bem-estar, rede, lojas/moderação e Wi-Fi. EAD/eventos ainda exigem auditoria.
+3. Achado inicial corrigido nas frentes revisadas nas entregas 6 e 8: recepção,
+   cuidado, bem-estar, rede, lojas/moderação, Wi-Fi, EAD e eventos. A revisão do
+   restante do produto continua necessária.
 4. `/api/giving/pix` gera BR Code estático. Isso não é gateway de PIX dinâmico,
    confirmação bancária nem doação recorrente automática.
-5. O app registra Expo Push Token, mas a tela de comunicação ainda anuncia push
-   e email como “em breve”. Registro de token não comprova entrega de campanha.
+5. O app registra Expo Push Token, mas push e email continuam “em breve”. O
+   WhatsApp manual registra apenas confirmação explícita do líder; nenhum desses
+   estados comprova entrega ou leitura por um provedor.
 6. Achado inicial, corrigido na entrega 2: a LP anunciava **100 membros** gratuitos; `packages/firebase/src/plans.ts`
    e o teste de limite aplicam **50**. Corrigir conteúdo conforme o plano vigente
    ou alterar o produto por decisão comercial explícita; não aumentar limite
@@ -149,7 +153,8 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Entrega 7 publicou finanças/doações, cobrança vinculada, cota de IA e retenção
-assistida Kids. Seguem migração de legados, sandbox Asaas, aparelhos, comunicação
-real e auditoria EAD/eventos. Manter pacotes maiores conforme pedido do usuário,
-com percentual sustentado por evidência. Mobile e LP não foram extraídos.
+Entrega 8 fechou localmente os fluxos inseguros de comunicação manual, progresso
+EAD e presença de eventos. Seguem migrações legadas, sandbox Asaas, aparelhos,
+comunicação por provedor, Turnstile e homologação coordenada. Manter pacotes
+maiores conforme pedido do usuário, com percentual sustentado por evidência.
+Mobile e LP não foram extraídos.

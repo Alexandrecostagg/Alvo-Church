@@ -23,8 +23,7 @@ import {
   Camera
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { recentPeople } from "../../lib/mock-data";
-import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, saveEventRegistration, fetchWorshipSongs, fetchWorshipSetlistByEventId, fetchServiceTeams, fetchServiceAssignments, fetchPeople } from "@alvo/firebase";
+import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, fetchWorshipSongs, fetchWorshipSetlistByEventId, fetchServiceTeams, fetchServiceAssignments, fetchPeople } from "@alvo/firebase";
 import type { Event as DomainEvent, EventRegistration as DomainEventRegistration } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
@@ -75,88 +74,6 @@ export interface WorshipSong {
     spotify?: string;
   }
 }
-
-// Inicializadores de Lojas/Eventos de Teste
-const initialEvents: EventType[] = [
-  {
-    id: "event_women_2026",
-    name: "Conferência Águas Profundas 2026",
-    description: "O maior encontro de mulheres do Plataforma Esdras. Três dias de imersão espiritual profunda na identidade, propósito e cura emocional para abençoar sua vida.",
-    type: "conference",
-    status: "published",
-    locationType: "onsite",
-    startsAt: "2026-06-12T19:00:00Z",
-    endsAt: "2026-06-14T12:00:00Z",
-    capacity: 350,
-    isPaid: true,
-    ticketPrice: 85,
-    location: "Auditório Principal - Plataforma Esdras"
-  },
-  {
-    id: "event_baptism_may",
-    name: "Batismo Geral de Outono",
-    description: "A pública profissão de fé e celebração da ressurreição espiritual de dezenas de novos discípulos que descerão às águas no Plataforma Esdras.",
-    type: "service",
-    status: "published",
-    locationType: "onsite",
-    startsAt: "2026-05-24T09:00:00Z",
-    endsAt: "2026-05-24T13:00:00Z",
-    capacity: 150,
-    isPaid: false,
-    location: "Espaço de Convivência e Piscina"
-  },
-  {
-    id: "event_leadership_camp",
-    name: "Acampamento de Líderes Extremo",
-    description: "Treinamento intensivo de sobrevivência, imersão em dinâmicas de tribo e alinhamento da liderança de células para a grande colheita de 2026.",
-    type: "camp",
-    status: "published",
-    locationType: "onsite",
-    startsAt: "2026-07-10T18:00:00Z",
-    endsAt: "2026-07-12T17:00:00Z",
-    capacity: 200,
-    isPaid: true,
-    ticketPrice: 220,
-    location: "Sítio Esdras de Recantos - Cotia"
-  }
-];
-
-const mockScheduleMap: Record<string, VolunteerAssignment[]> = {
-  event_women_2026: [
-    { id: "v1", role: "Líder de Recepção", volunteerName: "Ana Silva", status: "confirmed", teamName: "Acolhimento" },
-    { id: "v2", role: "Operador de Som", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
-    { id: "v3", role: "Câmera 1", volunteerName: "Rodrigo Melo", status: "pending", teamName: "Mídia/Som" },
-    { id: "v4", role: "Apoio Diaconato", volunteerName: "Matheus Costa", status: "confirmed", teamName: "Ordem e Protocolo" },
-    { id: "v5", role: "Recepcionista Portal", volunteerName: "Clara Santos", status: "pending", teamName: "Acolhimento" },
-  ],
-  event_baptism_may: [
-    { id: "v10", role: "Apoio Batismo", volunteerName: "Matheus Costa", status: "confirmed", teamName: "Ordem e Protocolo" },
-    { id: "v11", role: "Operador de Som", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
-    { id: "v12", role: "Fotógrafo", volunteerName: "Júlia Reis", status: "confirmed", teamName: "Mídia/Som" },
-  ],
-  event_leadership_camp: [
-    { id: "v20", role: "Coordenador Geral", volunteerName: "Marina Souza", status: "confirmed", teamName: "Liderança" },
-    { id: "v21", role: "Som & Iluminação", volunteerName: "Felipe Andrade", status: "confirmed", teamName: "Mídia/Som" },
-    { id: "v22", role: "Socorrista", volunteerName: "Dra. Patrícia Lima", status: "confirmed", teamName: "Saúde" },
-    { id: "v23", role: "Logística Sítio", volunteerName: "Carlos Silveira", status: "pending", teamName: "Infraestrutura" },
-  ]
-};
-
-const mockWorshipMap: Record<string, WorshipSong[]> = {
-  event_women_2026: [
-    { id: "s1", title: "Águas Profundas", artist: "Esdras Worship", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
-    { id: "s2", title: "O Lindo Nome", artist: "Hillsong Em Português", key: "D", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
-    { id: "s3", title: "Yeshua", artist: "Alessandro Vilas Boas", key: "Am", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
-  ],
-  event_baptism_may: [
-    { id: "s10", title: "Fará Ele Outra Vez", artist: "Elevation Worship", key: "G", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com" } },
-    { id: "s11", title: "A Ele a Glória", artist: "Diante do Trono", key: "C", links: { chords: "https://cifraclub.com.br", spotify: "https://spotify.com" } },
-  ],
-  event_leadership_camp: [
-    { id: "s20", title: "Tua Presença é o Meu Bem", artist: "Esdras Worship", key: "E", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com", spotify: "https://spotify.com" } },
-    { id: "s21", title: "Ruach", artist: "Comunidade da Zona Sul", key: "F#m", links: { chords: "https://cifraclub.com.br", youtube: "https://youtube.com" } },
-  ]
-};
 
 // Mapeadores entre o shape rico do view (EventType) e o Event persistido no Firestore.
 function slugifyEvent(s: string): string {
@@ -287,7 +204,7 @@ function QrCameraScanner({ active, onDetect }: { active: boolean; onDetect: (tex
 }
 
 export function EventsView() {
-  const { configured, firebaseReady, firebaseConfig, organizationId } = useAppAuth();
+  const { configured, firebaseReady, firebaseConfig, organizationId, user } = useAppAuth();
   
   // Estados reativos — eventos carregados do Firestore (não mais mock).
   const [events, setEvents] = useState<EventType[]>([]);
@@ -299,9 +216,8 @@ export function EventsView() {
   // Novos estados para Abas e Calendário
   const [activeTab, setActiveTab] = useState<"attendees" | "schedule" | "worship">("attendees");
   const [sidebarMode, setSidebarMode] = useState<"list" | "calendar">("list");
-  const [notifiedAttendeeId, setNotifiedAttendeeId] = useState<string | null>(null);
   const [notificationBanner, setNotificationBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2026, 5, 1)); // Junho 2026
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   // Inscritos/inscrições e referências (Escala/Worship) — dados REAIS do Firestore.
   const [attendeesMap, setAttendeesMap] = useState<Record<string, Attendee[]>>({});
@@ -472,7 +388,7 @@ export function EventsView() {
   const [showAddGuestForm, setShowAddGuestForm] = useState(false);
   const [newGuest, setNewGuest] = useState({ firstName: "", lastName: "", email: "" });
 
-  // Simulador de Scanner QR Code
+  // Scanner QR por câmera, com alternativa de marcação manual.
   const [showScanner, setShowScanner] = useState(false);
   const [selectedScanAttendeeId, setSelectedScanAttendeeId] = useState<string>("");
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -539,6 +455,18 @@ export function EventsView() {
         teamName: teamsById[a.serviceTeamId] || a.serviceTeamId || "Equipe",
       }));
   }, [activeEvent, serviceAssignments, peopleById, teamsById]);
+
+  async function attendanceRequest(body: Record<string, unknown>) {
+    if (!user) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/events/attendance", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({})) as { registration?: DomainEventRegistration; replayed?: boolean; error?: string };
+    if (!response.ok || !data.registration) throw new Error(data.error || "Não foi possível concluir a operação.");
+    return data;
+  }
 
   const resetEventForm = () => {
     setNewEvent({
@@ -629,26 +557,12 @@ export function EventsView() {
     e.preventDefault();
     if (!activeEvent || !newGuest.firstName) return;
 
-    const regId = `reg_guest_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
-    const code = "ESD-" + regId.slice(-5).toUpperCase();
-    const registration: DomainEventRegistration = {
-      id: regId,
-      organizationId,
-      eventId: activeEvent.id,
-      responsiblePersonId: `guest_${Date.now().toString(36)}`,
-      registrationCode: code,
-      status: "confirmed",
-      paymentStatus: activeEvent.isPaid ? "pending" : "not_required",
-      registeredAt: new Date().toISOString(),
-      personName: `${newGuest.firstName} ${newGuest.lastName}`.trim(),
-      personEmail: newGuest.email || undefined,
-    };
-
+    let registration: DomainEventRegistration;
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId }, registration);
-    } catch (err) {
-      console.error("registrar convidado falhou:", err);
-      setNotificationBanner({ message: "Não foi possível registrar o convidado. Tente de novo.", type: "info" });
+      const data = await attendanceRequest({ action: "guest", organizationId, eventId: activeEvent.id, requestId: crypto.randomUUID(), ...newGuest });
+      registration = data.registration!;
+    } catch (cause) {
+      setNotificationBanner({ message: cause instanceof Error ? cause.message : "Não foi possível registrar o convidado.", type: "info" });
       return;
     }
 
@@ -656,8 +570,8 @@ export function EventsView() {
     setAttendeesMap(prev => ({ ...prev, [activeEvent.id]: [regToAttendee(registration), ...(prev[activeEvent.id] ?? [])] }));
     setNotificationBanner({
       message: activeEvent.isPaid
-        ? `Convidado ${newGuest.firstName} inscrito (código ${code}). Pagamento pendente — confirme ao receber o PIX.`
-        : `Convidado ${newGuest.firstName} inscrito (código ${code}).`,
+        ? `Convidado ${newGuest.firstName} inscrito (código ${registration.registrationCode}). Pagamento pendente — confirme ao receber o PIX.`
+        : `Convidado ${newGuest.firstName} inscrito (código ${registration.registrationCode}).`,
       type: "success"
     });
     setNewGuest({ firstName: "", lastName: "", email: "" });
@@ -673,13 +587,12 @@ export function EventsView() {
       const at = new Date(reg.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       return { success: false, message: `Ingresso ${reg.registrationCode} já utilizado às ${at}.` };
     }
-    const nowIso = new Date().toISOString();
-    const updated: DomainEventRegistration = { ...reg, checkedInAt: nowIso };
+    let updated: DomainEventRegistration;
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId }, updated);
-    } catch (err) {
-      console.error("check-in falhou:", err);
-      return { success: false, message: "Não foi possível registrar o check-in. Tente de novo." };
+      const data = await attendanceRequest({ action: "checkin", organizationId, eventId: reg.eventId, registrationId: reg.id });
+      updated = data.registration!;
+    } catch (cause) {
+      return { success: false, message: cause instanceof Error ? cause.message : "Não foi possível registrar o check-in." };
     }
     setRegsById(prev => ({ ...prev, [attendeeId]: updated }));
     setAttendeesMap(prev => {
@@ -687,7 +600,7 @@ export function EventsView() {
       return {
         ...prev,
         [reg.eventId]: list.map(a => a.id === attendeeId
-          ? { ...a, checkedIn: true, checkedInAt: new Date(nowIso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }
+          ? { ...a, checkedIn: true, checkedInAt: new Date(updated.checkedInAt!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }
           : a)
       };
     });
@@ -702,12 +615,12 @@ export function EventsView() {
   const confirmPayment = async (attendeeId: string) => {
     const reg = regsById[attendeeId];
     if (!reg || reg.paymentStatus === "paid") return;
-    const updated: DomainEventRegistration = { ...reg, paymentStatus: "paid", paymentConfirmedAt: new Date().toISOString() };
+    let updated: DomainEventRegistration;
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId }, updated);
-    } catch (err) {
-      console.error("confirmar pagamento falhou:", err);
-      setNotificationBanner({ message: "Não foi possível confirmar o pagamento.", type: "info" });
+      const data = await attendanceRequest({ action: "payment", organizationId, eventId: reg.eventId, registrationId: reg.id });
+      updated = data.registration!;
+    } catch (cause) {
+      setNotificationBanner({ message: cause instanceof Error ? cause.message : "Não foi possível confirmar o pagamento.", type: "info" });
       return;
     }
     setRegsById(prev => ({ ...prev, [attendeeId]: updated }));
@@ -721,10 +634,13 @@ export function EventsView() {
   // Check-in por código/QR (do scanner ou entrada manual). Aceita "eventId|regId"
   // (payload do QR do ingresso) ou o próprio id da inscrição.
   const handleScanCode = async (raw: string) => {
-    const code = raw.includes("|") ? raw.split("|").pop()! : raw.trim();
+    const parts = raw.trim().split("|");
+    const code = parts.length === 2 ? parts[1] : parts[0];
     setScanning(true);
     setScanResult(null);
-    const result = await persistCheckIn(code);
+    const result = parts.length === 2 && parts[0] !== activeEvent?.id
+      ? { success: false, message: "Este ingresso pertence a outro evento." }
+      : await persistCheckIn(code);
     setScanning(false);
     setScanResult(result);
   };
@@ -745,7 +661,7 @@ export function EventsView() {
       }}
     >
       
-      {/* 1. Simulador de Scanner QR Code de Check-In */}
+      {/* 1. Scanner QR Code de Check-In */}
       {showScanner && (
         <div
           style={{
@@ -1000,7 +916,7 @@ export function EventsView() {
                 <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", margin: "6px 0 0 0", lineHeight: 1.3 }}>{activeEvent.name}</h4>
               </div>
 
-              {/* QR Code Simulado */}
+              {/* QR escaneável do ingresso: eventId|registrationId. */}
               <div 
                 style={{
                   width: 130,
@@ -1016,7 +932,13 @@ export function EventsView() {
                   border: "1px solid rgba(15, 23, 42, 0.04)"
                 }}
               >
-                <QrCode size={110} style={{ color: "#0f172a" }} />
+                <img
+                  src={`/api/qr?data=${encodeURIComponent(`${activeEvent.id}|${inspectedAttendee.id}`)}`}
+                  alt={`QR do ingresso ${inspectedAttendee.ticketCode}`}
+                  width={110}
+                  height={110}
+                  style={{ display: "block" }}
+                />
               </div>
 
               {/* Detalhes do Membro */}
@@ -1097,27 +1019,22 @@ export function EventsView() {
                       
                       <button
                         type="button"
-                        onClick={() => {
-                          setNotifiedAttendeeId(inspectedAttendee.id);
-                          setTimeout(() => {
-                            alert(`A cobrança já está visível para ${inspectedAttendee.firstName} no aplicativo. O reenvio de notificação push estará disponível em breve.`);
-                          }, 100);
-                        }}
+                        disabled
                         style={{
                           marginTop: "0.75rem",
                           width: "100%",
                           padding: "0.45rem",
-                          backgroundColor: notifiedAttendeeId === inspectedAttendee.id ? "var(--alvo-green)" : "var(--alvo-accent)",
+                          backgroundColor: "var(--alvo-line)",
                           color: "white",
                           border: "none",
                           borderRadius: 8,
                           fontSize: "0.7rem",
                           fontWeight: 700,
-                          cursor: "pointer",
+                          cursor: "not-allowed",
                           transition: "all 0.2s"
                         }}
                       >
-                        {notifiedAttendeeId === inspectedAttendee.id ? "✓ Cobrança Notificada no Celular!" : "🔔 Reenviar Notificação no Celular"}
+                        Reenvio push ainda não habilitado
                       </button>
                     </div>
                   </div>

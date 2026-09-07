@@ -26,7 +26,13 @@ function newId(prefix: string) {
 
 // Aceita link normal, curto (youtu.be) ou de incorporação do YouTube.
 function isProbablyVideoUrl(url: string) {
-  return /^https?:\/\//i.test(url.trim());
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.toLowerCase();
+    return parsed.protocol === "https:" && ["youtube.com", "www.youtube.com", "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com", "vimeo.com", "www.vimeo.com", "player.vimeo.com", "cloudflarestream.com", "videodelivery.net"].some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+  } catch {
+    return false;
+  }
 }
 
 export function CourseManagerView() {
@@ -102,6 +108,8 @@ export function CourseManagerView() {
       setNewCourse({ title: "", description: "" });
       setShowNewCourse(false);
       setStatus(`Curso "${course.title}" criado.`);
+    } catch {
+      setStatus("Não foi possível criar o curso.");
     } finally {
       setSaving(false);
     }
@@ -122,6 +130,8 @@ export function CourseManagerView() {
       await saveCourse(firebaseConfig, { organizationId }, updated);
       setCourses((cur) => cur.map((c) => (c.id === updated.id ? updated : c)));
       setStatus("Curso salvo.");
+    } catch {
+      setStatus("Não foi possível salvar o curso.");
     } finally {
       setSaving(false);
     }
@@ -130,8 +140,6 @@ export function CourseManagerView() {
   async function handleDeleteCourse(course: Course) {
     if (!ready) return;
     if (!window.confirm(`Excluir o curso "${course.title}" e todo o seu conteúdo? Esta ação é irreversível.`)) return;
-    setCourses((cur) => cur.filter((c) => c.id !== course.id));
-    setSelectedCourseId((cur) => (cur === course.id ? null : cur));
     try {
       // Remove aulas e módulos antes do curso (não há cascata no Firestore).
       const [mods, less] = await Promise.all([
@@ -141,9 +149,11 @@ export function CourseManagerView() {
       await Promise.all(less.map((l) => deleteLesson(firebaseConfig, { organizationId }, course.id, l.id)));
       await Promise.all(mods.map((m) => deleteCourseModule(firebaseConfig, { organizationId }, course.id, m.id)));
       await deleteCourse(firebaseConfig, { organizationId }, course.id);
+      setCourses((cur) => cur.filter((c) => c.id !== course.id));
+      setSelectedCourseId((cur) => (cur === course.id ? null : cur));
       setStatus(`Curso "${course.title}" excluído.`);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setStatus("Não foi possível excluir todo o conteúdo do curso.");
     }
   }
 
@@ -156,24 +166,25 @@ export function CourseManagerView() {
       title: moduleTitle.trim(),
       sortOrder: courseModules.length
     };
-    setModules((cur) => [...cur, mod]);
-    setModuleTitle("");
     try {
       await saveCourseModule(firebaseConfig, { organizationId }, mod);
+      setModules((cur) => [...cur, mod]);
+      setModuleTitle("");
       setStatus(`Módulo "${mod.title}" adicionado.`);
-    } catch (e) { console.error(e); }
+    } catch { setStatus("Não foi possível adicionar o módulo."); }
   }
 
   async function handleDeleteModule(mod: CourseModule) {
     if (!ready) return;
     const modLessons = lessons.filter((l) => l.moduleId === mod.id);
     if (!window.confirm(`Excluir o módulo "${mod.title}"${modLessons.length ? ` e suas ${modLessons.length} aula(s)` : ""}?`)) return;
-    setModules((cur) => cur.filter((m) => m.id !== mod.id));
-    setLessons((cur) => cur.filter((l) => l.moduleId !== mod.id));
     try {
       await Promise.all(modLessons.map((l) => deleteLesson(firebaseConfig, { organizationId }, mod.courseId, l.id)));
       await deleteCourseModule(firebaseConfig, { organizationId }, mod.courseId, mod.id);
-    } catch (e) { console.error(e); }
+      setModules((cur) => cur.filter((m) => m.id !== mod.id));
+      setLessons((cur) => cur.filter((l) => l.moduleId !== mod.id));
+      setStatus(`Módulo "${mod.title}" excluído.`);
+    } catch { setStatus("Não foi possível excluir todo o módulo."); }
   }
 
   async function handleAddLesson(mod: CourseModule) {
@@ -192,20 +203,21 @@ export function CourseManagerView() {
       sortOrder: moduleLessons.length,
       materialUrl: draft.materialUrl.trim() || undefined
     };
-    setLessons((cur) => [...cur, lesson]);
-    setLessonDraft((cur) => ({ ...cur, [mod.id]: { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" } }));
     try {
       await saveLesson(firebaseConfig, { organizationId }, lesson);
+      setLessons((cur) => [...cur, lesson]);
+      setLessonDraft((cur) => ({ ...cur, [mod.id]: { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" } }));
       setStatus(`Aula "${lesson.title}" adicionada.`);
-    } catch (e) { console.error(e); }
+    } catch { setStatus("Não foi possível adicionar a aula."); }
   }
 
   async function handleDeleteLesson(lesson: Lesson) {
     if (!ready) return;
-    setLessons((cur) => cur.filter((l) => l.id !== lesson.id));
     try {
       await deleteLesson(firebaseConfig, { organizationId }, lesson.courseId, lesson.id);
-    } catch (e) { console.error(e); }
+      setLessons((cur) => cur.filter((l) => l.id !== lesson.id));
+      setStatus(`Aula "${lesson.title}" excluída.`);
+    } catch { setStatus("Não foi possível excluir a aula."); }
   }
 
   function setDraft(moduleId: string, patch: Partial<{ title: string; videoUrl: string; durationMinutes: string; materialUrl: string }>) {

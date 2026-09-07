@@ -1925,19 +1925,6 @@ export async function deleteEvent(
   await deleteDoc(doc(firestore, getEventsCollectionPath(context), eventId));
 }
 
-export async function saveEventRegistration(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  registration: EventRegistration
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getEventRegistrationsCollectionPath(context, registration.eventId), registration.id),
-    cleanFirestoreData(registration),
-    { merge: true }
-  );
-}
-
 export async function fetchEventRegistrations(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -2366,26 +2353,6 @@ export async function fetchMarketplacePromotions(
 }
 
 // ── Comunicação: histórico de envios + templates ────────────────────────────
-export async function addCommunicationLogEntry(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  entry: Omit<CommunicationLogEntry, "id" | "createdAt" | "organizationId"> & { createdAt?: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getCommunicationLogCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData({
-    organizationId: context.organizationId,
-    channel: entry.channel,
-    message: entry.message,
-    recipientCount: entry.recipientCount,
-    sentCount: entry.sentCount,
-    failedCount: entry.failedCount,
-    sentByUserId: entry.sentByUserId,
-    createdAt: entry.createdAt ?? new Date().toISOString(),
-  }));
-  return ref.id;
-}
-
 export async function fetchCommunicationLog(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -2855,19 +2822,6 @@ export async function fetchMemberCourseProgress(
   );
   if (!snap.exists()) return null;
   return toMemberCourseProgress(snap.id, snap.data());
-}
-
-export async function saveMemberCourseProgress(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  progress: MemberCourseProgress
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getMemberCourseProgressCollectionPath(context, progress.memberId), progress.courseId),
-    cleanFirestoreData(progress),
-    { merge: true }
-  );
 }
 
 export async function saveCourse(
@@ -3535,19 +3489,6 @@ export async function fetchMemberBadges(
   const firestore = getFirebaseFirestore(config);
   const snap = await getDocs(collection(firestore, getMemberBadgesCollectionPath(context, personId)));
   return snap.docs.map((d) => toMemberBadge(d.id, d.data()));
-}
-
-export async function saveMemberBadge(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  memberBadge: MemberBadge
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getMemberBadgesCollectionPath(context, memberBadge.personId), memberBadge.id),
-    cleanFirestoreData(memberBadge),
-    { merge: true }
-  );
 }
 
 /* ── Network / Rede de Igrejas ─────────────────────────────────────────── */

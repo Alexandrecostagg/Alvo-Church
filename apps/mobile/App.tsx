@@ -35,7 +35,6 @@ import {
   fetchPublicPrayerWall,
   fetchTenantRuntimeSnapshot,
   fetchEvents,
-  saveEventRegistration,
   fetchGroups,
   incrementPrayerCount,
   isFirebaseWebRuntimeConfigured,
@@ -613,40 +612,44 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
     setLoadingCourse(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const [mods, less, prog] = await Promise.all([
+      const [mods, less, progressResponse] = await Promise.all([
         sdk.fetchCourseModules(firebaseConfig, { organizationId: orgId }, course.id),
         sdk.fetchCourseLessons(firebaseConfig, { organizationId: orgId }, course.id),
-        sdk.fetchMemberCourseProgress(firebaseConfig, { organizationId: orgId }, user.uid, course.id)
+        fetch(`${WEB_API_URL}/api/learning/progress`, {
+          method: "POST",
+          headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+          body: JSON.stringify({ action: "read", organizationId: orgId, courseId: course.id })
+        })
       ]);
+      const progressData = await progressResponse.json() as { status?: string; progress?: MemberCourseProgress; error?: string };
+      if (!progressResponse.ok) throw new Error(progressData.error || "Não foi possível carregar o progresso.");
       setModules(mods);
       setLessons(less);
-      setProgress(prog ?? {
-        id: `progress_${user.uid}_${course.id}`,
-        organizationId: orgId, memberId: user.uid, courseId: course.id,
+      setProgress(progressData.progress ?? {
+        id: course.id,
+        organizationId: orgId, memberId: "", courseId: course.id,
         completedLessons: [], isCompleted: false, updatedAt: new Date().toISOString()
       });
+      if (progressData.status === "unlinked") Alert.alert("Conta sem vínculo", "Peça à administração para vincular sua conta ao cadastro de pessoa antes de salvar o progresso.");
     } catch (e) { if (__DEV__) console.warn("openCourse falhou:", e); }
     finally { setLoadingCourse(false); }
   }
 
   async function toggleLesson(lesson: Lesson) {
-    if (!progress || !selectedCourse) return;
-    const done = progress.completedLessons.includes(lesson.id);
-    const nextCompleted = done
-      ? progress.completedLessons.filter((id) => id !== lesson.id)
-      : [...progress.completedLessons, lesson.id];
-    const courseLessons = lessons.filter((l) => l.courseId === selectedCourse.id);
-    const next: MemberCourseProgress = {
-      ...progress,
-      completedLessons: nextCompleted,
-      isCompleted: courseLessons.length > 0 && nextCompleted.length >= courseLessons.length,
-      updatedAt: new Date().toISOString()
-    };
-    setProgress(next);
+    if (!progress || !selectedCourse || !progress.memberId) {
+      Alert.alert("Conta sem vínculo", "Vincule sua conta a um cadastro de pessoa para registrar o progresso.");
+      return;
+    }
     try {
-      const { saveMemberCourseProgress } = await import("@alvo/firebase");
-      await saveMemberCourseProgress(firebaseConfig, { organizationId: orgId }, next);
-    } catch (e) { if (__DEV__) console.warn("saveMemberCourseProgress falhou:", e); }
+      const response = await fetch(`${WEB_API_URL}/api/learning/progress`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ action: "toggle", organizationId: orgId, courseId: selectedCourse.id, lessonId: lesson.id, requestId: Crypto.randomUUID() })
+      });
+      const data = await response.json() as { progress?: MemberCourseProgress; error?: string };
+      if (!response.ok || !data.progress) throw new Error(data.error || "Não foi possível salvar o progresso.");
+      setProgress(data.progress);
+    } catch (e) { Alert.alert("Progresso não salvo", e instanceof Error ? e.message : "Tente novamente."); }
   }
 
   async function watchLesson(lesson: Lesson) {
@@ -2402,31 +2405,16 @@ function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: stri
 
 function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [method, setMethod] = useState<"pix" | "cartao" | "free">(event.isPaid ? "pix" : "free");
-  const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reg, setReg] = useState<{ code: string; token: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const [pix, setPix] = useState<{ payload: string; qrDataUrl: string; pixKey: string; receiverName: string } | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
   const isFree = !event.isPaid;
   const price = event.priceAmount ?? 0;
-
-  async function pickReceipt() {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6, base64: true });
-    if (r.canceled || !r.assets[0]) return;
-    const b64 = r.assets[0].base64 ?? null;
-    // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
-    if (b64 && b64.length > 900_000) {
-      Alert.alert("Imagem muito grande", "Tire uma foto mais fechada só do comprovante e tente de novo.");
-      return;
-    }
-    setReceiptUri(r.assets[0].uri);
-    setReceiptBase64(b64);
-  }
 
   // Gera o PIX REAL da igreja (mesma API da doação) para o valor do evento.
   useEffect(() => {
@@ -2457,29 +2445,19 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
   async function confirmInscricao() {
     setSaving(true);
     setError(null);
-    const regId = `reg_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
-    const code = "ESD-" + regId.slice(-5).toUpperCase();
-    const token = `${event.id}|${regId}`; // o scanner de check-in lê isto
-    const registration: EventRegistration = {
-      id: regId,
-      organizationId: orgId,
-      eventId: event.id,
-      responsiblePersonId: user.uid,
-      registrationCode: code,
-      status: "confirmed",
-      paymentStatus: event.isPaid ? "pending" : "not_required",
-      registeredAt: new Date().toISOString(),
-      personName: user.displayName ?? undefined,
-      personEmail: user.email ?? undefined,
-      ...(receiptBase64 ? { receiptImage: receiptBase64 } : {}),
-    };
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);
-      setReg({ code, token });
+      const response = await fetch(`${WEB_API_URL}/api/events/attendance`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ action: "member", organizationId: orgId, eventId: event.id, requestId: Crypto.randomUUID() })
+      });
+      const data = await response.json() as { registration?: EventRegistration; error?: string };
+      if (!response.ok || !data.registration) throw new Error(data.error || "Não foi possível confirmar a inscrição.");
+      setReg({ code: data.registration.registrationCode, token: `${event.id}|${data.registration.id}` });
       setConfirmed(true);
     } catch (e) {
-      if (__DEV__) console.warn("saveEventRegistration falhou:", e);
-      setError("Não foi possível confirmar a inscrição. Tente novamente.");
+      if (__DEV__) console.warn("inscrição de evento falhou:", e);
+      setError(e instanceof Error ? e.message : "Não foi possível confirmar a inscrição. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -2550,9 +2528,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
                     <Text style={s.pixKey} selectable numberOfLines={3}>{pix.payload}</Text>
                     <Btn label="Copiar código PIX" onPress={() => { void Share.share({ message: pix.payload }); }} variant="outline" style={{ marginTop: 8 }} />
                     <Text style={[s.cardMeta, { marginTop: 8 }]}>Beneficiário: {pix.receiverName}</Text>
-                    <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" style={{ marginTop: 12 }} />
-                    {receiptUri && <Image source={{ uri: receiptUri }} style={[s.receiptPreview, { marginTop: 10 }]} resizeMode="cover" />}
-                    <Text style={[s.cardMeta, { marginTop: 10, color: "#64748b" }]}>Após pagar, confirme abaixo. A inscrição fica pendente até a liderança conferir o pagamento.</Text>
+                    <Text style={[s.cardMeta, { marginTop: 10, color: "#64748b" }]}>Após pagar, confirme abaixo. A inscrição fica pendente até a liderança conferir o crédito.</Text>
                   </>
                 ) : null}
               </View>

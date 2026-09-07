@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **05/09/2026**, após a entrega ampliada 7: **83,70% (+7,05 pontos)**.
+Atualizado em **07/09/2026**, após a entrega ampliada 8: **88,05% (+4,35 pontos)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -25,10 +25,10 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
 | P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Parcial — entrega 7 | Recepção/dashboard/escalas agora usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência e conversão única. Comprovantes privados e giving pelo servidor validados na entrega 7; falta Turnstile. |
-| P1.1 | Verdade dos dados | Parcial — entrega 6 | Recepção, pastoral, rede, lojas/ofertas/moderação, bem-estar e repertório revisados; Wi-Fi sem falso sucesso. Falta auditar EAD/eventos e demais rotas; não declarar todo o produto limpo. |
+| P1.1 | Verdade dos dados | Parcial — entrega 8 | EAD/eventos foram auditados; demos e sucesso otimista removidos. As frentes das entregas 6–8 usam estados reais. Falta revisar as demais rotas e a exclusão transacional de cursos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 2 | Oferta de 50 corrigida; 22 arquivos redundantes removidos, alias /landing validado em preview. Falta convergir LP ativa do painel, provas comerciais, SEO/privacidade e migração de domínio. |
-| P1.4 | Cobrança, comunicação e IA | Parcial — entrega 7 | Checkout/webhook idempotentes e vinculados, IA com cota/rate limit compartilhados e auditoria; opt-out de giving preservado. Faltam sandbox Asaas real, migração de referências legadas e envio/entrega de comunicação. |
+| P1.4 | Cobrança, comunicação e IA | Parcial — entrega 8 | Checkout/IA da entrega 7; WhatsApp manual com destinatário autorizado, opt-out, repetição segura e confirmação explícita na entrega 8. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 
 ## Épico 1 — Pessoas, famílias, identidade e jornadas
@@ -131,10 +131,12 @@ comercial. Assinatura SaaS em Asaas não equivale a doação recorrente da igrej
 
 ## Épico 12 — Comunicação multicanal
 
-**Parcial.** Templates, histórico e abertura de WhatsApp existem. Push/email
-na tela de campanhas ainda estão “em breve”; o app já registra Expo Push Token.
-Faltam envio/entrega comprovados, opt-out, destinatários autorizados, retries e
-agendamento. SMS/WhatsApp oficial precisam de integração e critério comercial.
+**Parcial — entrega 8 validada localmente.** WhatsApp manual prepara somente
+destinatários ativos, da igreja, com telefone válido e sem opt-out. Abertura da
+conversa não é contada como envio; o líder confirma destinatários e a operação
+é idempotente e auditada. Perfil permite retirar/reautorizar consentimento.
+Push/email continuam “em breve”. Faltam entrega comprovada, webhook, retries,
+agendamento e integração oficial com critério comercial.
 
 ## Épico 13 — Feature gate e menu
 
@@ -147,7 +149,11 @@ API, paridade mobile e alterações de plano. Esconder menu não é autorizaçã
 **Misto: implementações parciais e expansão futura.** Scoring de tribos possui
 testes; jornadas, cursos e rede têm telas e repositórios. Marketplace/rede revisados na entrega 6; loja pendente/aprovada e privacidade
 homologadas. Entrega 7 vincula acesso ao curso à ordem de cobrança e revoga
-após reembolso (provedor simulado); não fecha o EAD. Falta validar demais operações e remover demos de EAD/eventos. Jovens, workflows, analytics avançado, missões
+após reembolso (provedor simulado). Entrega 8 remove demos, exige vínculo
+conta/pessoa, valida aula/curso/entitlement e grava conclusão/medalha de modo
+transacional; eventos receberam inscrição, pagamento e check-in protegidos.
+Faltam conteúdo real, aparelhos, exclusão atômica de curso e provedor financeiro.
+Jovens, workflows, analytics avançado, missões
 e capacitação ampla em rede devem receber histórias e aceite antes de entrar
 na estimativa. Não anunciar toda a Camada 2 como entregue.
 

@@ -365,10 +365,19 @@ service cloud.firestore {
     // Comunicação (histórico de envios + templates): só liderança (admin) —
     // conteúdo de comunicados é sensível. Excluído dos catch-alls de leitura.
     match /organizations/{orgId}/communicationLog/{entryId} {
-      allow read, write: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
     match /organizations/{orgId}/communicationTemplates/{templateId} {
       allow read, write: if isTenantAdmin(orgId);
+    }
+    match /organizations/{orgId}/communicationCampaigns/{entryId} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/communicationAudit/{entryId} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Receipt metadata and legacy media are available only through the private API.
@@ -518,13 +527,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Progresso do aluno na Escola EAD (people/{uid}/courseProgress). O membro
-    // grava o PRÓPRIO progresso (personId == uid); admin também pode. Como as
-    // regras são OR, este match libera a escrita mesmo com o catch-all negando
-    // subcoleções de "people".
+    // O progresso EAD usa o vínculo privado conta↔pessoa e uma transação no
+    // backend. O cliente não escolhe personId, badge nem percentual concluído.
     match /organizations/{orgId}/people/{personId}/courseProgress/{progressId} {
-      allow read: if isTenantMember(orgId);
-      allow write: if isTenantMember(orgId) && (personId == request.auth.uid || isTenantAdmin(orgId));
+      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/people/{personId}/badges/{badgeId} {
+      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/learningAttempts/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/learningAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Igrejas filiais (plano Rede): até 50 filiais, só quem está no plano
@@ -577,10 +595,24 @@ service cloud.firestore {
     // alterar/excluir/marcar presença só admin. Regra específica é OR com o
     // catch-all abaixo (que só deixa admin escrever) — libera o self-register.
     match /organizations/{orgId}/events/{eventId}/registrations/{regId} {
+      allow read: if isTenantAdmin(orgId)
+        || (isTenantMember(orgId) && resource.data.responsiblePersonId == request.auth.uid);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/events/{eventId}/tickets/{ticketId} {
       allow read: if isTenantMember(orgId);
-      allow create: if isTenantMember(orgId)
-        && request.resource.data.responsiblePersonId == request.auth.uid;
-      allow update, delete: if isTenantAdmin(orgId);
+      allow write: if isTenantAdmin(orgId);
+    }
+    match /organizations/{orgId}/events/{eventId}/checkIns/{checkInId} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/eventAttempts/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/eventAttendanceAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Personal wellbeing records are visible to their author and pastoral staff.
@@ -637,8 +669,10 @@ service cloud.firestore {
     // (people, users, contribuições, kids, assinatura) têm regras específicas
     // e não podem ser reabertas por este match via OR.
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
-      allow read: if isTenantMember(orgId) && isOperationalCollection(collection);
-      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection);
+      // Subcoleções de events têm políticas próprias acima porque inscrições
+      // e presença contêm dados pessoais e transições financeiras.
+      allow read: if isTenantMember(orgId) && isOperationalCollection(collection) && collection != "events";
+      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection) && collection != "events";
     }
   }
 }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle, Trash2, Save } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import {
-  addCommunicationLogEntry,
   fetchCommunicationLog,
   saveCommunicationTemplate,
   fetchCommunicationTemplates,
@@ -19,11 +18,7 @@ const CHANNELS = [
   { key: "whatsapp", label: "WhatsApp", icon: Smartphone, desc: "Pelo seu WhatsApp · grátis" },
 ];
 
-interface SendResult {
-  sent: number;
-  failedCount: number;
-  failed: Array<{ phone: string; error?: string }>;
-}
+interface PreparedRecipient { personId: string; name: string; whatsapp: string }
 
 export function CommunicationView() {
   const { user, organizationId, firebaseConfig, configured } = useAppAuth();
@@ -34,10 +29,11 @@ export function CommunicationView() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [opened, setOpened] = useState<Set<string>>(new Set());
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [preparedRecipients, setPreparedRecipients] = useState<PreparedRecipient[]>([]);
   const [loggingCampaign, setLoggingCampaign] = useState(false);
   const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<SendResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<CommunicationLogEntry[]>([]);
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
@@ -115,6 +111,9 @@ export function CommunicationView() {
     return peopleWithWhatsapp.filter((p) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(q));
   }, [peopleWithWhatsapp, search]);
 
+  const allFilteredSelected = filteredPeople.length > 0
+    && filteredPeople.every((person) => selected.has(person.id));
+
   function toggleSelected(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -125,42 +124,72 @@ export function CommunicationView() {
 
   function toggleSelectAll() {
     setSelected((prev) =>
-      prev.size === filteredPeople.length ? new Set() : new Set(filteredPeople.map((p) => p.id))
+      allFilteredSelected
+        ? new Set([...prev].filter((id) => !filteredPeople.some((person) => person.id === id)))
+        : new Set([...prev, ...filteredPeople.map((person) => person.id)])
     );
   }
 
-  // Abre a conversa no WhatsApp (wa.me) com a mensagem pronta — envio pelo
-  // próprio número da liderança, grátis. Marca a pessoa como "aberta".
-  function openWhatsapp(p: Person) {
-    const raw = (p.whatsappPhone || p.mobilePhone || "").replace(/\D/g, "");
-    if (!raw || !message.trim()) return;
-    const withCountry = raw.startsWith("55") ? raw : `55${raw}`;
-    window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(message.trim())}`, "_blank", "noopener");
-    setOpened((prev) => new Set(prev).add(p.id));
+  async function campaignRequest(body: Record<string, unknown>) {
+    if (!user) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/communication/send-whatsapp", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({})) as Record<string, any>;
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Não foi possível registrar a campanha.");
+    return data;
   }
 
-  // Registra a campanha no histórico (quantos você abriu pra enviar).
-  async function logCampaign() {
-    if (!organizationId || !user || opened.size === 0 || !message.trim()) return;
+  async function prepareCampaign() {
+    if (!organizationId || !user || selected.size === 0 || !message.trim()) return;
     setLoggingCampaign(true);
+    setError(null);
     try {
-      const entryBase = {
-        channel: "whatsapp" as const,
-        message: message.trim(),
-        recipientCount: opened.size,
-        sentCount: opened.size,
-        failedCount: 0,
-        sentByUserId: user.uid,
-      };
-      let logId = crypto.randomUUID();
-      try {
-        logId = await addCommunicationLogEntry(firebaseConfig, { organizationId }, entryBase);
-      } catch { /* mesmo sem gravar, mantém na sessão */ }
-      setHistory((prev) => [{ id: logId, organizationId, createdAt: new Date().toISOString(), ...entryBase }, ...prev]);
+      const requestId = crypto.randomUUID();
+      const data = await campaignRequest({ action: "prepare", organizationId, requestId, message: message.trim(), recipientIds: [...selected] });
+      setCampaignId(data.campaignId);
+      setPreparedRecipients(data.recipients ?? []);
+      if (Array.isArray(data.skipped) && data.skipped.length) setError(`${data.skipped.length} pessoa(s) ficaram de fora por cadastro inativo, telefone inválido ou opt-out.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível preparar a campanha.");
+    } finally {
+      setLoggingCampaign(false);
+    }
+  }
+
+  function openWhatsapp(recipient: PreparedRecipient) {
+    if (!message.trim()) return;
+    window.open(`https://wa.me/${recipient.whatsapp}?text=${encodeURIComponent(message.trim())}`, "_blank", "noopener");
+    setOpened((prev) => new Set(prev).add(recipient.personId));
+  }
+
+  function toggleConfirmed(personId: string) {
+    setConfirmed((prev) => {
+      const next = new Set(prev);
+      if (next.has(personId)) next.delete(personId); else next.add(personId);
+      return next;
+    });
+  }
+
+  async function completeCampaign() {
+    if (!organizationId || !campaignId || confirmed.size === 0) return;
+    setLoggingCampaign(true);
+    setError(null);
+    try {
+      await campaignRequest({ action: "complete", organizationId, campaignId, confirmedRecipientIds: [...confirmed] });
+      const refreshed = await fetchCommunicationLog(firebaseConfig, { organizationId }, 30);
+      setHistory(refreshed);
       setMessage("");
       setOpened(new Set());
+      setConfirmed(new Set());
       setSelected(new Set());
+      setCampaignId(null);
+      setPreparedRecipients([]);
       setComposing(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível salvar as confirmações.");
     } finally {
       setLoggingCampaign(false);
     }
@@ -202,7 +231,7 @@ export function CommunicationView() {
             <h2 className="section-title">Pessoas com WhatsApp ({filteredPeople.length})</h2>
           </div>
           <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)", margin: "0 0 12px" }}>
-            Escreva a mensagem acima, depois clique em <strong>Abrir no WhatsApp</strong> de cada pessoa — a conversa abre com o texto pronto pra você enviar do seu número.
+            Selecione os destinatários. O servidor confere igreja, cadastro ativo, telefone e opt-out antes de liberar as conversas.
           </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -215,27 +244,40 @@ export function CommunicationView() {
             />
           </div>
 
+          {!campaignId && !loadingPeople && filteredPeople.length > 0 && (
+            <button className="btn-secondary btn-sm" type="button" onClick={toggleSelectAll} style={{ marginBottom: 10 }}>
+              {allFilteredSelected ? "Limpar esta lista" : "Selecionar esta lista"}
+            </button>
+          )}
+
           {loadingPeople ? (
             <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)" }}>Carregando pessoas...</p>
           ) : filteredPeople.length === 0 ? (
             <p style={{ fontSize: 13, color: "var(--alvo-ink-soft)" }}>
               Nenhuma pessoa com WhatsApp cadastrado{search ? " para essa busca" : ""}.
             </p>
+          ) : campaignId ? (
+            <div style={{ maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+              {preparedRecipients.map((recipient) => (
+                <div key={recipient.personId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--alvo-line)" }}>
+                  <span style={{ fontSize: 13, color: "var(--alvo-ink)" }}>{recipient.name}</span>
+                  <button className="btn-secondary btn-sm" type="button" onClick={() => openWhatsapp(recipient)} style={{ marginLeft: "auto", whiteSpace: "nowrap" }}>
+                    <Smartphone size={14} /> {opened.has(recipient.personId) ? "Reabrir conversa" : "Abrir no WhatsApp"}
+                  </button>
+                  <button className="btn-secondary btn-sm" type="button" disabled={!opened.has(recipient.personId)} onClick={() => toggleConfirmed(recipient.personId)} style={{ color: confirmed.has(recipient.personId) ? "#16a34a" : undefined, opacity: opened.has(recipient.personId) ? 1 : 0.5, whiteSpace: "nowrap" }}>
+                    <CheckCircle2 size={14} /> {confirmed.has(recipient.personId) ? "Envio confirmado" : "Confirmar que enviei"}
+                  </button>
+                </div>
+              ))}
+            </div>
           ) : (
             <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
               {filteredPeople.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8 }}>
+                <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, cursor: "pointer" }}>
+                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelected(p.id)} />
                   <span style={{ fontSize: 13, color: "var(--alvo-ink)" }}>{p.firstName} {p.lastName}</span>
                   <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", marginLeft: "auto" }}>{p.whatsappPhone || p.mobilePhone}</span>
-                  <button
-                    className="btn-secondary btn-sm"
-                    onClick={() => openWhatsapp(p)}
-                    disabled={!message.trim()}
-                    style={{ opacity: !message.trim() ? 0.5 : 1, color: opened.has(p.id) ? "#16a34a" : undefined, whiteSpace: "nowrap" }}
-                  >
-                    <Smartphone size={14} /> {opened.has(p.id) ? "Aberto ✓" : "Abrir no WhatsApp"}
-                  </button>
-                </div>
+                </label>
               ))}
             </div>
           )}
@@ -244,12 +286,12 @@ export function CommunicationView() {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             className="btn-primary"
-            onClick={logCampaign}
-            disabled={loggingCampaign || opened.size === 0}
-            style={{ opacity: loggingCampaign || opened.size === 0 ? 0.5 : 1 }}
+            onClick={campaignId ? completeCampaign : prepareCampaign}
+            disabled={loggingCampaign || (campaignId ? confirmed.size === 0 : selected.size === 0 || !message.trim())}
+            style={{ opacity: loggingCampaign || (campaignId ? confirmed.size === 0 : selected.size === 0 || !message.trim()) ? 0.5 : 1 }}
           >
             <CheckCircle2 size={16} />
-            {loggingCampaign ? "Registrando..." : `Registrar no histórico (${opened.size})`}
+            {loggingCampaign ? "Registrando..." : campaignId ? `Salvar confirmações (${confirmed.size})` : `Preparar conversas (${selected.size})`}
           </button>
           <button
             className="btn-secondary"
@@ -311,7 +353,8 @@ export function CommunicationView() {
               <div key={h.id} style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)" }}>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--alvo-ink)" }}>{h.message}</p>
                 <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>
-                  {new Date(h.createdAt).toLocaleString("pt-BR")} · {h.sentCount} enviada{h.sentCount !== 1 ? "s" : ""}
+                  {new Date(h.createdAt).toLocaleString("pt-BR")} · {h.sentCount} envio{h.sentCount !== 1 ? "s" : ""} confirmado{h.sentCount !== 1 ? "s" : ""} pela liderança
+                  {h.status === "prepared" ? " · campanha preparada, sem envio confirmado" : ""}
                   {h.failedCount > 0 ? ` · ${h.failedCount} falharam` : ""}
                 </p>
               </div>

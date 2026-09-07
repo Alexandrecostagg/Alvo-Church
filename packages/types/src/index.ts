@@ -374,6 +374,8 @@ export interface Person {
   email?: string;
   mobilePhone?: string;
   whatsappPhone?: string;
+  communicationOptOut?: boolean;
+  whatsappOptOutAt?: string;
   birthDate?: string;
   cpf?: string;
   address?: PostalAddress;
@@ -551,6 +553,11 @@ export interface CommunicationLogEntry {
   failedCount: number;
   sentByUserId: string;
   createdAt: string; // ISO
+  mode?: "manual" | "provider";
+  status?: "prepared" | "partially_confirmed" | "confirmed";
+  openedCount?: number;
+  skippedCount?: number;
+  confirmedAt?: string;
 }
 
 export interface CommunicationTemplate {
