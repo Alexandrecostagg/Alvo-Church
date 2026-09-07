@@ -1,14 +1,14 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 8 ampliada: **88,05% (aproximadamente 88,1%)**, ganho
-> de **4,35 pontos**. Comunicação manual auditável, EAD por identidade/entitlement
-> e presença de eventos mediada pelo servidor. 318 testes, 43 verificações novas
-> e regressões das entregas 6 e 7.
-> Ver [evidências e limites](entrega-ampliada-8-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 9 ampliada: **89,85% (aproximadamente 89,9%)**, ganho
+> de **1,80 ponto**. Administração EAD/eventos mediada, regras fechadas e portal
+> público com agenda real. 336 testes, 35 verificações novas e 43 regressivas.
+> Ver [evidências e limites](entrega-ampliada-9-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Última entrega publicada: `e92452c`, branch `codex/consolidacao-local-2026-09-05`.
-Entrega 8 validada localmente e ainda sem push/deploy.
+Entregas 8 e 9 validadas localmente; sincronização/publicação registrada ao fim
+da entrega 9.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
 o deploy. O app não foi enviado às lojas e as integrações externas continuam com
 os limites registrados no documento da entrega. A branch foi enviada ao remoto;
@@ -153,8 +153,8 @@ Fontes oficiais consultadas em 05/09/2026:
 
 ## Próximo marco
 
-Entrega 8 fechou localmente os fluxos inseguros de comunicação manual, progresso
-EAD e presença de eventos. Seguem migrações legadas, sandbox Asaas, aparelhos,
-comunicação por provedor, Turnstile e homologação coordenada. Manter pacotes
+Entrega 9 fechou também a administração de EAD/eventos e o portal público real.
+Seguem migrações legadas, sandbox Asaas, aparelhos, comunicação por provedor,
+Turnstile e homologação coordenada. Manter pacotes
 maiores conforme pedido do usuário, com percentual sustentado por evidência.
 Mobile e LP não foram extraídos.

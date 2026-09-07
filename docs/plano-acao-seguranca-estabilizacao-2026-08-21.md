@@ -6,6 +6,14 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Entrega ampliada 9 — 07/09
+
+**89,85% estimados (+1,80 ponto)**. Gestão EAD e eventos passa pelo servidor,
+com idempotência, auditoria, transições e regras sem escrita direta. Portal
+público projeta nome e próximos eventos reais. 336 testes, 35 checks novos,
+43 regressivos, cadastro 49→50, tipos, builds e QA visual passaram.
+[Evidências](entrega-ampliada-9-2026-09-07.md).
+
 ## Entrega ampliada 8 — 07/09
 
 **88,05% estimados (+4,35 pontos)**. WhatsApp manual com opt-out, destinatários
@@ -53,8 +61,8 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem. | Revisar demais coleções, provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. | Publicação/IAM, inventário legado, relação familiar, aparelhos e Turnstile. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
-| 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos da 8 revisados sem demos ou sucesso falso. | Demais operações e exclusão atômica de cursos; integração bancária. |
-| 5 — Validação | 318 testes, 43 checks novos, regressões, navegador e builds locais. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
+| 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos/portal das 8–9 revisados. | Demais operações, conteúdo real e integração bancária. |
+| 5 — Validação | 336 testes, 35 checks novos, 43 regressivos, navegador e builds locais. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 

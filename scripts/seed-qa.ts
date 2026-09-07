@@ -39,6 +39,24 @@ async function run() {
     });
     batch.set(org.collection("settings").doc("subscription"), { organizationId, plan, billingStatus: "active" });
     batch.set(org.collection("settings").doc("features"), { organizationId, modules: {} });
+    batch.set(db.doc(`org_slugs/qa-${suffix}`), {
+      organizationId,
+      displayName: `Igreja QA ${suffix}`,
+    });
+    batch.set(org.collection("events").doc(`event_qa_${suffix}`), {
+      id: `event_qa_${suffix}`,
+      organizationId,
+      name: "Encontro de QA",
+      slug: "encontro-de-qa",
+      description: "Evento local usado para validar a agenda pública.",
+      type: "service",
+      status: "published",
+      locationType: "onsite",
+      startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      capacity: 50,
+      isPaid: false,
+      locationName: "Auditório principal",
+    });
   }
   await batch.commit();
   console.log("Igrejas de QA criadas somente nos emuladores.");

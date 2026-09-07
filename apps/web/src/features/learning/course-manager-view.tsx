@@ -9,12 +9,6 @@ import {
   fetchCourses,
   fetchCourseModules,
   fetchCourseLessons,
-  saveCourse,
-  saveCourseModule,
-  saveLesson,
-  deleteCourse,
-  deleteCourseModule,
-  deleteLesson,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { Course, CourseModule, Lesson } from "@alvo/types";
@@ -66,6 +60,18 @@ export function CourseManagerView() {
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId) ?? null;
 
+  async function managementRequest(body: Record<string, unknown>) {
+    if (!user) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/learning/manage", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ organizationId, requestId: crypto.randomUUID(), ...body }),
+    });
+    const data = await response.json().catch(() => ({})) as Record<string, any>;
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Não foi possível alterar o curso.");
+    return data;
+  }
+
   // Carrega módulos + aulas do curso selecionado.
   useEffect(() => {
     if (!ready || !selectedCourseId) return;
@@ -98,24 +104,25 @@ export function CourseManagerView() {
       organizationId,
       title: newCourse.title.trim(),
       description: newCourse.description.trim(),
-      isActive: true,
+      isActive: false,
       createdAt: new Date().toISOString()
     };
     try {
-      await saveCourse(firebaseConfig, { organizationId }, course);
-      setCourses((cur) => [course, ...cur]);
-      setSelectedCourseId(course.id);
+      const data = await managementRequest({ action: "save_course", courseId: course.id, ...course });
+      const saved = data.course as Course;
+      setCourses((cur) => [saved, ...cur]);
+      setSelectedCourseId(saved.id);
       setNewCourse({ title: "", description: "" });
       setShowNewCourse(false);
-      setStatus(`Curso "${course.title}" criado.`);
-    } catch {
-      setStatus("Não foi possível criar o curso.");
+      setStatus(`Rascunho "${course.title}" criado.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Não foi possível criar o curso.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleSaveCourse() {
+  async function handleSaveCourse(nextActive = selectedCourse?.isActive ?? false) {
     if (!ready || !selectedCourse || !courseForm.title.trim()) return;
     setSaving(true);
     const updated: Course = {
@@ -124,36 +131,18 @@ export function CourseManagerView() {
       description: courseForm.description.trim(),
       thumbnailUrl: courseForm.thumbnailUrl.trim() || undefined,
       instructorName: courseForm.instructorName.trim() || undefined,
-      instructorTitle: courseForm.instructorTitle.trim() || undefined
+      instructorTitle: courseForm.instructorTitle.trim() || undefined,
+      isActive: nextActive,
     };
     try {
-      await saveCourse(firebaseConfig, { organizationId }, updated);
-      setCourses((cur) => cur.map((c) => (c.id === updated.id ? updated : c)));
-      setStatus("Curso salvo.");
-    } catch {
-      setStatus("Não foi possível salvar o curso.");
+      const data = await managementRequest({ action: "save_course", courseId: updated.id, ...updated });
+      const saved = data.course as Course;
+      setCourses((cur) => cur.map((c) => (c.id === saved.id ? saved : c)));
+      setStatus(saved.isActive ? "Curso publicado e salvo." : "Rascunho salvo.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Não foi possível salvar o curso.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleDeleteCourse(course: Course) {
-    if (!ready) return;
-    if (!window.confirm(`Excluir o curso "${course.title}" e todo o seu conteúdo? Esta ação é irreversível.`)) return;
-    try {
-      // Remove aulas e módulos antes do curso (não há cascata no Firestore).
-      const [mods, less] = await Promise.all([
-        fetchCourseModules(firebaseConfig, { organizationId }, course.id),
-        fetchCourseLessons(firebaseConfig, { organizationId }, course.id)
-      ]);
-      await Promise.all(less.map((l) => deleteLesson(firebaseConfig, { organizationId }, course.id, l.id)));
-      await Promise.all(mods.map((m) => deleteCourseModule(firebaseConfig, { organizationId }, course.id, m.id)));
-      await deleteCourse(firebaseConfig, { organizationId }, course.id);
-      setCourses((cur) => cur.filter((c) => c.id !== course.id));
-      setSelectedCourseId((cur) => (cur === course.id ? null : cur));
-      setStatus(`Curso "${course.title}" excluído.`);
-    } catch {
-      setStatus("Não foi possível excluir todo o conteúdo do curso.");
     }
   }
 
@@ -167,11 +156,11 @@ export function CourseManagerView() {
       sortOrder: courseModules.length
     };
     try {
-      await saveCourseModule(firebaseConfig, { organizationId }, mod);
-      setModules((cur) => [...cur, mod]);
+      const data = await managementRequest({ action: "save_module", courseId: mod.courseId, moduleId: mod.id, title: mod.title, sortOrder: mod.sortOrder });
+      setModules((cur) => [...cur, data.module as CourseModule]);
       setModuleTitle("");
       setStatus(`Módulo "${mod.title}" adicionado.`);
-    } catch { setStatus("Não foi possível adicionar o módulo."); }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível adicionar o módulo."); }
   }
 
   async function handleDeleteModule(mod: CourseModule) {
@@ -179,12 +168,11 @@ export function CourseManagerView() {
     const modLessons = lessons.filter((l) => l.moduleId === mod.id);
     if (!window.confirm(`Excluir o módulo "${mod.title}"${modLessons.length ? ` e suas ${modLessons.length} aula(s)` : ""}?`)) return;
     try {
-      await Promise.all(modLessons.map((l) => deleteLesson(firebaseConfig, { organizationId }, mod.courseId, l.id)));
-      await deleteCourseModule(firebaseConfig, { organizationId }, mod.courseId, mod.id);
+      await managementRequest({ action: "delete_module", courseId: mod.courseId, moduleId: mod.id });
       setModules((cur) => cur.filter((m) => m.id !== mod.id));
       setLessons((cur) => cur.filter((l) => l.moduleId !== mod.id));
       setStatus(`Módulo "${mod.title}" excluído.`);
-    } catch { setStatus("Não foi possível excluir todo o módulo."); }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível excluir todo o módulo."); }
   }
 
   async function handleAddLesson(mod: CourseModule) {
@@ -204,20 +192,20 @@ export function CourseManagerView() {
       materialUrl: draft.materialUrl.trim() || undefined
     };
     try {
-      await saveLesson(firebaseConfig, { organizationId }, lesson);
-      setLessons((cur) => [...cur, lesson]);
+      const data = await managementRequest({ action: "save_lesson", courseId: lesson.courseId, moduleId: lesson.moduleId, lessonId: lesson.id, title: lesson.title, videoUrl: lesson.videoUrl, durationMinutes: lesson.durationMinutes, sortOrder: lesson.sortOrder, materialUrl: lesson.materialUrl ?? "" });
+      setLessons((cur) => [...cur, data.lesson as Lesson]);
       setLessonDraft((cur) => ({ ...cur, [mod.id]: { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" } }));
       setStatus(`Aula "${lesson.title}" adicionada.`);
-    } catch { setStatus("Não foi possível adicionar a aula."); }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível adicionar a aula."); }
   }
 
   async function handleDeleteLesson(lesson: Lesson) {
     if (!ready) return;
     try {
-      await deleteLesson(firebaseConfig, { organizationId }, lesson.courseId, lesson.id);
+      await managementRequest({ action: "delete_lesson", courseId: lesson.courseId, lessonId: lesson.id });
       setLessons((cur) => cur.filter((l) => l.id !== lesson.id));
       setStatus(`Aula "${lesson.title}" excluída.`);
-    } catch { setStatus("Não foi possível excluir a aula."); }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível excluir a aula."); }
   }
 
   function setDraft(moduleId: string, patch: Partial<{ title: string; videoUrl: string; durationMinutes: string; materialUrl: string }>) {
@@ -269,7 +257,7 @@ export function CourseManagerView() {
         </section>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 300px) 1fr", gap: 20, alignItems: "start" }}>
+      <div className="course-manager-grid">
         {/* Lista de cursos */}
         <aside className="content-section" style={{ margin: 0 }}>
           <div className="section-header"><h2 className="section-title">Cursos</h2></div>
@@ -310,8 +298,8 @@ export function CourseManagerView() {
           ) : (
             <>
               <div className="section-header"><h2 className="section-title">Editar curso</h2>
-                <button className="btn-secondary btn-sm" onClick={() => void handleDeleteCourse(selectedCourse)} style={{ color: "#dc2626", display: "flex", alignItems: "center", gap: 4 }}>
-                  <Trash2 size={14} /> Excluir curso
+                <button className="btn-secondary btn-sm" onClick={() => void handleSaveCourse(!selectedCourse.isActive)} disabled={saving} style={{ color: selectedCourse.isActive ? "#b45309" : "#15803d", display: "flex", alignItems: "center", gap: 4, opacity: saving ? 0.6 : 1 }}>
+                  <GraduationCap size={14} /> {selectedCourse.isActive ? "Retirar da Escola" : "Publicar curso"}
                 </button>
               </div>
 
@@ -341,13 +329,19 @@ export function CourseManagerView() {
               {/* Módulos */}
               <div className="section-header" style={{ marginTop: 8 }}><h3 className="section-title" style={{ fontSize: 16 }}>Módulos e aulas</h3></div>
 
+              {selectedCourse.isActive && (
+                <p style={{ fontSize: 13, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 12px", maxWidth: 640 }}>
+                  Este curso está publicado. Retire-o da Escola antes de alterar módulos ou aulas; o progresso dos alunos será preservado.
+                </p>
+              )}
+
               <div style={{ display: "flex", gap: 8, marginBottom: 16, maxWidth: 640 }}>
                 <input
                   type="text" placeholder="Nome do módulo (ex: Módulo 1 — O Coração do Líder)"
                   value={moduleTitle} onChange={(e) => setModuleTitle(e.target.value)}
                   style={{ ...inputStyle, flex: 1 }}
                 />
-                <button className="btn-secondary" onClick={() => void handleAddModule()} disabled={!moduleTitle.trim()} style={{ opacity: moduleTitle.trim() ? 1 : 0.5, whiteSpace: "nowrap" }}>
+                <button className="btn-secondary" onClick={() => void handleAddModule()} disabled={selectedCourse.isActive || !moduleTitle.trim()} style={{ opacity: !selectedCourse.isActive && moduleTitle.trim() ? 1 : 0.5, whiteSpace: "nowrap" }}>
                   <Plus size={15} /> Módulo
                 </button>
               </div>
@@ -368,7 +362,7 @@ export function CourseManagerView() {
                           <strong style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "var(--alvo-ink)" }}>
                             <Layers size={15} style={{ color: "var(--alvo-accent)" }} /> {mod.title}
                           </strong>
-                          <button onClick={() => void handleDeleteModule(mod)} aria-label="Excluir módulo" style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626" }}>
+                          <button onClick={() => void handleDeleteModule(mod)} disabled={selectedCourse.isActive} aria-label="Excluir módulo" style={{ background: "none", border: "none", cursor: selectedCourse.isActive ? "not-allowed" : "pointer", color: "#dc2626", opacity: selectedCourse.isActive ? 0.35 : 1 }}>
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -385,7 +379,7 @@ export function CourseManagerView() {
                                     <Youtube size={11} /> {les.durationMinutes} min{les.materialUrl ? " · com material" : ""}
                                   </span>
                                 </div>
-                                <button onClick={() => void handleDeleteLesson(les)} aria-label="Excluir aula" style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", flexShrink: 0 }}>
+                                <button onClick={() => void handleDeleteLesson(les)} disabled={selectedCourse.isActive} aria-label="Excluir aula" style={{ background: "none", border: "none", cursor: selectedCourse.isActive ? "not-allowed" : "pointer", color: "#dc2626", flexShrink: 0, opacity: selectedCourse.isActive ? 0.35 : 1 }}>
                                   <X size={14} />
                                 </button>
                               </div>
@@ -404,8 +398,8 @@ export function CourseManagerView() {
                           <button
                             className="btn-primary btn-sm"
                             onClick={() => void handleAddLesson(mod)}
-                            disabled={!draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl)}
-                            style={{ justifySelf: "start", opacity: !draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl) ? 0.5 : 1 }}
+                            disabled={selectedCourse.isActive || !draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl)}
+                            style={{ justifySelf: "start", opacity: selectedCourse.isActive || !draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl) ? 0.5 : 1 }}
                           >
                             <Plus size={14} /> Adicionar aula
                           </button>

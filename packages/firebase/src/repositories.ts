@@ -1903,28 +1903,6 @@ export async function fetchEvents(
   return snapshot.docs.map((item) => toEvent(item.id, item.data()));
 }
 
-export async function saveEvent(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  event: Event
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getEventsCollectionPath(context), event.id),
-    cleanFirestoreData(event),
-    { merge: true }
-  );
-}
-
-export async function deleteEvent(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  eventId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getEventsCollectionPath(context), eventId));
-}
-
 export async function fetchEventRegistrations(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -2822,74 +2800,6 @@ export async function fetchMemberCourseProgress(
   );
   if (!snap.exists()) return null;
   return toMemberCourseProgress(snap.id, snap.data());
-}
-
-export async function saveCourse(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  course: Course
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getCoursesCollectionPath(context), course.id),
-    cleanFirestoreData(course),
-    { merge: true }
-  );
-}
-
-export async function saveCourseModule(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  module: CourseModule
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getCourseModulesCollectionPath(context, module.courseId), module.id),
-    cleanFirestoreData(module),
-    { merge: true }
-  );
-}
-
-export async function saveLesson(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  lesson: Lesson
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getLessonsCollectionPath(context, lesson.courseId), lesson.id),
-    cleanFirestoreData(lesson),
-    { merge: true }
-  );
-}
-
-export async function deleteCourse(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getCoursesCollectionPath(context), courseId));
-}
-
-export async function deleteCourseModule(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string,
-  moduleId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getCourseModulesCollectionPath(context, courseId), moduleId));
-}
-
-export async function deleteLesson(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string,
-  lessonId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getLessonsCollectionPath(context, courseId), lessonId));
 }
 
 // ─── Loja de Capacitação (catálogo global + entitlements por org) ──────────────

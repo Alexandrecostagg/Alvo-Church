@@ -11314,3 +11314,17 @@ h1.page-title,
 .legal-card section { margin-top: 30px; }
 .legal-card h2 { margin: 0 0 8px; color: #172033; font-size: 19px; }
 .legal-card a { color: #ea580c; font-weight: 700; }
+/* O editor EAD mantém lista e conteúdo lado a lado no painel, mas empilha em
+   telas estreitas para que formulários e ações continuem utilizáveis. */
+.course-manager-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .course-manager-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

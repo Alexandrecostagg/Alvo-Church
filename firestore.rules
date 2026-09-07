@@ -527,6 +527,25 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Conteúdo EAD é administrado pelo backend para validar publicação,
+    // hierarquia módulo/aula e preservar progresso durante alterações.
+    match /organizations/{orgId}/courses/{courseId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if false;
+
+      match /{sub}/{subDoc} {
+        allow read: if isTenantMember(orgId) && (sub == "modules" || sub == "lessons");
+        allow write: if false;
+      }
+    }
+    match /organizations/{orgId}/courseManagementAttempts/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/courseManagementAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+
     // O progresso EAD usa o vínculo privado conta↔pessoa e uma transação no
     // backend. O cliente não escolhe personId, badge nem percentual concluído.
     match /organizations/{orgId}/people/{personId}/courseProgress/{progressId} {
@@ -590,10 +609,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Inscrição em evento: o membro cria a PRÓPRIA inscrição (responsiblePersonId
-    // = seu uid). Leitura por membro (ver o próprio ingresso / admin ver todos);
-    // alterar/excluir/marcar presença só admin. Regra específica é OR com o
-    // catch-all abaixo (que só deixa admin escrever) — libera o self-register.
+    // Eventos e inscrições passam pelo backend: ele valida status, datas,
+    // capacidade, pagamento e preserva inscrições ao cancelar um evento.
+    match /organizations/{orgId}/events/{eventId} {
+      allow read: if isTenantMember(orgId);
+      allow write: if false;
+    }
     match /organizations/{orgId}/events/{eventId}/registrations/{regId} {
       allow read: if isTenantAdmin(orgId)
         || (isTenantMember(orgId) && resource.data.responsiblePersonId == request.auth.uid);
@@ -611,6 +632,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /organizations/{orgId}/eventAttendanceAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/eventManagementAttempts/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/eventManagementAudit/{id} {
       allow read: if isTenantAdmin(orgId);
       allow write: if false;
     }
@@ -661,8 +689,10 @@ service cloud.firestore {
     // Coleções operacionais de primeiro nível. A lista fechada acima evita
     // que uma coleção nova herde acesso por acidente.
     match /organizations/{orgId}/{collection}/{documentId} {
-      allow read: if isTenantMember(orgId) && isOperationalCollection(collection);
-      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection);
+      allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
+        && collection != "events" && collection != "courses";
+      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+        && collection != "events" && collection != "courses";
     }
 
     // Subcoleções dos módulos operacionais da lista fechada. Coleções sensíveis
@@ -671,8 +701,10 @@ service cloud.firestore {
     match /organizations/{orgId}/{collection}/{documentId}/{document=**} {
       // Subcoleções de events têm políticas próprias acima porque inscrições
       // e presença contêm dados pessoais e transições financeiras.
-      allow read: if isTenantMember(orgId) && isOperationalCollection(collection) && collection != "events";
-      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection) && collection != "events";
+      allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
+        && collection != "events" && collection != "courses";
+      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+        && collection != "events" && collection != "courses";
     }
   }
 }

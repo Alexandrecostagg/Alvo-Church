@@ -23,7 +23,7 @@ import {
   Camera
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchEvents, saveEvent, deleteEvent, fetchEventRegistrations, fetchWorshipSongs, fetchWorshipSetlistByEventId, fetchServiceTeams, fetchServiceAssignments, fetchPeople } from "@alvo/firebase";
+import { fetchEvents, fetchEventRegistrations, fetchWorshipSongs, fetchWorshipSetlistByEventId, fetchServiceTeams, fetchServiceAssignments, fetchPeople } from "@alvo/firebase";
 import type { Event as DomainEvent, EventRegistration as DomainEventRegistration } from "@alvo/types";
 
 // Type definitions to keep TypeScript happy
@@ -80,6 +80,15 @@ function slugifyEvent(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
 }
+function localDateTimeValue(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+function localDateKey(value: string) {
+  return localDateTimeValue(value).slice(0, 10);
+}
 const TYPE_TO_DOMAIN: Record<EventType["type"], DomainEvent["type"]> = {
   conference: "conference", service: "service", camp: "retreat", training: "training", celebration: "kids_event"
 };
@@ -96,8 +105,8 @@ function viewToDomain(v: EventType, orgId: string): DomainEvent {
     type: TYPE_TO_DOMAIN[v.type] ?? "service",
     status: v.status === "completed" ? "closed" : v.status === "draft" ? "draft" : "published",
     locationType: v.locationType === "online" ? "online" : "onsite",
-    startsAt: v.startsAt,
-    endsAt: v.endsAt || undefined,
+    startsAt: new Date(v.startsAt).toISOString(),
+    endsAt: v.endsAt ? new Date(v.endsAt).toISOString() : undefined,
     capacity: v.capacity || undefined,
     isPaid: v.isPaid,
     locationName: v.location || undefined,
@@ -333,7 +342,7 @@ export function EventsView() {
     const active = events.find(e => e.id === selectedEventId);
     for (let day = 1; day <= totalDays; day++) {
       const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const dayHasEvent = events.some(e => e.startsAt.startsWith(dateString));
+      const dayHasEvent = events.some(e => localDateKey(e.startsAt) === dateString);
       
       let dayIsSelected = false;
       if (active) {
@@ -361,7 +370,7 @@ export function EventsView() {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
-    const dayEvent = events.find(e => e.startsAt.startsWith(dateString));
+    const dayEvent = events.find(e => localDateKey(e.startsAt) === dateString);
     if (dayEvent) {
       setSelectedEventId(dayEvent.id);
     }
@@ -468,6 +477,18 @@ export function EventsView() {
     return data;
   }
 
+  async function eventManagementRequest(body: Record<string, unknown>) {
+    if (!user) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/events/manage", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ organizationId, requestId: crypto.randomUUID(), ...body }),
+    });
+    const data = await response.json().catch(() => ({})) as { event?: DomainEvent; deletedEventId?: string; removal?: "deleted" | "cancelled"; error?: string };
+    if (!response.ok) throw new Error(data.error || "Não foi possível alterar o evento.");
+    return data;
+  }
+
   const resetEventForm = () => {
     setNewEvent({
       name: "", description: "", type: "conference", locationType: "onsite",
@@ -481,7 +502,7 @@ export function EventsView() {
   const openEditDrawer = (evt: EventType) => {
     setNewEvent({
       name: evt.name, description: evt.description, type: evt.type,
-      locationType: evt.locationType, startsAt: evt.startsAt, capacity: evt.capacity,
+      locationType: evt.locationType, startsAt: localDateTimeValue(evt.startsAt), capacity: evt.capacity,
       isPaid: evt.isPaid, ticketPrice: evt.ticketPrice ?? 0, location: evt.location
     });
     setEditingId(evt.id);
@@ -511,7 +532,9 @@ export function EventsView() {
     };
 
     try {
-      await saveEvent(firebaseConfig, { organizationId }, viewToDomain(savedEvent, organizationId));
+      const persisted = viewToDomain(savedEvent, organizationId);
+      const data = await eventManagementRequest({ action: "save", eventId: persisted.id, ...persisted });
+      if (data.event) Object.assign(savedEvent, domainToView(data.event));
     } catch (err) {
       console.error("saveEvent falhou:", err);
       setNotificationBanner({ message: "Não foi possível salvar o evento. Tente de novo.", type: "info" });
@@ -535,13 +558,19 @@ export function EventsView() {
   const handleDeleteEvent = async (evt: EventType) => {
     setDeletingId(evt.id);
     try {
-      await deleteEvent(firebaseConfig, { organizationId }, evt.id);
-      setEvents(prev => {
-        const next = prev.filter(ev => ev.id !== evt.id);
-        setSelectedEventId(cur => cur === evt.id ? (next[0]?.id ?? "") : cur);
-        return next;
-      });
-      setNotificationBanner({ message: `Evento "${evt.name}" excluído.`, type: "info" });
+      const data = await eventManagementRequest({ action: "remove", eventId: evt.id });
+      if (data.removal === "cancelled" && data.event) {
+        const cancelled = domainToView(data.event);
+        setEvents(prev => prev.map(event => event.id === evt.id ? cancelled : event));
+        setNotificationBanner({ message: `Evento "${evt.name}" cancelado porque já possui inscrições.`, type: "info" });
+      } else {
+        setEvents(prev => {
+          const next = prev.filter(ev => ev.id !== evt.id);
+          setSelectedEventId(cur => cur === evt.id ? (next[0]?.id ?? "") : cur);
+          return next;
+        });
+        setNotificationBanner({ message: `Evento "${evt.name}" excluído.`, type: "info" });
+      }
     } catch (err) {
       console.error("deleteEvent falhou:", err);
       setNotificationBanner({ message: "Não foi possível excluir o evento.", type: "info" });

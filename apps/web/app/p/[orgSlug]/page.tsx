@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { MapPin, Clock, Calendar, Heart, ClipboardList } from "lucide-react";
+import { notFound } from "next/navigation";
+import { publicPortalSnapshot } from "../../api/_lib/public-portal";
 
 interface Props {
   params: Promise<{ orgSlug: string }>;
@@ -7,6 +9,9 @@ interface Props {
 
 export default async function PublicOrgPortal({ params }: Props) {
   const { orgSlug } = await params;
+  const portal = await publicPortalSnapshot(orgSlug).catch(() => null);
+  if (!portal) notFound();
+  const nextEvent = portal.events[0];
 
   return (
     <main style={pageStyle}>
@@ -15,10 +20,10 @@ export default async function PublicOrgPortal({ params }: Props) {
         <div style={logoAreaStyle}>
           <div style={logoPlaceholderStyle}>
             <span style={{ fontSize: 28, fontWeight: 800, color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }}>
-              {orgSlug.slice(0, 2).toUpperCase()}
+              {portal.displayName.slice(0, 2).toUpperCase()}
             </span>
           </div>
-          <h1 style={churchNameStyle}>{orgSlug}</h1>
+          <h1 style={churchNameStyle}>{portal.displayName}</h1>
           <p style={taglineStyle}>Bem-vindo!</p>
         </div>
 
@@ -39,21 +44,29 @@ export default async function PublicOrgPortal({ params }: Props) {
               <p style={actionDescStyle}>Dízimos, ofertas e campanhas</p>
             </div>
           </Link>
+
+          <Link href={`/p/${orgSlug}/events`} style={actionCardStyle}>
+            <Calendar size={24} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
+            <div>
+              <strong style={actionTitleStyle}>Próximos eventos</strong>
+              <p style={actionDescStyle}>Confira a agenda publicada pela igreja</p>
+            </div>
+          </Link>
         </div>
 
         {/* Info placeholder */}
         <div style={infoSectionStyle}>
           <div style={infoRowStyle}>
             <Clock size={16} />
-            <span>Horários de culto em breve</span>
+            <span>{nextEvent ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: portal.timeZone }).format(new Date(nextEvent.startsAt)) : "Agenda sem eventos publicados"}</span>
           </div>
           <div style={infoRowStyle}>
             <MapPin size={16} />
-            <span>Endereço em breve</span>
+            <span>{nextEvent?.locationName || "Consulte a liderança para informações do local"}</span>
           </div>
           <div style={infoRowStyle}>
             <Calendar size={16} />
-            <span>Próximos eventos em breve</span>
+            <span>{nextEvent?.name || "Novos eventos aparecerão aqui quando publicados"}</span>
           </div>
         </div>
       </div>

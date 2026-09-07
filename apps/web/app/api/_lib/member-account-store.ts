@@ -20,7 +20,7 @@ function decode(value: Data): any {
   return value.doubleValue ?? value.timestampValue ?? value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
-  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }) => Promise<Data[]>;
+  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "NOT_EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }) => Promise<Data[]>;
   usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
   set: (path: string, data: Data) => void;
