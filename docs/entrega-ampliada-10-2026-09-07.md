@@ -1,7 +1,7 @@
 # Entrega ampliada 10 — marketplace seguro e LP verificável
 
 Data: **07/09/2026**
-Estado: **validada localmente**
+Estado: **validada, publicada e sincronizada**
 Avanço estimado: **91,25%**, ganho de **1,40 ponto percentual**.
 
 ## Resultado entregue
@@ -36,6 +36,16 @@ Avanço estimado: **91,25%**, ganho de **1,40 ponto percentual**.
 - QA visual confirmou hierarquia, rótulos de demonstração, oferta de 50 membros,
   CTAs e links legais na LP.
 - `git diff --check` sem erros.
+
+## Publicação
+
+- Implementação registrada no commit `4d361f2` e enviada à branch
+  `codex/consolidacao-local-2026-09-05` no remoto.
+- Artefato OpenNext reconstruído e painel/API publicados no Worker
+  `alvo-church-web`, versão `994c25a5-fabf-4ee3-bfc5-a5061c442ec6`.
+- Regras do Firestore compiladas e liberadas no projeto `alvo-church`.
+- Verificação HTTP confirmou `/landing` com o conteúdo atualizado, `/test` em
+  `404` e a nova API em `401` com `private, no-store` sem autenticação.
 
 ## Cálculo do avanço
 

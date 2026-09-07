@@ -14,6 +14,8 @@ A LP removeu prova social e promessas sem fonte, rotulou exemplos, acrescentou
 canonical e links legais. A rota `/test` foi removida. 340 testes, 20 checks
 novos, tipos, builds e QA visual passaram.
 [Evidências](entrega-ampliada-10-2026-09-07.md).
+Implementação `4d361f2` enviada; Worker publicado na versão
+`994c25a5-fabf-4ee3-bfc5-a5061c442ec6` e regras Firestore liberadas.
 
 ## Entrega ampliada 9 — 07/09
 
