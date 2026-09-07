@@ -6,6 +6,15 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Entrega ampliada 10 — 07/09
+
+**91,25% estimados (+1,40 ponto)**. Moderação do marketplace passa por transação
+autenticada, idempotente e auditada; escrita direta e log forjado foram fechados.
+A LP removeu prova social e promessas sem fonte, rotulou exemplos, acrescentou
+canonical e links legais. A rota `/test` foi removida. 340 testes, 20 checks
+novos, tipos, builds e QA visual passaram.
+[Evidências](entrega-ampliada-10-2026-09-07.md).
+
 ## Entrega ampliada 9 — 07/09
 
 **89,85% estimados (+1,80 ponto)**. Gestão EAD e eventos passa pelo servidor,

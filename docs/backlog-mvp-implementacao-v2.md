@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **07/09/2026**, após a entrega ampliada 9: **89,85% (+1,80 ponto)**.
+Atualizado em **07/09/2026**, após a entrega ampliada 10: **91,25% (+1,40 ponto)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -25,9 +25,9 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
 | P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Parcial — entrega 7 | Recepção/dashboard/escalas agora usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência e conversão única. Comprovantes privados e giving pelo servidor validados na entrega 7; falta Turnstile. |
-| P1.1 | Verdade dos dados | Parcial — entrega 9 | EAD/eventos sem demos e com mutações mediadas; portal público usa igreja/agenda reais. Falta revisar as demais rotas e dados externos. |
+| P1.1 | Verdade dos dados | Parcial — entrega 10 | EAD/eventos sem demos; portal usa dados reais; LP não publica prova social/promessas sem fonte. Falta revisar as demais rotas e dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
-| P1.3 | Consolidação da LP | Parcial — entrega 2 | Oferta de 50 corrigida; 22 arquivos redundantes removidos, alias /landing validado em preview. Falta convergir LP ativa do painel, provas comerciais, SEO/privacidade e migração de domínio. |
+| P1.3 | Consolidação da LP | Parcial — entrega 10 | Oferta de 50, prova verificável, exemplos rotulados, canonical e links legais validados; componentes sem uso removidos. Faltam prova real, analytics consentido e migração de domínio. |
 | P1.4 | Cobrança, comunicação e IA | Parcial — entrega 8 | Checkout/IA da entrega 7; WhatsApp manual com destinatário autorizado, opt-out, repetição segura e confirmação explícita na entrega 8. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 
@@ -88,7 +88,7 @@ vínculo da pessoa ao usuário, aceite/recusa/troca e repertório no app. Criaç
 ## Épico 7 — Marketplace e Esdras Passe
 
 **Parcial.** Loja, moderação e benefícios têm telas/repositórios. Fallbacks fictícios em vitrine, detalhes e moderação foram removidos na entrega 6.
-Loja pendente é privada; criação pelo titular, aprovação e auditoria foram homologadas. A emissão do Passe foi corrigida,
+Loja pendente é privada; criação pelo titular, aprovação e auditoria foram homologadas. Na entrega 10, aprovação, rejeição e suspensão passaram a uma transação de servidor com idempotência; status e logs diretos foram bloqueados. A emissão do Passe foi corrigida,
 e a carteirinha mobile/vínculo seguro foram implementados na entrega 3. Homologar
 validação em parceiro sem expor CPF/renda/histórico e em aparelhos; consulta do
 app revalida a cada 60 segundos, não invalida capturas antigas do código.
@@ -108,8 +108,9 @@ remota apenas na etapa de homologação/deploy.
 
 **Parcial.** Consolidação Git concluída, testes/types e build OpenNext passaram.
 Wi-Fi deixou de simular sucesso e CI por aplicação/emuladores foi versionado na
-entrega 6. A execução remota está pendente, sem push. Ainda existem `/test` e
-rotas/LPs sobrepostas; registrar destinos e critérios de promoção/rollback.
+entrega 6. A branch foi enviada e o painel publicado; a rota `/test` foi removida
+na entrega 10. Ainda existem rotas/LPs sobrepostas; registrar destinos e critérios
+de promoção/rollback.
 
 ## Épico 10 — Formulários públicos e QR
 
@@ -166,4 +167,4 @@ validado justificar, conforme solicitação do usuário. Não aumentar indicador
 apenas para atingir a faixa. Guardar evidência no repositório: commit, cenário, ambiente, resultado e
 limitações. Atualizar este backlog e a linha de base de porcentagem somente
 quando houver nova implementação/validação. Build, publicação e homologação
-são estados diferentes. Nenhum repo, domínio ou deploy foi alterado nesta revisão.
+são estados diferentes. Nenhum repositório ou domínio foi alterado nesta entrega.

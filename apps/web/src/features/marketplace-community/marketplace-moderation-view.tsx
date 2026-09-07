@@ -13,7 +13,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
-import { fetchCommunityStores, fetchCommunityStoreModerationLogs, saveCommunityStore, saveCommunityStoreModerationLog } from "@alvo/firebase";
+import { fetchCommunityStores, fetchCommunityStoreModerationLogs } from "@alvo/firebase";
 import type { CommunityStore, CommunityStoreModerationLog, TenantContext } from "@alvo/types";
 
 export function MarketplaceModerationView() {
@@ -48,126 +48,41 @@ export function MarketplaceModerationView() {
     return store.status === filterStatus;
   });
 
-  const handleApprove = async (storeId: string) => {
+  const moderate = async (storeId: string, action: "approve" | "reject" | "suspend", reason = "") => {
     if (!user) return;
     try {
       setActioningStore(storeId);
+      setLoadError(null);
+      const response = await fetch("/api/marketplace/moderate", {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ organizationId, requestId: crypto.randomUUID(), storeId, action, reason }),
+      });
+      const data = await response.json() as { store?: CommunityStore; error?: string };
+      if (!response.ok || !data.store) throw new Error(data.error || "Não foi possível moderar a loja.");
+      setStores(prev => prev.map(store => store.id === storeId ? data.store! : store));
       const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
-      if (!store) throw new Error("Store not found");
-
-      const now = new Date().toISOString();
-      const updatedStore: CommunityStore = {
-        ...store,
-        status: "approved",
-        approvedAt: now
-      };
-
-      const log: CommunityStoreModerationLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        organizationId,
-        storeId,
-        action: "approved",
-        moderatedBy: user.uid,
-        timestamp: now
-      };
-
-      await Promise.all([
-        saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
-      ]);
-
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
-    } catch (error) {
-      console.error("Error approving store:", error);
-    } finally {
-      setActioningStore(null);
-    }
-  };
-
-  const handleReject = async (storeId: string) => {
-    if (!user || !rejectionReason.trim()) {
-      alert("Por favor, forneça um motivo para a rejeição");
-      return;
-    }
-    try {
-      setActioningStore(storeId);
-      const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
-      if (!store) throw new Error("Store not found");
-
-      const now = new Date().toISOString();
-      const updatedStore: CommunityStore = {
-        ...store,
-        status: "rejected",
-        rejectionReason
-      };
-
-      const log: CommunityStoreModerationLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        organizationId,
-        storeId,
-        action: "rejected",
-        moderatedBy: user.uid,
-        reason: rejectionReason,
-        timestamp: now
-      };
-
-      await Promise.all([
-        saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
-      ]);
-
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
+      setLogs(await fetchCommunityStoreModerationLogs(firebaseConfig, context, undefined, 500));
       setShowRejectionForm(null);
       setRejectionReason("");
     } catch (error) {
-      console.error("Error rejecting store:", error);
+      setLoadError(error instanceof Error ? error.message : "Não foi possível moderar a loja.");
     } finally {
       setActioningStore(null);
     }
   };
 
-  const handleSuspend = async (storeId: string) => {
-    if (!user) return;
-    try {
-      setActioningStore(storeId);
-      const context: TenantContext = { organizationId };
-      const store = stores.find(s => s.id === storeId);
-      if (!store) throw new Error("Store not found");
+  const handleApprove = (storeId: string) => moderate(storeId, "approve");
 
-      const now = new Date().toISOString();
-      const updatedStore: CommunityStore = {
-        ...store,
-        status: "suspended",
-        suspensionReason: "Suspensa pela moderação"
-      };
-
-      const log: CommunityStoreModerationLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        organizationId,
-        storeId,
-        action: "suspended",
-        moderatedBy: user.uid,
-        previousStatus: store.status,
-        timestamp: now
-      };
-
-      await Promise.all([
-        saveCommunityStore(firebaseConfig, context, updatedStore),
-        saveCommunityStoreModerationLog(firebaseConfig, context, log)
-      ]);
-
-      setStores(prev => prev.map(s => s.id === storeId ? updatedStore : s));
-      setLogs(prev => [log, ...prev]);
-    } catch (error) {
-      console.error("Error suspending store:", error);
-    } finally {
-      setActioningStore(null);
+  const handleReject = async (storeId: string) => {
+    if (!rejectionReason.trim()) {
+      alert("Por favor, forneça um motivo para a rejeição");
+      return;
     }
+    await moderate(storeId, "reject", rejectionReason);
   };
+
+  const handleSuspend = (storeId: string) => moderate(storeId, "suspend", "Suspensa pela moderação");
 
   const stats = {
     pending: stores.filter(s => s.status === "pending").length,

@@ -2,17 +2,17 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { Reveal } from "./components/Reveal";
-import { Counter } from "./components/Counter";
 import { ModuleShowcaseClient } from "./components/ModuleShowcaseClient";
 import { PricingClient } from "./components/PricingClient";
-import { TestimonialsClient } from "./components/TestimonialsClient";
 import { FAQClient } from "./components/FAQClient";
 import { NavActive } from "./components/NavActive";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://alvo-church-web.alexandrecostagg.workers.dev"),
   title: "Plataforma Esdras — Gestão para Igrejas e Redes",
   description:
     "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado. Grátis até 50 membros, sem cartão de crédito.",
+  alternates: { canonical: "/landing" },
   openGraph: {
     title: "Plataforma Esdras — Gestão para Igrejas e Redes",
     description:
@@ -39,7 +39,6 @@ export default function LandingPage() {
       <TrustBar />
       <Features />
       <ModuleShowcase />
-      <Testimonials />
       <Pricing />
       <FAQClient />
       <FinalCTA />
@@ -63,8 +62,8 @@ function LPNav() {
           <a href="#planos" className="lp-nav-link" data-section="planos">
             Planos
           </a>
-          <a href="#depoimentos" className="lp-nav-link" data-section="depoimentos">
-            Depoimentos
+          <a href="#trust" className="lp-nav-link" data-section="trust">
+            Segurança
           </a>
           <a href="#perguntas" className="lp-nav-link" data-section="perguntas">
             FAQ
@@ -126,6 +125,7 @@ function Hero() {
                 <span className="lp-preview-dot" />
                 <span className="lp-preview-dot" />
                 <span className="lp-preview-dot" />
+                <span className="lp-preview-demo-label">Demonstração ilustrativa</span>
               </div>
               <div className="lp-preview-body">
                 <div className="lp-preview-sidebar">
@@ -176,15 +176,15 @@ function Hero() {
           <div className="lp-hero-float lp-hero-float-1">
             <span className="lp-visual-dot green live" />
             <div>
-              <strong>Check-in em tempo real</strong>
-              <span>3 visitantes agora</span>
+              <strong>Fluxo de check-in</strong>
+              <span>Exemplo ilustrativo</span>
             </div>
           </div>
           <div className="lp-hero-float lp-hero-float-2">
             <span className="lp-hero-float-icon">🙏</span>
             <div>
               <strong>Radar Pastoral</strong>
-              <span>7 dias de cuidado ativo</span>
+              <span>Exemplo ilustrativo</span>
             </div>
           </div>
         </div>
@@ -197,36 +197,26 @@ function TrustBar() {
   return (
     <section className="lp-trust" id="trust">
       <div className="lp-container lp-trust-inner">
-        <span className="lp-trust-label">
-          Confiado por igrejas em todo o Brasil
-        </span>
+        <span className="lp-trust-label">O que já pode ser verificado</span>
         <div className="lp-trust-stats">
           <div className="lp-trust-stat">
-            <strong>
-              <Counter to={500} prefix="+" />
-            </strong>
-            <span>Igrejas ativas</span>
+            <strong>50</strong>
+            <span>membros no plano gratuito</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong>
-              <Counter to={120} prefix="+" suffix=" mil" />
-            </strong>
-            <span>Membros gerenciados</span>
+            <strong>Por papel</strong>
+            <span>acesso separado por igreja e função</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong>
-              <Counter to={98} suffix="%" />
-            </strong>
-            <span>Satisfação dos pastores</span>
+            <strong>Auditável</strong>
+            <span>operações sensíveis deixam histórico</span>
           </div>
           <div className="lp-trust-divider" />
           <div className="lp-trust-stat">
-            <strong>
-              <Counter to={4} suffix=" estados" />
-            </strong>
-            <span>Com redes denominacionais</span>
+            <strong>Web + app</strong>
+            <span>contratos compartilhados entre as interfaces</span>
           </div>
         </div>
       </div>
@@ -267,7 +257,7 @@ const FEATURES = [
     icon: "📅",
     title: "Escalas prontas em minutos",
     body:
-      "Monte escalas de louvor, portaria, kids e ministérios. Notificação automática para cada voluntário.",
+      "Monte escalas de louvor, portaria, kids e ministérios e acompanhe confirmações e trocas.",
     tag: "Pastoral +",
   },
   {
@@ -306,26 +296,10 @@ function ModuleShowcase() {
         <Reveal>
           <div className="lp-section-header">
             <h2>Veja como funciona na prática</h2>
+            <p>Fluxos demonstrativos do produto com dados ilustrativos.</p>
           </div>
         </Reveal>
         <ModuleShowcaseClient />
-      </div>
-    </section>
-  );
-}
-
-function Testimonials() {
-  return (
-    <section className="lp-testimonials" id="depoimentos">
-      <div className="lp-container">
-        <Reveal>
-          <div className="lp-section-header">
-            <h2>O que os pastores dizem</h2>
-          </div>
-        </Reveal>
-        <Reveal delay={100}>
-          <TestimonialsClient />
-        </Reveal>
       </div>
     </section>
   );
@@ -362,7 +336,7 @@ function FinalCTA() {
             Comece hoje, gratuitamente. Sem cartão de crédito.
             <br />
             <span className="lp-final-cta-guarantee">
-              14 dias grátis nos planos pagos. Cancele quando quiser.
+              Plano gratuito para até 50 membros. Conheça os planos antes de contratar.
             </span>
           </p>
         </Reveal>
@@ -399,6 +373,7 @@ function LPFooter() {
           <a href="#planos">Planos</a>
           <a href="#perguntas">Perguntas frequentes</a>
           <Link href="/privacy">Privacidade</Link>
+          <Link href="/account-deletion">Exclusão de conta</Link>
           <Link href="/login">Entrar</Link>
         </div>
         <p className="lp-footer-copy">

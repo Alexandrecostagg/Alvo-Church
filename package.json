@@ -29,7 +29,8 @@
     "qa:delivery6": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery6.ts",
     "qa:delivery7": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery7.ts",
     "qa:delivery8": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery8.ts",
-    "qa:delivery9": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery9.ts"
+    "qa:delivery9": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery9.ts",
+    "qa:delivery10": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery10.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

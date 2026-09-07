@@ -669,12 +669,16 @@ service cloud.firestore {
     match /organizations/{orgId}/communityStores/{id} {
       allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || resource.data.status == "approved" || resource.data.ownerId == request.auth.uid);
       allow create: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
-        && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending";
+        && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending"
+        && !request.resource.data.keys().hasAny(["moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
       // Editing a published store by its owner sends it back for moderation.
       allow update: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
         && request.resource.data.ownerId == resource.data.ownerId
-        && (isTenantAdmin(orgId) || (resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending"));
-      allow delete: if isTenantAdmin(orgId);
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == "pending"
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(["ownerId", "organizationId", "createdAt", "moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
+      allow delete: if false;
       match /offers/{offerId} {
         allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || (get(/databases/$(database)/documents/organizations/$(orgId)/communityStores/$(id)).data.status == "approved" && resource.data.status == "active"));
         allow write: if isTenantAdmin(orgId);
@@ -682,8 +686,10 @@ service cloud.firestore {
     }
     match /organizations/{orgId}/communityStoreModerationLogs/{id} {
       allow read: if isTenantAdmin(orgId);
-      allow create: if isTenantAdmin(orgId) && request.resource.data.organizationId == orgId && request.resource.data.moderatedBy == request.auth.uid;
-      allow update, delete: if false;
+      allow write: if false;
+    }
+    match /organizations/{orgId}/communityStoreModerationAttempts/{id} {
+      allow read, write: if false;
     }
 
     // Coleções operacionais de primeiro nível. A lista fechada acima evita

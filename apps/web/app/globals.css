@@ -10071,6 +10071,7 @@ h1.page-title,
   gap: 6px;
   align-items: center;
 }
+.lp-preview-demo-label { margin-left: auto; color: #94a3b8; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .lp-preview-dot {
   width: 10px; height: 10px;
   border-radius: 50%;

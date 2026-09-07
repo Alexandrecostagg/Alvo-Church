@@ -30,7 +30,7 @@ const PLANS = [
       "Eventos & Comunicação",
       "50 consultas de IA/mês",
     ],
-    cta: "Começar 14 dias grátis",
+    cta: "Criar conta e escolher",
     highlight: false,
   },
   {
@@ -46,7 +46,7 @@ const PLANS = [
       "Escola EAD",
       "Marketplace da comunidade",
     ],
-    cta: "Começar 14 dias grátis",
+    cta: "Criar conta e escolher",
     highlight: true,
   },
   {
@@ -102,7 +102,7 @@ export function PricingClient() {
               className={`lp-plan-card${plan.highlight ? " highlight" : ""}`}
             >
               {plan.highlight && (
-                <div className="lp-plan-badge">Mais popular</div>
+                <div className="lp-plan-badge">Mais recursos</div>
               )}
               <div className="lp-plan-name">{plan.name}</div>
               <div className="lp-plan-price">

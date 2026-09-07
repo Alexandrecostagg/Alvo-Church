@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 const FAQS = [
   {
@@ -16,12 +16,12 @@ const FAQS = [
     a: "Jamais. A IA é um auxiliar que sugere versículos, abordagens e próximos passos — mas a decisão final e o cuidado humano sempre são do pastor. Os limites éticos estão travados no sistema.",
   },
   {
-    q: "Consegui migrar os dados de outra plataforma?",
-    a: "Sim. Aceitamos importação de planilhas Excel/CSV com membros, células e finanças. A equipe ajuda no processo durante os 14 dias de teste dos planos pagos.",
+    q: "Consigo migrar os dados de outra plataforma?",
+    a: "A equipe analisa a origem e o formato antes da migração. Fale conosco para conferir o que pode ser importado com segurança.",
   },
   {
     q: "Os dados da igreja são seguros?",
-    a: "Sim. Usamos Firebase com regras de acesso por função, encriptação em trânsito e backups automáticos. Membros só veem o que a liderança permite.",
+    a: "A plataforma separa os dados por igreja, valida papéis de acesso e protege operações sensíveis no servidor. A política de privacidade explica o tratamento dos dados.",
   },
   {
     q: "Posso usar com uma rede de igrejas?",
@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "Escala de voluntários funciona automaticamente?",
-    a: "A plataforma monta a escala com os voluntários disponíveis e envia notificação para confirmação. O líder só valida — em minutos, tudo pronto.",
+    a: "O líder monta a escala e acompanha aceite, recusa e trocas. A confirmação pelo app depende do vínculo da conta do voluntário.",
   },
 ];
 
@@ -44,7 +44,7 @@ export function FAQClient() {
           <span className="lp-faq-eyebrow">Tirando dúvidas</span>
           <h2>Perguntas frequentes</h2>
           <p>
-            Se a dúvida não estiver aqui, chama a gente no WhatsApp que respondemos em minutos.
+            Se a dúvida não estiver aqui, envie uma mensagem para a equipe pelo WhatsApp.
           </p>
         </div>
 

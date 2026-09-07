@@ -1,9 +1,9 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 9 ampliada: **89,85% (aproximadamente 89,9%)**, ganho
-> de **1,80 ponto**. Administração EAD/eventos mediada, regras fechadas e portal
-> público com agenda real. 336 testes, 35 verificações novas e 43 regressivas.
-> Ver [evidências e limites](entrega-ampliada-9-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 10 ampliada: **91,25% (aproximadamente 91,3%)**, ganho
+> de **1,40 ponto**. Marketplace mediado no servidor, rota de teste removida e LP
+> com alegações verificáveis. 340 testes e 20 verificações novas.
+> Ver [evidências e limites](entrega-ampliada-10-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Última implementação publicada: `7c80579`, branch

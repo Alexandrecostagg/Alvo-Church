@@ -2411,25 +2411,6 @@ export async function fetchCommunityStoreModerationLogs(
   return snapshot.docs.map((item) => toCommunityStoreModerationLog(item.id, item.data()));
 }
 
-export async function saveCommunityStoreModerationLog(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  log: CommunityStoreModerationLog
-) {
-  const firestore = getFirebaseFirestore(config);
-
-  await setDoc(
-    doc(firestore, getCommunityStoreModerationLogsCollectionPath(context), log.id),
-    cleanFirestoreData({
-      ...log,
-      organizationId: context.organizationId
-    }),
-    { merge: true }
-  );
-
-  return log;
-}
-
 // Conversion functions
 function toCommunityStore(documentId: string, data: DocumentData): CommunityStore {
   return {

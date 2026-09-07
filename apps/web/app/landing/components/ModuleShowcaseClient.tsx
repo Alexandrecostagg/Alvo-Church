@@ -33,7 +33,7 @@ const MODULES = [
     title: "Escalas & Voluntários",
     subtitle: "Escala pronta em minutos, não em horas",
     description:
-      "Monte a escala de louvor, portaria e kids em minutos. Cada voluntário recebe notificação automática e confirma presença pelo celular. Fim dos grupos de WhatsApp confusos.",
+      "Monte a escala de louvor, portaria e kids, acompanhe confirmações e organize trocas. Cada voluntário confirma presença pelo celular quando a conta está vinculada.",
     visual: "serving",
   },
   {
@@ -165,7 +165,7 @@ function ModuleVisual({ type }: { type: string }) {
         </div>
         <div className="lp-visual-footer">
           <span>6 de 8 posições confirmadas</span>
-          <span>Notificado às 08:00</span>
+          <span>Exemplo ilustrativo</span>
         </div>
       </div>
     );
