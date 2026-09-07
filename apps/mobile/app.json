@@ -62,7 +62,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/generated/splash.png",
+          "image": "./assets/generated/esdras-app-icon.png",
+          "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#eef2f6"
         }
