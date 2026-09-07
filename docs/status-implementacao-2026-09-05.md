@@ -1,20 +1,19 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 11: **91,70% (aproximadamente 91,7%)**, ganho de
-> **0,45 ponto**. O AAB Android foi confirmado no Play Console, a declaração que
-> exigia conta de organização foi corrigida, o reenvio entrou em análise e o
-> teste interno foi liberado às duas listas existentes.
-> Ver [evidências e limites](entrega-ampliada-11-google-play-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 12: **92,15% (aproximadamente 92,2%)**, ganho de
+> **0,45 ponto**. O AAB 11 foi gerado do estado atual, teve assinatura validada,
+> foi aceito pelo Google Play e está disponível na faixa de teste interno.
+> Ver [evidências e limites](entrega-ampliada-12-aab11-google-play-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Última implementação publicada: `4d361f2`, branch
 `codex/consolidacao-local-2026-09-05`. Entregas 8–10 e a estabilização do deploy
-Cloudflare foram enviadas ao remoto; a entrega 11 registra a operação no Google Play.
+Cloudflare foram enviadas ao remoto; as entregas 11–12 registram a operação no Google Play.
 O painel e as APIs estão no Worker `alvo-church-web`, versão
 `994c25a5-fabf-4ee3-bfc5-a5061c442ec6`, e as regras do Firestore foram liberadas
 no projeto `alvo-church`.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
-o deploy. No Google Play, a versão 8 está disponível no teste interno e a versão
+o deploy. No Google Play, a versão 11 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. A branch foi enviada ao remoto; `main` permaneceu intacta.
 
@@ -88,8 +87,8 @@ build OpenNext, export do bundle iOS e QA HTTP/emuladores de cadastro/Kids/Passe
 Consulte [cadastro transacional](cadastro-transacional-2026-09-05.md) e
 [retomada local](encerramento-jules-2026-09-05.md).
 
-A conta EAS e o Google Play foram inspecionados em 07/09 na entrega 11. O Play
-Console comprovou os App Bundles 8–10 e a disponibilidade interna da versão 8;
+A conta EAS e o Google Play foram inspecionados em 07/09 nas entregas 11–12. O Play
+Console comprovou os App Bundles 8–11 e a disponibilidade interna da versão 11;
 App Store, instalação física e configuração remota de CI permanecem sem inspeção.
 
 ## Achados que mudam o plano
@@ -159,7 +158,8 @@ Fontes oficiais consultadas em 05/09/2026:
 ## Próximo marco
 
 Entrega 11 corrigiu a declaração do Google Play sem mudar titularidade e reenviou
-a versão 10 para revisão. Seguem instalação e QA em aparelho, migrações legadas,
+a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Seguem
+instalação e QA em aparelho, migrações legadas,
 sandbox Asaas, comunicação por provedor, Turnstile e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
 evidência. Mobile e LP não foram extraídos.
