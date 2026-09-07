@@ -1,10 +1,13 @@
 # Testes nas lojas — EsdrasApp
 
-Atualizado em **07/09/2026**. Estado: **AAB 11 disponível no teste interno e
-versão 10 em revisão fechada; sem homologação em aparelho comprovada**. A conta
+Atualizado em **07/09/2026**. Estado: **AAB 11 disponível no teste interno; fonte
+da próxima versão pronta com vínculo por lista e marca corrigida; sem homologação
+em aparelho comprovada**. A conta
 EAS, os AABs 8–11 e o Play Console foram inspecionados. O AAB 11 foi gerado do
 estado atual, teve assinatura comparada com a versão 10 e foi publicado apenas
 na faixa interna. Ver [entrega 12](entrega-ampliada-12-aab11-google-play-2026-09-07.md).
+O AAB 12 ainda não foi gerado; as mudanças e o ruleset publicado estão registrados
+na [entrega 13](entrega-ampliada-13-vinculo-instituicao-marca-2026-09-07.md).
 
 Antes do roteiro de distribuição abaixo, fechar escala/sala/evento Kids e papéis.
 Dependências, vínculo/Passe e mídia Kids foram validados localmente nas entregas

@@ -1,19 +1,22 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 12: **92,15% (aproximadamente 92,2%)**, ganho de
-> **0,45 ponto**. O AAB 11 foi gerado do estado atual, teve assinatura validada,
-> foi aceito pelo Google Play e está disponível na faixa de teste interno.
-> Ver [evidências e limites](entrega-ampliada-12-aab11-google-play-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 13: **92,45% (aproximadamente 92,5%)**, ganho de
+> **0,30 ponto**. O app agora oferece vínculo por lista pesquisável de instituições,
+> ajuda para contas ainda não cadastradas e marca atual corrigida no ícone e no splash.
+> As regras do diretório estão publicadas; o novo AAB ainda não foi gerado.
+> Ver [evidências e limites](entrega-ampliada-13-vinculo-instituicao-marca-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Última implementação publicada: `4d361f2`, branch
+Última implementação enviada: `079eb5a`, branch
 `codex/consolidacao-local-2026-09-05`. Entregas 8–10 e a estabilização do deploy
-Cloudflare foram enviadas ao remoto; as entregas 11–12 registram a operação no Google Play.
+Cloudflare foram enviadas ao remoto; as entregas 11–13 registram a operação no Google Play,
+o vínculo por instituição e a correção da marca mobile.
 O painel e as APIs estão no Worker `alvo-church-web`, versão
 `994c25a5-fabf-4ee3-bfc5-a5061c442ec6`, e as regras do Firestore foram liberadas
 no projeto `alvo-church`.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
-o deploy. No Google Play, a versão 11 está disponível no teste interno e a versão
+o deploy. O ruleset Firestore ativo é `19eb2cd8-2cff-4bb6-946a-bda6a6f75d53`.
+No Google Play, a versão 11 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. A branch foi enviada ao remoto; `main` permaneceu intacta.
 
@@ -158,8 +161,10 @@ Fontes oficiais consultadas em 05/09/2026:
 ## Próximo marco
 
 Entrega 11 corrigiu a declaração do Google Play sem mudar titularidade e reenviou
-a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Seguem
-instalação e QA em aparelho, migrações legadas,
+a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entrega
+13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
+corrigida, com regras já publicadas. Seguem AAB 12, instalação e QA em aparelho,
+migrações legadas,
 sandbox Asaas, comunicação por provedor, Turnstile e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
 evidência. Mobile e LP não foram extraídos.
