@@ -1,10 +1,9 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 13: **92,45% (aproximadamente 92,5%)**, ganho de
-> **0,30 ponto**. O app agora oferece vínculo por lista pesquisável de instituições,
-> ajuda para contas ainda não cadastradas e marca atual corrigida no ícone e no splash.
-> As regras do diretório estão publicadas; o novo AAB ainda não foi gerado.
-> Ver [evidências e limites](entrega-ampliada-13-vinculo-instituicao-marca-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 14: **92,60% (aproximadamente 92,6%)**, ganho de
+> **0,15 ponto**. A versão 12, com vínculo por lista, ajuda e marca corrigida,
+> foi aceita pelo Google Play e está disponível no teste interno.
+> Ver [evidências e limites](entrega-ampliada-14-aab12-google-play-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Última implementação enviada: `079eb5a`, branch
@@ -16,7 +15,7 @@ O painel e as APIs estão no Worker `alvo-church-web`, versão
 no projeto `alvo-church`.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
 o deploy. O ruleset Firestore ativo é `19eb2cd8-2cff-4bb6-946a-bda6a6f75d53`.
-No Google Play, a versão 11 está disponível no teste interno e a versão
+No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. A branch foi enviada ao remoto; `main` permaneceu intacta.
 
@@ -163,7 +162,8 @@ Fontes oficiais consultadas em 05/09/2026:
 Entrega 11 corrigiu a declaração do Google Play sem mudar titularidade e reenviou
 a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entrega
 13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
-corrigida, com regras já publicadas. Seguem AAB 12, instalação e QA em aparelho,
+corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
+Seguem instalação e QA em aparelho,
 migrações legadas,
 sandbox Asaas, comunicação por provedor, Turnstile e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por

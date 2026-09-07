@@ -1,13 +1,10 @@
 # Testes nas lojas — EsdrasApp
 
-Atualizado em **07/09/2026**. Estado: **AAB 11 disponível no teste interno; fonte
-da próxima versão pronta com vínculo por lista e marca corrigida; sem homologação
-em aparelho comprovada**. A conta
-EAS, os AABs 8–11 e o Play Console foram inspecionados. O AAB 11 foi gerado do
-estado atual, teve assinatura comparada com a versão 10 e foi publicado apenas
-na faixa interna. Ver [entrega 12](entrega-ampliada-12-aab11-google-play-2026-09-07.md).
-O AAB 12 ainda não foi gerado; as mudanças e o ruleset publicado estão registrados
-na [entrega 13](entrega-ampliada-13-vinculo-instituicao-marca-2026-09-07.md).
+Atualizado em **07/09/2026**. Estado: **AAB 12 disponível no teste interno, com
+vínculo por lista e marca corrigida; sem homologação em aparelho comprovada**. A
+conta EAS, os AABs 8–12 e o Play Console foram inspecionados. O AAB 12 foi gerado
+do commit `fff1822`, teve assinatura comparada com as versões anteriores e foi
+publicado apenas na faixa interna. Ver [entrega 14](entrega-ampliada-14-aab12-google-play-2026-09-07.md).
 
 Antes do roteiro de distribuição abaixo, fechar escala/sala/evento Kids e papéis.
 Dependências, vínculo/Passe e mídia Kids foram validados localmente nas entregas
@@ -28,10 +25,10 @@ restrito às faixas de teste; produção pública não foi solicitada.
 
 ## Estado do Google Play em 07/09/2026
 
-- Teste interno ativo com a versão 11 e as duas listas existentes selecionadas
+- Teste interno ativo com a versão 12 e as duas listas existentes selecionadas
   (26 cadastros brutos, limite de cem participantes).
 - Acesso ao teste interno: `https://play.google.com/apps/internaltest/4701732869010871749`.
-- Versão 11 (`1.0.0`) disponível aos testadores internos desde 07/09/2026 às 13:44.
+- Versão 12 (`1.0.0`) disponível aos testadores internos desde 07/09/2026 às 15:18.
 - Versão 10 (`1.0.0`) na faixa fechada `Esdras 1`, reenviada e **em análise**.
 - Acesso ao teste fechado após aprovação: `https://play.google.com/apps/testing/com.plataformaesdras.app`.
 - Titularidade, tipo da conta, proprietário e permissões administrativas
