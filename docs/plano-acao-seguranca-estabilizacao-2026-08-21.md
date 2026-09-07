@@ -13,6 +13,9 @@ com idempotência, auditoria, transições e regras sem escrita direta. Portal
 público projeta nome e próximos eventos reais. 336 testes, 35 checks novos,
 43 regressivos, cadastro 49→50, tipos, builds e QA visual passaram.
 [Evidências](entrega-ampliada-9-2026-09-07.md).
+Implementação `7c80579` enviada; painel/APIs publicados no Worker
+`alvo-church-web`, versão `20d782fb-f01a-42fe-ad05-8aa7bb38b733`, e regras do
+Firestore liberadas no projeto `alvo-church`.
 
 ## Entrega ampliada 8 — 07/09
 

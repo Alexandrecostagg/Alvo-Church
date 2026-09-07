@@ -6,9 +6,11 @@
 > Ver [evidências e limites](entrega-ampliada-9-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Última entrega publicada: `e92452c`, branch `codex/consolidacao-local-2026-09-05`.
-Entregas 8 e 9 validadas localmente; sincronização/publicação registrada ao fim
-da entrega 9.
+Última implementação publicada: `7c80579`, branch
+`codex/consolidacao-local-2026-09-05`. Entregas 8 e 9 foram enviadas ao remoto.
+O painel e as APIs estão no Worker `alvo-church-web`, versão
+`20d782fb-f01a-42fe-ad05-8aa7bb38b733`, e as regras do Firestore foram liberadas
+no projeto `alvo-church`.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
 o deploy. O app não foi enviado às lojas e as integrações externas continuam com
 os limites registrados no documento da entrega. A branch foi enviada ao remoto;

@@ -1,7 +1,7 @@
 # Entrega ampliada 9 — gestão EAD, eventos e portal público
 
 Data: **07/09/2026**  
-Estado: **validada localmente**  
+Estado: **validada, publicada e sincronizada**
 Avanço estimado: **89,85%**, ganho de **1,80 ponto percentual**.
 
 ## Resultado entregue
@@ -42,6 +42,16 @@ O plano gratuito permanece com **50 membros**.
 - QA visual em largura móvel confirmou o gerenciador responsivo, portal e agenda.
 - `git diff --check` sem erros.
 
+## Publicação
+
+- Implementação registrada no commit `7c80579` e enviada à branch
+  `codex/consolidacao-local-2026-09-05` no remoto.
+- Painel e APIs publicados no Worker `alvo-church-web`, versão
+  `20d782fb-f01a-42fe-ad05-8aa7bb38b733`.
+- Regras do Firestore compiladas e liberadas no projeto `alvo-church`.
+- Verificação HTTP confirmou redirecionamento da raiz para `/landing` e resposta
+  `401` com cache privado nas duas novas APIs sem autenticação.
+
 ## Cálculo do avanço
 
 | Frente | Antes | Depois | Evidência creditada |
@@ -66,7 +76,7 @@ recebem crédito por implementação local incompleta.
 - App, câmera, QR e notificações precisam de aparelhos físicos e builds assinados.
 - EAD precisa de conteúdo real e homologação com contas de membros vinculadas.
 - Comunicação ainda não comprova entrega por provedor.
-- Publicação das regras e APIs desta entrega deve ser coordenada com o painel.
+- Próximas mudanças de regras e APIs devem continuar coordenadas com o painel.
 
 ## Próximo marco
 
