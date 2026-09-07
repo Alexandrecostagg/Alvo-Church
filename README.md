@@ -90,6 +90,18 @@ Observacao importante:
 - `@cloudflare/next-on-pages` nao e mais o caminho recomendado para este projeto
 - como o Alvo usa `Next 16`, o deploy correto e via `@opennextjs/cloudflare`
 - para Git deploy no Cloudflare, use um projeto baseado em `Worker`, apontando para `apps/web/wrangler.jsonc`
+- no Workers Builds deste monorepo, mantenha o diretorio raiz em `/` e deixe o
+  comando de build vazio; os comandos abaixo compilam o OpenNext antes de
+  publicar e evitam que `npx` procure um Wrangler fora do pacote web:
+
+```bash
+# Deploy command (branch de producao)
+corepack pnpm --filter @alvo/web build:cloudflare && corepack pnpm --filter @alvo/web exec wrangler deploy
+
+# Version command (demais branches)
+corepack pnpm --filter @alvo/web build:cloudflare && corepack pnpm --filter @alvo/web exec wrangler versions upload
+```
+
 - deploy canonico atual: `https://alvo-church-web.alexandrecostagg.workers.dev`
 - `https://alvo-church-web.pages.dev` e legado/teste e nao deve ser usado como fonte principal de validacao
 
