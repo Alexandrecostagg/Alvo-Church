@@ -6,6 +6,15 @@ para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
 
+## Entrega ampliada 19 — 08/09
+
+**94,00% estimados (+0,05 ponto)**. O cron da rede calcula membros, grupos,
+finanças, eventos e presenças reais por instituição. O painel expõe cobertura,
+data e significado correto dos indicadores. 384 testes, tipos, builds e seis
+índices `READY` passaram. API `29ee2174-583c-41b7-951e-39700c53a6f9` e painel
+`19ba5036-2700-4908-9a3a-c146d4887318` foram publicados e verificados.
+[Evidências](entrega-ampliada-19-indicadores-rede-2026-09-08.md).
+
 ## Entrega ampliada 18 — 08/09
 
 **93,95% estimados (+0,25 ponto)**. Convites e vínculos de rede passaram ao
@@ -85,8 +94,8 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem; gestão central auditada e bloqueios de módulo publicados em API/Firestore. | Revisar provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. Turnstile publicado e validado ao vivo nos formulários públicos. | Inventário legado, relação familiar e aparelhos. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
-| 4 — Dados/fluxos | Frentes anteriores, células, escalas, follow-ups e transparência só confirmam gravações reais; rede transacional e gravador cliente antigo removido na entrega 18. | Agregados ainda incompletos, dados externos e integração bancária. |
-| 5 — Validação | 379 testes, TypeScript integral, build OpenNext e compilação local/remota das regras passaram na entrega 18. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
+| 4 — Dados/fluxos | Frentes anteriores só confirmam gravações reais; rede transacional e cron com agregados reais, escopo por instituição e cobertura explícita nas entregas 18–19. | Dados externos e integração bancária. |
+| 5 — Validação | 384 testes, TypeScript integral, builds, índices e QA HTTP passaram na entrega 19. | Primeiro ciclo agendado, aparelhos, integrações externas, CI remoto e homologação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 

@@ -1,9 +1,7 @@
 // Snapshot diário de rede (NetworkSnapshot) calculado no servidor via cron.
 //
-// Substitui (e supera) o cálculo que era feito no navegador pelo
-// useNetworkSnapshotWriter do apps/web: lá o cliente baixava até 2000 pessoas
-// + grupos para contar no JS; aqui usamos runAggregationQuery do Firestore —
-// só os NÚMEROS trafegam, nenhum documento é baixado.
+// Usa runAggregationQuery do Firestore: somente números trafegam e nenhum
+// cadastro individual é baixado pelo Worker.
 //
 // Grava em organizations/{orgId}/networkSnapshots/{yyyy-mm-dd}. O navegador
 // apenas lê os agregados autorizados; nenhum cliente pode sobrescrever o cron.
@@ -119,39 +117,198 @@ function gteFilter(field: string, value: string): FirestoreFilter {
   };
 }
 
+function ltFilter(field: string, value: string): FirestoreFilter {
+  return {
+    fieldFilter: {
+      field: { fieldPath: field },
+      op: "LESS_THAN",
+      value: { stringValue: value }
+    }
+  };
+}
+
+function andFilter(...filters: FirestoreFilter[]): FirestoreFilter {
+  return { compositeFilter: { op: "AND", filters } };
+}
+
+type Aggregation =
+  | { kind: "count"; alias: "c" }
+  | { kind: "sum"; alias: "s"; field: string };
+
+export function buildAggregationBody(params: {
+  collectionId: string;
+  where?: FirestoreFilter;
+  allDescendants?: boolean;
+  aggregation: Aggregation;
+}) {
+  const structuredQuery: Record<string, unknown> = {
+    from: [{
+      collectionId: params.collectionId,
+      ...(params.allDescendants ? { allDescendants: true } : {})
+    }]
+  };
+  if (params.where) structuredQuery.where = params.where;
+  const aggregation = params.aggregation.kind === "count"
+    ? { count: {}, alias: params.aggregation.alias }
+    : { sum: { field: { fieldPath: params.aggregation.field } }, alias: params.aggregation.alias };
+  return { structuredAggregationQuery: { structuredQuery, aggregations: [aggregation] } };
+}
+
+async function aggregateDocuments(params: {
+  projectId: string;
+  token: string;
+  parentPath: string;
+  collectionId: string;
+  where?: FirestoreFilter;
+  allDescendants?: boolean;
+  aggregation: Aggregation;
+}): Promise<number> {
+  const url = `https://firestore.googleapis.com/v1/projects/${params.projectId}/databases/(default)/documents/${params.parentPath}:runAggregationQuery`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${params.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(buildAggregationBody(params)),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!res.ok) {
+    throw new Error(`runAggregationQuery falhou (${params.collectionId}): ${res.status} ${await res.text()}`);
+  }
+  const alias = params.aggregation.alias;
+  const rows = (await res.json()) as Array<{
+    result?: { aggregateFields?: Record<string, { integerValue?: string; doubleValue?: number }> };
+  }>;
+  const value = rows[0]?.result?.aggregateFields?.[alias];
+  return Number(value?.integerValue ?? value?.doubleValue ?? 0);
+}
+
 async function countDocuments(params: {
   projectId: string;
   token: string;
   parentPath: string; // ex: "organizations/org_x"
   collectionId: string;
   where?: FirestoreFilter;
+  allDescendants?: boolean;
 }): Promise<number> {
-  const url = `https://firestore.googleapis.com/v1/projects/${params.projectId}/databases/(default)/documents/${params.parentPath}:runAggregationQuery`;
-  const structuredQuery: Record<string, unknown> = {
-    from: [{ collectionId: params.collectionId }]
-  };
-  if (params.where) structuredQuery.where = params.where;
+  return aggregateDocuments({ ...params, aggregation: { kind: "count", alias: "c" } });
+}
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${params.token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      structuredAggregationQuery: {
-        structuredQuery,
-        aggregations: [{ count: {}, alias: "c" }]
-      }
-    }),
-    signal: AbortSignal.timeout(10000)
+async function sumDocuments(params: {
+  projectId: string;
+  token: string;
+  parentPath: string;
+  collectionId: string;
+  field: string;
+  where?: FirestoreFilter;
+  allDescendants?: boolean;
+}): Promise<number> {
+  return aggregateDocuments({
+    ...params,
+    aggregation: { kind: "sum", alias: "s", field: params.field }
   });
+}
 
-  if (!res.ok) {
-    throw new Error(`runAggregationQuery falhou (${params.collectionId}): ${res.status} ${await res.text()}`);
-  }
+export function networkMonthWindow(now: Date) {
+  const current = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return {
+    month: current.toISOString().slice(0, 7),
+    currentStart: current.toISOString(),
+    previousStart: previous.toISOString(),
+    nextStart: next.toISOString()
+  };
+}
 
-  const rows = (await res.json()) as Array<{
-    result?: { aggregateFields?: { c?: { integerValue?: string } } };
-  }>;
-  return Number(rows[0]?.result?.aggregateFields?.c?.integerValue ?? 0);
+export async function collectOrganizationSnapshotMetrics(params: {
+  projectId: string;
+  token: string;
+  organizationId: string;
+  now: Date;
+}) {
+  const parentPath = `organizations/${params.organizationId}`;
+  const base = { projectId: params.projectId, token: params.token, parentPath };
+  const window = networkMonthWindow(params.now);
+  const financeFilter = (start: string, end: string) => andFilter(
+    eqFilter("kind", "income"),
+    gteFilter("date", start),
+    ltFilter("date", end)
+  );
+  const voidedFinanceFilter = (start: string, end: string) => andFilter(
+    eqFilter("kind", "income"),
+    eqFilter("status", "voided"),
+    gteFilter("date", start),
+    ltFilter("date", end)
+  );
+  const eventFilter = andFilter(
+    inFilter("status", ["published", "closed"]),
+    gteFilter("startsAt", window.currentStart),
+    ltFilter("startsAt", window.nextStart)
+  );
+  const meetingFilter = andFilter(
+    eqFilter("organizationId", params.organizationId),
+    eqFilter("meetingStatus", "completed"),
+    gteFilter("completedAt", window.currentStart),
+    ltFilter("completedAt", window.nextStart)
+  );
+  const attendanceFilter = andFilter(
+    eqFilter("organizationId", params.organizationId),
+    inFilter("attendanceStatus", ["present", "first_time_guest"]),
+    gteFilter("recordedAt", window.currentStart),
+    ltFilter("recordedAt", window.nextStart)
+  );
+  const eventAttendanceFilter = andFilter(
+    eqFilter("organizationId", params.organizationId),
+    gteFilter("checkedInAt", window.currentStart),
+    ltFilter("checkedInAt", window.nextStart)
+  );
+
+  const [
+    totalPeople,
+    visitors,
+    activeMembers,
+    newMembersThisMonth,
+    totalGroups,
+    activeGroups,
+    allGivingThisMonth,
+    voidedGivingThisMonth,
+    allGivingLastMonth,
+    voidedGivingLastMonth,
+    eventsThisMonth,
+    completedMeetings,
+    groupAttendances,
+    totalEventAttendance
+  ] = await Promise.all([
+    countDocuments({ ...base, collectionId: "people" }),
+    countDocuments({ ...base, collectionId: "people", where: eqFilter("memberStatus", "visitor") }),
+    countDocuments({ ...base, collectionId: "people", where: inFilter("memberStatus", ["member", "leader", "volunteer"]) }),
+    countDocuments({ ...base, collectionId: "people", where: gteFilter("createdAt", window.currentStart) }),
+    countDocuments({ ...base, collectionId: "groups" }),
+    countDocuments({ ...base, collectionId: "groups", where: eqFilter("status", "active") }),
+    sumDocuments({ ...base, collectionId: "financialTransactions", field: "amount", where: financeFilter(window.currentStart, window.nextStart) }),
+    sumDocuments({ ...base, collectionId: "financialTransactions", field: "amount", where: voidedFinanceFilter(window.currentStart, window.nextStart) }),
+    sumDocuments({ ...base, collectionId: "financialTransactions", field: "amount", where: financeFilter(window.previousStart, window.currentStart) }),
+    sumDocuments({ ...base, collectionId: "financialTransactions", field: "amount", where: voidedFinanceFilter(window.previousStart, window.currentStart) }),
+    countDocuments({ ...base, collectionId: "events", where: eventFilter }),
+    countDocuments({ ...base, collectionId: "meetings", where: meetingFilter, allDescendants: true }),
+    countDocuments({ ...base, collectionId: "attendance", where: attendanceFilter, allDescendants: true }),
+    countDocuments({ ...base, collectionId: "registrations", where: eventAttendanceFilter, allDescendants: true })
+  ]);
+  const totalMembers = Math.max(0, totalPeople - visitors);
+  return {
+    month: window.month,
+    totalMembers,
+    newMembersThisMonth,
+    activeMembers,
+    visitors,
+    totalGroups,
+    activeGroups,
+    avgGroupAttendance: completedMeetings ? Math.round(groupAttendances / completedMeetings) : 0,
+    eventsThisMonth,
+    totalEventAttendance,
+    givingThisMonth: Math.max(0, allGivingThisMonth - voidedGivingThisMonth),
+    givingLastMonth: Math.max(0, allGivingLastMonth - voidedGivingLastMonth),
+    serviceAttendanceRate: totalMembers ? Math.round((activeMembers / totalMembers) * 100) : 0
+  };
 }
 
 async function listOrganizationIds(projectId: string, token: string): Promise<string[]> {
@@ -202,11 +359,7 @@ async function patchSnapshot(params: {
     .map(([k]) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
     .join("&");
 
-  const firestoreFields: Record<string, { stringValue: string } | { integerValue: string }> = {};
-  for (const [key, value] of fieldEntries) {
-    firestoreFields[key] =
-      typeof value === "number" ? { integerValue: String(value) } : { stringValue: value };
-  }
+  const firestoreFields = encodeSnapshotFields(params.fields);
 
   const res = await fetch(
     `https://firestore.googleapis.com/v1/projects/${params.projectId}/databases/(default)/documents/${path}?${updateMask}`,
@@ -221,6 +374,33 @@ async function patchSnapshot(params: {
   if (!res.ok) {
     throw new Error(`PATCH do snapshot falhou (${params.organizationId}): ${res.status} ${await res.text()}`);
   }
+}
+
+export function encodeSnapshotFields(fields: Record<string, string | number>) {
+  const encoded: Record<string, { stringValue: string } | { integerValue: string } | { doubleValue: number }> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    encoded[key] = typeof value === "number"
+      ? Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value }
+      : { stringValue: value };
+  }
+  return encoded;
+}
+
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  work: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await work(items[index]!);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 // ── Job principal ───────────────────────────────────────────────────────────
@@ -241,35 +421,16 @@ export async function writeDailyNetworkSnapshots(env: {
 
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
-  const month = today.slice(0, 7);
-  const monthStart = `${month}-01T00:00:00.000Z`;
   const createdAt = now.toISOString();
 
-  let ok = 0;
-  let failed = 0;
-
-  for (const organizationId of orgIds) {
+  const results = await mapWithConcurrency(orgIds, 4, async (organizationId) => {
     try {
-      const parentPath = `organizations/${organizationId}`;
-      const base = { projectId, token, parentPath };
-
-      // Só agregações — nenhum documento de pessoa/grupo é transferido.
-      const [totalPeople, visitors, activeMembers, newThisMonth, totalGroups, activeGroups] =
-        await Promise.all([
-          countDocuments({ ...base, collectionId: "people" }),
-          countDocuments({ ...base, collectionId: "people", where: eqFilter("memberStatus", "visitor") }),
-          countDocuments({
-            ...base,
-            collectionId: "people",
-            where: inFilter("memberStatus", ["member", "leader", "volunteer"])
-          }),
-          countDocuments({ ...base, collectionId: "people", where: gteFilter("createdAt", monthStart) }),
-          countDocuments({ ...base, collectionId: "groups" }),
-          countDocuments({ ...base, collectionId: "groups", where: eqFilter("status", "active") })
-        ]);
-
-      // Mesma semântica do writer do cliente: totalMembers = todos - visitantes.
-      const totalMembers = totalPeople - visitors;
+      const metrics = await collectOrganizationSnapshotMetrics({
+        projectId,
+        token,
+        organizationId,
+        now
+      });
 
       await patchSnapshot({
         projectId,
@@ -280,29 +441,19 @@ export async function writeDailyNetworkSnapshots(env: {
           id: today,
           organizationId,
           date: today,
-          month,
-          totalMembers,
-          newMembersThisMonth: newThisMonth,
-          activeMembers,
-          visitors,
-          totalGroups,
-          activeGroups,
-          avgGroupAttendance: 0,
-          eventsThisMonth: 0,
-          totalEventAttendance: 0,
-          givingThisMonth: 0,
-          givingLastMonth: 0,
-          serviceAttendanceRate: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,
+          ...metrics,
           createdAt
         }
       });
-
-      ok++;
+      return true;
     } catch (e) {
-      failed++;
       console.error(`[network-snapshot] org ${organizationId} falhou:`, e);
+      return false;
     }
-  }
+  });
+
+  const ok = results.filter(Boolean).length;
+  const failed = results.length - ok;
 
   console.log(`[network-snapshot] concluído: ${ok} ok, ${failed} falhas, data=${today}`);
   return { ok, failed };

@@ -174,7 +174,10 @@ export function NetworkView() {
                 acc.activeMembers        += h.activeMembers;
                 acc.visitors             += h.visitors;
                 acc.totalGroups          += h.totalGroups;
+                acc.activeGroups         += h.activeGroups;
                 acc.givingThisMonth      += h.givingThisMonth;
+                acc.givingLastMonth      += h.givingLastMonth;
+                acc.eventsThisMonth      += h.eventsThisMonth;
                 acc.totalEventAttendance += h.totalEventAttendance;
               }
             }
@@ -183,7 +186,14 @@ export function NetworkView() {
 
         if (cancelled) return;
         setSnapshots(snaps);
-        const sortedHistory = Object.values(histByMonth).sort((a, b) => a.month.localeCompare(b.month));
+        const sortedHistory = Object.values(histByMonth)
+          .map((snapshot) => ({
+            ...snapshot,
+            serviceAttendanceRate: snapshot.totalMembers
+              ? Math.round((snapshot.activeMembers / snapshot.totalMembers) * 100)
+              : 0,
+          }))
+          .sort((a, b) => a.month.localeCompare(b.month));
         setHistory(sortedHistory);
       } catch (e) {
         if (cancelled) return;
@@ -218,6 +228,11 @@ export function NetworkView() {
 
   const activeAffiliates = affiliates.filter(a => a.status === "active");
   const pendingAffiliates = affiliates.filter(a => a.status === "pending");
+  const consolidatedAffiliates = activeAffiliates.filter(a => snapshots[a.childOrganizationId]);
+  const latestSnapshotDate = Object.values(snapshots)
+    .map((snapshot) => snapshot.date)
+    .sort()
+    .at(-1);
   const givingDelta = pctDelta(totals.giving, totals.givingLast);
 
   /* ── Bar chart data ───────────────────────────────────────────────── */
@@ -232,7 +247,7 @@ export function NetworkView() {
     .slice(0, 8);
 
   const tierLabel = orgTier === "denomination" ? "Denominação" : "Rede de Igrejas";
-  const avgAttendance = activeAffiliates.length
+  const avgActiveMemberRate = activeAffiliates.length
     ? Math.round(activeAffiliates.reduce((a, af) => a + (snapshots[af.childOrganizationId]?.serviceAttendanceRate ?? 0), 0) / activeAffiliates.length)
     : 0;
 
@@ -240,7 +255,7 @@ export function NetworkView() {
     const headers = [
       "Igreja","Cidade","Estado","Status","Membros","Novos/mês","Membros ativos",
       "Visitantes","Grupos totais","Grupos ativos","Arrecadação (R$)","Arrecad. anterior (R$)",
-      "Δ arrecadação (%)","Eventos/mês","Total presença eventos","Engajamento (%)",
+      "Δ arrecadação (%)","Eventos/mês","Presenças em eventos/mês","Membros ativos (%)",
     ];
     const rows = affiliates.map(a => {
       const s = snapshots[a.childOrganizationId];
@@ -387,6 +402,14 @@ export function NetworkView() {
         </div>
       </div>
 
+      {activeAffiliates.length > 0 && (
+        <div style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", color: "var(--alvo-ink-soft)", fontSize: 12 }}>
+          Indicadores consolidados de <strong>{consolidatedAffiliates.length}/{activeAffiliates.length}</strong> instituições ativas
+          {latestSnapshotDate ? ` · última consolidação: ${latestSnapshotDate.split("-").reverse().join("/")}` : " · aguardando a primeira execução diária"}.
+          {consolidatedAffiliates.length < activeAffiliates.length && " Os totais ainda não incluem as instituições sem snapshot."}
+        </div>
+      )}
+
       {/* KPI cards com trend */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
         <MetricCard
@@ -415,13 +438,13 @@ export function NetworkView() {
           icon={<Users size={20} />}
         />
         <div style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 16 }}>
-          <Donut value={avgAttendance} color="var(--alvo-accent)" size={80} label={`${avgAttendance}%`} />
+          <Donut value={avgActiveMemberRate} color="var(--alvo-accent)" size={80} label={`${avgActiveMemberRate}%`} />
           <div>
             <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Engajamento médio
+              Membros ativos
             </span>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--alvo-ink-soft)", lineHeight: 1.4 }}>
-              média das igrejas ativas
+              proporção média nas igrejas
             </p>
           </div>
         </div>
@@ -542,12 +565,16 @@ export function NetworkView() {
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontWeight: 800, color: "var(--alvo-ink)" }}>{snap.serviceAttendanceRate}%</div>
-                        <div style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>engajamento</div>
+                        <div style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>membros ativos</div>
                       </div>
                     </div>
                   ) : affiliate.status === "pending" ? (
                     <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
                       Aguardando aceite
+                    </span>
+                  ) : affiliate.status === "active" ? (
+                    <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
+                      Aguardando consolidação
                     </span>
                   ) : null}
 
@@ -566,9 +593,9 @@ export function NetworkView() {
                       { label: "Novos membros",     value: `+${snap.newMembersThisMonth}`, color: "#16a34a" },
                       { label: "Visitantes",         value: fmt(snap.visitors),             color: "#f59e0b" },
                       { label: "Grupos ativos",      value: `${snap.activeGroups}/${snap.totalGroups}`, color: "#8b5cf6" },
-                      { label: "Participação média", value: `${snap.avgGroupAttendance} p/grupo`, color: "#06b6d4" },
+                      { label: "Presença média",      value: `${snap.avgGroupAttendance} p/encontro`, color: "#06b6d4" },
                       { label: "Eventos/mês",        value: snap.eventsThisMonth,           color: "#ec4899" },
-                      { label: "Total eventos",      value: fmt(snap.totalEventAttendance), color: "#ec4899" },
+                      { label: "Presenças em eventos/mês", value: fmt(snap.totalEventAttendance), color: "#ec4899" },
                       { label: "Arrecad. anterior",  value: fmtBRL(snap.givingLastMonth),   color: "#64748b" },
                       { label: "Δ arrecadação",      value: (() => { const d = pctDelta(snap.givingThisMonth, snap.givingLastMonth); return d ? `${d.positive ? "+" : "-"}${d.text}` : "—"; })(), color: "#10b981" },
                     ].map(item => (
@@ -581,7 +608,10 @@ export function NetworkView() {
                 )}
 
                 {isSelected && affiliate.status === "active" && (
-                  <div style={{ padding: "12px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", display: "flex", justifyContent: "flex-end" }}>
+                  <div style={{ padding: "12px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
+                      {snap ? `Snapshot de ${snap.date.split("-").reverse().join("/")}` : "O cron diário ainda não consolidou esta instituição."}
+                    </span>
                     <button
                       type="button"
                       className="btn-outline"

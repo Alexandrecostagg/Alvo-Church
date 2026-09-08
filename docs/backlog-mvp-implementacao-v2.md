@@ -26,7 +26,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
 | P0.6 | Administração central | Publicado e validado — entregas 16–17 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Pausas alcançam UI, APIs e Firestore direto; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
-| P1.1 | Verdade dos dados | Parcial — entrega 18 | EAD/eventos sem demos; portal usa dados reais; rede não permite mais gravação cliente nem sobrescrita do cron. Células, escalas, follow-ups e transparência só confirmam persistência. Faltam revisar dados externos e completar agregados do cron. |
+| P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 10 | Oferta de 50, prova verificável, exemplos rotulados, canonical e links legais validados; componentes sem uso removidos. Faltam prova real, analytics consentido e migração de domínio. |
 | P1.4 | Cobrança, comunicação e IA | Parcial — entrega 8 | Checkout/IA da entrega 7; WhatsApp manual com destinatário autorizado, opt-out, repetição segura e confirmação explícita na entrega 8. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
@@ -167,7 +167,8 @@ Entrega 9 protege também a administração, publicação, módulos e aulas; pre
 progresso pela despublicação e fecha mutação direta. Faltam conteúdo real,
 aparelhos e provedor financeiro.
 Entrega 18 fecha o ciclo operacional de vínculos da rede e sua fronteira de
-privacidade; ainda faltam indicadores completos no cron e capacitação herdada.
+privacidade. Entrega 19 completa os indicadores do cron com agregações reais,
+isolamento por instituição, cobertura e data visíveis; falta capacitação herdada.
 Jovens, workflows, analytics avançado, missões
 e capacitação ampla em rede devem receber histórias e aceite antes de entrar
 na estimativa. Não anunciar toda a Camada 2 como entregue.

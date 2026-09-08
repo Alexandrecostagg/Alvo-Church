@@ -254,11 +254,11 @@ export interface NetworkSnapshot {
   avgGroupAttendance: number;
   // Eventos
   eventsThisMonth: number;
-  totalEventAttendance: number;
+  totalEventAttendance: number;   // presenças no mês do snapshot
   // Financeiro
   givingThisMonth: number;
   givingLastMonth: number;
-  // Engajamento
+  // Proporção cadastral ativa (nome legado preservado por compatibilidade)
   serviceAttendanceRate: number;   // 0–100
   // Meta
   createdAt: string;

@@ -1,18 +1,18 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 18: **93,95% (aproximadamente 94,0%)**, ganho de
-> **0,25 ponto**. Convites e vínculos de rede agora são transacionais, auditados
-> e administráveis, com aceite pela instituição autenticada e isolamento dos
-> dados individuais.
-> Ver [evidências e limites](entrega-ampliada-18-rede-segura-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 19: **94,00%**, ganho de **0,05 ponto**. O cron diário
+> agora calcula indicadores reais de membros, grupos, finanças e eventos por
+> instituição, e o painel informa cobertura e data da consolidação.
+> Ver [evidências e limites](entrega-ampliada-19-indicadores-rede-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 18: `8ed61bd`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17 e 18 estão validadas,
-publicadas e registradas na branch de trabalho.
-O painel e as APIs estão no Worker `alvo-church-web`, versão
-`d525bde0-939a-48d6-8676-3931ba1aec24`, e as regras do Firestore foram liberadas
-no projeto `alvo-church`.
+Base anterior à entrega 19: `2f7aad6`, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–19 estão validadas e
+publicadas na branch de trabalho.
+O painel está no Worker `alvo-church-web`, versão
+`19ba5036-2700-4908-9a3a-c146d4887318`, e a API de snapshots no Worker
+`alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
+Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
@@ -164,8 +164,10 @@ a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entre
 13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
 corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
 Entrega 15 implementou e publicou Turnstile com QA ao vivo. Entrega 16 publicou
-a gestão central, a entrega 17 tornou seus bloqueios efetivos e a entrega 18
-protegeu e completou a administração dos vínculos de rede; seguem
+a gestão central, a entrega 17 tornou seus bloqueios efetivos, a entrega 18
+protegeu e completou a administração dos vínculos de rede e a entrega 19
+publicou sua consolidação diária com dados reais. A primeira atualização remota
+ocorrerá no próximo cron das 03:00 em Belém; seguem
 instalação e QA em aparelho, migrações legadas,
 sandbox Asaas, comunicação por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
