@@ -1,10 +1,20 @@
 # Plano de ação — segurança e estabilização
 
-Atualizado em **07/09/2026**; nome do arquivo preservado para manter os links.
+Atualizado em **08/09/2026**; nome do arquivo preservado para manter os links.
 Este plano organiza os achados da varredura técnica
 para tornar a Plataforma Esdras segura, coerente para o cliente e pronta para
 homologação mobile. Itens marcados como **bloqueadores** devem estar concluídos
 antes de ampliar o uso com dados reais ou enviar versões para as lojas.
+
+## Entrega ampliada 18 — 08/09
+
+**93,95% estimados (+0,25 ponto)**. Convites e vínculos de rede passaram ao
+backend transacional, com plano, limite 50, uso único, expiração, prevenção de
+auto vínculo/segunda rede e auditoria. A sede administra reemissão, revogação e
+desvinculação e lê apenas snapshots agregados das filiais ativas. Escritas diretas
+e o gravador cliente antigo foram removidos. 379 testes, tipos, lint, build
+OpenNext, regras e QA ao vivo passaram.
+[Evidências](entrega-ampliada-18-rede-segura-2026-09-08.md).
 
 ## Entrega ampliada 10 — 07/09
 
@@ -75,8 +85,8 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem; gestão central auditada e bloqueios de módulo publicados em API/Firestore. | Revisar provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. Turnstile publicado e validado ao vivo nos formulários públicos. | Inventário legado, relação familiar e aparelhos. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
-| 4 — Dados/fluxos | Frentes anteriores, células, escalas, follow-ups e transparência só confirmam gravações reais; mocks sem uso removidos na entrega 17. | Dados externos e integração bancária. |
-| 5 — Validação | 369 testes, TypeScript integral, build OpenNext e compilação local/remota das regras passaram na entrega 17. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
+| 4 — Dados/fluxos | Frentes anteriores, células, escalas, follow-ups e transparência só confirmam gravações reais; rede transacional e gravador cliente antigo removido na entrega 18. | Agregados ainda incompletos, dados externos e integração bancária. |
+| 5 — Validação | 379 testes, TypeScript integral, build OpenNext e compilação local/remota das regras passaram na entrega 18. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 

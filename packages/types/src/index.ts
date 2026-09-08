@@ -234,7 +234,6 @@ export interface NetworkAffiliate {
   childCity?: string;
   childState?: string;
   status: "pending" | "active" | "inactive";
-  inviteCode?: string;
   joinedAt?: string;
   lastSnapshotAt?: string;
 }

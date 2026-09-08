@@ -5,11 +5,8 @@
 // + grupos para contar no JS; aqui usamos runAggregationQuery do Firestore —
 // só os NÚMEROS trafegam, nenhum documento é baixado.
 //
-// Grava exatamente o mesmo shape/path que o cliente
-// (organizations/{orgId}/networkSnapshots/{yyyy-mm-dd}), então o dashboard de
-// rede continua lendo do mesmo lugar. O writer do cliente continua existindo
-// como fallback best-effort (1x/dia por navegador) e é idempotente com este —
-// os dois escrevem o doc do dia com merge.
+// Grava em organizations/{orgId}/networkSnapshots/{yyyy-mm-dd}. O navegador
+// apenas lê os agregados autorizados; nenhum cliente pode sobrescrever o cron.
 //
 // Requisitos de deploy:
 //   wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON   (mesma SA usada no web)

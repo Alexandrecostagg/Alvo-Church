@@ -141,9 +141,27 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));
     }
 
+    function isNetworkParentAdmin(childOrgId) {
+      let affiliationPath = /databases/$(database)/documents/networkAffiliations/$(childOrgId);
+      return signedIn()
+        && exists(affiliationPath)
+        && get(affiliationPath).data.status == "active"
+        && isTenantAdmin(get(affiliationPath).data.parentOrganizationId);
+    }
+
     match /platformAdmins/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, write: if false;
+    }
+
+    // Claims e vínculo global existem para localizar um convite sem expor a
+    // sede e para provar qual rede pode ler os indicadores agregados da filial.
+    // Somente o backend transacional grava ou lê esses documentos.
+    match /networkInviteClaims/{id} {
+      allow read, write: if false;
+    }
+    match /networkAffiliations/{childOrgId} {
+      allow read, write: if false;
     }
 
     // Loja de Capacitação: catálogo GLOBAL de trilhas autoradas pela Esdras.
@@ -159,43 +177,6 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if isPlatformAdmin();
       }
-    }
-
-    // ── Limites por plano ──────────────────────────────────────────────────
-    // Espelha packages/firebase/src/plans.ts (PLAN_LIMITS). Rules não
-    // importam TS, então os números vivem duplicados aqui — se mudar um
-    // lado, mudar o outro.
-    function subscriptionDocPath(orgId) {
-      return /databases/$(database)/documents/organizations/$(orgId)/settings/subscription;
-    }
-
-    function resolvedPlan(orgId) {
-      let sub = exists(subscriptionDocPath(orgId)) ? get(subscriptionDocPath(orgId)).data : {};
-      return "plan" in sub
-        ? sub.plan
-        : (
-          !("planTier" in sub) ? "free" :
-          sub.planTier == "growth" ? "comunidade" :
-          sub.planTier == "advanced" ? "pastoral" :
-          sub.planTier == "enterprise" ? "rede" :
-          "free"
-        );
-    }
-
-    function branchOrgLimit(orgId) {
-      let plan = resolvedPlan(orgId);
-      return plan == "rede" ? 50
-        : plan == "enterprise" ? 999
-        : 0; // free / comunidade / pastoral: sem multi-tenant
-    }
-
-    function orgCounter(orgId, field) {
-      let org = get(orgDocPath(orgId)).data;
-      return field in org ? org[field] : 0;
-    }
-
-    function withinBranchOrgLimit(orgId) {
-      return orgCounter(orgId, "affiliateCount") < branchOrgLimit(orgId);
     }
 
     // Diretório mínimo de instituições. Visitantes públicos só consultam um
@@ -594,13 +575,25 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Igrejas filiais (plano Rede): até 50 filiais, só quem está no plano
-    // Rede ou Enterprise pode ter alguma. O contador affiliateCount em
-    // organizations/{orgId} é mantido por saveNetworkAffiliate.
+    // Convites e vínculos de rede são operações do backend. Ele aplica plano,
+    // limite, unicidade, expiração e auditoria numa transação.
     match /organizations/{orgId}/affiliates/{affiliateId} {
-      allow read: if isTenantMember(orgId);
-      allow create: if isTenantAdmin(orgId) && withinBranchOrgLimit(orgId);
-      allow update, delete: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/networkInviteAttempts/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/networkAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+
+    // O cron do backend publica apenas totais diários. A própria instituição
+    // lê seus dados; a sede ativa lê somente estes snapshots agregados.
+    match /organizations/{orgId}/networkSnapshots/{snapshotId} {
+      allow read: if isTenantMember(orgId) || isNetworkParentAdmin(orgId);
+      allow write: if false;
     }
 
     // Entitlements de trilhas compradas na Loja de Capacitação. Membros leem

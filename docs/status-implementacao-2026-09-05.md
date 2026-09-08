@@ -1,16 +1,17 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 17: **93,70% (aproximadamente 93,7%)**, ganho de
-> **0,25 ponto**. Bloqueios de módulos agora alcançam APIs e acessos diretos ao
-> Firestore; telas operacionais só confirmam gravações após persistência real.
-> Ver [evidências e limites](entrega-ampliada-17-bloqueios-e-verdade-dos-dados-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 18: **93,95% (aproximadamente 94,0%)**, ganho de
+> **0,25 ponto**. Convites e vínculos de rede agora são transacionais, auditados
+> e administráveis, com aceite pela instituição autenticada e isolamento dos
+> dados individuais.
+> Ver [evidências e limites](entrega-ampliada-18-rede-segura-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 17: `5835444`, branch
-`codex/consolidacao-local-2026-09-05`. A entrega 17 está validada, publicada e
-registrada na branch de trabalho.
+Base anterior à entrega 18: `8ed61bd`, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17 e 18 estão validadas,
+publicadas e registradas na branch de trabalho.
 O painel e as APIs estão no Worker `alvo-church-web`, versão
-`a184cfa6-eead-413e-a47f-54b403e74950`, e as regras do Firestore foram liberadas
+`d525bde0-939a-48d6-8676-3931ba1aec24`, e as regras do Firestore foram liberadas
 no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 No Google Play, a versão 12 está disponível no teste interno e a versão
@@ -163,8 +164,8 @@ a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entre
 13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
 corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
 Entrega 15 implementou e publicou Turnstile com QA ao vivo. Entrega 16 publicou
-a gestão central e a entrega 17 tornou seus bloqueios efetivos em APIs/Firestore,
-além de retirar sucessos locais enganosos e dados fictícios sem uso; seguem
+a gestão central, a entrega 17 tornou seus bloqueios efetivos e a entrega 18
+protegeu e completou a administração dos vínculos de rede; seguem
 instalação e QA em aparelho, migrações legadas,
 sandbox Asaas, comunicação por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por

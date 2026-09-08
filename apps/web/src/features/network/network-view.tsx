@@ -4,17 +4,15 @@ import { useEffect, useState, useMemo } from "react";
 import {
   Building2, Users, TrendingUp, MapPin, Plus,
   ChevronRight, CheckCircle, Clock, AlertCircle,
-  Heart, CalendarRange, Waypoints, RefreshCw, Copy, Check,
+  Heart, CalendarRange, Waypoints, RefreshCw, Copy,
   Download, History,
 } from "lucide-react";
 import {
   fetchNetworkAffiliates,
   fetchLatestNetworkSnapshot,
   fetchNetworkSnapshotsHistory,
-  saveNetworkAffiliate,
   isFirebaseWebRuntimeConfigured,
 } from "@alvo/firebase";
-import { generateSecureCode } from "@alvo/utils";
 import type { NetworkAffiliate, NetworkSnapshot } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
@@ -47,29 +45,37 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [saving, setSaving] = useState(false);
-  const { firebaseConfig } = useAppAuth();
+  const { user } = useAppAuth();
   const [inviteError, setInviteError] = useState("");
-
-  const code = useMemo(() => generateSecureCode(6), []);
+  const [created, setCreated] = useState<{ code: string; url: string } | null>(null);
+  const requestId = useMemo(() => crypto.randomUUID(), []);
 
   async function handleCreate() {
     if (!name.trim()) return;
+    if (!user) { setInviteError("Entre na conta para criar o convite."); return; }
     setSaving(true);
-    const affiliate: NetworkAffiliate = {
-      id: `aff-${Date.now()}`,
-      parentOrganizationId: parentOrgId,
-      childOrganizationId:  "",
-      childName:  name.trim(),
-      childCity:  city.trim() || undefined,
-      childState: state.trim() || undefined,
-      status:     "pending",
-      inviteCode: code,
-    };
     try {
-      if (!isFirebaseWebRuntimeConfigured(firebaseConfig)) throw new Error("Conecte-se para salvar o convite.");
-      await saveNetworkAffiliate(firebaseConfig, affiliate);
-      onSave(affiliate); onClose();
-    } catch { setInviteError("Não foi possível salvar o convite. Tente novamente."); }
+      setInviteError("");
+      const response = await fetch("/api/network/invitations", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          action: "create",
+          organizationId: parentOrgId,
+          requestId,
+          childName: name.trim(),
+          childCity: city.trim(),
+          childState: state.trim(),
+        }),
+      });
+      const data = await response.json() as { affiliate?: NetworkAffiliate; inviteCode?: string; error?: string };
+      if (!response.ok || !data.affiliate || !data.inviteCode) throw new Error(data.error || "Não foi possível criar o convite.");
+      onSave(data.affiliate);
+      setCreated({ code: data.inviteCode, url: `${window.location.origin}/join/${data.inviteCode}` });
+    } catch (error) { setInviteError(error instanceof Error ? error.message : "Não foi possível salvar o convite. Tente novamente."); }
     finally { setSaving(false); }
   }
 
@@ -77,8 +83,8 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "var(--alvo-surface)", borderRadius: 20, padding: "28px 24px", maxWidth: 420, width: "100%", display: "grid", gap: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
         {inviteError && <p role="alert">{inviteError}</p>}
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--alvo-ink)" }}>Adicionar Igreja</h2>
-        {[
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--alvo-ink)" }}>Convidar igreja</h2>
+        {!created && [
           { label: "Nome da Igreja *", value: name, set: setName, placeholder: "Ex: Igreja Esdras Campinas" },
           { label: "Cidade",           value: city, set: setCity, placeholder: "Ex: Campinas" },
           { label: "Estado",           value: state, set: setState, placeholder: "Ex: SP" },
@@ -92,17 +98,20 @@ function InviteModal({ parentOrgId, onClose, onSave }: { parentOrgId: string; on
             />
           </div>
         ))}
-        <div style={{ background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", borderRadius: 10, padding: "12px 14px" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--alvo-ink-soft)", fontWeight: 600 }}>Código de convite (enviar ao pastor)</p>
-          <code style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.1em", color: "var(--alvo-accent-dark)" }}>{code}</code>
-        </div>
+        {created && <div style={{ background: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", borderRadius: 10, padding: "16px", display: "grid", gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--alvo-ink)", fontWeight: 700 }}>Convite criado por 30 dias</p>
+          <code style={{ fontSize: 20, fontWeight: 800, letterSpacing: "0.1em", color: "var(--alvo-accent-dark)" }}>{created.code}</code>
+          <button type="button" className="btn-outline" onClick={() => void navigator.clipboard.writeText(created.url)}>
+            <Copy size={15} /> Copiar link seguro
+          </button>
+        </div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1px solid var(--alvo-line)", background: "none", cursor: "pointer", fontSize: 14, color: "var(--alvo-ink)" }}>
-            Cancelar
+            {created ? "Concluir" : "Cancelar"}
           </button>
-          <button onClick={handleCreate} disabled={!name.trim() || saving} style={{ flex: 2, padding: "12px", borderRadius: 12, border: "none", background: "var(--alvo-accent-dark)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+          {!created && <button onClick={handleCreate} disabled={!name.trim() || saving} style={{ flex: 2, padding: "12px", borderRadius: 12, border: "none", background: "var(--alvo-accent-dark)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
             {saving ? "Salvando…" : "Criar convite"}
-          </button>
+          </button>}
         </div>
       </div>
     </div>
@@ -120,7 +129,9 @@ export function NetworkView() {
   const [loading, setLoading]         = useState(true);
   const [showInvite, setShowInvite]   = useState(false);
   const [selectedId, setSelectedId]   = useState<string | null>(null);
-  const [copiedCode, setCopiedCode]   = useState<string | null>(null);
+  const [rowActionId, setRowActionId] = useState<string | null>(null);
+  const [rowError, setRowError]       = useState<string | null>(null);
+  const [renewedInvites, setRenewedInvites] = useState<Record<string, { code: string; url: string }>>({});
 
   const isReal = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
@@ -138,7 +149,7 @@ export function NetworkView() {
       }
       try {
         const affs = await fetchNetworkAffiliates(firebaseConfig, organizationId);
-        const usedAffs = affs;
+        const usedAffs = affs.filter((affiliate) => affiliate.status !== "inactive");
         if (cancelled) return;
         setAffiliates(usedAffs);
 
@@ -253,10 +264,40 @@ export function NetworkView() {
     URL.revokeObjectURL(url);
   }
 
-  async function copyCode(code: string) {
-    await navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+  async function manageAffiliate(action: "renew" | "deactivate", affiliate: NetworkAffiliate) {
+    if (!user || !organizationId) return;
+    if (action === "deactivate") {
+      const label = affiliate.status === "pending" ? "revogar este convite" : "desvincular esta instituição";
+      if (!window.confirm(`Confirma que deseja ${label}?`)) return;
+    }
+    const actionId = `${action}:${affiliate.id}`;
+    setRowActionId(actionId);
+    setRowError(null);
+    try {
+      const response = await fetch("/api/network/invitations", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({ action, organizationId, affiliateId: affiliate.id }),
+      });
+      const data = await response.json() as { inviteCode?: string; error?: string };
+      if (!response.ok) throw new Error(data.error || "Não foi possível atualizar o vínculo.");
+      if (action === "renew" && data.inviteCode) {
+        setRenewedInvites((current) => ({
+          ...current,
+          [affiliate.id]: { code: data.inviteCode!, url: `${window.location.origin}/join/${data.inviteCode}` },
+        }));
+      } else if (action === "deactivate") {
+        setAffiliates((current) => current.filter((item) => item.id !== affiliate.id));
+        setSelectedId(null);
+      }
+    } catch (error) {
+      setRowError(error instanceof Error ? error.message : "Não foi possível atualizar o vínculo.");
+    } finally {
+      setRowActionId(null);
+    }
   }
 
   if (loading) {
@@ -278,7 +319,7 @@ export function NetworkView() {
         <InviteModal
           parentOrgId={organizationId}
           onClose={() => setShowInvite(false)}
-          onSave={a => setAffiliates(prev => [...prev, a])}
+          onSave={a => setAffiliates(prev => [a, ...prev.filter(item => item.id !== a.id)])}
         />
       )}
 
@@ -295,7 +336,7 @@ export function NetworkView() {
             <Download size={15} /> Exportar CSV
           </button>
           <button onClick={() => setShowInvite(true)} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={15} /> Adicionar Igreja
+            <Plus size={15} /> Convidar igreja
           </button>
         </div>
       </header>
@@ -462,6 +503,7 @@ export function NetworkView() {
             {activeAffiliates.length} ativas · {pendingAffiliates.length} aguardando integração
           </span>
         </div>
+        {rowError && <p role="alert" style={{ color: "#b91c1c", fontSize: 13 }}>{rowError}</p>}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {affiliates.map(affiliate => {
@@ -503,16 +545,10 @@ export function NetworkView() {
                         <div style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>engajamento</div>
                       </div>
                     </div>
-                  ) : affiliate.status === "pending" && affiliate.inviteCode ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <code style={{ fontSize: 13, fontWeight: 700, color: "var(--alvo-accent-dark)", letterSpacing: "0.08em" }}>{affiliate.inviteCode}</code>
-                      <button
-                        onClick={e => { e.stopPropagation(); void copyCode(affiliate.inviteCode!); }}
-                        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", color: "var(--alvo-ink-soft)" }}
-                      >
-                        {copiedCode === affiliate.inviteCode ? <Check size={14} /> : <Copy size={14} />}
-                      </button>
-                    </div>
+                  ) : affiliate.status === "pending" ? (
+                    <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)" }}>
+                      Aguardando aceite
+                    </span>
                   ) : null}
 
                   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: status.bg, flexShrink: 0 }}>
@@ -544,9 +580,50 @@ export function NetworkView() {
                   </div>
                 )}
 
+                {isSelected && affiliate.status === "active" && (
+                  <div style={{ padding: "12px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      disabled={rowActionId === `deactivate:${affiliate.id}`}
+                      onClick={() => void manageAffiliate("deactivate", affiliate)}
+                      style={{ color: "#b91c1c" }}
+                    >
+                      {rowActionId === `deactivate:${affiliate.id}` ? "Desvinculando…" : "Desvincular instituição"}
+                    </button>
+                  </div>
+                )}
+
                 {isSelected && !snap && affiliate.status === "pending" && (
-                  <div style={{ padding: "14px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", fontSize: 13, color: "var(--alvo-ink-soft)" }}>
-                    Igreja aguardando integração. Compartilhe o código <strong style={{ color: "var(--alvo-accent-dark)" }}>{affiliate.inviteCode}</strong> com o administrador da igreja.
+                  <div style={{ padding: "14px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", display: "grid", gap: 12, fontSize: 13, color: "var(--alvo-ink-soft)" }}>
+                    <span>Igreja aguardando integração. Por segurança, o código só é exibido quando o convite é criado ou reemitido.</span>
+                    {renewedInvites[affiliate.id] && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <code style={{ fontSize: 17, fontWeight: 800, color: "var(--alvo-accent-dark)", letterSpacing: "0.08em" }}>{renewedInvites[affiliate.id]!.code}</code>
+                        <button type="button" className="btn-outline" onClick={() => void navigator.clipboard.writeText(renewedInvites[affiliate.id]!.url)}>
+                          <Copy size={14} /> Copiar novo link
+                        </button>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        disabled={rowActionId === `renew:${affiliate.id}`}
+                        onClick={() => void manageAffiliate("renew", affiliate)}
+                      >
+                        {rowActionId === `renew:${affiliate.id}` ? "Reemitindo…" : "Reemitir convite"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        disabled={rowActionId === `deactivate:${affiliate.id}`}
+                        onClick={() => void manageAffiliate("deactivate", affiliate)}
+                        style={{ color: "#b91c1c" }}
+                      >
+                        {rowActionId === `deactivate:${affiliate.id}` ? "Revogando…" : "Revogar convite"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

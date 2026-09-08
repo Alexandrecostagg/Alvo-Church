@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthPanel } from "../auth-panel";
 import { BrandLogo } from "../brand-logo";
@@ -9,10 +9,16 @@ import { useAppAuth } from "../providers";
 export default function LoginPage() {
   const { user } = useAppAuth();
   const router = useRouter();
+  const [returnTo, setReturnTo] = useState("/app");
 
   useEffect(() => {
-    if (user) router.replace("/app");
-  }, [user, router]);
+    const requested = new URLSearchParams(window.location.search).get("returnTo");
+    if (requested?.startsWith("/") && !requested.startsWith("//")) setReturnTo(requested);
+  }, []);
+
+  useEffect(() => {
+    if (user) router.replace(returnTo);
+  }, [user, router, returnTo]);
 
   return (
     <div

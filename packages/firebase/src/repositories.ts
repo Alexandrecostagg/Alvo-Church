@@ -3393,10 +3393,6 @@ function getNetworkAffiliatesPath(parentOrgId: string) {
   return `organizations/${parentOrgId}/affiliates`;
 }
 
-function getNetworkSnapshotPath(childOrgId: string, date: string) {
-  return `organizations/${childOrgId}/networkSnapshots/${date}`;
-}
-
 function getNetworkSnapshotsPath(childOrgId: string) {
   return `organizations/${childOrgId}/networkSnapshots`;
 }
@@ -3408,51 +3404,6 @@ export async function fetchNetworkAffiliates(
   const firestore = getFirebaseFirestore(config);
   const snap = await getDocs(collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as NetworkAffiliate));
-}
-
-export async function saveNetworkAffiliate(
-  config: FirebaseWebRuntimeConfig,
-  affiliate: NetworkAffiliate
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, getNetworkAffiliatesPath(affiliate.parentOrganizationId), affiliate.id);
-  const existing = await getDoc(ref);
-  await setDoc(ref, cleanFirestoreData(affiliate), { merge: true });
-
-  if (!existing.exists()) {
-    await updateDoc(doc(firestore, "organizations", affiliate.parentOrganizationId), {
-      affiliateCount: increment(1)
-    }).catch(() => {});
-  }
-}
-
-export async function fetchNetworkAffiliateByInviteCode(
-  config: FirebaseWebRuntimeConfig,
-  parentOrganizationId: string,
-  inviteCode: string
-): Promise<NetworkAffiliate | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(
-      collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)),
-      where("inviteCode", "==", inviteCode)
-    )
-  );
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id: d.id, ...d.data() } as NetworkAffiliate;
-}
-
-export async function saveNetworkSnapshot(
-  config: FirebaseWebRuntimeConfig,
-  snapshot: NetworkSnapshot
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getNetworkSnapshotPath(snapshot.organizationId, snapshot.date)),
-    cleanFirestoreData(snapshot),
-    { merge: true }
-  );
 }
 
 export async function fetchLatestNetworkSnapshot(

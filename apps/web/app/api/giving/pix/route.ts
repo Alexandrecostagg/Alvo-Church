@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const body = await boundedJson(req, 2048),
       amount = money(body.amount) / 100;
     const branding = await accountTransaction(async (tx) => {
-      const { root } = await financeActor(tx, body.organizationId, uid, false);
+      const { root } = await financeActor(tx, body.organizationId, uid, false, "giving");
       return (await tx.read(`${root}/settings/branding`))[0];
     });
     if (!branding?.pixKey)
