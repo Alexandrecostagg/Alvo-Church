@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { TurnstileWidget } from "../../../_components/turnstile-widget";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -44,6 +45,9 @@ export default function VisitorFormPage() {
   });
   const [state, setState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileRequestId, setTurnstileRequestId] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   function set(field: keyof VisitorForm, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -66,6 +70,10 @@ export default function VisitorFormPage() {
       setErrorMsg("Telefone inválido.");
       return;
     }
+    if (!turnstileToken) {
+      setErrorMsg("Conclua a verificação de segurança.");
+      return;
+    }
 
     setState("submitting");
     setErrorMsg("");
@@ -85,6 +93,8 @@ export default function VisitorFormPage() {
         howHeard: form.howHeard || undefined,
         consent: form.consent,
         companyWebsite: form.companyWebsite,
+        turnstileToken,
+        turnstileRequestId,
       }),
     });
 
@@ -94,8 +104,9 @@ export default function VisitorFormPage() {
       const data = await res.json().catch(() => ({})) as { error?: string };
       setState("error");
       setErrorMsg(data.error ?? "Erro ao enviar. Tente novamente.");
+      setTurnstileResetKey((value) => value + 1);
     }
-    } catch { setState("error"); setErrorMsg("Não foi possível enviar. Verifique a conexão e tente novamente; seus campos foram preservados."); }
+    } catch { setState("error"); setErrorMsg("Não foi possível enviar. Verifique a conexão e tente novamente; seus campos foram preservados."); setTurnstileResetKey((value) => value + 1); }
   }
 
   if (state === "success") {
@@ -249,12 +260,22 @@ export default function VisitorFormPage() {
             </span>
           </label>
 
+          <TurnstileWidget
+            action="public_visit"
+            resetKey={turnstileResetKey}
+            onTokenChange={(token) => {
+              setTurnstileToken(token);
+              setTurnstileRequestId(token ? crypto.randomUUID() : "");
+            }}
+          />
+
           {errorMsg && <p style={errorStyle}>{errorMsg}</p>}
 
           <button
             type="submit"
             style={submitButtonStyle}
-            disabled={state === "submitting"}
+            disabled={state === "submitting" || !turnstileToken}
+            aria-disabled={state === "submitting" || !turnstileToken}
           >
             {state === "submitting" ? (
               <>

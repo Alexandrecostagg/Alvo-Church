@@ -1,23 +1,24 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 14: **92,60% (aproximadamente 92,6%)**, ganho de
-> **0,15 ponto**. A versão 12, com vínculo por lista, ajuda e marca corrigida,
-> foi aceita pelo Google Play e está disponível no teste interno.
-> Ver [evidências e limites](entrega-ampliada-14-aab12-google-play-2026-09-07.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 15: **93,05% (aproximadamente 93,1%)**, ganho de
+> **0,45 ponto**. Turnstile foi implementado e publicado nos formulários públicos
+> de visita e contribuição; secret criptografado, hostnames, falha segura e widgets
+> reais foram validados ao vivo.
+> Ver [evidências e limites](entrega-ampliada-15-turnstile-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Última implementação enviada: `079eb5a`, branch
-`codex/consolidacao-local-2026-09-05`. Entregas 8–10 e a estabilização do deploy
-Cloudflare foram enviadas ao remoto; as entregas 11–13 registram a operação no Google Play,
-o vínculo por instituição e a correção da marca mobile.
+Base anterior à entrega 15: `fff1822`, branch
+`codex/consolidacao-local-2026-09-05`. A entrega 15 está validada, publicada e
+registrada na branch de trabalho.
 O painel e as APIs estão no Worker `alvo-church-web`, versão
-`994c25a5-fabf-4ee3-bfc5-a5061c442ec6`, e as regras do Firestore foram liberadas
+`aab95130-2590-4ef9-b658-fbb5962fc4ee`, e as regras do Firestore foram liberadas
 no projeto `alvo-church`.
 O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
 o deploy. O ruleset Firestore ativo é `19eb2cd8-2cff-4bb6-946a-bda6a6f75d53`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
-em aparelho continuam pendentes. A branch foi enviada ao remoto; `main` permaneceu intacta.
+em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
+com o remoto; `main` permaneceu intacta.
 
 ## Onde estão os planos
 
@@ -163,8 +164,8 @@ Entrega 11 corrigiu a declaração do Google Play sem mudar titularidade e reenv
 a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entrega
 13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
 corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
-Seguem instalação e QA em aparelho,
-migrações legadas,
-sandbox Asaas, comunicação por provedor, Turnstile e homologação coordenada.
+Entrega 15 implementou e publicou Turnstile com QA ao vivo; seguem instalação
+e QA em aparelho, migrações legadas,
+sandbox Asaas, comunicação por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
 evidência. Mobile e LP não foram extraídos.

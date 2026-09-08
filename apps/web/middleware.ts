@@ -28,10 +28,11 @@ const emulatorConnections = isDevelopment && process.env.NEXT_PUBLIC_USE_FIREBAS
   : "";
 const CSP_VALUE = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://www.google.com https://www.googleapis.com`,
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://www.google.com https://www.googleapis.com https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https:",
+  "frame-src https://challenges.cloudflare.com",
   `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://brasilapi.com.br https://servicodados.ibge.gov.br${emulatorConnections}${isDevelopment ? " ws://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",

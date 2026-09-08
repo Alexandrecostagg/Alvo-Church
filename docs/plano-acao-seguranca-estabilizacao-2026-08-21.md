@@ -73,10 +73,10 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
 | 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem. | Revisar demais coleções, provisionamento e migração de referências antigas. |
-| 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. | Publicação/IAM, inventário legado, relação familiar, aparelhos e Turnstile. |
+| 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. Turnstile publicado e validado ao vivo nos formulários públicos. | Inventário legado, relação familiar e aparelhos. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
 | 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos/portal das 8–9 revisados. | Demais operações, conteúdo real e integração bancária. |
-| 5 — Validação | 336 testes, 35 checks novos, 43 regressivos, navegador e builds locais. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
+| 5 — Validação | 358 testes, TypeScript integral e build OpenNext passaram na entrega 15. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 
@@ -155,7 +155,8 @@ existentes. Coleções novas não herdam mais leitura/escrita automaticamente.
 O formulário público de visitante deixou de gravar diretamente no Firestore:
 a API valida o pedido, aplica limite por IP/honeypot e grava com service
 account. Na entrega 6, contadores persistentes no Firestore substituíram o
-limite em memória; a adoção de Turnstile continua pendente.
+limite em memória. A entrega 15 implementou Turnstile com Siteverify, ação e
+hostname vinculados; secret criptografado, publicação e QA ao vivo foram concluídos.
 
 ## Frente 3 — custo, comunicação e pagamentos **(alta)**
 

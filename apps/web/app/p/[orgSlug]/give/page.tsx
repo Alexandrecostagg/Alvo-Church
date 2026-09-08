@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Heart, QrCode, Copy, Check, ChevronLeft, Loader2, CheckCircle, Paperclip } from "lucide-react";
+import { TurnstileWidget } from "../../../_components/turnstile-widget";
 const SUGGESTED_AMOUNTS = [20, 50, 100, 200];
 
 export default function PublicGivePage() {
@@ -29,12 +30,15 @@ export default function PublicGivePage() {
   const [declaring, setDeclaring] = useState(false);
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileRequestId, setTurnstileRequestId] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const requestToken = useRef("");
   const busy = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    let cancelled = false; setLoadingConfig(true); setPixKey(""); setError(""); setStep("form"); requestToken.current = "";
+    let cancelled = false; setLoadingConfig(true); setPixKey(""); setError(""); setStep("form"); setTurnstileToken(""); setTurnstileRequestId(""); setTurnstileResetKey((value) => value + 1); requestToken.current = "";
     const cid = new URLSearchParams(window.location.search).get("campanha") || ""; setCampaignId(cid);
     publicRequest({ action: "config", orgSlug, campaignId: cid }).then(data => {
       if (cancelled) return;
@@ -62,13 +66,13 @@ export default function PublicGivePage() {
     return data;
   }
   async function generatePix() {
-    if (busy.current) return;
+    if (busy.current || !turnstileToken) return;
     busy.current = true; setGenerating(true); setError("");
     requestToken.current ||= crypto.randomUUID();
     try {
-      const data = await publicRequest({ action: "intent", orgSlug, campaignId, amount: Number(amount), name: donorName, whatsapp: donorWhatsapp, consentContact: consent, token: requestToken.current });
+      const data = await publicRequest({ action: "intent", orgSlug, campaignId, amount: Number(amount), name: donorName, whatsapp: donorWhatsapp, consentContact: consent, token: requestToken.current, turnstileToken, turnstileRequestId });
       setOrgId(data.organizationId); setIntentId(data.intentId); setPixPayload(data.payload); setPixKey(data.pixKey); setPixName(data.receiverName); setStep("pix");
-    } catch (e) { setError(e instanceof Error ? e.message : "Falha de conexão. Tente novamente."); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Falha de conexão. Tente novamente."); setTurnstileResetKey((value) => value + 1); }
     finally { busy.current = false; setGenerating(false); }
   }
 
@@ -126,7 +130,7 @@ export default function PublicGivePage() {
       <main style={pageStyle}>
         <div style={cardStyle}>
           {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
-          <button onClick={() => { setStep("form"); requestToken.current = ""; setDeclaredPaid(false); setReceiptBase64(""); setError(""); }} style={backBtnStyle}>
+          <button onClick={() => { setStep("form"); requestToken.current = ""; setDeclaredPaid(false); setReceiptBase64(""); setError(""); setTurnstileToken(""); setTurnstileRequestId(""); setTurnstileResetKey((value) => value + 1); }} style={backBtnStyle}>
             <ChevronLeft size={16} /> Voltar
           </button>
 
@@ -306,14 +310,23 @@ export default function PublicGivePage() {
               <span>Autorizo a igreja a entrar em contato comigo pelo WhatsApp (LGPD).</span>
             </label>
 
+            <TurnstileWidget
+              action="public_giving"
+              resetKey={turnstileResetKey}
+              onTokenChange={(token) => {
+                setTurnstileToken(token);
+                setTurnstileRequestId(token ? crypto.randomUUID() : "");
+              }}
+            />
+
             <button
               type="button"
               onClick={generatePix}
-              disabled={!canProceed || !pixKey || generating}
+              disabled={!canProceed || !pixKey || generating || !turnstileToken}
               style={{
                 ...submitStyle,
-                opacity: canProceed ? 1 : 0.5,
-                cursor: canProceed ? "pointer" : "not-allowed",
+                opacity: canProceed && turnstileToken ? 1 : 0.5,
+                cursor: canProceed && turnstileToken ? "pointer" : "not-allowed",
               }}
             >
               {generating ? "Registrando intenção..." : "Gerar QR Code PIX"}

@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **07/09/2026**, após a entrega ampliada 10: **91,25% (+1,40 ponto)**.
+Atualizado em **08/09/2026**, após a entrega ampliada 15: **93,05% (+0,45 ponto)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -24,7 +24,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
 | P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
-| P0.5 | Limites e proteção pública | Parcial — entrega 7 | Recepção/dashboard/escalas agora usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência e conversão única. Comprovantes privados e giving pelo servidor validados na entrega 7; falta Turnstile. |
+| P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
 | P1.1 | Verdade dos dados | Parcial — entrega 10 | EAD/eventos sem demos; portal usa dados reais; LP não publica prova social/promessas sem fonte. Falta revisar as demais rotas e dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 10 | Oferta de 50, prova verificável, exemplos rotulados, canonical e links legais validados; componentes sem uso removidos. Faltam prova real, analytics consentido e migração de domínio. |
@@ -117,9 +117,11 @@ de promoção/rollback.
 **Parcial, não mais “novo”.** Portal `/p/[orgSlug]`, `/visit` e API
 `/api/public/visit` existem; visitante público passa pelo servidor, com honeypot,
 limites persistentes e idempotência desde a entrega 6. Giving usa slug real,
-capacidade secreta de 48 horas e projeção pública mínima desde a entrega 7;
-configurações exibem links e QR reais. Faltam Turnstile, QA integral do acolhimento
-e recorte de check-in adulto/página pública por evento. Não remover essas rotas
+capacidade secreta de 48 horas e projeção pública mínima desde a entrega 7.
+A entrega 15 adiciona Turnstile nos dois pontos de gravação, valida token, ação e
+hostname no servidor e preserva a confirmação PIX pelo token já existente. O
+secret criptografado, o deploy e o QA ao vivo foram concluídos; falta fechar o
+acolhimento e o recorte de check-in adulto/página pública por evento. Não remover essas rotas
 ao separar a LP institucional: pertencem à operação da plataforma.
 
 ## Épico 11 — Giving recorrente e doações

@@ -9,18 +9,22 @@ import {
   declareGiving,
   publicGivingConfig,
 } from "../../_lib/finance-operations";
+import { verifyTurnstile } from "../../_lib/turnstile";
 export async function POST(req: NextRequest) {
   try {
     const body = await boundedJson(req, 700000);
     if (!["config", "intent", "declare"].includes(body.action))
       throw new AccountError(400, "Operação inválida.");
+    const clientKey = req.headers.get("cf-connecting-ip")?.slice(0, 64) || "unknown";
+    if (body.action === "intent")
+      await verifyTurnstile({ token: body.turnstileToken, expectedAction: "public_giving", remoteIp: clientKey, idempotencyKey: body.turnstileRequestId });
     const result =
       body.action === "config"
         ? await publicGivingConfig(body)
         : body.action === "intent"
           ? await createPublicGiving(
               body,
-              req.headers.get("cf-connecting-ip") || "unknown",
+              clientKey,
             )
           : await declareGiving(body);
     return NextResponse.json(result, { headers: privateHeaders });
