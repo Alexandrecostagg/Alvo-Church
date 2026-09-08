@@ -57,6 +57,42 @@ service cloud.firestore {
         ]);
     }
 
+    function featuresDocPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/settings/features;
+    }
+
+    // Ausência de configuração mantém compatibilidade com organizações
+    // antigas. Somente enabled == false, definido pela administração da
+    // plataforma, interrompe leituras e gravações diretas do módulo.
+    function moduleEnabled(orgId, moduleKey) {
+      let path = featuresDocPath(orgId);
+      return !exists(path)
+        || !("modules" in get(path).data)
+        || !(moduleKey in get(path).data.modules)
+        || !("enabled" in get(path).data.modules[moduleKey])
+        || get(path).data.modules[moduleKey].enabled != false;
+    }
+
+    function operationalModuleEnabled(orgId, collection) {
+      return (![
+          "groups", "groupBanners"
+        ].hasAny([collection]) || moduleEnabled(orgId, "groups"))
+        && (![
+          "scheduleSwapRequests", "serviceAssignments", "serviceTeams",
+          "worshipSetlists", "worshipSongs"
+        ].hasAny([collection]) || moduleEnabled(orgId, "volunteers"))
+        && (![
+          "memberTribeProfiles", "tribeAssessments", "tribeBehaviorSignals",
+          "tribeReviewRequests", "tribes"
+        ].hasAny([collection]) || moduleEnabled(orgId, "tribes"))
+        && (![
+          "badges", "journeyProfiles"
+        ].hasAny([collection]) || moduleEnabled(orgId, "journeys"))
+        && (collection != "financeReports" || moduleEnabled(orgId, "finance"))
+        && (collection != "visitorJourneys" || moduleEnabled(orgId, "visitors"))
+        && (collection != "weeklyThemes" || moduleEnabled(orgId, "communication"));
+    }
+
     // Coleções operacionais conhecidas. O Firestore não tem "deny" que
     // sobreponha outro allow: por isso o catch-all abaixo só pode liberar uma
     // lista fechada. Coleção nova exige regra e revisão de segurança próprias.
@@ -72,23 +108,6 @@ service cloud.firestore {
         "tribes", "visitorJourneys", "wellBeingResources", "weeklyThemes",
         "worshipSetlists", "worshipSongs"
       ].hasAny([collection]);
-    }
-
-    // Segurança Kids: quem pode operar o check-in/out (gravar kidsCheckIns).
-    // Honra a config do admin (settings/kids.qrGeneratorRoles); se ausente,
-    // cai para os admins do tenant. Boundary grosseiro no servidor — o app
-    // ainda exige estar escalado na sala.
-    function kidsSettingsPath(orgId) {
-      return /databases/$(database)/documents/organizations/$(orgId)/settings/kids;
-    }
-    function kidsQrRoles(orgId) {
-      return exists(kidsSettingsPath(orgId)) && ("qrGeneratorRoles" in get(kidsSettingsPath(orgId)).data)
-        ? get(kidsSettingsPath(orgId)).data.qrGeneratorRoles
-        : [];
-    }
-    function canOperateKids(orgId) {
-      return isTenantMember(orgId)
-        && (isTenantAdmin(orgId) || tenantUserData(orgId).roles.hasAny(kidsQrRoles(orgId)));
     }
 
     // Check-ins de crianças carregam dados de menor (foto, alergias e
@@ -163,13 +182,6 @@ service cloud.firestore {
         );
     }
 
-    function memberLimit(orgId) {
-      let plan = resolvedPlan(orgId);
-      return plan == "free" ? 50
-        : plan == "comunidade" ? 300
-        : 999999999; // pastoral / rede / enterprise: sem limite de membros
-    }
-
     function branchOrgLimit(orgId) {
       let plan = resolvedPlan(orgId);
       return plan == "rede" ? 50
@@ -180,10 +192,6 @@ service cloud.firestore {
     function orgCounter(orgId, field) {
       let org = get(orgDocPath(orgId)).data;
       return field in org ? org[field] : 0;
-    }
-
-    function withinMemberLimit(orgId) {
-      return orgCounter(orgId, "memberCount") < memberLimit(orgId);
     }
 
     function withinBranchOrgLimit(orgId) {
@@ -371,8 +379,8 @@ service cloud.firestore {
 
     // Financial writes are server transactions; members read only their own declarations.
     match /organizations/{orgId}/contributions/{contributionId} {
-      allow read: if isTenantAdmin(orgId)
-        || (isTenantMember(orgId) && resource.data.userId == request.auth.uid);
+      allow read: if moduleEnabled(orgId, "giving") && (isTenantAdmin(orgId)
+        || (isTenantMember(orgId) && resource.data.userId == request.auth.uid));
 
       allow write: if false;
     }
@@ -380,25 +388,25 @@ service cloud.firestore {
     // Promoções do marketplace (nível flat da org): membro lê (feed/notificação
     // in-app no app), só admin publica/edita.
     match /organizations/{orgId}/marketplacePromotions/{promotionId} {
-      allow read: if isTenantMember(orgId);
-      allow write: if isTenantAdmin(orgId);
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace");
+      allow write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "marketplace");
     }
 
     // Comunicação (histórico de envios + templates): só liderança (admin) —
     // conteúdo de comunicados é sensível. Excluído dos catch-alls de leitura.
     match /organizations/{orgId}/communicationLog/{entryId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "communication");
       allow write: if false;
     }
     match /organizations/{orgId}/communicationTemplates/{templateId} {
-      allow read, write: if isTenantAdmin(orgId);
+      allow read, write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "communication");
     }
     match /organizations/{orgId}/communicationCampaigns/{entryId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "communication");
       allow write: if false;
     }
     match /organizations/{orgId}/communicationAudit/{entryId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "communication");
       allow write: if false;
     }
 
@@ -412,18 +420,18 @@ service cloud.firestore {
     // de outro membro nem trocar autor/organização. Administração mantém a
     // moderação completa, inclusive exclusão.
     match /organizations/{orgId}/bannerHistory/{bannerId} {
-      allow read: if isTenantMember(orgId);
-      allow create: if isTenantMember(orgId)
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "ai");
+      allow create: if isTenantMember(orgId) && moduleEnabled(orgId, "ai")
         && request.resource.data.organizationId == orgId
         && request.resource.data.createdByUserId == request.auth.uid;
-      allow update: if isTenantAdmin(orgId)
+      allow update: if moduleEnabled(orgId, "ai") && (isTenantAdmin(orgId)
         || (
           isTenantMember(orgId)
           && resource.data.createdByUserId == request.auth.uid
           && request.resource.data.createdByUserId == resource.data.createdByUserId
           && request.resource.data.organizationId == resource.data.organizationId
-        );
-      allow delete: if isTenantAdmin(orgId);
+        ));
+      allow delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "ai");
     }
 
     // Visitor intake público entra exclusivamente pelo backend (com limite de
@@ -432,38 +440,38 @@ service cloud.firestore {
     match /organizations/{orgId}/visitorIntakes/{intakeId} {
       // Recepção autenticada continua podendo registrar atendimento interno;
       // o visitante público só entra pela API server-side.
-      allow create: if isTenantAdmin(orgId);
-      allow read: if isTenantMember(orgId);
-      allow update, delete: if isTenantAdmin(orgId);
+      allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "visitors");
+      allow update, delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
     }
 
     // Campanhas de oferta (metas de arrecadação): gestão só do time (admin);
     // membro lista; UMA campanha pode ser lida publicamente (get) pra o link
     // público /p/{slug}/give?campanha={id} mostrar título/meta/progresso.
     match /organizations/{orgId}/givingCampaigns/{campaignId} {
-      allow get: if true;
-      allow list: if isTenantMember(orgId);
-      allow create: if isTenantAdmin(orgId) && request.resource.data.organizationId == orgId && request.resource.data.raisedAmount == 0;
-      allow update: if isTenantAdmin(orgId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "raisedAmount"]);
-      allow delete: if isTenantAdmin(orgId) && resource.data.raisedAmount == 0;
+      allow get: if moduleEnabled(orgId, "giving");
+      allow list: if isTenantMember(orgId) && moduleEnabled(orgId, "giving");
+      allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && request.resource.data.organizationId == orgId && request.resource.data.raisedAmount == 0;
+      allow update: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "raisedAmount"]);
+      allow delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && resource.data.raisedAmount == 0;
     }
 
     // Public declarations are mediated by a scoped, expiring capability.
     match /organizations/{orgId}/givingReceipts/{receiptId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving");
       allow write: if false;
     }
 
     // Donor contacts are private; public writes cannot bypass backend quotas.
     match /organizations/{orgId}/givingIntents/{intentId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving");
       allow write: if false;
     }
 
     // Ledger financeiro (lançamentos de entrada/saída/missões): dado sensível —
     // só a liderança administrativa lê e escreve.
     match /organizations/{orgId}/financialTransactions/{transactionId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "finance");
       allow write: if false;
     }
 
@@ -475,7 +483,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /organizations/{orgId}/financeAudit/{id} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "finance");
       allow write: if false;
     }
     match /organizations/{orgId}/financeReferences/{id} {
@@ -552,11 +560,11 @@ service cloud.firestore {
     // Conteúdo EAD é administrado pelo backend para validar publicação,
     // hierarquia módulo/aula e preservar progresso durante alterações.
     match /organizations/{orgId}/courses/{courseId} {
-      allow read: if isTenantMember(orgId);
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys");
       allow write: if false;
 
       match /{sub}/{subDoc} {
-        allow read: if isTenantMember(orgId) && (sub == "modules" || sub == "lessons");
+        allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys") && (sub == "modules" || sub == "lessons");
         allow write: if false;
       }
     }
@@ -571,11 +579,11 @@ service cloud.firestore {
     // O progresso EAD usa o vínculo privado conta↔pessoa e uma transação no
     // backend. O cliente não escolhe personId, badge nem percentual concluído.
     match /organizations/{orgId}/people/{personId}/courseProgress/{progressId} {
-      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
+      allow read: if moduleEnabled(orgId, "journeys") && (isTenantAdmin(orgId) || ownsPerson(orgId, personId));
       allow write: if false;
     }
     match /organizations/{orgId}/people/{personId}/badges/{badgeId} {
-      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
+      allow read: if moduleEnabled(orgId, "journeys") && (isTenantAdmin(orgId) || ownsPerson(orgId, personId));
       allow write: if false;
     }
     match /organizations/{orgId}/learningAttempts/{id} {
@@ -608,7 +616,7 @@ service cloud.firestore {
     // A lista completa é exclusiva da equipe Kids. Responsáveis fazem query
     // restrita aos próprios filhos/pessoas autorizadas e só leem esses docs.
     match /organizations/{orgId}/kidsCheckIns/{checkInId} {
-      allow get, list: if isTenantAdmin(orgId) || isKidsGuardianFor(orgId, resource.data);
+      allow get, list: if moduleEnabled(orgId, "children") && (isTenantAdmin(orgId) || isKidsGuardianFor(orgId, resource.data));
       // Entrada, vínculo e retirada são transações autenticadas no backend.
       allow write: if false;
     }
@@ -622,32 +630,32 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId}/kidsOperationSessions/{id} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "children");
       allow write: if false;
     }
 
     match /organizations/{orgId}/kidsCustodyAudit/{id} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "children");
       allow write: if false;
     }
 
     // Eventos e inscrições passam pelo backend: ele valida status, datas,
     // capacidade, pagamento e preserva inscrições ao cancelar um evento.
     match /organizations/{orgId}/events/{eventId} {
-      allow read: if isTenantMember(orgId);
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "events");
       allow write: if false;
     }
     match /organizations/{orgId}/events/{eventId}/registrations/{regId} {
-      allow read: if isTenantAdmin(orgId)
-        || (isTenantMember(orgId) && resource.data.responsiblePersonId == request.auth.uid);
+      allow read: if moduleEnabled(orgId, "events") && (isTenantAdmin(orgId)
+        || (isTenantMember(orgId) && resource.data.responsiblePersonId == request.auth.uid));
       allow write: if false;
     }
     match /organizations/{orgId}/events/{eventId}/tickets/{ticketId} {
-      allow read: if isTenantMember(orgId);
-      allow write: if isTenantAdmin(orgId);
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "events");
+      allow write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "events");
     }
     match /organizations/{orgId}/events/{eventId}/checkIns/{checkInId} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "events");
       allow write: if false;
     }
     match /organizations/{orgId}/eventAttempts/{id} {
@@ -689,12 +697,12 @@ service cloud.firestore {
       allow delete: if isTenantAdmin(orgId);
     }
     match /organizations/{orgId}/communityStores/{id} {
-      allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || resource.data.status == "approved" || resource.data.ownerId == request.auth.uid);
-      allow create: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && (isTenantAdmin(orgId) || resource.data.status == "approved" || resource.data.ownerId == request.auth.uid);
+      allow create: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && request.resource.data.organizationId == orgId
         && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending"
         && !request.resource.data.keys().hasAny(["moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
       // Editing a published store by its owner sends it back for moderation.
-      allow update: if isTenantMember(orgId) && request.resource.data.organizationId == orgId
+      allow update: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && request.resource.data.organizationId == orgId
         && request.resource.data.ownerId == resource.data.ownerId
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.status == "pending"
@@ -702,12 +710,12 @@ service cloud.firestore {
           .hasAny(["ownerId", "organizationId", "createdAt", "moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
       allow delete: if false;
       match /offers/{offerId} {
-        allow read: if isTenantMember(orgId) && (isTenantAdmin(orgId) || (get(/databases/$(database)/documents/organizations/$(orgId)/communityStores/$(id)).data.status == "approved" && resource.data.status == "active"));
-        allow write: if isTenantAdmin(orgId);
+        allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && (isTenantAdmin(orgId) || (get(/databases/$(database)/documents/organizations/$(orgId)/communityStores/$(id)).data.status == "approved" && resource.data.status == "active"));
+        allow write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "marketplace");
       }
     }
     match /organizations/{orgId}/communityStoreModerationLogs/{id} {
-      allow read: if isTenantAdmin(orgId);
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "marketplace");
       allow write: if false;
     }
     match /organizations/{orgId}/communityStoreModerationAttempts/{id} {
@@ -718,8 +726,10 @@ service cloud.firestore {
     // que uma coleção nova herde acesso por acidente.
     match /organizations/{orgId}/{collection}/{documentId} {
       allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
+        && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
       allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+        && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
     }
 
@@ -730,8 +740,10 @@ service cloud.firestore {
       // Subcoleções de events têm políticas próprias acima porque inscrições
       // e presença contêm dados pessoais e transições financeiras.
       allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
+        && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
       allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+        && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
     }
   }

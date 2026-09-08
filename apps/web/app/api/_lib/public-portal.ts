@@ -1,5 +1,6 @@
 import { AccountError, accountTransaction } from "./member-account-store";
 import { publicEventProjection } from "./event-management";
+import { assertModuleEnabled } from "./module-access";
 
 export function publicPortalSlug(value: unknown) {
   if (typeof value !== "string") throw new AccountError(404, "Igreja não encontrada.");
@@ -25,6 +26,7 @@ export async function publicPortalSnapshot(rawSlug: unknown, now = Date.now()) {
     const organizationId = typeof slugDocument?.organizationId === "string" ? slugDocument.organizationId : null;
     if (!organizationId || !/^[A-Za-z0-9_-]{1,128}$/.test(organizationId)) throw new AccountError(404, "Igreja não encontrada.");
     const root = `organizations/${organizationId}`;
+    await assertModuleEnabled(tx, root, "publicForms");
     const [organization, events] = await Promise.all([
       tx.read(root).then(([value]) => value),
       tx.query(root, "events", "status", "published", "EQUAL", 100),

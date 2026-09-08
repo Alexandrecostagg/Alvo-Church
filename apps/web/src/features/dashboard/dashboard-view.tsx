@@ -659,11 +659,10 @@ export function DashboardView() {
 
   async function handlePublishTransparencyReport() {
     if (!latestReport) return;
-    setPublishedTransparencyMonth(transparencySummary.month);
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setTransparencyStatus(
-        `Demonstrativo de ${transparencySummary.month} marcado localmente. Conecte o Firebase para publicar.`
+        `Não foi possível publicar ${transparencySummary.month}. Entre na conta e confira a conexão.`
       );
       return;
     }
@@ -687,6 +686,7 @@ export function DashboardView() {
           publishedByUserId: user.uid
         }
       );
+      setPublishedTransparencyMonth(transparencySummary.month);
       setTransparencyStatus(`Demonstrativo de ${transparencySummary.month} publicado.`);
     } catch (error) {
       setTransparencyStatus(
@@ -696,18 +696,17 @@ export function DashboardView() {
   }
 
   async function handleCompleteAction(actionId: string) {
-    setCompletedActionIds((currentIds) =>
-      currentIds.includes(actionId) ? currentIds : [...currentIds, actionId]
-    );
-    setActionSyncStatus("Acao concluida nesta sessao.");
-
     if (!actionId.startsWith("followup_")) {
+      setCompletedActionIds((currentIds) =>
+        currentIds.includes(actionId) ? currentIds : [...currentIds, actionId]
+      );
+      setActionSyncStatus("Ação visual concluída nesta sessão.");
       return;
     }
 
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
       setActionSyncStatus(
-        "Acao concluida localmente. Conecte o Firebase para salvar no Firestore."
+        "Não foi possível concluir o follow-up. Entre na conta e confira a conexão."
       );
       return;
     }
@@ -722,9 +721,11 @@ export function DashboardView() {
           completedByUserId: user.uid
         }
       );
+      setCompletedActionIds((currentIds) =>
+        currentIds.includes(actionId) ? currentIds : [...currentIds, actionId]
+      );
       setActionSyncStatus("Follow-up salvo no Firestore.");
     } catch (error) {
-      setCompletedActionIds((currentIds) => currentIds.filter((id) => id !== actionId));
       setActionSyncStatus(
         friendlyError(error, "Nao foi possivel salvar o follow-up no Firestore.")
       );

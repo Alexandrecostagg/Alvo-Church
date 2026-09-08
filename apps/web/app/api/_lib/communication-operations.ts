@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 
 const MANAGERS = ["super_admin", "church_admin", "pastor", "secretary"];
 export const MAX_MANUAL_WHATSAPP_RECIPIENTS = 100;
@@ -53,6 +54,7 @@ export function campaignCompletionInput(raw: unknown) {
 async function authorize(tx: AccountTransaction, orgId: string, uid: string) {
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "communication");
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   const roles = Array.isArray(actor?.roles) ? actor.roles : [];
   if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true || !roles.some((role: string) => MANAGERS.includes(role))) {

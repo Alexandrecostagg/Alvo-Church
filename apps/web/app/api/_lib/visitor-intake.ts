@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction } from "./member-account-store";
 import { birthDateError } from "../../../src/lib/member-form";
+import { assertModuleEnabled } from "./module-access";
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export function validateVisitor(raw: any) {
@@ -71,6 +72,7 @@ export async function capturePublicVisitor(
     if (typeof orgId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(orgId))
       throw new AccountError(404, "Igreja não encontrada.");
     const root = `organizations/${orgId}`;
+    await assertModuleEnabled(tx, root, "publicForms");
     const path = `${root}/visitorIntakes/public_${id}`;
     const limits = [
       `${root}/publicIntakeLimits/ip_${hash(clientKey).slice(0, 2)}`,

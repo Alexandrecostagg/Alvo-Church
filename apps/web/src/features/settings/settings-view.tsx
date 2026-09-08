@@ -431,12 +431,6 @@ export function SettingsView() {
       </section>
 
       <style jsx>{`
-        .settings-demo-banner {
-          display: flex; align-items: center; gap: 8px;
-          background: #fffbeb; border: 1px solid #fde68a;
-          border-radius: 10px; padding: 10px 14px;
-          font-size: 12px; color: var(--alvo-ink-soft); margin-bottom: 12px;
-        }
         .modules-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

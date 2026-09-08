@@ -36,7 +36,7 @@ export async function previewRetention(
 ) {
   retentionDays(days);
   return accountTransaction(async (tx) => {
-    const { root } = await financeActor(tx, orgId, uid);
+    const { root } = await financeActor(tx, orgId, uid, true, "children");
     const rows = await tx.query(
       root,
       "kidsCheckIns",
@@ -77,7 +77,7 @@ export async function purgeRetention(
   const root = `organizations/${orgId}`,
     path = `${root}/kidsCheckIns/${id}`;
   const old = await accountTransaction(async (tx) => {
-    await financeActor(tx, orgId, uid);
+    await financeActor(tx, orgId, uid, true, "children");
     const [row] = await tx.read(path);
     if (!row || row.organizationId !== orgId)
       throw new AccountError(404, "Entrada não encontrada.");
@@ -101,7 +101,7 @@ export async function purgeRetention(
   // Keep the object reference until deletion succeeds, allowing safe retries.
   if (old.photoPath) await removeObject(old.photoPath);
   return accountTransaction(async (tx) => {
-    await financeActor(tx, orgId, uid);
+    await financeActor(tx, orgId, uid, true, "children");
     const [row] = await tx.read(path);
     if (row?.photoPurgedFingerprint === raw.fingerprint)
       return { ok: true, replayed: true };

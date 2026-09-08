@@ -198,22 +198,8 @@ export function GroupsView() {
       return;
     }
 
-    const localMember: GroupMember = {
-      id: `${selectedGroup.id}_${person.id}`,
-      organizationId,
-      groupId: selectedGroup.id,
-      personId: person.id,
-      roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member",
-      joinedAt: new Date().toISOString()
-    };
-    setGroupMembers((currentMembers) => [
-      localMember,
-      ...currentMembers.filter((member) => member.id !== localMember.id)
-    ]);
-    setStatus(`${getFullName(person)} vinculado a ${selectedGroup.name}.`);
-
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Vínculo criado localmente. Conecte o Firebase para persistir.");
+      setStatus("Entre na conta e confira a conexão antes de criar o vínculo.");
       return;
     }
 
@@ -224,9 +210,10 @@ export function GroupsView() {
         personId: person.id,
         roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member"
       });
-      setGroupMembers((currentMembers) =>
-        currentMembers.map((member) => (member.id === localMember.id ? savedMember : member))
-      );
+      setGroupMembers((currentMembers) => [
+        savedMember,
+        ...currentMembers.filter((member) => member.id !== savedMember.id)
+      ]);
       setStatus("Vínculo com célula salvo no Firestore.");
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível vincular a célula."));
@@ -346,12 +333,15 @@ export function GroupsView() {
     const group = deleteTarget;
     if (!group) return;
     setDeleteTarget(null);
-    setGroups((current) => current.filter((g) => g.id !== group.id));
-    setGroupMembers((current) => current.filter((m) => m.groupId !== group.id));
-    setSelectedGroupId((id) => (id === group.id ? null : id));
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de excluir a célula.");
+      return;
+    }
     try {
       await deleteGroup(firebaseConfig, { organizationId }, group.id);
+      setGroups((current) => current.filter((g) => g.id !== group.id));
+      setGroupMembers((current) => current.filter((m) => m.groupId !== group.id));
+      setSelectedGroupId((id) => (id === group.id ? null : id));
       setStatus(`Célula "${group.name}" excluída.`);
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível excluir a célula."));
@@ -362,10 +352,13 @@ export function GroupsView() {
     const person = people.find((p) => p.id === member.personId);
     const label = person ? getFullName(person) : member.personId;
     if (!window.confirm(`Remover ${label} desta célula?`)) return;
-    setGroupMembers((current) => current.filter((m) => m.id !== member.id));
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) return;
+    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de remover o participante.");
+      return;
+    }
     try {
       await removeGroupMember(firebaseConfig, { organizationId }, member.groupId, member.personId);
+      setGroupMembers((current) => current.filter((m) => m.id !== member.id));
       setStatus(`${label} removido da célula.`);
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível remover o participante."));
@@ -380,19 +373,8 @@ export function GroupsView() {
 
     // Usa a data escolhida (datetime-local) ou "agora" se em branco.
     const scheduledStartAt = meetingDate ? new Date(meetingDate).toISOString() : new Date().toISOString();
-    const localMeeting: GroupMeeting = {
-      id: `meeting_local_${Date.now()}`,
-      organizationId,
-      groupId: selectedGroup.id,
-      scheduledStartAt,
-      meetingStatus: "scheduled"
-    };
-    setMeetings((currentMeetings) => [localMeeting, ...currentMeetings]);
-    setMeetingDate("");
-    setStatus(`Encontro aberto para ${selectedGroup.name}.`);
-
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Encontro criado localmente. Conecte o Firebase para persistir.");
+      setStatus("Entre na conta e confira a conexão antes de abrir o encontro.");
       return;
     }
 
@@ -402,11 +384,8 @@ export function GroupsView() {
         groupId: selectedGroup.id,
         scheduledStartAt
       });
-      setMeetings((currentMeetings) =>
-        currentMeetings.map((meeting) =>
-          meeting.id === localMeeting.id ? savedMeeting : meeting
-        )
-      );
+      setMeetings((currentMeetings) => [savedMeeting, ...currentMeetings]);
+      setMeetingDate("");
       setStatus("Encontro salvo no Firestore.");
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível abrir o encontro."));
@@ -422,22 +401,8 @@ export function GroupsView() {
       return;
     }
 
-    const localAttendance: GroupAttendance = {
-      id: `${selectedActiveMeeting.id}_${member.personId}`,
-      organizationId,
-      groupId: selectedGroup.id,
-      groupMeetingId: selectedActiveMeeting.id,
-      personId: member.personId,
-      attendanceStatus
-    };
-    setAttendance((currentAttendance) => [
-      localAttendance,
-      ...currentAttendance.filter((item) => item.id !== localAttendance.id)
-    ]);
-    setStatus(`Presença marcada como ${getAttendanceLabel(attendanceStatus)}.`);
-
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Presença registrada localmente. Conecte o Firebase para persistir.");
+      setStatus("Entre na conta e confira a conexão antes de registrar presença.");
       return;
     }
 
@@ -449,11 +414,10 @@ export function GroupsView() {
         recordedByUserId: user.uid,
         status: attendanceStatus
       });
-      setAttendance((currentAttendance) =>
-        currentAttendance.map((item) =>
-          item.id === localAttendance.id ? savedAttendance : item
-        )
-      );
+      setAttendance((currentAttendance) => [
+        savedAttendance,
+        ...currentAttendance.filter((item) => item.id !== savedAttendance.id)
+      ]);
       setStatus("Presença salva no Firestore.");
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível registrar presença."));
@@ -466,17 +430,8 @@ export function GroupsView() {
       return;
     }
 
-    setMeetings((currentMeetings) =>
-      currentMeetings.map((meeting) =>
-        meeting.id === selectedActiveMeeting.id
-          ? { ...meeting, meetingStatus: "completed" }
-          : meeting
-      )
-    );
-    setStatus(`Encontro de ${selectedGroup.name} encerrado.`);
-
     if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Encontro encerrado localmente. Conecte o Firebase para persistir.");
+      setStatus("Entre na conta e confira a conexão antes de encerrar o encontro.");
       return;
     }
 
@@ -487,6 +442,13 @@ export function GroupsView() {
         status: "completed",
         updatedByUserId: user.uid
       });
+      setMeetings((currentMeetings) =>
+        currentMeetings.map((meeting) =>
+          meeting.id === selectedActiveMeeting.id
+            ? { ...meeting, meetingStatus: "completed" }
+            : meeting
+        )
+      );
       setStatus("Encontro encerrado no Firestore.");
     } catch (error) {
       setStatus(friendlyError(error, "Não foi possível encerrar o encontro."));

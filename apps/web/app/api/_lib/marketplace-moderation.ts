@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 
 const MODERATOR_ROLES = ["super_admin", "church_admin", "pastor", "secretary"];
 const TRANSITIONS = {
@@ -47,6 +48,7 @@ export function marketplaceModerationInput(raw: unknown): MarketplaceModerationO
 async function authorize(tx: AccountTransaction, orgId: string, uid: string) {
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "marketplace");
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   const roles = Array.isArray(actor?.roles) ? actor.roles : [];
   if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true || !roles.some((role: string) => MODERATOR_ROLES.includes(role))) {

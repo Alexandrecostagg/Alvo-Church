@@ -4,6 +4,7 @@ import {
   type AccountTransaction,
 } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 const ADMIN = ["super_admin", "church_admin", "pastor", "secretary"];
 export const isKidsAdmin = (actor: any) =>
   Array.isArray(actor?.roles) &&
@@ -24,6 +25,7 @@ export async function kidsActor(
   documentId(orgId, "Igreja");
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "children");
   const [org, actor, settings] = await tx.read(
     root,
     `${root}/users/${uid}`,

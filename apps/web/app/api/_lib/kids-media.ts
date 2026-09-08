@@ -2,6 +2,7 @@ import { authorizeSession, isKidsAdmin } from "./kids-sessions";
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 import { isLocalQaFirebase } from "./firebase-server-env";
 import { getGoogleAccessToken } from "./google-service-account";
 export { AccountError };
@@ -18,6 +19,7 @@ export function kidsAccess(actor: any, checkIn: any, settings: any, orgId: strin
 export async function authorizeKids(tx: AccountTransaction, orgId: string, id: string, uid: string, upload = false, active = true) {
   documentId(orgId, "Igreja"); documentId(id, "Check-in"); documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "children");
   const [org, actor, checkIn, settings] = await tx.read(root, `${root}/users/${uid}`, `${root}/kidsCheckIns/${id}`, `${root}/settings/kids`);
   const access = kidsAccess(actor, checkIn, settings, orgId, uid);
   if (org?.status !== "active" || !(upload ? access.upload : access.read)) throw new AccountError(403, "Você não tem acesso a esta mídia Kids.");

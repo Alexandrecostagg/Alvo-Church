@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 
 const EVENT_OPERATORS = ["super_admin", "church_admin", "pastor", "secretary"];
 
@@ -36,6 +37,7 @@ function eventInput(raw: unknown, action: "guest" | "member" | "checkin" | "paym
 async function authorize(tx: AccountTransaction, orgId: string, uid: string, operator = true) {
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "events");
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   const roles = Array.isArray(actor?.roles) ? actor.roles : [];
   if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true || (operator && !roles.some((role: string) => EVENT_OPERATORS.includes(role)))) {

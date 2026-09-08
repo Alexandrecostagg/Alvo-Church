@@ -39,6 +39,7 @@ export async function aiGate(
       orgId,
       uid,
       task.startsWith("banner_"),
+      "ai",
     );
     if (
       task === "pastoral_suggestion" &&

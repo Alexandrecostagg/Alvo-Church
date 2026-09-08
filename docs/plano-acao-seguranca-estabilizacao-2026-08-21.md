@@ -72,11 +72,11 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
-| 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem; gestão central auditada e bloqueio publicado. | Revisar demais coleções, provisionamento e migração de referências antigas. |
+| 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem; gestão central auditada e bloqueios de módulo publicados em API/Firestore. | Revisar provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. Turnstile publicado e validado ao vivo nos formulários públicos. | Inventário legado, relação familiar e aparelhos. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
-| 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos/portal das 8–9 revisados. | Demais operações, conteúdo real e integração bancária. |
-| 5 — Validação | 364 testes, TypeScript integral, build OpenNext e compilação remota das regras passaram na entrega 16. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
+| 4 — Dados/fluxos | Frentes anteriores, células, escalas, follow-ups e transparência só confirmam gravações reais; mocks sem uso removidos na entrega 17. | Dados externos e integração bancária. |
+| 5 — Validação | 369 testes, TypeScript integral, build OpenNext e compilação local/remota das regras passaram na entrega 17. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 
@@ -163,6 +163,11 @@ operação revalida o administrador Esdras, exige motivo e registra antes/depois
 auditoria privada. Bloqueios de instituição e usuário são aplicados pelas regras,
 pela sessão web e pelas APIs verificadas. O último administrador ativo e contas
 ligadas ao cadastro de pessoas não podem ser removidos acidentalmente.
+
+Na entrega 17, a pausa de módulos também passou a ser verificada pelas APIs de
+negócio e pelas regras do Firestore. Assim, chamadas diretas recebem negação
+enquanto o módulo estiver explicitamente desabilitado. O checkout da assinatura
+permanece disponível para regularização do plano.
 
 ## Frente 3 — custo, comunicação e pagamentos **(alta)**
 

@@ -7,6 +7,7 @@ import {
 } from "./member-account-store";
 import { documentId } from "./member-account";
 import { deletePhoto, getPhoto, photoBytes, putPhoto } from "./kids-media";
+import { assertModuleEnabled } from "./module-access";
 
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 export function money(value: unknown): number {
@@ -39,10 +40,12 @@ export async function financeActor(
   orgId: string,
   uid: string,
   admin = true,
+  moduleKey: "finance" | "giving" | "ai" | "children" | null = "finance",
 ) {
   documentId(orgId, "Igreja");
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  if (moduleKey) await assertModuleEnabled(tx, root, moduleKey);
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   if (
     org?.status !== "active" ||
@@ -96,6 +99,7 @@ async function publicContext(tx: AccountTransaction, orgSlug: string) {
   if (!slug) throw new AccountError(404, "Igreja não encontrada.");
   const orgId = documentId(slug.organizationId, "Igreja");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "giving");
   const [org, branding] = await tx.read(root, `${root}/settings/branding`);
   if (org?.status !== "active")
     throw new AccountError(404, "Igreja indisponível.");
@@ -183,6 +187,7 @@ async function publicReceiptAuth(tx: AccountTransaction, raw: any) {
   const orgId = documentId(raw.organizationId, "Igreja"),
     id = documentId(raw.intentId, "Intenção");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "giving");
   const [org, intent] = await tx.read(root, `${root}/givingIntents/${id}`);
   if (
     org?.status !== "active" ||
@@ -223,7 +228,7 @@ export async function declareGiving(raw: any, uid?: string) {
   const authenticate = async (tx: AccountTransaction) =>
     publicFlow
       ? publicReceiptAuth(tx, raw)
-      : financeActor(tx, orgId, uid!, Boolean(raw.personId));
+      : financeActor(tx, orgId, uid!, Boolean(raw.personId), "giving");
   const prior = await accountTransaction(async (tx) => {
     const { root } = await authenticate(tx);
     const [old] = await tx.read(`${root}/contributions/${contributionId}`);

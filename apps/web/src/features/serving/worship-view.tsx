@@ -140,7 +140,7 @@ export function WorshipView() {
         </div>
         <div className="page-header-actions">
           <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
-            {configured && firebaseReady ? "Firestore conectado" : "Modo demonstração"}
+            {configured && firebaseReady ? "Firestore conectado" : "Firestore desconectado"}
           </span>
         </div>
       </header>

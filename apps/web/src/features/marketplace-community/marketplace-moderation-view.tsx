@@ -519,31 +519,6 @@ export function MarketplaceModerationView() {
           text-align: center;
         }
 
-        .demo-injector-box {
-          margin-top: 1.5rem;
-          padding: 1.5rem;
-          border: 1px dashed rgba(255, 255, 255, 0.1);
-          border-radius: 1rem;
-          background: rgba(15, 23, 42, 0.3);
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          max-width: 450px;
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        .demo-injector-box p {
-          font-size: 0.9rem;
-          color: #cbd5e1;
-          line-height: 1.5;
-        }
-
-        .demo-btn {
-          align-self: center;
-          padding: 0.75rem 1.5rem !important;
-        }
-
         .stores-list {
           display: flex;
           flex-direction: column;

@@ -269,32 +269,26 @@ export function ServingView() {
     const person = people.find(p => p.id === currentAssignment.personId);
     const personName = person ? getFullName(person) : "Voluntário";
 
-    setAssignments((currentAssignments) =>
-      currentAssignments.map((assignment) =>
-        assignment.id === assignmentId ? updatedAssignment : assignment
-      )
-    );
-
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const statusLabel = getAssignmentStatusLabel(nextStatus);
-    setAuditLogs(prev => [
-      { time: timeString, text: `${personName} foi marcado como ${statusLabel}.`, type: nextStatus === "confirmed" ? "success" : "info" },
-      ...prev
-    ]);
-
-    setStatus(`Escala marcada como ${statusLabel}.`);
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await saveServiceAssignment(firebaseConfig, { organizationId }, updatedAssignment);
-        setStatus(`Escala marcada como ${statusLabel} e sincronizada.`);
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? "Escala atualizada aqui, mas não foi possível salvar. Verifique sua conexão."
-            : "Escala atualizada localmente, mas não foi possível sincronizar."
-        );
-      }
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de atualizar a escala.");
+      return;
+    }
+    try {
+      await saveServiceAssignment(firebaseConfig, { organizationId }, updatedAssignment);
+      setAssignments((currentAssignments) =>
+        currentAssignments.map((assignment) =>
+          assignment.id === assignmentId ? updatedAssignment : assignment
+        )
+      );
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      setAuditLogs(prev => [
+        { time: timeString, text: `${personName} foi marcado como ${statusLabel}.`, type: nextStatus === "confirmed" ? "success" : "info" },
+        ...prev
+      ]);
+      setStatus(`Escala marcada como ${statusLabel} e salva.`);
+    } catch {
+      setStatus("Não foi possível salvar a atualização da escala. Verifique sua conexão.");
     }
   }
 
@@ -325,27 +319,22 @@ export function ServingView() {
       }
     }
 
-    setAssignments((currentAssignments) => [newAssignment, ...currentAssignments]);
-    
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    setAuditLogs(prev => [
-      { time: timeString, text: `${getFullName(person)} foi escalado(a) como ${role} em ${selectedMinistry.name}.`, type: "info" },
-      ...prev
-    ]);
-
-    setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name}.`);
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await saveServiceAssignment(firebaseConfig, { organizationId }, newAssignment);
-        setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name}.`);
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? "Escala criada aqui, mas não foi possível salvar. Verifique sua conexão."
-            : "Escala criada aqui, mas não foi possível salvar. Verifique sua conexão."
-        );
-      }
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de criar a escala.");
+      return;
+    }
+    try {
+      await saveServiceAssignment(firebaseConfig, { organizationId }, newAssignment);
+      setAssignments((currentAssignments) => [newAssignment, ...currentAssignments]);
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      setAuditLogs(prev => [
+        { time: timeString, text: `${getFullName(person)} foi escalado(a) como ${role} em ${selectedMinistry.name}.`, type: "info" },
+        ...prev
+      ]);
+      setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name}.`);
+    } catch {
+      setStatus("Não foi possível salvar a nova escala. Verifique sua conexão.");
+      return;
     }
 
     return newAssignment;
@@ -448,10 +437,14 @@ export function ServingView() {
 
     const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de solicitar uma troca.");
+      return;
+    }
 
     const newSwap: ScheduleSwapRequest = {
       id: `swap_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      organizationId: organizationId || "demo_org",
+      organizationId,
       assignmentId,
       requestorPersonId: assignment.personId,
       proposedReplacementPersonId: replacementPersonId,
@@ -461,28 +454,24 @@ export function ServingView() {
       updatedAt: new Date().toISOString()
     };
 
-    setSwapRequests(prev => [newSwap, ...prev]);
-
     const requestor = people.find(p => p.id === assignment.personId);
     const replacement = people.find(p => p.id === replacementPersonId);
     const requestorName = requestor ? getFullName(requestor) : "Voluntário";
     const replacementName = replacement ? getFullName(replacement) : "Substituto";
 
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    setAuditLogs(prev => [
-      { time: timeString, text: `Solicitada troca: ${requestorName} por ${replacementName}.`, type: "info" },
-      ...prev
-    ]);
-
-    setStatus(`Solicitação de troca enviada para aprovação.`);
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await saveScheduleSwapRequest(firebaseConfig, { organizationId }, newSwap);
-      } catch (err) {
-        console.error(err);
-        setStatus("Solicitação salva apenas localmente.");
-      }
+    try {
+      await saveScheduleSwapRequest(firebaseConfig, { organizationId }, newSwap);
+      setSwapRequests(prev => [newSwap, ...prev]);
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      setAuditLogs(prev => [
+        { time: timeString, text: `Solicitada troca: ${requestorName} por ${replacementName}.`, type: "info" },
+        ...prev
+      ]);
+      setStatus("Solicitação de troca enviada para aprovação.");
+    } catch (error) {
+      console.error(error);
+      setStatus("Não foi possível salvar a solicitação de troca.");
+      return;
     }
 
     setRequestingSwapForAssignmentId(null);
@@ -493,38 +482,36 @@ export function ServingView() {
   async function handleAcceptSwap(swapId: string) {
     const swap = swapRequests.find(s => s.id === swapId);
     if (!swap) return;
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de aprovar a troca.");
+      return;
+    }
 
     try {
       const { requestorAssignment } = processScheduleSwap(swap, assignments);
-
-      setAssignments(current => current.map(a => a.id === requestorAssignment.id ? requestorAssignment : a));
 
       const updatedSwap: ScheduleSwapRequest = {
         ...swap,
         status: "accepted",
         updatedAt: new Date().toISOString()
       };
-      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
-
       const requestor = people.find(p => p.id === swap.requestorPersonId);
       const replacement = people.find(p => p.id === (swap.proposedReplacementPersonId || swap.targetPersonId));
       const requestorName = requestor ? getFullName(requestor) : "Voluntário";
       const replacementName = replacement ? getFullName(replacement) : "Substituto";
       const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
+      await Promise.all([
+        saveServiceAssignment(firebaseConfig, { organizationId }, requestorAssignment),
+        saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap)
+      ]);
+      setAssignments(current => current.map(a => a.id === requestorAssignment.id ? requestorAssignment : a));
+      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
       setAuditLogs(prev => [
         { time: timeString, text: `Troca aprovada: ${replacementName} assume o lugar de ${requestorName}.`, type: "success" },
         ...prev
       ]);
-      setStatus("Troca aprovada com sucesso.");
-
-      if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-        await Promise.all([
-          saveServiceAssignment(firebaseConfig, { organizationId }, requestorAssignment),
-          saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap)
-        ]);
-        setStatus("Troca aprovada e salva.");
-      }
+      setStatus("Troca aprovada e salva.");
     } catch (error) {
       console.error(error);
       setStatus("Não foi possível processar a troca. Tente novamente.");
@@ -534,30 +521,31 @@ export function ServingView() {
   async function handleDeclineSwap(swapId: string) {
     const swap = swapRequests.find(s => s.id === swapId);
     if (!swap) return;
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de recusar a troca.");
+      return;
+    }
 
     const updatedSwap: ScheduleSwapRequest = {
       ...swap,
       status: "declined",
       updatedAt: new Date().toISOString()
     };
-    setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
-
     const requestor = people.find(p => p.id === swap.requestorPersonId);
     const requestorName = requestor ? getFullName(requestor) : "Voluntário";
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-    setAuditLogs(prev => [
-      { time: timeString, text: `Troca recusada para a escala de ${requestorName}.`, type: "warning" },
-      ...prev
-    ]);
-    setStatus("Troca recusada.");
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap);
-      } catch (err) {
-        console.error(err);
-      }
+    try {
+      await saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap);
+      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
+      setAuditLogs(prev => [
+        { time: timeString, text: `Troca recusada para a escala de ${requestorName}.`, type: "warning" },
+        ...prev
+      ]);
+      setStatus("Troca recusada e salva.");
+    } catch (error) {
+      console.error(error);
+      setStatus("Não foi possível salvar a recusa da troca.");
     }
   }
 
@@ -571,27 +559,21 @@ export function ServingView() {
     const person = people.find(p => p.id === currentAssignment.personId);
     const personName = person ? getFullName(person) : "Voluntário";
 
-    setAssignments(current => current.filter(a => a.id !== assignmentId));
-
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    setAuditLogs(prev => [
-      { time: timeString, text: `${personName} foi removido(a) da escala.`, type: "warning" },
-      ...prev
-    ]);
-
-    setStatus(`${personName} removido da escala.`);
-
-    if (configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      try {
-        await deleteServiceAssignment(firebaseConfig, { organizationId }, assignmentId);
-        setStatus(`${personName} removido da escala.`);
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? "Escala removida aqui, mas não foi possível salvar. Verifique sua conexão."
-            : "Escala removida aqui, mas não foi possível salvar. Verifique sua conexão."
-        );
-      }
+    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
+      setStatus("Entre na conta e confira a conexão antes de remover a escala.");
+      return;
+    }
+    try {
+      await deleteServiceAssignment(firebaseConfig, { organizationId }, assignmentId);
+      setAssignments(current => current.filter(a => a.id !== assignmentId));
+      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      setAuditLogs(prev => [
+        { time: timeString, text: `${personName} foi removido(a) da escala.`, type: "warning" },
+        ...prev
+      ]);
+      setStatus(`${personName} removido da escala.`);
+    } catch {
+      setStatus("Não foi possível remover a escala. Verifique sua conexão.");
     }
   }
 

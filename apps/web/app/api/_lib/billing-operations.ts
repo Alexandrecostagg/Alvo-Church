@@ -73,7 +73,7 @@ export async function startBilling(
     orderPath = `${root}/billingOrders/${orderId}`;
   const externalReference = `order:${orgId}:${orderId}`;
   const order = await accountTransaction(async (tx) => {
-    const { org, actor } = await financeActor(tx, orgId, uid);
+    const { org, actor } = await financeActor(tx, orgId, uid, true, null);
     const [old, subscription, program, entitlement] = await tx.read(
       orderPath,
       `${root}/settings/subscription`,
@@ -144,7 +144,7 @@ export async function startBilling(
     body: Record<string, unknown>,
   ) {
     const reservation = await accountTransaction(async (tx) => {
-      await financeActor(tx, orgId, uid);
+      await financeActor(tx, orgId, uid, true, null);
       const [state] = await tx.read(orderPath);
       if (state?.[field]) return { id: state[field], fresh: false };
       const flag = `${field}Requested`;
@@ -183,7 +183,7 @@ export async function startBilling(
     )
       throw new AccountError(502, "Valor ou cliente do gateway divergente.");
     await accountTransaction(async (tx) => {
-      await financeActor(tx, orgId, uid);
+      await financeActor(tx, orgId, uid, true, null);
       const [state] = await tx.read(orderPath);
       if (state?.[field] && state[field] !== id)
         throw new AccountError(409, "Pedido divergente; consulte o suporte.");
@@ -228,7 +228,7 @@ export async function startBilling(
     );
   const url = checkoutUrl(payment.invoiceUrl);
   await accountTransaction(async (tx) => {
-    await financeActor(tx, orgId, uid);
+    await financeActor(tx, orgId, uid, true, null);
     const [current, subscription] = await tx.read(
       orderPath,
       `${root}/settings/subscription`,

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
+import { assertModuleEnabled } from "./module-access";
 
 function learningInput(raw: unknown, toggle: boolean) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new AccountError(400, "Progresso inválido.");
@@ -28,6 +29,7 @@ async function courseAccess(tx: AccountTransaction, root: string, orgId: string,
 async function linkedPerson(tx: AccountTransaction, orgId: string, uid: string) {
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
+  await assertModuleEnabled(tx, root, "journeys");
   const [org, actor, link] = await tx.read(root, `${root}/users/${uid}`, `${root}/memberAccountLinks/${uid}`);
   if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true) {
     throw new AccountError(403, "Você não tem acesso à Escola desta igreja.");

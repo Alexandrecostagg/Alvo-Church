@@ -9,7 +9,7 @@ import {
 import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { tribeDefinitions } from "../../lib/mock-data";
+import { tribeDefinitions } from "./tribe-definitions";
 import {
   UsersRound,
   Tent,
