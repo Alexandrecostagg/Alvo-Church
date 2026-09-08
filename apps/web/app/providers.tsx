@@ -187,7 +187,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         // Only set default role on first access (no existing user doc)
-        const userRoles: AppRole[] = existingUser?.roles ?? ["church_admin"];
+        const userRoles: AppRole[] =
+          existingUser?.isActive === false
+            ? []
+            : (existingUser?.roles ?? ["church_admin"]);
 
         if (!existingUser) {
           await sdk.ensureTenantUserAccess(firebaseConfig, {

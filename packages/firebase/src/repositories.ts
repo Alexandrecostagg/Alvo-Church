@@ -240,6 +240,7 @@ function toOrganizationSubscriptionSettings(
 ): OrganizationSubscriptionSettings {
   return {
     organizationId,
+    plan: data.plan as OrganizationSubscriptionSettings["plan"],
     planCode: String(data.planCode ?? "alvo-growth"),
     planTier: (data.planTier as OrganizationSubscriptionSettings["planTier"]) ?? "growth",
     billingCycle:
@@ -678,7 +679,9 @@ export async function isPlatformAdmin(
 export interface PlatformOrgSummary {
   id: string;
   displayName: string;
+  status: import("@alvo/types").OrganizationStatus;
   plan: PlanId;
+  billingStatus: "active" | "overdue" | "suspended";
   planTier?: string;
   memberCount: number;
   aiUsed: number;
@@ -714,7 +717,9 @@ export async function fetchPlatformOverview(
       return {
         id: org.id,
         displayName: org.displayName ?? org.name,
-        plan: aiQuota?.plan ?? "free",
+        status: org.status ?? "active",
+        plan: subscription?.plan ?? planTierToPlanId(subscription?.planTier),
+        billingStatus: subscription?.billingStatus ?? "active",
         planTier: subscription?.planTier,
         memberCount,
         aiUsed: aiQuota?.used ?? 0,

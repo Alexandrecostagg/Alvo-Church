@@ -7,6 +7,7 @@ import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
 import { PlanProvider } from "../../contexts/PlanContext";
 import { ToastProvider } from "../../contexts/ToastContext";
 import { BillingGate } from "./billing-gate";
+import { OrganizationAccessGate } from "./organization-access-gate";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
@@ -22,7 +23,9 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                 <Suspense fallback={null}>
                   <TopBar />
                 </Suspense>
-                <BillingGate>{children}</BillingGate>
+                <OrganizationAccessGate>
+                  <BillingGate>{children}</BillingGate>
+                </OrganizationAccessGate>
               </div>
             </div>
           </AuthGate>

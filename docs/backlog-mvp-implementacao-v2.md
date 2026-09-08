@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **08/09/2026**, após a entrega ampliada 15: **93,05% (+0,45 ponto)**.
+Atualizado em **08/09/2026**, após a entrega ampliada 16: **93,45% (+0,40 ponto)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -25,6 +25,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
 | P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
+| P0.6 | Administração central | Publicado e validado — entrega 16 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Bloqueios alcançam UI, regras e API; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
 | P1.1 | Verdade dos dados | Parcial — entrega 10 | EAD/eventos sem demos; portal usa dados reais; LP não publica prova social/promessas sem fonte. Falta revisar as demais rotas e dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 10 | Oferta de 50, prova verificável, exemplos rotulados, canonical e links legais validados; componentes sem uso removidos. Faltam prova real, analytics consentido e migração de domínio. |
@@ -96,13 +97,16 @@ Evidências: [entrega 3](vinculo-passe-2026-09-05.md).
 
 ## Épico 8 — SaaS, organizações e white-label
 
-**Parcial.** Tenant, branding, planos, módulos e checkout existem. Gestão de
-usuários restringe papéis, e a assinatura está protegida nas regras. Revisar
-todas as coleções, limites por todos os pontos de entrada, provisionamento,
-unicidade de slug/domínio. Checkout e webhook vinculados à ordem foram validados
-com provedor simulado na entrega 7; migrar cobranças legadas e homologar sandbox
-real, troca/cancelamento de plano e recuperação assistida. Confirmar configuração
-remota apenas na etapa de homologação/deploy.
+**Parcial — gestão central publicada na entrega 16.** Tenant, branding, planos,
+módulos e checkout existem. O admin Esdras agora altera cadastro/situação, plano,
+cobrança e módulos e pode mudar papel, bloquear, reativar ou remover acesso sem
+vínculo cadastral. Toda mutação exige motivo e deixa auditoria privada; o último
+admin ativo e contas ligadas a pessoas são preservados. Bloqueio de instituição
+ou usuário alcança a interface, as regras e APIs administrativas verificadas.
+Revisar limites nas demais entradas, provisionamento e unicidade de slug/domínio.
+Checkout e webhook vinculados à ordem foram validados com provedor simulado na
+entrega 7; migrar cobranças legadas e homologar sandbox real e cancelamento
+financeiro no provedor.
 
 ## Épico 9 — Limpeza técnica, rotas e releases
 

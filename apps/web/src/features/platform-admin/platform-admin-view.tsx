@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { friendlyError } from "../../lib/friendly-error";
-import { AlertTriangle, Building2, GraduationCap, LayoutDashboard, Loader2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, Building2, GraduationCap, LayoutDashboard, Loader2, Settings2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { PlatformProgramsView } from "./platform-programs-view";
 import { fetchPlatformOverview, isPlatformAdmin } from "@alvo/firebase";
 import type { PlatformOrgSummary } from "@alvo/firebase";
 import type { PlanId } from "@alvo/firebase";
+import { PlatformOrganizationManager } from "./platform-organization-manager";
 
 const PLAN_LABELS: Record<PlanId, string> = {
   free: "Gratuito",
@@ -49,6 +50,7 @@ export function PlatformAdminView() {
   const [error, setError] = useState("");
   const [orgs, setOrgs] = useState<PlatformOrgSummary[]>([]);
   const [tab, setTab] = useState<"overview" | "programs">("overview");
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setChecking(false); return; }
@@ -57,14 +59,22 @@ export function PlatformAdminView() {
       .finally(() => setChecking(false));
   }, [user, firebaseConfig]);
 
-  useEffect(() => {
+  const loadOrganizations = useCallback(async () => {
     if (!authorized) return;
     setLoading(true);
-    fetchPlatformOverview(firebaseConfig)
-      .then(setOrgs)
-      .catch((e) => setError(friendlyError(e, "Erro ao carregar visão da plataforma")))
-      .finally(() => setLoading(false));
+    setError("");
+    try {
+      setOrgs(await fetchPlatformOverview(firebaseConfig));
+    } catch (e) {
+      setError(friendlyError(e, "Erro ao carregar visão da plataforma"));
+    } finally {
+      setLoading(false);
+    }
   }, [authorized, firebaseConfig]);
+
+  useEffect(() => {
+    void loadOrganizations();
+  }, [loadOrganizations]);
 
   const stats = useMemo(() => {
     const totalMembers = orgs.reduce((s, o) => s + o.memberCount, 0);
@@ -128,7 +138,14 @@ export function PlatformAdminView() {
         </div>
       )}
 
-      {loading ? (
+      {selectedOrganizationId && user ? (
+        <PlatformOrganizationManager
+          organizationId={selectedOrganizationId}
+          user={user}
+          onClose={() => setSelectedOrganizationId(null)}
+          onChanged={() => void loadOrganizations()}
+        />
+      ) : loading ? (
         <div style={{ padding: "3rem", display: "flex", justifyContent: "center", color: "var(--color-text-secondary)" }}>
           <Loader2 size={22} className="spin" />
         </div>
@@ -182,6 +199,8 @@ export function PlatformAdminView() {
                   <th style={thStyle}>Membros</th>
                   <th style={thStyle}>IA (mês)</th>
                   <th style={thStyle}>Última atividade</th>
+                  <th style={thStyle}>Situação</th>
+                  <th style={thStyle}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,6 +222,32 @@ export function PlatformAdminView() {
                       <td style={tdStyle}>{org.aiUsed} / {org.aiLimit || "—"}</td>
                       <td style={{ ...tdStyle, color: isStale ? "#A32D2D" : "var(--color-text-secondary)" }}>
                         {org.daysSinceActivity !== null ? `há ${org.daysSinceActivity} dias` : "sem registro"}
+                      </td>
+                      <td style={tdStyle}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: org.status === "active" ? "#085041" : "#A32D2D" }}>
+                          {org.status === "active"
+                            ? org.billingStatus === "active"
+                              ? "Ativa"
+                              : org.billingStatus === "overdue"
+                                ? "Em atraso"
+                                : "Cobrança suspensa"
+                            : org.status === "suspended"
+                              ? "Suspensa"
+                              : "Inativa"}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        <button
+                          onClick={() => setSelectedOrganizationId(org.id)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            border: "1px solid var(--color-border-secondary, #d1d5db)",
+                            borderRadius: 7, background: "var(--color-background-primary)",
+                            padding: "6px 9px", cursor: "pointer", fontSize: 11, fontWeight: 700
+                          }}
+                        >
+                          <Settings2 size={13} /> Gerenciar
+                        </button>
                       </td>
                     </tr>
                   );

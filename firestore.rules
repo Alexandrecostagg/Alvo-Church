@@ -18,11 +18,22 @@ service cloud.firestore {
       return get(userDocPath(orgId)).data;
     }
 
-    function isTenantMember(orgId) {
+    function hasTenantAccount(orgId) {
       return signedIn()
         && tenantUserExists(orgId)
-        && tenantUserData(orgId).organizationId == orgId
+        && tenantUserData(orgId).organizationId == orgId;
+    }
+
+    function hasActiveTenantAccount(orgId) {
+      return hasTenantAccount(orgId)
         && tenantUserData(orgId).isActive == true;
+    }
+
+    function isTenantMember(orgId) {
+      return hasActiveTenantAccount(orgId)
+        && exists(/databases/$(database)/documents/organizations/$(orgId))
+        && (!("status" in get(/databases/$(database)/documents/organizations/$(orgId)).data)
+          || get(/databases/$(database)/documents/organizations/$(orgId)).data.status == "active");
     }
 
     function isTenantAdmin(orgId) {
@@ -198,7 +209,7 @@ service cloud.firestore {
 
     // Organization root document: creatable once by its owner, managed by admins.
     match /organizations/{orgId} {
-      allow get: if isTenantMember(orgId) || isOrgOwner(orgId) || isPlatformAdmin();
+      allow get: if hasTenantAccount(orgId) || isOrgOwner(orgId) || isPlatformAdmin();
       // Listing the whole collection (e.g. fetchAllOrganizations) is only
       // for the platform admin's cross-tenant dashboard / org switcher.
       allow list: if isPlatformAdmin();
@@ -208,9 +219,7 @@ service cloud.firestore {
       // Um administrador do tenant pode atualizar os dados cadastrais, mas
       // jamais trocar organização solo por rede, liberar uma modalidade ou
       // manipular os contadores usados para aplicar limites do plano.
-      allow update: if isPlatformAdmin()
-        || (
-          isTenantAdmin(orgId)
+      allow update: if isTenantAdmin(orgId)
           && (
             !("ownerUid" in resource.data)
             || request.resource.data.ownerUid == resource.data.ownerUid
@@ -235,7 +244,11 @@ service cloud.firestore {
               ? !("affiliateCount" in request.resource.data)
               : request.resource.data.affiliateCount == resource.data.affiliateCount
           )
-        );
+          && (
+            !("status" in resource.data)
+              ? !("status" in request.resource.data)
+              : request.resource.data.status == resource.data.status
+          );
       allow delete: if false;
     }
 
@@ -300,7 +313,7 @@ service cloud.firestore {
     // cobrança da Esdras. Um administrador da igreja pode ler, mas não pode
     // liberar recursos nem alterar o plano por chamada direta ao Firestore.
     match /organizations/{orgId}/settings/subscription {
-      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      allow read: if hasTenantAccount(orgId) || isPlatformAdmin();
       // A primeira assinatura vem exclusivamente do cadastro público e deve
       // iniciar no plano gratuito. Alterações posteriores passam pelo backend
       // de cobrança (Admin SDK) ou por um administrador da plataforma.
@@ -309,20 +322,21 @@ service cloud.firestore {
           && request.resource.data.organizationId == orgId
           && request.resource.data.plan == "free");
       // O checkout pode apenas vincular os IDs retornados pelo gateway; nunca
-      // troca plano, status ou limites diretamente no cliente.
-      allow update: if isPlatformAdmin()
-        || (isTenantAdmin(orgId)
+      // troca plano, status ou limites diretamente no cliente. A gestão Esdras
+      // também passa pela API auditada, que usa credencial de servidor.
+      allow update: if isTenantAdmin(orgId)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["asaasCustomerId", "asaasSubscriptionId"]));
-      allow delete: if isPlatformAdmin();
+            .hasOnly(["asaasCustomerId", "asaasSubscriptionId"]);
+      allow delete: if false;
     }
 
     match /organizations/{orgId}/settings/features {
-      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      allow read: if hasTenantAccount(orgId) || isPlatformAdmin();
       // O documento inicial é criado junto da organização. Depois disso,
-      // somente a administração Esdras pode ajustar disponibilidade técnica.
+      // somente a API auditada da administração Esdras pode ajustar a
+      // disponibilidade técnica depois do provisionamento inicial.
       allow create: if isPlatformAdmin() || isOrgOwner(orgId);
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if false;
     }
 
     match /organizations/{orgId}/settings/{documentId} {
@@ -332,6 +346,12 @@ service cloud.firestore {
       allow write: if documentId != "subscription"
         && documentId != "features"
         && (isTenantAdmin(orgId) || isPlatformAdmin());
+    }
+
+    // Permite montar apenas a identidade visual da tela de bloqueio quando a
+    // instituição está inativa/suspensa. Demais configurações continuam fechadas.
+    match /organizations/{orgId}/settings/branding {
+      allow read: if hasTenantAccount(orgId) || isPlatformAdmin();
     }
 
     // Contadores de IA são escritos somente pelo backend com service account,

@@ -265,7 +265,7 @@ Documentos de produto e arquitetura:
 
 ## Status
 
-Base funcional em estabilização: estimativa gerencial atual de aproximadamente 93,1% do escopo
+Base funcional em estabilização: estimativa gerencial atual de aproximadamente 93,5% do escopo
 operacional avaliado ([entregas e cálculo](docs/entregas-2026-09-05.md)), com critérios e limites no [diagnóstico atual](docs/status-implementacao-2026-09-05.md).
 Não equivale a prontidão para produção. Os planos ativos foram atualizados em
 08/09; documentos conceituais e registros datados preservam a história do projeto.

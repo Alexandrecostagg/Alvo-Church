@@ -72,11 +72,11 @@ Medição e evidências: [estado da implementação](status-implementacao-2026-0
 
 | Frente | Confirmado localmente | Ainda bloqueia o fechamento |
 | --- | --- | --- |
-| 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem. | Revisar demais coleções, provisionamento e migração de referências antigas. |
+| 1 — Acesso/assinatura | Conta/pessoa protegidas; cadastro transacional e teto 50 em três origens; cobrança vinculada à ordem; gestão central auditada e bloqueio publicado. | Revisar demais coleções, provisionamento e migração de referências antigas. |
 | 2 — APIs/Kids | Sessões/custódia/mídia privada e remoção assistida após retirada; comprovantes privados no servidor. Turnstile publicado e validado ao vivo nos formulários públicos. | Inventário legado, relação familiar e aparelhos. |
 | 3 — Custo/cobrança | Cota compartilhada de IA; checkout/webhook idempotentes; WhatsApp manual com destinatário/opt-out auditados. | Sandbox real, migrações e envio/entrega por provedor. |
 | 4 — Dados/fluxos | Frentes da entrega 6, finanças da 7 e EAD/eventos/portal das 8–9 revisados. | Demais operações, conteúdo real e integração bancária. |
-| 5 — Validação | 358 testes, TypeScript integral e build OpenNext passaram na entrega 15. | Aparelhos, integrações externas, CI remoto e publicação coordenada. |
+| 5 — Validação | 364 testes, TypeScript integral, build OpenNext e compilação remota das regras passaram na entrega 16. | Aparelhos, integrações externas, CI remoto e homologação coordenada. |
 
 ### Identidade e Passe — entrega 3 validada localmente
 
@@ -157,6 +157,12 @@ a API valida o pedido, aplica limite por IP/honeypot e grava com service
 account. Na entrega 6, contadores persistentes no Firestore substituíram o
 limite em memória. A entrega 15 implementou Turnstile com Siteverify, ação e
 hostname vinculados; secret criptografado, publicação e QA ao vivo foram concluídos.
+
+A entrega 16 fechou a mutação central da plataforma em API server-side: cada
+operação revalida o administrador Esdras, exige motivo e registra antes/depois em
+auditoria privada. Bloqueios de instituição e usuário são aplicados pelas regras,
+pela sessão web e pelas APIs verificadas. O último administrador ativo e contas
+ligadas ao cadastro de pessoas não podem ser removidos acidentalmente.
 
 ## Frente 3 — custo, comunicação e pagamentos **(alta)**
 

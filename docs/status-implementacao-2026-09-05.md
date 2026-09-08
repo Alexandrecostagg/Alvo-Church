@@ -1,20 +1,18 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 15: **93,05% (aproximadamente 93,1%)**, ganho de
-> **0,45 ponto**. Turnstile foi implementado e publicado nos formulários públicos
-> de visita e contribuição; secret criptografado, hostnames, falha segura e widgets
-> reais foram validados ao vivo.
-> Ver [evidências e limites](entrega-ampliada-15-turnstile-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 16: **93,45% (aproximadamente 93,5%)**, ganho de
+> **0,40 ponto**. A administração central de instituições, planos, módulos e
+> usuários foi implementada, auditada, testada e publicada.
+> Ver [evidências e limites](entrega-ampliada-16-admin-plataforma-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 15: `fff1822`, branch
-`codex/consolidacao-local-2026-09-05`. A entrega 15 está validada, publicada e
+Base anterior à entrega 16: `55397e1`, branch
+`codex/consolidacao-local-2026-09-05`. A entrega 16 está validada, publicada e
 registrada na branch de trabalho.
 O painel e as APIs estão no Worker `alvo-church-web`, versão
-`aab95130-2590-4ef9-b658-fbb5962fc4ee`, e as regras do Firestore foram liberadas
+`f2148e9c-de63-4abe-807f-fed2a840d284`, e as regras do Firestore foram liberadas
 no projeto `alvo-church`.
-O Worker canônico, regras Firestore/Storage e índice Kids foram verificados após
-o deploy. O ruleset Firestore ativo é `19eb2cd8-2cff-4bb6-946a-bda6a6f75d53`.
+O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
@@ -164,8 +162,9 @@ Entrega 11 corrigiu a declaração do Google Play sem mudar titularidade e reenv
 a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entrega
 13 implementou o vínculo por lista, as orientações de suporte e a marca mobile
 corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
-Entrega 15 implementou e publicou Turnstile com QA ao vivo; seguem instalação
-e QA em aparelho, migrações legadas,
+Entrega 15 implementou e publicou Turnstile com QA ao vivo. Entrega 16 publicou
+a gestão central de instituições, planos, módulos e acessos com auditoria; seguem
+instalação e QA em aparelho, migrações legadas,
 sandbox Asaas, comunicação por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
 evidência. Mobile e LP não foram extraídos.
