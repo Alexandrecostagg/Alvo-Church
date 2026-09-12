@@ -29,6 +29,8 @@ objetivos registrados no sistema visual.
 - Revisão visual integral em **1440 px** e revisão responsiva em **390 px**:
   hierarquia, cartões e transições entre seções sem cortes ou grandes vazios.
 - Oferta gratuita revalidada em **50 membros** em conteúdo e documentação.
+- Worker `plataformaesdras-lp` publicado na versão
+  `a0e2b8ff-c4cf-4282-bc8b-bdd4de6bcd21` e confirmado com HTTP 200.
 
 O Superpowers **6.3.0** foi instalado e permanece habilitado no Codex local. Foram
 aplicadas as rotinas pertinentes de diagnóstico, planejamento, implementação e
@@ -41,3 +43,5 @@ LP e aquisição: **93% → 94%**. Com peso de 5% no diagnóstico geral, o ganho
 
 Continuam fora desta entrega: capturas reais do painel, analytics consentido e
 migração do domínio público.
+
+Commit funcional: `35c0d17`.
