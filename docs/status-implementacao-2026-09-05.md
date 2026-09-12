@@ -1,13 +1,13 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 21: **95,85%**, ganho de **1,15 ponto**. Parceiros
-> vinculados agora validam o Esdras Passe por uma API transacional com limite de
-> tentativas, auditoria e resposta mínima. Comunicação ganhou rascunhos com IA
-> sujeitos a revisão, cota e auditoria sem conteúdo.
-> Ver [evidências e limites](entrega-ampliada-21-passe-parceiro-comunicacao-ia-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 22: **96,00%**, ganho de **0,15 ponto**. A LP recebeu
+> direção visual editorial própria, narrativa mais concreta, marca oficial e uma
+> base CSS exclusiva, sem os efeitos e componentes genéricos que davam aparência
+> de página produzida por IA.
+> Ver [evidências e limites](entrega-ampliada-22-lp-editorial-refero-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 21: `14071c5`, branch
+Base anterior à entrega 22: `b135336`, branch
 `codex/consolidacao-local-2026-09-05`. As entregas 17–21 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
@@ -172,7 +172,9 @@ a gestão central, a entrega 17 tornou seus bloqueios efetivos, a entrega 18
 protegeu e completou a administração dos vínculos de rede, a entrega 19
 publicou sua consolidação diária com dados reais e a entrega 20 vinculou a
 custódia Kids ao cadastro familiar oficial. A entrega 21 fechou a validação web
-do Passe em parceiros e integrou rascunhos de IA à Comunicação. Seguem instalação
+do Passe em parceiros e integrou rascunhos de IA à Comunicação. A entrega 22
+consolidou uma direção editorial própria para a LP e removeu mais de 11 mil linhas
+de estilos do painel que estavam copiadas para o site público. Seguem instalação
 e QA em aparelho/estabelecimento, migrações legadas, sandbox Asaas, comunicação
 por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
