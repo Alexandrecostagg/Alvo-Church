@@ -1,21 +1,22 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 24: **96,10%**, ganho de **0,05 ponto**. A LP agora
-> limita títulos, justifica parágrafos de leitura e mantém transições entre
-> seções consecutivas em até 80 px no desktop.
-> Ver [evidências e limites](entrega-ampliada-24-tipografia-ritmo-lp-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 25: **96,35%**, ganho de **0,25 ponto**. A LP agora
+> usa o domínio oficial como canonical, mede interações somente após consentimento
+> e apresenta o resumo à administração. O painel também diagnostica a conexão
+> e o webhook do Asaas sem expor segredos.
+> Ver [evidências e limites](entrega-ampliada-25-lp-medicao-asaas-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 24: `cbf57a8`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–24 estão validadas e
+Base funcional da entrega 25: `30c2429`, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–25 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`afb66973-a44d-4b25-aa44-efd3a0e43ce1`, e a API de snapshots no Worker
+`9b1cf184-cfdf-4c07-b13d-027aaabf2dd5`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
-`a0e2b8ff-c4cf-4282-bc8b-bdd4de6bcd21`.
+`de051360-235b-497f-8887-9ae83e237c0b`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
@@ -176,7 +177,9 @@ custódia Kids ao cadastro familiar oficial. A entrega 21 fechou a validação w
 do Passe em parceiros e integrou rascunhos de IA à Comunicação. A entrega 22
 consolidou uma direção editorial própria para a LP e removeu mais de 11 mil linhas
 de estilos do painel que estavam copiadas para o site público. A entrega 23
-compactou o ritmo vertical e registrou limites responsivos. Seguem instalação
+compactou o ritmo vertical e registrou limites responsivos. A entrega 24 ajustou
+tipografia e justificou a leitura; a entrega 25 publicou canonical/sitemap,
+medição consentida, painel de aquisição e diagnóstico do Asaas. Seguem instalação
 e QA em aparelho/estabelecimento, migrações legadas, sandbox Asaas, comunicação
 por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
