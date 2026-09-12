@@ -6,6 +6,7 @@ export type AiTask =
   | "cell_meeting_summary"
   | "absence_message"
   | "care_reply"
+  | "communication_draft"
   | "pastoral_suggestion";
 
 export interface AiApiResponse {

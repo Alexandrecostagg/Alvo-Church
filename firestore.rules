@@ -295,7 +295,14 @@ service cloud.firestore {
     }
     match /organizations/{orgId}/memberBenefitValidations/{id} {
       allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, resource.data.personId);
-      allow write: if isTenantAdmin(orgId);
+      allow write: if false;
+    }
+    match /organizations/{orgId}/partnerBenefitRateLimits/{id} {
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/partnerBenefitAudit/{id} {
+      allow read: if isTenantAdmin(orgId);
+      allow write: if false;
     }
 
     // Assinatura e módulos são definidos no provisionamento e no processo de

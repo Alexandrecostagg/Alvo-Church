@@ -49,6 +49,7 @@ try {
   for (const task of [
     "qa:registration",
     "qa:member-pass",
+    "qa:partner-pass",
     "qa:kids-custody",
     "qa:kids-media",
     "qa:delivery6",

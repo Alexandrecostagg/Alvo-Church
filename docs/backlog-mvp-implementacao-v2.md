@@ -21,7 +21,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | Ordem | Item | Estado | Critério de aceite |
 | --- | --- | --- | --- |
 | P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
-| P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
+| P0.2 | Conta → pessoa → Passe → parceiro | Validado localmente — entregas 3 e 21 | Administração confirma vínculo exclusivo e auditado. Parceiro vinculado valida QR/código por API, com benefício/consentimento, limite, idempotência, auditoria e resposta mínima; escrita direta fechada. QA físico segue em P1.2. |
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
 | P0.4 | Fluxo Kids mobile | Validado localmente — entregas 6 e 20; físico pendente | Sessões por sala/evento/equipe, horário/lotação e presença exclusiva. Criança cadastrada só usa responsáveis legais ativos da família, com conta verificada quando existente e revogação reconferida na retirada. Entrada avulsa continua explícita. Faltam legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
@@ -29,7 +29,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entrega 10 | Oferta de 50, prova verificável, exemplos rotulados, canonical e links legais validados; componentes sem uso removidos. Faltam prova real, analytics consentido e migração de domínio. |
-| P1.4 | Cobrança, comunicação e IA | Parcial — entrega 8 | Checkout/IA da entrega 7; WhatsApp manual com destinatário autorizado, opt-out, repetição segura e confirmação explícita na entrega 8. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
+| P1.4 | Cobrança, comunicação e IA | Parcial — entrega 21 | Checkout/IA da entrega 7; WhatsApp manual seguro da entrega 8; rascunho de comunicado com revisão, cota e auditoria da entrega 21. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 
 ## Épico 1 — Pessoas, famílias, identidade e jornadas
@@ -74,11 +74,12 @@ Aceite conforme P0.3/P0.4; teste unitário não substitui retirada em aparelho.
 
 ## Épico 5 — IA Pastoral
 
-**Parcial — entrega 7.** Texto, banner e imagem compartilham cota mensal UTC,
+**Parcial — entregas 7 e 21.** Texto, banner e imagem compartilham cota mensal UTC,
 limites persistentes por igreja/usuário, autorização e auditoria sem prompts.
 Tentativa iniciada consome cota mesmo em falha; concorrência na última unidade
-validada sem chamar provedor real. Manter revisão humana e homologar geração
-real, custos e sinais pastorais antes de ampliar o uso.
+validada sem chamar provedor real. Comunicação agora gera rascunho curto dentro
+do compositor, validado antes de consumir cota e sempre sujeito a revisão humana.
+Homologar geração real, custos e sinais pastorais antes de ampliar o uso.
 
 ## Épico 6 — Louvor e escalas
 
@@ -88,11 +89,13 @@ vínculo da pessoa ao usuário, aceite/recusa/troca e repertório no app. Criaç
 
 ## Épico 7 — Marketplace e Esdras Passe
 
-**Parcial.** Loja, moderação e benefícios têm telas/repositórios. Fallbacks fictícios em vitrine, detalhes e moderação foram removidos na entrega 6.
+**Parcial — validação web concluída na entrega 21.** Loja, moderação e benefícios têm telas/repositórios. Fallbacks fictícios em vitrine, detalhes e moderação foram removidos na entrega 6.
 Loja pendente é privada; criação pelo titular, aprovação e auditoria foram homologadas. Na entrega 10, aprovação, rejeição e suspensão passaram a uma transação de servidor com idempotência; status e logs diretos foram bloqueados. A emissão do Passe foi corrigida,
-e a carteirinha mobile/vínculo seguro foram implementados na entrega 3. Homologar
-validação em parceiro sem expor CPF/renda/histórico e em aparelhos; consulta do
-app revalida a cada 60 segundos, não invalida capturas antigas do código.
+e a carteirinha mobile/vínculo seguro foram implementados na entrega 3. Na
+entrega 21, parceiro vinculado passou a validar QR/código por API transacional,
+sem CPF/renda/histórico, com limite, idempotência e auditoria. Falta homologar em
+aparelho e estabelecimento; a consulta do app revalida a cada 60 segundos e não
+invalida capturas antigas do código.
 Evidências: [entrega 3](vinculo-passe-2026-09-05.md).
 
 ## Épico 8 — SaaS, organizações e white-label
@@ -142,10 +145,12 @@ comercial. Assinatura SaaS em Asaas não equivale a doação recorrente da igrej
 
 ## Épico 12 — Comunicação multicanal
 
-**Parcial — entrega 8 validada localmente.** WhatsApp manual prepara somente
+**Parcial — entregas 8 e 21 validadas localmente.** WhatsApp manual prepara somente
 destinatários ativos, da igreja, com telefone válido e sem opt-out. Abertura da
 conversa não é contada como envio; o líder confirma destinatários e a operação
-é idempotente e auditada. Perfil permite retirar/reautorizar consentimento.
+é idempotente e auditada. Perfil permite retirar/reautorizar consentimento. O
+compositor gera rascunho com IA sob cota e auditoria sem conteúdo, deixando o
+envio exclusivamente após revisão humana.
 Push/email continuam “em breve”. Faltam entrega comprovada, webhook, retries,
 agendamento e integração oficial com critério comercial.
 

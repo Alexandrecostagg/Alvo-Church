@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   Store, 
   Search, 
@@ -12,7 +13,8 @@ import {
   ArrowRight,
   Navigation,
   ExternalLink,
-  Loader2
+  Loader2,
+  ShieldCheck
 } from "lucide-react";
 
 import type { PartnerOrganization, PartnerBenefit, Person, TenantContext } from "@alvo/types";
@@ -79,6 +81,10 @@ export function MarketplaceView() {
           <h1>Marketplace da Comunidade</h1>
           <p>Apoie os empreendimentos dos nossos membros e aproveite descontos exclusivos com seu Esdras Passe.</p>
         </div>
+
+        <Link href="/marketplace/validate" className="primary-view-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 18, width: "fit-content", textDecoration: "none" }}>
+          <ShieldCheck size={17} /> Área do parceiro: validar Passe
+        </Link>
 
         <div className="search-bar-container">
           <div className="search-input-wrapper">

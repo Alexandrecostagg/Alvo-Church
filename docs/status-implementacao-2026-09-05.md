@@ -1,15 +1,16 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 20: **94,70%**, ganho de **0,70 ponto**. Crianças
-> cadastradas agora usam exclusivamente os responsáveis legais ativos da família;
-> a retirada reconfirma o vínculo vigente. O CI isolado também voltou a validar
-> Turnstile e passou a executar as entregas 8–10.
-> Ver [evidências e limites](entrega-ampliada-20-familia-kids-ci-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 21: **95,85%**, ganho de **1,15 ponto**. Parceiros
+> vinculados agora validam o Esdras Passe por uma API transacional com limite de
+> tentativas, auditoria e resposta mínima. Comunicação ganhou rascunhos com IA
+> sujeitos a revisão, cota e auditoria sem conteúdo.
+> Ver [evidências e limites](entrega-ampliada-21-passe-parceiro-comunicacao-ia-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 20: `d1de495`, branch
+Base anterior à entrega 21: `14071c5`, branch
 `codex/consolidacao-local-2026-09-05`. As entregas 17–20 estão validadas e
-publicadas na branch de trabalho.
+publicadas; a entrega 21 está validada localmente e aguarda publicação na branch
+de trabalho.
 O painel está no Worker `alvo-church-web`, versão
 `a82a8b29-3bf8-460f-addf-2fe62e803410`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
@@ -171,8 +172,9 @@ Entrega 15 implementou e publicou Turnstile com QA ao vivo. Entrega 16 publicou
 a gestão central, a entrega 17 tornou seus bloqueios efetivos, a entrega 18
 protegeu e completou a administração dos vínculos de rede, a entrega 19
 publicou sua consolidação diária com dados reais e a entrega 20 vinculou a
-custódia Kids ao cadastro familiar oficial. Seguem
-instalação e QA em aparelho, migrações legadas,
-sandbox Asaas, comunicação por provedor e homologação coordenada.
+custódia Kids ao cadastro familiar oficial. A entrega 21 fechou a validação web
+do Passe em parceiros e integrou rascunhos de IA à Comunicação. Seguem instalação
+e QA em aparelho/estabelecimento, migrações legadas, sandbox Asaas, comunicação
+por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por
 evidência. Mobile e LP não foram extraídos.

@@ -468,7 +468,9 @@ export interface MemberBenefitValidation {
   partnerId: string;
   benefitId: string;
   personId: string;
-  memberCardCode: string;
+  /** Legado: novas validações não persistem o código completo. */
+  memberCardCode?: string;
+  memberCardCodeSuffix?: string;
   validationStatus: "approved" | "denied" | "expired";
   validatedAt: string;
   exposedFields: readonly string[];

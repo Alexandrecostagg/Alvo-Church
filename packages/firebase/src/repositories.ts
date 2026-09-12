@@ -439,7 +439,8 @@ function toMemberBenefitValidation(
     partnerId: String(data.partnerId ?? ""),
     benefitId: String(data.benefitId ?? ""),
     personId: String(data.personId ?? ""),
-    memberCardCode: String(data.memberCardCode ?? ""),
+    memberCardCode: data.memberCardCode ? String(data.memberCardCode) : undefined,
+    memberCardCodeSuffix: data.memberCardCodeSuffix ? String(data.memberCardCodeSuffix) : undefined,
     validationStatus:
       (data.validationStatus as MemberBenefitValidation["validationStatus"]) ?? "denied",
     validatedAt: String(data.validatedAt ?? ""),

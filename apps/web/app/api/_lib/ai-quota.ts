@@ -13,6 +13,7 @@ export const AI_TASKS = [
   "cell_meeting_summary",
   "absence_message",
   "care_reply",
+  "communication_draft",
   "pastoral_suggestion",
   "tribe_classify",
   "banner_copy",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle, Trash2, Save } from "lucide-react";
+import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle, Trash2, Save, Sparkles } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import {
   fetchCommunicationLog,
@@ -38,6 +38,12 @@ export function CommunicationView() {
   const [history, setHistory] = useState<CommunicationLogEntry[]>([]);
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiObjective, setAiObjective] = useState("");
+  const [aiAudience, setAiAudience] = useState("Membros e visitantes selecionados");
+  const [aiDetails, setAiDetails] = useState("");
+  const [aiTone, setAiTone] = useState("acolhedor");
+  const [generatingDraft, setGeneratingDraft] = useState(false);
 
   // Histórico e templates reais (persistidos): carrega ao abrir a tela.
   useEffect(() => {
@@ -142,6 +148,27 @@ export function CommunicationView() {
     return data;
   }
 
+  async function generateDraft() {
+    if (!organizationId || !user || !aiObjective.trim() || !aiAudience.trim()) return;
+    setGeneratingDraft(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ organizationId, task: "communication_draft", input: { objective: aiObjective.trim(), audience: aiAudience.trim(), details: aiDetails.trim(), tone: aiTone } }),
+      });
+      const data = await response.json().catch(() => ({})) as Record<string, any>;
+      if (!response.ok || typeof data.content !== "string") throw new Error(typeof data.error === "string" ? data.error : "Não foi possível gerar o rascunho.");
+      setMessage(data.content.trim());
+      setAiOpen(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível gerar o rascunho.");
+    } finally {
+      setGeneratingDraft(false);
+    }
+  }
+
   async function prepareCampaign() {
     if (!organizationId || !user || selected.size === 0 || !message.trim()) return;
     setLoggingCampaign(true);
@@ -217,6 +244,17 @@ export function CommunicationView() {
         )}
 
         <section className="content-section">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <div><strong>Mensagem</strong><p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>Revise o texto antes de abrir as conversas.</p></div>
+            <button className="btn-secondary btn-sm" type="button" onClick={() => setAiOpen((value) => !value)}><Sparkles size={14} /> Criar rascunho com IA</button>
+          </div>
+          {aiOpen && <div style={{ display: "grid", gap: 10, padding: 14, border: "1px solid var(--alvo-line)", borderRadius: 10, marginBottom: 12, background: "var(--alvo-surface-soft, var(--alvo-surface))" }}>
+            <input value={aiObjective} onChange={(event) => setAiObjective(event.target.value)} maxLength={500} placeholder="Objetivo: lembrar o culto de domingo..." style={inputStyle} />
+            <input value={aiAudience} onChange={(event) => setAiAudience(event.target.value)} maxLength={200} placeholder="Público do comunicado" style={inputStyle} />
+            <textarea value={aiDetails} onChange={(event) => setAiDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Detalhes confirmados: data, horário, local e chamada para ação" style={{ ...inputStyle, resize: "vertical" }} />
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><select value={aiTone} onChange={(event) => setAiTone(event.target.value)} style={inputStyle}><option value="acolhedor">Acolhedor</option><option value="objetivo">Objetivo</option><option value="celebrativo">Celebrativo</option><option value="pastoral">Pastoral</option></select><button className="btn-primary btn-sm" type="button" disabled={generatingDraft || !aiObjective.trim() || !aiAudience.trim()} onClick={() => void generateDraft()}><Sparkles size={14} /> {generatingDraft ? "Gerando..." : "Gerar para revisar"}</button></div>
+            <small style={{ color: "var(--alvo-ink-soft)" }}>Não inclua dados pessoais ou pastorais. A geração usa a cota mensal da instituição e fica registrada sem salvar o conteúdo no log de IA.</small>
+          </div>}
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -400,3 +438,5 @@ export function CommunicationView() {
     </div>
   );
 }
+
+const inputStyle = { padding: "9px 11px", borderRadius: 8, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface)", color: "var(--alvo-ink)", font: "inherit", boxSizing: "border-box" as const };
