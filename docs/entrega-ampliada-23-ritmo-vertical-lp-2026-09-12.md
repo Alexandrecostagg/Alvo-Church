@@ -31,6 +31,9 @@ quebrava a continuidade da leitura.
 - Revisão visual em 390 px: aprovada, sem corte ou overflow horizontal.
 - Passagem entre os cartões 05/06 e a seção de módulos revisada isoladamente.
 - Oferta gratuita preservada em **50 membros**.
+- Commit funcional: `cbf57a8`.
+- Worker `plataformaesdras-lp`, versão
+  `44b052f3-439a-48f7-93fb-da7556184a8d`, publicado e confirmado com HTTP 200.
 
 ## Percentual
 

@@ -15,7 +15,7 @@ O painel está no Worker `alvo-church-web`, versão
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
-`0a86d984-a172-4200-9b8c-1ae677a21706`.
+`44b052f3-439a-48f7-93fb-da7556184a8d`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
