@@ -40,10 +40,14 @@ ritmo; nenhum texto, logotipo, fotografia ou componente foi copiado.
 - Mantenha uma única ação dominante: `Criar conta grátis`.
 - Preserve `50 membros` em toda menção ao plano gratuito.
 - No mobile, CTA, promessa e explicação precisam caber sem overflow horizontal.
-- Mantenha a transição entre seções compacta: cerca de 40–68 px por lado no
-  desktop e 40–48 px no celular.
-- Deixe os cartões crescerem conforme o conteúdo. Evite alturas mínimas acima de
-  220 px quando a informação não precisar delas.
+- Mantenha a transição entre seções compacta: 28–44 px por lado no desktop e
+  28–32 px no celular; duas seções consecutivas não devem somar mais de 80 px.
+- Deixe os cartões crescerem conforme o conteúdo, sem altura mínima decorativa.
+  Use até 22 px de respiro vertical entre borda e conteúdo no desktop.
+- Limite o hero a 58 px, os títulos de seção a 48 px e os títulos de cartões a
+  30 px no desktop; no celular, o hero deve permanecer entre 32 e 38 px.
+- Justifique parágrafos de leitura com hifenização automática. Rótulos, botões,
+  títulos e textos muito curtos mantêm alinhamento natural.
 
 ## Evitar
 

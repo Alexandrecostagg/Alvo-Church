@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **12/09/2026**, após a entrega ampliada 23: **96,05% (+0,05 ponto)**.
+Atualizado em **12/09/2026**, após a entrega ampliada 24: **96,10% (+0,05 ponto)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -28,7 +28,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.6 | Administração central | Publicado e validado — entregas 16–17 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Pausas alcançam UI, APIs e Firestore direto; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
-| P1.3 | Consolidação da LP | Parcial — entregas 22–23 | Oferta de 50, narrativa e direção visual próprias, marca oficial, ritmo vertical compacto, exemplos rotulados, canonical e links legais validados; CSS copiado e componente inoperante removidos. Faltam capturas reais do produto, analytics consentido e migração de domínio. |
+| P1.3 | Consolidação da LP | Parcial — entregas 22–24 | Oferta de 50, narrativa e direção visual próprias, marca oficial, títulos limitados, parágrafos justificados, cartões e ritmo vertical compactos, exemplos rotulados, canonical e links legais validados; CSS copiado e componente inoperante removidos. Faltam capturas reais do produto, analytics consentido e migração de domínio. |
 | P1.4 | Cobrança, comunicação e IA | Parcial — entrega 21 | Checkout/IA da entrega 7; WhatsApp manual seguro da entrega 8; rascunho de comunicado com revisão, cota e auditoria da entrega 21. Faltam sandbox Asaas, migrações e entrega por provedor/webhook. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 

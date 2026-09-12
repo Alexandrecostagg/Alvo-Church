@@ -1,21 +1,21 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 23: **96,05%**, ganho de **0,05 ponto**. O ritmo
-> vertical da LP foi compactado, com transições até 52% menores e limites
-> responsivos registrados no sistema visual.
-> Ver [evidências e limites](entrega-ampliada-23-ritmo-vertical-lp-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 24: **96,10%**, ganho de **0,05 ponto**. A LP agora
+> limita títulos, justifica parágrafos de leitura e mantém transições entre
+> seções consecutivas em até 80 px no desktop.
+> Ver [evidências e limites](entrega-ampliada-24-tipografia-ritmo-lp-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 23: `91e01c8`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–23 estão validadas e
+Base anterior à entrega 24: `cbf57a8`, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–24 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
 `afb66973-a44d-4b25-aa44-efd3a0e43ce1`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
-A LP está no Worker `plataformaesdras-lp`, versão
-`44b052f3-439a-48f7-93fb-da7556184a8d`.
+A LP está no Worker `plataformaesdras-lp`; a versão da entrega 24 será registrada
+após a publicação.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
