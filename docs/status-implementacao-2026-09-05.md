@@ -12,7 +12,7 @@ Base anterior à entrega 21: `14071c5`, branch
 publicadas; a entrega 21 está validada localmente e aguarda publicação na branch
 de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`a82a8b29-3bf8-460f-addf-2fe62e803410`, e a API de snapshots no Worker
+`afb66973-a44d-4b25-aa44-efd3a0e43ce1`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.

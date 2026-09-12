@@ -84,4 +84,13 @@ de 7–10 pontos deixaram de ser matematicamente possíveis sem aumentar o escop
 
 ## Publicação
 
-Será preenchida após commit, CI, regras e Worker estarem publicados.
+- Commit principal: `587e4d9`.
+- Worker `alvo-church-web`: versão
+  `afb66973-a44d-4b25-aa44-efd3a0e43ce1`; tela respondeu 200 e API sem sessão, 401.
+- Os secrets de DeepSeek, Groq e Turnstile permaneceram configurados no Worker.
+- A primeira execução remota encontrou uma virada de minuto no teste antigo de
+  cota pública depois que a nova suíte aumentou a duração. O teste foi reancorado
+  no minuto corrente sem alterar a regra do produto; nova execução será ligada
+  ao commit de evidência.
+- Regras Firestore aguardam apenas a renovação autorizada da sessão Firebase;
+  nenhuma regra foi parcialmente publicada.
