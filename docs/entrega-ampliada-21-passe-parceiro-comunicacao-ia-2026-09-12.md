@@ -90,7 +90,7 @@ de 7–10 pontos deixaram de ser matematicamente possíveis sem aumentar o escop
 - Os secrets de DeepSeek, Groq e Turnstile permaneceram configurados no Worker.
 - A primeira execução remota encontrou uma virada de minuto no teste antigo de
   cota pública depois que a nova suíte aumentou a duração. O teste foi reancorado
-  no minuto corrente sem alterar a regra do produto; nova execução será ligada
-  ao commit de evidência.
-- Regras Firestore aguardam apenas a renovação autorizada da sessão Firebase;
-  nenhuma regra foi parcialmente publicada.
+  no minuto corrente sem alterar a regra do produto. O commit `e85af54` passou
+  integralmente no GitHub Actions
+  [`34697158629`](https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/34697158629).
+- As regras Firestore compilaram e foram publicadas no projeto `alvo-church`.

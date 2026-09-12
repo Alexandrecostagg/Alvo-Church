@@ -8,9 +8,8 @@
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base anterior à entrega 21: `14071c5`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–20 estão validadas e
-publicadas; a entrega 21 está validada localmente e aguarda publicação na branch
-de trabalho.
+`codex/consolidacao-local-2026-09-05`. As entregas 17–21 estão validadas e
+publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
 `afb66973-a44d-4b25-aa44-efd3a0e43ce1`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
