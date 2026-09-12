@@ -40,6 +40,10 @@ ritmo; nenhum texto, logotipo, fotografia ou componente foi copiado.
 - Mantenha uma única ação dominante: `Criar conta grátis`.
 - Preserve `50 membros` em toda menção ao plano gratuito.
 - No mobile, CTA, promessa e explicação precisam caber sem overflow horizontal.
+- Mantenha a transição entre seções compacta: cerca de 40–68 px por lado no
+  desktop e 40–48 px no celular.
+- Deixe os cartões crescerem conforme o conteúdo. Evite alturas mínimas acima de
+  220 px quando a informação não precisar delas.
 
 ## Evitar
 
