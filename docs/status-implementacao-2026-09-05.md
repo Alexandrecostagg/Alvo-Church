@@ -8,13 +8,15 @@
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base anterior à entrega 22: `b135336`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–21 estão validadas e
+`codex/consolidacao-local-2026-09-05`. As entregas 17–22 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
 `afb66973-a44d-4b25-aa44-efd3a0e43ce1`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
+A LP está no Worker `plataformaesdras-lp`, versão
+`0a86d984-a172-4200-9b8c-1ae677a21706`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada

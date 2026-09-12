@@ -48,11 +48,17 @@ substitui o símbolo improvisado da LP.
 
 - TypeScript da LP: aprovado.
 - Export estático de `/` e `/landing`: aprovado.
+- CI integral [34699383607](https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/34699383607):
+  qualidade, autorização e builds web, mobile e LP aprovados.
 - Revisão visual: hero, narrativa completa, planos e largura estreita/desktop.
 - Responsividade: CTA, tipografia, grids e tabs reorganizados em telas pequenas.
 - Acessibilidade: landmarks preservados, heading único no hero, foco visível,
   controles com nomes e `prefers-reduced-motion` mantido.
 - Oferta gratuita preservada em **50 membros**.
+- Cloudflare Worker `plataformaesdras-lp`, versão
+  `0a86d984-a172-4200-9b8c-1ae677a21706`, publicado em
+  `https://plataformaesdras-lp.alexandrecostagg.workers.dev` e verificado com HTTP 200.
+- Commit funcional: `1a53fcf`.
 
 ## Limites
 
