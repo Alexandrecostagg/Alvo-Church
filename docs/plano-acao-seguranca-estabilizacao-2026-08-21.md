@@ -222,6 +222,13 @@ autorizada. Foram publicados os índices dessas consultas e a interface web foi
 atualizada. Ainda falta retirar a foto em base64 do documento do check-in e
 entregá-la apenas por armazenamento privado.
 
+Na entrega 20, crianças já cadastradas passaram a usar o vínculo familiar como
+fonte autoritativa: família ativa, associação da criança, responsável legal
+adulto e conta pessoa/usuário são validados no servidor. Nomes enviados pelo
+navegador não criam autorização. A retirada reconfirma a relação atual, portanto
+uma revogação cadastral bloqueia a liberação mesmo em check-in ainda aberto. A
+entrada avulsa permanece separada para visitantes sem cadastro prévio.
+
 ## Frente 5 — dependências e validação **(bloqueador para publicação)**
 
 1. Atualizar Next.js para versão corrigida (mínimo 16.2.11), Hono e a cadeia
@@ -276,3 +283,10 @@ regressão 49→50, types, builds web/LP/mobile e QA de navegador. CI definido,
 mas não executado no remoto. Seguem retenção/legado Kids, aparelhos, comprovantes,
 cobrança/cotas e comunicação real. Regras de aprovação de loja e log não tornam
 as duas escritas atômicas; esse refinamento segue pendente.
+
+### Fechamento local da entrega 20
+
+385 testes, TypeScript integral, build Next e emuladores passaram. O bloco da
+entrega 6 chegou a 101 verificações com família, conta vinculada, adulteração e
+revogação. O CI local passou a cobrir entregas 6–10 e o Turnstile de QA continua
+restrito ao projeto de demonstração com Auth e Firestore emulados.

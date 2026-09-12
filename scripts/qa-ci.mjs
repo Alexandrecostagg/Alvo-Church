@@ -53,6 +53,9 @@ try {
     "qa:kids-media",
     "qa:delivery6",
     "qa:delivery7",
+    "qa:delivery8",
+    "qa:delivery9",
+    "qa:delivery10",
   ])
     await run([task]);
 } finally {

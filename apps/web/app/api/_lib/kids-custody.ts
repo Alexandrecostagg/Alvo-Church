@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
 import { authorizeKids, kidsAccess } from "./kids-media";
+import { assertCurrentFamilyGuardian, assertCurrentGuardianAccount, registeredGuardianData, resolveRegisteredGuardians } from "./kids-family-guardians";
 const hash = (data: unknown) => createHash("sha256").update(JSON.stringify(data)).digest("hex");
 function text(value: unknown, name: string, max = 120, required = true) {
   if (!required && (value === undefined || value === "")) return "";
@@ -43,8 +44,11 @@ async function operator(tx: AccountTransaction, orgId: string, uid: string) {
 }
 export async function createKids(raw: any, uid: string) {
   const organizationId = documentId(raw.organizationId, "Igreja"), attempt = requestId(raw.requestId);
-  const guardians = guardianInput(raw);
-  const input = { ...guardians, sessionId: documentId(raw.sessionId, "Sessão"), childId: raw.childId ? documentId(raw.childId, "Criança cadastrada") : "", childName: text(raw.childName, "Nome da criança"), roomCode: text(raw.roomCode, "Sala", 120, false), allergies: text(raw.allergies, "Alergias", 500, false), securityRestrictions: text(raw.securityRestrictions, "Restrições", 500, false) };
+  const childId = raw.childId ? documentId(raw.childId, "Criança cadastrada") : "";
+  const guardianPersonId = childId ? documentId(raw.guardianPersonId, "Responsável legal") : "";
+  const guardians = childId ? { guardianPersonId } : guardianInput(raw);
+  if (childId && raw.identityConfirmed !== true) throw new AccountError(400, "Confirme a identidade do responsável legal escolhido.");
+  const input = { ...guardians, sessionId: documentId(raw.sessionId, "Sessão"), childId, childName: childId ? "" : text(raw.childName, "Nome da criança"), roomCode: text(raw.roomCode, "Sala", 120, false), allergies: text(raw.allergies, "Alergias", 500, false), securityRestrictions: text(raw.securityRestrictions, "Restrições", 500, false) };
   const fingerprint = hash({ input, uid }), id = `kc_${attempt}`;
   return accountTransaction(async tx => {
     await operator(tx, organizationId, uid);
@@ -57,15 +61,15 @@ export async function createKids(raw: any, uid: string) {
       return { checkIn: existing, replayed: true };
     }
     const session = (await authorizeSession(tx, organizationId, uid, input.sessionId, true))!;
-    let childName = input.childName;
+    let childName = input.childName, guardian;
     if (input.childId) {
-      const [child, claim] = await tx.read(`organizations/${organizationId}/people/${input.childId}`, `organizations/${organizationId}/kidsChildPresence/${input.childId}`);
-      if (child?.organizationId !== organizationId || child.status !== "active" || !["child", "teen"].includes(child.personType)) throw new AccountError(409, "Criança cadastral não encontrada nesta igreja.");
+      const registered = await registeredGuardianData(tx, organizationId, input.childId, guardianPersonId);
+      const [claim] = await tx.read(`organizations/${organizationId}/kidsChildPresence/${input.childId}`);
       if (claim) throw new AccountError(409, "Esta criança já possui uma entrada ativa. Confira a outra sala.");
-      childName = `${child.firstName} ${child.lastName ?? ""}`.trim();
+      childName = `${registered.child.firstName} ${registered.child.lastName ?? ""}`.trim();
+      guardian = registered.guardian;
       tx.set(`organizations/${organizationId}/kidsChildPresence/${input.childId}`, { checkInId: id, sessionId: session.id });
-    }
-    const guardian = await guardianData(tx, organizationId, input);
+    } else guardian = await guardianData(tx, organizationId, input as ReturnType<typeof guardianInput>);
     const now = new Date().toISOString();
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const random = crypto.getRandomValues(new Uint8Array(10));
@@ -79,16 +83,27 @@ export async function createKids(raw: any, uid: string) {
 }
 export async function assignGuardians(raw: any, uid: string) {
   const organizationId = documentId(raw.organizationId, "Igreja"), id = documentId(raw.checkInId, "Check-in");
-  const input = guardianInput(raw), reason = text(raw.reason, "Motivo", 500);
+  if (raw.identityConfirmed !== true) throw new AccountError(400, "Confirme a identidade do responsável e as autorizações.");
+  const reason = text(raw.reason, "Motivo", 500);
   if (!Number.isInteger(raw.expectedGuardianVersion) || raw.expectedGuardianVersion < 0) throw new AccountError(400, "Versão do vínculo inválida.");
   return accountTransaction(async tx => {
     const current = await authorizeKids(tx, organizationId, id, uid, true);
     if ((current.guardianVersion ?? 0) !== raw.expectedGuardianVersion) throw new AccountError(409, "Os responsáveis mudaram. Atualize antes de confirmar.");
-    const guardians = await guardianData(tx, organizationId, input);
+    const guardians = current.registeredChild === true
+      ? (await registeredGuardianData(tx, organizationId, documentId(current.childId, "Criança"), raw.guardianPersonId)).guardian
+      : await guardianData(tx, organizationId, guardianInput(raw));
     const guardianVersion = (current.guardianVersion ?? 0) + 1;
     tx.patch(`organizations/${organizationId}/kidsCheckIns/${id}`, { ...guardians, guardianVersion });
     tx.set(`organizations/${organizationId}/kidsCustodyAudit/${crypto.randomUUID()}`, { checkInId: id, action: "guardians_changed", actorId: uid, fromParentId: current.parentId ?? "", parentId: guardians.parentId, previousPeople: current.pickupPeople ?? [], pickupPeople: guardians.pickupPeople, identityConfirmed: true, guardianVersion, reason, at: new Date().toISOString() });
     return { checkIn: { ...current, ...guardians, guardianVersion } };
+  });
+}
+export async function familyGuardians(raw: any, uid: string) {
+  const organizationId = documentId(raw.organizationId, "Igreja"), childId = documentId(raw.childId, "Criança cadastrada");
+  return accountTransaction(async tx => {
+    await authorizeSession(tx, organizationId, uid, raw.sessionId);
+    const { guardians } = await resolveRegisteredGuardians(tx, organizationId, childId);
+    return { guardians: guardians.map(({ id, name, userId }) => ({ id, name, hasAppAccess: Boolean(userId) })) };
   });
 }
 export async function releaseKids(raw: any, uid: string) {
@@ -108,9 +123,14 @@ export async function releaseKids(raw: any, uid: string) {
     if (proof !== current.securityToken && proof.toUpperCase() !== current.pickupCode) throw new AccountError(403, "QR ou código de retirada incorreto.");
     const receiver = Array.isArray(current.pickupPeople) ? current.pickupPeople.find((person: any) => person.id === receiverId) : null;
     if (!receiver) throw new AccountError(403, "Esta pessoa não está autorizada a retirar. Confirme os responsáveis antes de continuar.");
+    if (current.registeredChild === true) await assertCurrentFamilyGuardian(tx, organizationId, documentId(current.childId, "Criança"), receiverId);
     if (receiver.userId) {
-      const [account] = await tx.read(`organizations/${organizationId}/users/${documentId(receiver.userId, "Responsável")}`);
-      if (account?.isActive !== true || account.organizationId !== organizationId) throw new AccountError(409, "Conta do responsável inativa. Confirme novamente a autorização pelo painel.");
+      const accountId = documentId(receiver.userId, "Responsável");
+      if (current.registeredChild === true) await assertCurrentGuardianAccount(tx, organizationId, documentId(receiver.id, "Pessoa responsável"), accountId);
+      else {
+        const [account] = await tx.read(`organizations/${organizationId}/users/${accountId}`);
+        if (account?.isActive !== true || account.organizationId !== organizationId) throw new AccountError(409, "Conta do responsável inativa. Confirme novamente a autorização pelo painel.");
+      }
     }
     const session = await authorizeSession(tx, organizationId, uid, current.sessionId);
     if (session) {

@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **08/09/2026**, após a entrega ampliada 18: **93,95% (+0,25 ponto)**.
+Atualizado em **12/09/2026**, após a entrega ampliada 20: **94,70% (+0,70 ponto)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -23,7 +23,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.1 | Dependências de produção | Validado localmente — entrega 1 | Zero críticos/altos; 1 moderado de uuid/Xcode sem alcance identificado no uso v4. Testes, builds, pods e QA registrados em `entregas-2026-09-05.md`. |
 | P0.2 | Conta → pessoa → Passe | Validado localmente — entrega 3 | Administração confirma vínculo exclusivo e auditado; regras negam autoatribuição e leitura alheia. Cartão mobile condicionado à elegibilidade; 78 verificações HTTP/regras, QR decodificado e exports iOS/Android. QA físico segue em P1.2. |
 | P0.3 | QR e fotos Kids | Validado localmente — entrega 4 | POST autenticado, Storage privado sem download token, consulta periódica; responsável/autorizado/operador/estranho, upload e exclusão física testados em 62 verificações. Retenção assistida validada na entrega 7; publicação/IAM e inventário legado pendentes. |
-| P0.4 | Fluxo Kids mobile | Validado localmente — entrega 6; físico pendente | Sessões por sala/evento/equipe, horário/lotação, presença cadastral exclusiva no painel e retirada validada no servidor; app usa as sessões. Retenção assistida validada na entrega 7; faltam relação familiar cadastral, legados remotos e aparelho. |
+| P0.4 | Fluxo Kids mobile | Validado localmente — entregas 6 e 20; físico pendente | Sessões por sala/evento/equipe, horário/lotação e presença exclusiva. Criança cadastrada só usa responsáveis legais ativos da família, com conta verificada quando existente e revogação reconferida na retirada. Entrada avulsa continua explícita. Faltam legados remotos e aparelho. |
 | P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
 | P0.6 | Administração central | Publicado e validado — entregas 16–17 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Pausas alcançam UI, APIs e Firestore direto; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |

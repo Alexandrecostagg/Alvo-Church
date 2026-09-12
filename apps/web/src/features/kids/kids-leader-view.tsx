@@ -52,6 +52,7 @@ interface KidRecord {
   guardianPhone?: string;     // WhatsApp de quem deixou
   authorizedPickupNames?: string[]; // nomes autorizados a retirar
 }
+interface FamilyGuardianChoice { id: string; name: string; hasAppAccess: boolean }
 
 // KidsCheckIn (Firestore) -> KidRecord (view).
 function toKidRecord(c: KidsCheckIn): KidRecord {
@@ -95,6 +96,10 @@ export function KidsLeaderView() {
   const [scannedChild, setScannedChild] = useState<KidRecord | null>(null);
   const [proof, setProof] = useState("");
   const [guardianEmail, setGuardianEmail] = useState("");
+  const [familyGuardians, setFamilyGuardians] = useState<FamilyGuardianChoice[]>([]);
+  const [guardianPersonId, setGuardianPersonId] = useState("");
+  const [familyGuardianError, setFamilyGuardianError] = useState<string | null>(null);
+  const [loadingFamilyGuardians, setLoadingFamilyGuardians] = useState(false);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const createAttempt = useRef(crypto.randomUUID());
@@ -123,6 +128,26 @@ export function KidsLeaderView() {
   // Retirada: quem está retirando + observação (auditoria) + código digitado (fallback).
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setFamilyGuardians([]); setGuardianPersonId(""); setFamilyGuardianError(null); setLoadingFamilyGuardians(false);
+    if (!childId || !user || !organizationId) return () => { active = false; };
+    setLoadingFamilyGuardians(true);
+    void (async () => {
+      try {
+        const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ action: "family_guardians", organizationId, childId, sessionId }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        if (!active) return;
+        const guardians = data.guardians as FamilyGuardianChoice[];
+        setFamilyGuardians(guardians); setGuardianPersonId(guardians[0]?.id ?? "");
+      } catch (error) {
+        if (active) setFamilyGuardianError(error instanceof Error ? error.message : "Não foi possível consultar os responsáveis legais.");
+      } finally { if (active) setLoadingFamilyGuardians(false); }
+    })();
+    return () => { active = false; };
+  }, [childId, organizationId, sessionId, user]);
 
   // Carrega os check-ins ativos reais do Firestore.
   const reloadKids = useCallback(async () => {
@@ -254,7 +279,7 @@ export function KidsLeaderView() {
 
   const handleCheckinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newKidDraft.name || !newKidDraft.parentName) return;
+    if (!newKidDraft.name || (!childId && !newKidDraft.parentName) || (childId && !guardianPersonId)) return;
 
     if (!user || saving || !identityConfirmed) return;
     setSaving(true); setLoadError(null);
@@ -262,7 +287,7 @@ export function KidsLeaderView() {
     let checkIn: KidsCheckIn;
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ action: "check_in", organizationId, sessionId, childId: childId || undefined, requestId: createAttempt.current, childName: newKidDraft.name, guardianName: newKidDraft.parentName, guardianEmail, guardianPhone: newKidDraft.parentPhone, authorizedNames: newKidDraft.authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies: newKidDraft.allergies, securityRestrictions: newKidDraft.securityRestrictions, identityConfirmed }) });
+      const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ action: "check_in", organizationId, sessionId, childId: childId || undefined, guardianPersonId: childId ? guardianPersonId : undefined, requestId: createAttempt.current, childName: newKidDraft.name, guardianName: childId ? undefined : newKidDraft.parentName, guardianEmail: childId ? undefined : guardianEmail, guardianPhone: childId ? undefined : newKidDraft.parentPhone, authorizedNames: childId ? undefined : newKidDraft.authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies: newKidDraft.allergies, securityRestrictions: newKidDraft.securityRestrictions, identityConfirmed }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       checkIn = data.checkIn;
@@ -280,7 +305,7 @@ export function KidsLeaderView() {
       ...prev
     ]);
     setNewKidDraft({ name: "", age: "", parentName: "", parentPhone: "", authorizedNames: "", allergies: "", securityRestrictions: "" });
-    setGuardianEmail(""); setIdentityConfirmed(false); setChildId("");
+    setGuardianEmail(""); setIdentityConfirmed(false); setChildId(""); setFamilyGuardians([]); setGuardianPersonId("");
     setJustCheckedIn({ id: checkIn.id, code: pickupCode, name: newKid.name });
     setView("list");
     void reloadKids();
@@ -536,10 +561,10 @@ export function KidsLeaderView() {
             </p>
 
             <form onSubmit={handleCheckinSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <label style={{ display: "block" }}>E-mail da conta do responsável (vazio para visitante sem conta)
+              {!childId && <label style={{ display: "block" }}>E-mail da conta do responsável (vazio para visitante sem conta)
                 <input type="email" value={guardianEmail} onChange={e => setGuardianEmail(e.target.value)} style={{ display: "block", width: "100%", padding: 10 }} />
-              </label>
-              <label style={{ display: "block" }}><input type="checkbox" checked={identityConfirmed} onChange={e => setIdentityConfirmed(e.target.checked)} /> Confirmei a identidade do responsável, o vínculo da conta informada e os autorizados a retirar.</label>
+              </label>}
+              <label style={{ display: "block" }}><input type="checkbox" checked={identityConfirmed} onChange={e => setIdentityConfirmed(e.target.checked)} /> {childId ? "Confirmei a identidade do responsável legal selecionado no cadastro familiar." : "Confirmei a identidade do responsável, o vínculo da conta informada e os autorizados a retirar."}</label>
               {loadError && <p role="alert">{loadError}</p>}
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Nome da Criança
@@ -554,7 +579,7 @@ export function KidsLeaderView() {
               </label>
 
               <div className="kids-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {canListChildren && <label>Criança cadastrada (opcional)<select value={childId} onChange={e => { setChildId(e.target.value); const child = children.find(p => p.id === e.target.value); if (child) setNewKidDraft(d => ({ ...d, name: `${child.firstName} ${child.lastName}`.trim() })); }}><option value="">Entrada avulsa / visitante</option>{children.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select></label>}
+                {canListChildren && <label>Criança cadastrada (opcional)<select value={childId} onChange={e => { const nextId = e.target.value; setChildId(nextId); setIdentityConfirmed(false); const child = children.find(p => p.id === nextId); setNewKidDraft(d => ({ ...d, name: child ? `${child.firstName} ${child.lastName}`.trim() : "" })); }}><option value="">Entrada avulsa / visitante</option>{children.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select></label>}
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Idade
                   <input 
@@ -567,7 +592,7 @@ export function KidsLeaderView() {
                   />
                 </label>
 
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                {!childId && <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                   Responsável pela Entrada
                   <input
                     required
@@ -576,10 +601,19 @@ export function KidsLeaderView() {
                     onChange={e => setNewKidDraft(prev => ({ ...prev, parentName: e.target.value }))}
                     style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                   />
-                </label>
+                </label>}
               </div>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+              {childId && <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+                Responsável legal presente
+                <select value={guardianPersonId} disabled={loadingFamilyGuardians || Boolean(familyGuardianError)} onChange={e => setGuardianPersonId(e.target.value)} style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)" }}>
+                  <option value="">{loadingFamilyGuardians ? "Consultando cadastro familiar..." : "Selecione o responsável"}</option>
+                  {familyGuardians.map(guardian => <option key={guardian.id} value={guardian.id}>{guardian.name}{guardian.hasAppAccess ? " · acesso ao app" : ""}</option>)}
+                </select>
+              </label>}
+              {familyGuardianError && <p role="alert">{familyGuardianError} Procure a secretaria para corrigir a família e os responsáveis legais.</p>}
+
+              {!childId && <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 WhatsApp do Responsável <span style={{ fontWeight: 400 }}>(contato em caso de necessidade)</span>
                 <input
                   type="tel"
@@ -588,9 +622,9 @@ export function KidsLeaderView() {
                   onChange={e => setNewKidDraft(prev => ({ ...prev, parentPhone: e.target.value }))}
                   style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
-              </label>
+              </label>}
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
+              {!childId && <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Quem mais pode retirar? <span style={{ fontWeight: 400 }}>(nomes separados por vírgula)</span>
                 <input
                   placeholder="Ex: Vovó Marta, Tio João"
@@ -598,7 +632,7 @@ export function KidsLeaderView() {
                   onChange={e => setNewKidDraft(prev => ({ ...prev, authorizedNames: e.target.value }))}
                   style={{ padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
                 />
-              </label>
+              </label>}
 
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
                 Alergias / Necessidades Médicas
@@ -630,7 +664,7 @@ export function KidsLeaderView() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={saving || !identityConfirmed}
+                  disabled={saving || !identityConfirmed || (Boolean(childId) && (loadingFamilyGuardians || !guardianPersonId || Boolean(familyGuardianError)))}
                   style={{ flex: 1, padding: "12px", background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "10px", fontWeight: 800, cursor: "pointer" }}
                 >
                   Gerar crachá e confirmar entrada

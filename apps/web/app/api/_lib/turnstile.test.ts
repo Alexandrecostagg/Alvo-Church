@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { verifyTurnstile } from "./turnstile";
+import { localQaTurnstileToken, verifyTurnstile } from "./turnstile";
 
 const validRequest = {
   token: "valid-turnstile-token",
@@ -14,6 +14,27 @@ afterEach(() => {
 });
 
 describe("Turnstile server validation", () => {
+  it("uses an action-bound token only inside the isolated QA emulators", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "demo-alvo-qa");
+    vi.stubEnv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8080");
+    vi.stubEnv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9099");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verifyTurnstile({
+      ...validRequest,
+      token: localQaTurnstileToken("public_visit"),
+    });
+    await expect(
+      verifyTurnstile({
+        ...validRequest,
+        token: localQaTurnstileToken("public_giving"),
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("fails closed in production when the secret is not configured", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("TURNSTILE_SECRET_KEY", "");

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { localQaTurnstileToken } from "../apps/web/app/api/_lib/turnstile";
 if (
   process.env.FIREBASE_PROJECT_ID !== "demo-alvo-qa" ||
   process.env.FIRESTORE_EMULATOR_HOST !== "127.0.0.1:8080" ||
@@ -37,13 +38,14 @@ async function login(who: string) {
   return (await r.json()).idToken as string;
 }
 async function api(path: string, body: object, token?: string) {
+  const payload = path === "public/visit" ? { turnstileToken: localQaTurnstileToken("public_visit"), turnstileRequestId: randomUUID(), ...body } : body;
   const r = await fetch(`http://127.0.0.1:3001/api/${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ organizationId: orgId, ...body }),
+    body: JSON.stringify({ organizationId: orgId, ...payload }),
   });
   return { status: r.status, data: await r.json() };
 }
@@ -562,12 +564,33 @@ async function run() {
     lastName: "QA",
     status: "active",
     personType: "child",
+    primaryFamilyId: "family_existing_3",
   });
+  equal((await api("kids/custody", { action: "family_guardians", childId: "existing_3", sessionId: room2.sessionId }, a)).status, 409, "Criança sem família completa não libera responsáveis digitados");
+  await org.collection("people").doc("existing_4").set({ organizationId: orgId, firstName: "Responsável", lastName: "Cadastrado", email: "admin.secundaria@example.test", whatsappPhone: "5591999999999", status: "active", personType: "adult" });
+  await org.collection("people").doc("existing_5").set({ organizationId: orgId, firstName: "Avó", lastName: "Autorizada", status: "active", personType: "adult" });
+  await org.collection("families").doc("family_existing_3").set({ organizationId: orgId, familyName: "Família QA", displayName: "Família QA", status: "active" });
+  const family = org.collection("families").doc("family_existing_3").collection("members");
+  await Promise.all([
+    family.doc("child").set({ organizationId: orgId, familyId: "family_existing_3", personId: "existing_3", relationshipType: "child", isLegalGuardian: false }),
+    family.doc("guardian").set({ organizationId: orgId, familyId: "family_existing_3", personId: "existing_4", relationshipType: "parent", isLegalGuardian: true }),
+    family.doc("grandmother").set({ organizationId: orgId, familyId: "family_existing_3", personId: "existing_5", relationshipType: "other", isLegalGuardian: true }),
+  ]);
+  await org.collection("users").doc(member).update({ personId: "existing_4" });
+  await org.collection("memberAccountLinks").doc(member).set({ organizationId: orgId, userId: member, personId: "existing_4", verifiedBy: admin });
+  await org.collection("memberAccountClaims").doc("existing_4").set({ organizationId: orgId, userId: member, personId: "existing_4" });
+  const familyChoices = await api("kids/custody", { action: "family_guardians", childId: "existing_3", sessionId: room2.sessionId }, a);
+  equal(familyChoices.status, 200, JSON.stringify(familyChoices));
+  equal(familyChoices.data.guardians.length, 2, "Somente responsáveis legais ativos");
+  equal(familyChoices.data.guardians[0].email, undefined, "API não expõe e-mail familiar");
+  equal(familyChoices.data.guardians[0].phone, undefined, "API não expõe telefone familiar");
   const identity = {
     ...child(room2.sessionId),
     childId: "existing_3",
     childName: "Nome adulterado",
+    guardianPersonId: "existing_4",
   };
+  equal((await api("kids/custody", { ...identity, guardianPersonId: "existing_6" }, a)).status, 409, "Nome digitado não substitui responsável legal cadastrado");
   const bound = await api("kids/custody", identity, a);
   equal(bound.status, 200, JSON.stringify(bound));
   equal(
@@ -575,6 +598,9 @@ async function run() {
     "Nome cadastral QA",
     "Nome autoritativo cadastral",
   );
+  equal(bound.data.checkIn.guardianName, "Responsável Cadastrado", "Responsável vem da família");
+  equal(bound.data.checkIn.parentId, member, "Conta verificada recebe acesso ao crachá");
+  equal(bound.data.checkIn.pickupPeople.length, 2, "Todos os responsáveis legais podem retirar");
   equal(
     (await api("kids/custody", { ...identity, requestId: randomUUID() }, a))
       .status,
@@ -611,6 +637,9 @@ async function run() {
     50,
     "Kids não cria pessoa nem amplia limite",
   );
+  await family.doc("grandmother").update({ isLegalGuardian: false });
+  equal((await api("kids/custody", { ...release, requestId: randomUUID(), checkInId: bound.data.checkIn.id, proof: bound.data.checkIn.pickupCode, receiverId: "existing_5" }, a)).status, 409, "Revogação familiar é aplicada antes da retirada");
+  await family.doc("grandmother").update({ isLegalGuardian: true });
   equal(
     (
       await api(
@@ -620,6 +649,7 @@ async function run() {
           requestId: randomUUID(),
           checkInId: bound.data.checkIn.id,
           proof: bound.data.checkIn.pickupCode,
+          receiverId: "existing_5",
         },
         a,
       )

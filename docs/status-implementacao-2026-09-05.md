@@ -1,14 +1,15 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 19: **94,00%**, ganho de **0,05 ponto**. O cron diário
-> agora calcula indicadores reais de membros, grupos, finanças e eventos por
-> instituição, e o painel informa cobertura e data da consolidação.
-> Ver [evidências e limites](entrega-ampliada-19-indicadores-rede-2026-09-08.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 20: **94,70%**, ganho de **0,70 ponto**. Crianças
+> cadastradas agora usam exclusivamente os responsáveis legais ativos da família;
+> a retirada reconfirma o vínculo vigente. O CI isolado também voltou a validar
+> Turnstile e passou a executar as entregas 8–10.
+> Ver [evidências e limites](entrega-ampliada-20-familia-kids-ci-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base anterior à entrega 19: `2f7aad6`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–19 estão validadas e
-publicadas na branch de trabalho.
+Base anterior à entrega 20: `d1de495`, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–19 estão publicadas e a
+entrega 20 está validada localmente, aguardando o registro da publicação.
 O painel está no Worker `alvo-church-web`, versão
 `19ba5036-2700-4908-9a3a-c146d4887318`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
@@ -114,7 +115,10 @@ App Store, instalação física e configuração remota de CI permanecem sem ins
    ou alterar o produto por decisão comercial explícita; não aumentar limite
    silenciosamente para acompanhar a propaganda.
 7. CI versionado na entrega 6 para tipos, testes, builds por aplicação e emuladores.
-   Sem push: nenhuma execução desse workflow remoto foi verificada.
+   Na entrega 20, a massa local de Turnstile passou a usar desafio vinculado à
+   ação somente no projeto isolado `demo-alvo-qa`, e as entregas 8–10 entraram
+   na matriz. A validação local integral passou; a execução remota será registrada
+   após o push.
 
 ## App e LP: recomendação de repositórios
 
@@ -165,9 +169,9 @@ a versão 10 para revisão. Entrega 12 publicou o AAB 11 no teste interno. Entre
 corrigida, com regras já publicadas. Entrega 14 publicou o AAB 12 no teste interno.
 Entrega 15 implementou e publicou Turnstile com QA ao vivo. Entrega 16 publicou
 a gestão central, a entrega 17 tornou seus bloqueios efetivos, a entrega 18
-protegeu e completou a administração dos vínculos de rede e a entrega 19
-publicou sua consolidação diária com dados reais. A primeira atualização remota
-ocorrerá no próximo cron das 03:00 em Belém; seguem
+protegeu e completou a administração dos vínculos de rede, a entrega 19
+publicou sua consolidação diária com dados reais e a entrega 20 vinculou a
+custódia Kids ao cadastro familiar oficial. Seguem
 instalação e QA em aparelho, migrações legadas,
 sandbox Asaas, comunicação por provedor e homologação coordenada.
 Manter pacotes maiores conforme pedido do usuário, com percentual sustentado por

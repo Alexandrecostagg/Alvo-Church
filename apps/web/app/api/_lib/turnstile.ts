@@ -1,4 +1,5 @@
 import { AccountError } from "./member-account-store";
+import { isLocalQaFirebase } from "./firebase-server-env";
 
 const SITEVERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -16,6 +17,12 @@ interface TurnstileInput {
   expectedAction: "public_visit" | "public_giving";
   remoteIp?: string;
   idempotencyKey?: unknown;
+}
+
+export function localQaTurnstileToken(
+  action: TurnstileInput["expectedAction"],
+) {
+  return `local-qa-turnstile:${action}`;
 }
 
 function secretKey() {
@@ -77,6 +84,15 @@ export async function verifyTurnstile({
   remoteIp,
   idempotencyKey,
 }: TurnstileInput) {
+  const challenge = challengeToken(token);
+  if (isLocalQaFirebase()) {
+    if (challenge !== localQaTurnstileToken(expectedAction))
+      throw new AccountError(
+        400,
+        "A verificação de segurança de QA é inválida.",
+      );
+    return;
+  }
   const allowed = allowedHostnames();
   if (process.env.NODE_ENV === "production" && !allowed.length)
     throw new AccountError(
@@ -85,7 +101,7 @@ export async function verifyTurnstile({
     );
   const body = new URLSearchParams({
     secret: secretKey(),
-    response: challengeToken(token),
+    response: challenge,
   });
   if (remoteIp && remoteIp !== "unknown") body.set("remoteip", remoteIp);
   const requestId = uuid(idempotencyKey);

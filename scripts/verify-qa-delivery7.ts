@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { localQaTurnstileToken } from "../apps/web/app/api/_lib/turnstile";
 import {
   startBilling,
   billingEvent,
@@ -59,13 +60,16 @@ async function login(who: string) {
   return (await r.json()).idToken as string;
 }
 async function api(path: string, body: object, token?: string) {
+  const payload = path === "public/giving" && (body as { action?: string }).action === "intent"
+    ? { turnstileToken: localQaTurnstileToken("public_giving"), turnstileRequestId: randomUUID(), ...body }
+    : body;
   const r = await fetch(`http://127.0.0.1:3001/api/${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ organizationId: orgId, ...body }),
+    body: JSON.stringify({ organizationId: orgId, ...payload }),
   });
   return {
     status: r.status,

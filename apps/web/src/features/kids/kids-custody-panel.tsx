@@ -1,13 +1,13 @@
 "use client";
 import { kidsOperation } from "./kids-operations-client";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { KidsCheckIn } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { KidsPhotoEditor } from "./kids-photo-editor";
 const fieldStyle = { display: "block", width: "100%", padding: 10, marginBlock: 8 };
 
 export function KidsCustodyPanel({ record, initialProof, onClose }: { record: KidsCheckIn; initialProof: string; onClose: (releasedTo?: string) => void }) {
-  const { user, organizationId, firebaseConfig } = useAppAuth();
+  const { user, organizationId } = useAppAuth();
   const [current, setCurrent] = useState(record);
   const [proof, setProof] = useState(initialProof);
   const [receiverId, setReceiverId] = useState("");
@@ -16,12 +16,12 @@ export function KidsCustodyPanel({ record, initialProof, onClose }: { record: Ki
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const attempt = useRef(crypto.randomUUID());
-  async function call(body: object) {
+  const call = useCallback(async (body: object) => {
     if (!user) throw new Error("Entre na sua conta.");
     const token = await user.getIdToken();
     const response = await fetch("/api/kids/custody", { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ ...body, organizationId, checkInId: current.id }) });
     const data = await response.json(); if (!response.ok) throw new Error(data.error); return data;
-  }
+  }, [current.id, organizationId, user]);
   async function release() {
     setBusy(true); setMessage("");
     try {
@@ -33,7 +33,6 @@ export function KidsCustodyPanel({ record, initialProof, onClose }: { record: Ki
   async function refresh() {
     setBusy(true);
     try {
-      const sdk = await import("@alvo/firebase");
       const updated = (await kidsOperation(user, organizationId, { action: "lookup", proof: current.securityToken })).checkIn;
       if (!updated || updated.status !== "checked_in") { onClose(); return; }
       setCurrent(updated); setReceiverId(""); setConfirmed(false); setMessage("");
@@ -77,21 +76,37 @@ function GuardianEditor({ record, disabled, call, onChanged }: { record: KidsChe
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [familyGuardians, setFamilyGuardians] = useState<Array<{ id: string; name: string; hasAppAccess: boolean }>>([]);
+  const [guardianPersonId, setGuardianPersonId] = useState(record.guardianPersonId ?? "");
+  useEffect(() => {
+    let active = true;
+    if (record.registeredChild !== true) return () => { active = false; };
+    setBusy(true);
+    void call({ action: "family_guardians", childId: record.childId, sessionId: record.sessionId })
+      .then(data => { if (active) { setFamilyGuardians(data.guardians); setGuardianPersonId(current => current || data.guardians[0]?.id || ""); } })
+      .catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Falha ao consultar a família."); })
+      .finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [call, record.childId, record.registeredChild, record.sessionId]);
   async function save() {
     setBusy(true);
     try {
-      const data = await call({ action: "guardians", guardianName: name, guardianEmail: email, guardianPhone: record.guardianPhone ?? "", authorizedNames: names.split(",").map(n => n.trim()).filter(Boolean), reason, identityConfirmed: confirmed, expectedGuardianVersion: record.guardianVersion ?? 0 });
+      const data = await call(record.registeredChild === true
+        ? { action: "guardians", guardianPersonId, reason, identityConfirmed: confirmed, expectedGuardianVersion: record.guardianVersion ?? 0 }
+        : { action: "guardians", guardianName: name, guardianEmail: email, guardianPhone: record.guardianPhone ?? "", authorizedNames: names.split(",").map(n => n.trim()).filter(Boolean), reason, identityConfirmed: confirmed, expectedGuardianVersion: record.guardianVersion ?? 0 });
       onChanged(data.checkIn);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Falha ao confirmar responsáveis."); }
     finally { setBusy(false); }
   }
   return <fieldset disabled={busy || disabled} style={{ border: 0, padding: 0 }}>
+    {record.registeredChild === true ? <label>Responsável legal cadastrado<select style={fieldStyle} value={guardianPersonId} onChange={e => setGuardianPersonId(e.target.value)}><option value="">Selecione</option>{familyGuardians.map(guardian => <option key={guardian.id} value={guardian.id}>{guardian.name}{guardian.hasAppAccess ? " · acesso ao app" : ""}</option>)}</select></label> : <>
     <label>Nome do responsável<input style={fieldStyle} value={name} onChange={e => setName(e.target.value)} /></label>
     <label>E-mail da conta na igreja (vazio para responsável sem conta)<input style={fieldStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
     <label>Outras pessoas autorizadas, separadas por vírgula<input style={fieldStyle} value={names} onChange={e => setNames(e.target.value)} /></label>
+    </>}
     <label>Motivo da confirmação ou alteração<textarea style={fieldStyle} value={reason} maxLength={500} onChange={e => setReason(e.target.value)} /></label>
     <label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> Confirmei a identidade, o vínculo da conta informada e a autorização destas pessoas.</label>
     <p role="status">{message}</p>
-    <button disabled={!confirmed || !reason.trim() || !name.trim()} onClick={() => void save()}>Salvar responsáveis</button>
+    <button disabled={!confirmed || !reason.trim() || (record.registeredChild === true ? !guardianPersonId : !name.trim())} onClick={() => void save()}>Salvar responsáveis</button>
   </fieldset>;
 }

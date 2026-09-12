@@ -1193,6 +1193,9 @@ export interface KidsCheckIn {
   organizationId: string;
   campusId?: string;
   childId: string;                 // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
+  registeredChild?: boolean;
+  familyId?: string;
+  guardianPersonId?: string;
   parentId: string;                // conta do responsável; vazio quando sem conta, nunca o operador por padrão
   authorizedPickUpIds: string[];   // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
   checkedInAt: string;
