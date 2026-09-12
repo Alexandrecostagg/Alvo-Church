@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { friendlyError } from "../../lib/friendly-error";
-import { Check, Sparkles, Lock, Zap, Loader2, Receipt, AlertTriangle } from "lucide-react";
+import { Check, Sparkles, Lock, Zap, Loader2, Receipt, AlertTriangle, CircleCheck, CircleX, Webhook } from "lucide-react";
 import { usePlan } from "../../../contexts/PlanContext";
 import { useAppAuth } from "../../../app/providers";
 import type { PlanId } from "@alvo/firebase";
@@ -109,6 +109,18 @@ interface Invoice {
   invoiceUrl: string | null;
 }
 
+interface BillingConnection {
+  provider: string;
+  environment: "sandbox" | "production";
+  connection: "connected" | "unavailable" | "not_configured";
+  receiverSecretConfigured: boolean;
+  webhook: { found: boolean; enabled: boolean; interrupted: boolean; eventCount: number };
+  linked: boolean;
+  lastSyncAt: string | null;
+  lastProviderStatus: string | null;
+  checkedAt: string;
+}
+
 const INVOICE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Aguardando pagamento", color: "#9a6b00" },
   OVERDUE: { label: "Vencida", color: "#A32D2D" },
@@ -137,6 +149,7 @@ export function PlanoView() {
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [connection, setConnection] = useState<BillingConnection | null>(null);
 
   useEffect(() => {
     if (!user || !organizationId) return;
@@ -145,11 +158,16 @@ export function PlanoView() {
     (async () => {
       try {
         const idToken = await user.getIdToken();
-        const res = await fetch(`/api/billing/invoices?organizationId=${encodeURIComponent(organizationId)}`, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-        const data = await res.json();
-        if (!cancelled) setInvoices(res.ok ? data.invoices ?? [] : []);
+        const authHeaders = { Authorization: `Bearer ${idToken}` };
+        const [invoiceResponse, statusResponse] = await Promise.all([
+          fetch(`/api/billing/invoices?organizationId=${encodeURIComponent(organizationId)}`, { headers: authHeaders }),
+          fetch(`/api/billing/status?organizationId=${encodeURIComponent(organizationId)}`, { headers: authHeaders, cache: "no-store" }),
+        ]);
+        const [invoiceData, statusData] = await Promise.all([invoiceResponse.json(), statusResponse.json()]);
+        if (!cancelled) {
+          setInvoices(invoiceResponse.ok ? invoiceData.invoices ?? [] : []);
+          setConnection(statusResponse.ok ? statusData : null);
+        }
       } catch {
         if (!cancelled) setInvoices([]);
       } finally {
@@ -237,6 +255,39 @@ export function PlanoView() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {connection && (
+        <div style={{
+          display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 10px", alignItems: "center",
+          padding: "1rem 1.25rem", borderRadius: 12,
+          background: connection.connection === "connected" && connection.receiverSecretConfigured && connection.webhook.enabled && !connection.webhook.interrupted
+            ? "var(--color-background-success, #edf8f1)"
+            : "var(--color-background-warning, #fff7e6)",
+          margin: "-1rem 0 2rem", fontSize: 13,
+        }}>
+          {connection.connection === "connected" ? <CircleCheck size={18} color="#1b8a4a" /> : <CircleX size={18} color="#A32D2D" />}
+          <strong>
+            Asaas {connection.connection === "connected" ? "conectado" : "precisa de atenção"}
+            {connection.environment === "production" ? " · produção" : " · ambiente de testes"}
+          </strong>
+          <Webhook size={16} color={connection.receiverSecretConfigured && connection.webhook.enabled && !connection.webhook.interrupted ? "#1b8a4a" : "#9a6b00"} />
+          <span>
+            {connection.webhook.found
+              ? connection.webhook.interrupted
+                ? "Webhook encontrado, mas a fila está interrompida."
+                : connection.webhook.enabled
+                  ? `Webhook ativo para ${connection.webhook.eventCount} eventos.`
+                  : "Webhook encontrado, porém desativado."
+              : "Webhook financeiro não foi localizado na conta Asaas."}
+            {!connection.receiverSecretConfigured ? " O token de recebimento precisa ser revisto." : ""}
+            {connection.lastSyncAt
+              ? ` Última sincronização registrada em ${new Date(connection.lastSyncAt).toLocaleString("pt-BR")}.`
+              : connection.linked
+                ? " Assinatura vinculada, ainda sem evento registrado."
+                : " Esta igreja ainda não possui assinatura vinculada."}
+          </span>
         </div>
       )}
 

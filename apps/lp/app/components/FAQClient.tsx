@@ -61,6 +61,9 @@ export function FAQClient() {
                 onClick={() => setOpen(open === i ? null : i)}
                 aria-expanded={open === i}
                 aria-controls={`lp-faq-answer-${i}`}
+                data-analytics-event="faq_open"
+                data-analytics-placement="faq"
+                data-analytics-target={`faq-${i + 1}`}
               >
                 <span>{item.q}</span>
                 <span className="lp-faq-chevron" aria-hidden="true">

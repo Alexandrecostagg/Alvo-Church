@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
 
 const WEB_APP_URL = "https://alvo-church-web.alexandrecostagg.workers.dev";
+const LP_URL = "https://plataformaesdras.com.br";
 
 import { Reveal } from "./components/Reveal";
 import { ModuleShowcaseClient } from "./components/ModuleShowcaseClient";
 import { PricingClient } from "./components/PricingClient";
 import { FAQClient } from "./components/FAQClient";
+import { ConversionAnalytics } from "./components/ConversionAnalytics";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(WEB_APP_URL),
+  metadataBase: new URL(LP_URL),
   title: "Plataforma Esdras — Gestão que mantém as pessoas à vista",
   description:
     "Organize membros, recepção, células, finanças, escalas e cuidado pastoral. Plano gratuito para igrejas com até 50 membros.",
-  alternates: { canonical: "/landing" },
+  alternates: { canonical: "/" },
   openGraph: {
     title: "Plataforma Esdras — Gestão que mantém as pessoas à vista",
     description:
       "Membros, recepção, células, finanças, escalas e cuidado pastoral trabalhando juntos.",
     type: "website",
-    url: "https://alvo-church-web.alexandrecostagg.workers.dev",
+    url: LP_URL,
     siteName: "Plataforma Esdras",
     locale: "pt_BR",
   },
@@ -43,6 +45,7 @@ export default function LandingPage() {
       <Contact />
       <FinalCTA />
       <LPFooter />
+      <ConversionAnalytics />
     </div>
   );
 }
@@ -76,10 +79,10 @@ function LPNav() {
             </a>
           </nav>
           <div className="lp-nav-ctas">
-            <a href={`${WEB_APP_URL}/login`} className="lp-btn-ghost">
+            <a href={`${WEB_APP_URL}/login`} className="lp-btn-ghost" data-analytics-event="secondary_cta_click" data-analytics-placement="navigation" data-analytics-target="login">
               Entrar
             </a>
-            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary">
+            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary" data-analytics-event="primary_cta_click" data-analytics-placement="navigation" data-analytics-target="signup">
               Criar conta grátis
             </a>
           </div>
@@ -103,10 +106,10 @@ function Hero() {
             trabalham juntos para a liderança agir no momento certo.
           </p>
           <div className="lp-hero-ctas">
-            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary lp-btn-lg">
+            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary lp-btn-lg" data-analytics-event="primary_cta_click" data-analytics-placement="hero" data-analytics-target="signup">
               Criar conta grátis
             </a>
-            <a href="#modulos" className="lp-btn-ghost lp-btn-lg">
+            <a href="#modulos" className="lp-btn-ghost lp-btn-lg" data-analytics-event="secondary_cta_click" data-analytics-placement="hero" data-analytics-target="modules">
               Conhecer a plataforma
             </a>
           </div>
@@ -296,7 +299,7 @@ function FinalCTA() {
         </Reveal>
         <Reveal delay={160}>
           <div className="lp-hero-ctas">
-            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary lp-btn-lg lp-btn-white">
+            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary lp-btn-lg lp-btn-white" data-analytics-event="primary_cta_click" data-analytics-placement="final" data-analytics-target="signup">
               Criar conta grátis
             </a>
             <a
@@ -304,6 +307,9 @@ function FinalCTA() {
               target="_blank"
               rel="noreferrer"
               className="lp-btn-ghost lp-btn-lg lp-btn-network"
+              data-analytics-event="contact_click"
+              data-analytics-placement="final"
+              data-analytics-target="whatsapp"
             >
               Sou uma rede de igrejas
             </a>
@@ -327,7 +333,7 @@ function Contact() {
                 Nossa equipe está pronta para orientar sua igreja e tirar suas dúvidas sobre a Plataforma Esdras.
               </p>
             </div>
-            <a className="lp-contact-email" href="mailto:contato@plataformaesdras.com.br">
+            <a className="lp-contact-email" href="mailto:contato@plataformaesdras.com.br" data-analytics-event="contact_click" data-analytics-placement="contact" data-analytics-target="email">
               contato@plataformaesdras.com.br
             </a>
           </div>

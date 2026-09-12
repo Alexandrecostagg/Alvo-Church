@@ -13,7 +13,7 @@ export const asaas: Gateway = async (path, body) => {
   if (!key)
     throw new AccountError(503, "Gateway de pagamento ainda não configurado.");
   const base =
-    process.env.ASAAS_API_BASE_URL || "https://sandbox.asaas.com/api/v3";
+    process.env.ASAAS_API_BASE_URL || "https://api-sandbox.asaas.com/v3";
   if (
     ![
       "https://sandbox.asaas.com/api/v3",

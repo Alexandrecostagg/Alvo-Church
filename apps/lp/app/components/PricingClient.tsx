@@ -82,6 +82,9 @@ export function PricingClient() {
           aria-label="Alternar entre cobrança mensal e anual"
           className={`lp-toggle-switch${annual ? " on" : ""}`}
           onClick={() => setAnnual((a) => !a)}
+          data-analytics-event="pricing_toggle"
+          data-analytics-placement="pricing"
+          data-analytics-target={annual ? "monthly" : "annual"}
         >
           <span className="lp-toggle-thumb" />
         </button>
@@ -131,6 +134,9 @@ export function PricingClient() {
                   target="_blank"
                   rel="noreferrer"
                   className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}
+                  data-analytics-event="contact_click"
+                  data-analytics-placement={`pricing-${plan.id}`}
+                  data-analytics-target="whatsapp"
                 >
                   {plan.cta}
                 </a>
@@ -138,6 +144,9 @@ export function PricingClient() {
                 <a
                   href="https://alvo-church-web.alexandrecostagg.workers.dev/signup"
                   className={`lp-plan-cta${plan.highlight ? " primary" : ""}`}
+                  data-analytics-event="primary_cta_click"
+                  data-analytics-placement={`pricing-${plan.id}`}
+                  data-analytics-target="signup"
                 >
                   {plan.cta}
                 </a>

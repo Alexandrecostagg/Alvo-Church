@@ -216,6 +216,9 @@ export function ModuleShowcaseClient() {
             aria-selected={i === active}
             className={`lp-module-tab${i === active ? " active" : ""}`}
             onClick={() => setActive(i)}
+            data-analytics-event="module_view"
+            data-analytics-placement="modules"
+            data-analytics-target={m.visual}
           >
             {m.tag}
           </button>
@@ -230,7 +233,7 @@ export function ModuleShowcaseClient() {
             <span className="lp-module-subtitle">{mod.subtitle}</span>
           </h3>
           <p>{mod.description}</p>
-          <a href="https://alvo-church-web.alexandrecostagg.workers.dev/signup" className="lp-btn-primary">
+          <a href="https://alvo-church-web.alexandrecostagg.workers.dev/signup" className="lp-btn-primary" data-analytics-event="primary_cta_click" data-analytics-placement={`module-${mod.visual}`} data-analytics-target="signup">
             Experimentar →
           </a>
         </div>

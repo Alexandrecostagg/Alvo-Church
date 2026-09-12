@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { friendlyError } from "../../lib/friendly-error";
-import { AlertTriangle, Building2, GraduationCap, LayoutDashboard, Loader2, Settings2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, GraduationCap, LayoutDashboard, Loader2, MousePointerClick, Settings2, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 import { PlatformProgramsView } from "./platform-programs-view";
 import { fetchPlatformOverview, isPlatformAdmin } from "@alvo/firebase";
@@ -19,8 +19,8 @@ const PLAN_LABELS: Record<PlanId, string> = {
 };
 
 // Preços mensais de referência (mesmos de /settings/plano). MRR aqui é uma
-// ESTIMATIVA com base no plano corrente — não substitui o valor real de
-// faturamento/gateway, que esta plataforma ainda não integra.
+// ESTIMATIVA com base no plano corrente — não substitui o valor conciliado
+// pelo Asaas.
 const PLAN_PRICE: Record<PlanId, number> = {
   free: 0,
   comunidade: 79,
@@ -49,7 +49,12 @@ export function PlatformAdminView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orgs, setOrgs] = useState<PlatformOrgSummary[]>([]);
-  const [tab, setTab] = useState<"overview" | "programs">("overview");
+  const [tab, setTab] = useState<"overview" | "acquisition" | "programs">("overview");
+  const [analytics, setAnalytics] = useState<{
+    totals: Record<string, number>;
+    series: Array<{ day: string; counts: Record<string, number> }>;
+  } | null>(null);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,6 +80,24 @@ export function PlatformAdminView() {
   useEffect(() => {
     void loadOrganizations();
   }, [loadOrganizations]);
+
+  useEffect(() => {
+    if (!authorized || !user) return;
+    let cancelled = false;
+    user.getIdToken().then((token) =>
+      fetch("/api/platform/lp-analytics", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      }),
+    ).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      if (!cancelled) setAnalytics(data);
+    }).catch((reason) => {
+      if (!cancelled) setAnalyticsError(friendlyError(reason, "Métricas indisponíveis"));
+    });
+    return () => { cancelled = true; };
+  }, [authorized, user]);
 
   const stats = useMemo(() => {
     const totalMembers = orgs.reduce((s, o) => s + o.memberCount, 0);
@@ -119,16 +142,25 @@ export function PlatformAdminView() {
           Visão da plataforma
         </h1>
         <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0 }}>
-          {tab === "overview" ? "Todas as organizações, planos e uso de IA em um só lugar." : "Catálogo de trilhas vendidas às igrejas na Loja de Capacitação."}
+          {tab === "overview"
+            ? "Todas as organizações, planos e uso de IA em um só lugar."
+            : tab === "acquisition"
+              ? "Interações consentidas na página pública nos últimos sete dias."
+              : "Catálogo de trilhas vendidas às igrejas na Loja de Capacitação."}
         </p>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
         <TabButton active={tab === "overview"} onClick={() => setTab("overview")} icon={<LayoutDashboard size={15} />} label="Visão" />
+        <TabButton active={tab === "acquisition"} onClick={() => setTab("acquisition")} icon={<BarChart3 size={15} />} label="Aquisição" />
         <TabButton active={tab === "programs"} onClick={() => setTab("programs")} icon={<GraduationCap size={15} />} label="Capacitação" />
       </div>
 
       {tab === "programs" && <PlatformProgramsView />}
+
+      {tab === "acquisition" && (
+        <AcquisitionView analytics={analytics} error={analyticsError} />
+      )}
 
       {tab === "overview" && (
       <>
@@ -257,13 +289,41 @@ export function PlatformAdminView() {
           </div>
 
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary, #94a3b8)", marginTop: 12 }}>
-            "Última atividade" usa o check-in de culto mais recente registrado; organizações sem check-ins mostram a data de início da assinatura. MRR é estimado pelo preço de tabela do plano atual — não reflete cobrança real, já que não há gateway de pagamento integrado ainda.
+            "Última atividade" usa o check-in de culto mais recente registrado; organizações sem check-ins mostram a data de início da assinatura. MRR é estimado pelo preço de tabela do plano atual e não substitui os valores conciliados pelo Asaas.
           </p>
         </>
       )}
       </>
       )}
     </div>
+  );
+}
+
+function AcquisitionView({ analytics, error }: {
+  analytics: { totals: Record<string, number>; series: Array<{ day: string; counts: Record<string, number> }> } | null;
+  error: string;
+}) {
+  if (error) return <div style={{ padding: 14, borderRadius: 10, background: "#FCEBEB", color: "#A32D2D", fontSize: 13 }}>{error}</div>;
+  if (!analytics) return <div style={{ padding: "3rem", display: "flex", justifyContent: "center" }}><Loader2 size={22} className="spin" /></div>;
+  const views = analytics.totals.lp_view ?? 0;
+  const primary = analytics.totals.primary_cta_click ?? 0;
+  const clicksPerVisit = views ? (primary / views).toFixed(2).replace(".", ",") : "—";
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <StatCard icon={<Users size={16} />} label="Visitas consentidas" value={String(views)} />
+        <StatCard icon={<MousePointerClick size={16} />} label="Cliques principais" value={String(primary)} />
+        <StatCard icon={<TrendingUp size={16} />} label="Cliques por visita" value={clicksPerVisit} sub="interações; não equivale a cadastro concluído" />
+        <StatCard icon={<Sparkles size={16} />} label="Módulos explorados" value={String(analytics.totals.module_view ?? 0)} />
+      </div>
+      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead><tr style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", textAlign: "left" }}><th style={thStyle}>Dia</th><th style={thStyle}>Visitas</th><th style={thStyle}>Cliques principais</th><th style={thStyle}>Contato</th><th style={thStyle}>Dúvidas abertas</th></tr></thead>
+          <tbody>{analytics.series.map((row) => <tr key={row.day} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}><td style={tdStyle}>{new Date(`${row.day}T12:00:00Z`).toLocaleDateString("pt-BR")}</td><td style={tdStyle}>{row.counts.lp_view ?? 0}</td><td style={tdStyle}>{row.counts.primary_cta_click ?? 0}</td><td style={tdStyle}>{row.counts.contact_click ?? 0}</td><td style={tdStyle}>{row.counts.faq_open ?? 0}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: 11, color: "var(--color-text-tertiary, #94a3b8)", marginTop: 12 }}>A contagem começa somente após o visitante permitir métricas. Nenhum nome, telefone ou e-mail é coletado.</p>
+    </>
   );
 }
 
