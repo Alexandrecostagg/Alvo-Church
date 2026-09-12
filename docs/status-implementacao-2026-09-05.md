@@ -8,10 +8,10 @@
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
 Base anterior à entrega 20: `d1de495`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–19 estão publicadas e a
-entrega 20 está validada localmente, aguardando o registro da publicação.
+`codex/consolidacao-local-2026-09-05`. As entregas 17–20 estão validadas e
+publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`19ba5036-2700-4908-9a3a-c146d4887318`, e a API de snapshots no Worker
+`a82a8b29-3bf8-460f-addf-2fe62e803410`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
@@ -117,8 +117,8 @@ App Store, instalação física e configuração remota de CI permanecem sem ins
 7. CI versionado na entrega 6 para tipos, testes, builds por aplicação e emuladores.
    Na entrega 20, a massa local de Turnstile passou a usar desafio vinculado à
    ação somente no projeto isolado `demo-alvo-qa`, e as entregas 8–10 entraram
-   na matriz. A validação local integral passou; a execução remota será registrada
-   após o push.
+   na matriz. A execução remota `34695537668` passou em qualidade, autorização e
+   builds web, mobile e LP.
 
 ## App e LP: recomendação de repositórios
 

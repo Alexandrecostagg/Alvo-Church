@@ -70,5 +70,18 @@ O ganho é **0,70 ponto**. O plano gratuito permanece com **50 membros**.
 - Cobrança em sandbox, comunicação por provedor e validação ponta a ponta do
   Esdras Passe ainda são as maiores oportunidades para aproximar o sistema de 100%.
 
-Commit, execução remota do GitHub Actions e versão do Worker serão acrescentados
-após a publicação desta entrega.
+## Publicação
+
+- Commit principal: `051a760`.
+- GitHub Actions:
+  [`34695537668`](https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/34695537668),
+  aprovado em qualidade, autorização e builds web, mobile e LP.
+- Worker `alvo-church-web`: versão
+  `a82a8b29-3bf8-460f-addf-2fe62e803410`.
+- `/kids/scan`: resposta HTTP 200 após a publicação.
+- `TURNSTILE_SECRET_KEY`: presença confirmada na lista de segredos, sem leitura
+  nem exposição do valor.
+
+O comando padrão de deploy passou a envolver também a etapa de envio no shim do
+pnpm do projeto. Isso evita que um pnpm global incompatível interrompa a carga do
+cache remoto antes da publicação.

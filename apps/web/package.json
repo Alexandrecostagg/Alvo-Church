@@ -7,7 +7,7 @@
     "build:cloudflare:web": "corepack pnpm build:cloudflare",
     "dev": "next dev --webpack",
     "preview:cloudflare": "corepack pnpm build:cloudflare && wrangler dev",
-    "deploy:cloudflare": "corepack pnpm build:cloudflare && opennextjs-cloudflare deploy",
+    "deploy:cloudflare": "corepack pnpm build:cloudflare && sh ./scripts/run-with-pnpm-shim.sh opennextjs-cloudflare deploy",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --check ."
