@@ -1,7 +1,8 @@
 # Asaas em produção — teste em 13/09/2026
 
 Estado: checkout verificado; autenticação corrigida no receptor de produção.
-Falta o titular salvar o mesmo token no Asaas e validar o evento original.
+Após o titular informar o salvamento no Asaas, o reenvio ainda retornou 401.
+É necessário conferir o valor salvo antes de validar o evento original.
 Esta etapa complementa a [homologação Sandbox da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 
 ## Verificado
@@ -52,9 +53,23 @@ o novo token retornou 200 e `unbound_reference`, sem referência financeira nem
 escrita no banco. A página de login retornou 200, e os demais nomes de segredos
 continuam presentes. Isso verifica autenticação, não a ativação do plano.
 
-O formulário do webhook no Asaas foi aberto em edição. A entrada e o salvamento
-do token no navegador devem ser realizados pelo titular. Após salvar, reprocessar
-o evento original e conferir o plano e os registros de evento no banco.
+Após o titular informar o salvamento, a penalização foi removida pela interface
+normal do webhook Esdras para permitir o reenvio. As novas tentativas do evento
+original ainda retornaram 401 com `Token de webhook inválido.`; a penalização
+voltou. A fila continua habilitada. Não remover o evento nem gerar nova cobrança.
+
+A observação temporária no receptor confirmou o cabeçalho `asaas-access-token`
+na tentativa rejeitada. A Cloudflare mascara seu valor, portanto não foi possível
+compará-lo diretamente nem determinar qual conteúdo foi salvo no Asaas. Um
+novo diagnóstico com o valor do arquivo privado retornou 200 no mesmo receptor,
+sem referência financeira e sem escrita no banco. A consulta somente leitura
+confirmou plano `free`, pedido `ready`, vínculo de assinatura correspondente
+ao pedido e nenhum evento persistido. Não houve ativação manual.
+
+O formulário do Asaas ficou novamente em edição para o titular substituir todo
+o campo pelo valor do arquivo privado (somente os 64 caracteres após `=`).
+A entrada e o salvamento de credenciais no navegador exigem intervenção do
+titular. Conferir o salvamento e reprocessar o evento original após a correção.
 
 ## Problemas observados e cuidados para retomar
 
@@ -66,7 +81,9 @@ o evento original e conferir o plano e os registros de evento no banco.
   instituição. Revisar a persistência da seleção e o estado de plano durante
   a troca de instituição em uma próxima correção.
 - Nenhum plano de igreja existente foi alterado. Apenas o token do receptor
-  Esdras foi atualizado; o agente não alterou a configuração nem a fila no Asaas.
+  Esdras foi atualizado; a penalização do webhook Esdras foi removida para
+  reenvio. URL, eventos, credencial e estado habilitado no Asaas foram preservados
+  pelo agente. O valor da credencial é preenchido e salvo pelo titular.
 - O Sandbox permanece separado, com a fila intencionalmente pausada após
   encerrar o receptor temporário da entrega 27.
 

@@ -10,8 +10,9 @@
 > Preparação posterior: instituição isolada de faturamento criada; interface
 > confirmou Asaas conectado em produção e webhook ativo para nove eventos.
 > Geração de boleto verificada. Token corrigido e publicado no receptor de
-> produção; teste de autenticação passou. Falta salvar o mesmo token no Asaas
-> e comprovar a ativação automática pelo evento original.
+> produção; diagnóstico com o token esperado passou. Após o titular informar
+> salvamento no Asaas, o reenvio original ainda retornou 401. Campo preparado
+> para conferir o valor salvo; ativação automática continua pendente.
 > Detalhes financeiros omitidos do relatório.
 > Ver [teste de produção em andamento](homologacao-asaas-producao-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
