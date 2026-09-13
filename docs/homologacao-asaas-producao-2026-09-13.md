@@ -1,7 +1,7 @@
 # Asaas em produção — teste em 13/09/2026
 
-Estado: checkout verificado; homologação da ativação bloqueada por autenticação
-do webhook em produção (HTTP 401).
+Estado: checkout verificado; autenticação corrigida no receptor de produção.
+Falta o titular salvar o mesmo token no Asaas e validar o evento original.
 Esta etapa complementa a [homologação Sandbox da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 
 ## Verificado
@@ -42,14 +42,19 @@ O cancelamento da recorrência e eventual estorno são operações separadas.
 
 Um novo token foi preparado em `.env.asaas-production.local`, ignorado pelo Git,
 com permissão 0600. Seu valor não deve entrar em logs nem nesta documentação.
-A tentativa de `wrangler secret put` foi recusada pela Cloudflare porque há
-uma versão enviada mais recente que a versão ativa. Nenhum segredo remoto foi
-alterado por essa tentativa. A republicação completa do artefato foi bloqueada
-pela revisão automática por alcance e risco de substituição do serviço.
-É necessária autorização explícita para essa republicação ou uma alternativa
-comprovadamente restrita à credencial na versão ativa. A entrada e o salvamento
-do token no navegador Asaas devem ser realizados pelo titular. O novo token
-ainda não está aplicado em nenhum dos dois serviços.
+Após autorização explícita do titular, o artefato verificado foi republicado.
+Como a atualização direta do segredo encontrou uma versão enviada ainda não
+publicada, foi utilizada a operação versionada de segredo, seguida da publicação
+integral dessa versão. O novo token está aplicado no receptor Esdras.
+
+Validação após publicação: requisição sem token retornou 401; diagnóstico com
+o novo token retornou 200 e `unbound_reference`, sem referência financeira nem
+escrita no banco. A página de login retornou 200, e os demais nomes de segredos
+continuam presentes. Isso verifica autenticação, não a ativação do plano.
+
+O formulário do webhook no Asaas foi aberto em edição. A entrada e o salvamento
+do token no navegador devem ser realizados pelo titular. Após salvar, reprocessar
+o evento original e conferir o plano e os registros de evento no banco.
 
 ## Problemas observados e cuidados para retomar
 
@@ -60,14 +65,14 @@ ainda não está aplicado em nenhum dos dois serviços.
   o campo de CPF/CNPJ. Não gerar pedidos enquanto o cabeçalho estiver em outra
   instituição. Revisar a persistência da seleção e o estado de plano durante
   a troca de instituição em uma próxima correção.
-- Nenhum plano de igreja existente foi alterado. Nenhuma chave, token,
-  fila de webhook ou configuração Asaas foi modificada pelo agente nesta etapa.
+- Nenhum plano de igreja existente foi alterado. Apenas o token do receptor
+  Esdras foi atualizado; o agente não alterou a configuração nem a fila no Asaas.
 - O Sandbox permanece separado, com a fila intencionalmente pausada após
   encerrar o receptor temporário da entrega 27.
 
 ## Progresso e publicação
 
 Sistema **96,35%**, LP **99%**, limite gratuito **50 membros**: sem incremento
-enquanto a ativação via webhook permanece bloqueada.
-Esta etapa registra o diagnóstico; nenhum novo deploy foi concluído.
-Versão web de referência: `e97e2b56-a074-4afa-90ee-c02db3b8add0`.
+enquanto a ativação via webhook não for comprovada.
+Correção de autenticação publicada em 100% do tráfego.
+Versão web ativa: `411e7bf9-995e-4797-a055-393ed41617c1`.
