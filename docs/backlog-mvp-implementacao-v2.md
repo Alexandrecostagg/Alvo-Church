@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **12/09/2026**, após a entrega ampliada 25: **96,35% (+0,25 ponto)**.
+Atualizado em **13/09/2026**, após a entrega ampliada 26: **96,35% (sem incremento)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -28,7 +28,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.6 | Administração central | Publicado e validado — entregas 16–17 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Pausas alcançam UI, APIs e Firestore direto; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
-| P1.3 | Consolidação da LP | Parcial — entregas 22–25 | Oferta de 50, narrativa e direção visual próprias, marca oficial, tipografia e ritmo compactos, domínio canônico, sitemap e analytics consentido com leitura administrativa. Faltam capturas reais aprovadas do produto. |
+| P1.3 | Consolidação da LP | Parcial — entregas 22–26 | Oferta de 50, narrativa e direção visual próprias, marca oficial, tipografia e ritmo compactos, domínio canônico, sitemap e analytics consentido com leitura administrativa. Demonstrações ilustrativas baseadas na interface publicadas; faltam capturas intactas aprovadas do produto. |
 | P1.4 | Cobrança, comunicação e IA | Parcial — entregas 21 e 25 | Checkout/IA, WhatsApp manual seguro e rascunho com revisão/cota/auditoria. Asaas tem base de produção, segredos remotos e diagnóstico de credencial/webhook na tela de planos. Faltam sandbox real, migrações, fila assíncrona do webhook e entrega por provedor de comunicação. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 

@@ -19,7 +19,7 @@ const MODULE_MAP: Array<{ match: (p: string) => boolean } & ModuleInfo> = [
   { match: (p) => p.startsWith("/reception"), label: "Recepção", icon: ClipboardList },
   { match: (p) => p.startsWith("/pastoral-ai"), label: "Cuidado Pastoral", icon: Bot },
   { match: (p) => p.startsWith("/finance"), label: "Finanças", icon: Landmark },
-  { match: (p) => p.startsWith("/me"), label: "Meu Perfil", icon: UserCircle },
+  { match: (p) => p === "/me" || p.startsWith("/me/"), label: "Meu Perfil", icon: UserCircle },
   { match: (p) => p.startsWith("/members/new"), label: "Novo Membro", icon: UserPlus },
   { match: (p) => p.startsWith("/members"), label: "Pessoas", icon: UsersRound },
   { match: (p) => p.startsWith("/marketplace"), label: "Marketplace", icon: Store },

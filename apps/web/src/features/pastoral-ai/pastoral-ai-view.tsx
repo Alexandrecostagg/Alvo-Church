@@ -507,7 +507,7 @@ export function PastoralAiView() {
               <button
                 type="button"
                 key={request.id}
-                className={request.id === selectedRequest.id ? "request-row is-active" : "request-row"}
+                className={request.id === selectedRequest?.id ? "request-row is-active" : "request-row"}
                 onClick={() => setSelectedRequestId(request.id)}
               >
                 <div>
@@ -528,6 +528,8 @@ export function PastoralAiView() {
         </article>
 
         <article className="pastoral-ai-panel request-detail">
+          {selectedRequest ? (
+            <>
           <span className="eyebrow">Pedido de cuidado</span>
           <h2>{selectedRequest.person}</h2>
           <p>{selectedRequest.summary}</p>
@@ -593,6 +595,14 @@ export function PastoralAiView() {
               Abrir WhatsApp
             </a>
           </div>
+            </>
+          ) : (
+            <div className="empty-request-list">
+              <span className="eyebrow">Pedido de cuidado</span>
+              <strong>Nenhuma solicitação selecionada</strong>
+              <span>Cadastre uma entrada pastoral para iniciar o acompanhamento com apoio da IA.</span>
+            </div>
+          )}
         </article>
       </section>
 

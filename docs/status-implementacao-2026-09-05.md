@@ -1,22 +1,22 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 25: **96,35%**, ganho de **0,25 ponto**. A LP agora
-> usa o domínio oficial como canonical, mede interações somente após consentimento
-> e apresenta o resumo à administração. O painel também diagnostica a conexão
-> e o webhook do Asaas sem expor segredos.
-> Ver [evidências e limites](entrega-ampliada-25-lp-medicao-asaas-2026-09-12.md) e [cálculo](entregas-2026-09-05.md).
+> Atualização após entrega 26: **96,35%**, sem incremento. A LP ganhou
+> demonstrações ilustrativas baseadas na interface; Pessoas e o estado vazio
+> da IA pastoral foram corrigidos. A homologação real do Asaas e as capturas
+> definitivas continuam pendentes.
+> Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base funcional da entrega 25: `30c2429`, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–25 estão validadas e
+Base funcional: entrega 26, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–26 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`9b1cf184-cfdf-4c07-b13d-027aaabf2dd5`, e a API de snapshots no Worker
+`349d1fb8-761e-4694-9e2a-2994386ae6a9`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
-`de051360-235b-497f-8887-9ae83e237c0b`.
+`d4be745b-d430-4533-bbb2-89e1455f8f25`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada

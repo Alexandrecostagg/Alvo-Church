@@ -174,7 +174,7 @@ function Hero() {
             </div>
           </div>
           <div className="lp-hero-float lp-hero-float-1">
-            <span className="lp-visual-dot green live" />
+            <span className="lp-hero-float-status" />
             <div>
               <strong>Fluxo de check-in</strong>
               <span>Exemplo ilustrativo</span>
@@ -296,7 +296,7 @@ function ModuleShowcase() {
         <Reveal>
           <div className="lp-section-header">
             <h2>Veja como funciona na prática</h2>
-            <p>Fluxos demonstrativos do produto com dados ilustrativos.</p>
+            <p>Conheça a interface em demonstrações ilustrativas com dados fictícios.</p>
           </div>
         </Reveal>
         <ModuleShowcaseClient />
