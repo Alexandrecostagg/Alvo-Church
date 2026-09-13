@@ -4,7 +4,10 @@
 > demonstrações ilustrativas baseadas na interface; Pessoas e o estado vazio
 > da IA pastoral foram corrigidos. A homologação real do Asaas e as capturas
 > definitivas continuam pendentes. Em 13/09, o webhook do Esdras e sua fila
-> foram ativados no Asaas; o recebimento autenticado ainda precisa de teste.
+> foram ativados no Asaas de produção; o recebimento autenticado ainda precisa de teste.
+> No Sandbox, a fila antiga que apontava para produção foi pausada; receptor
+> isolado preparado e 32 verificações locais passaram. Falta a credencial para
+> homologação externa: [estado do Sandbox](homologacao-asaas-sandbox-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
