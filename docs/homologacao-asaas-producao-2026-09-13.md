@@ -1,6 +1,6 @@
-# Asaas em produção — preparação do teste em 13/09/2026
+# Asaas em produção — teste em 13/09/2026
 
-Estado: preparação iniciada; cobrança e pagamento real ainda pendentes.
+Estado: boleto emitido em produção; pagamento e ativação automática pendentes.
 Esta etapa complementa a [homologação Sandbox da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 
 ## Verificado
@@ -19,16 +19,19 @@ Esta etapa complementa a [homologação Sandbox da entrega 27](entrega-ampliada-
   autenticado de um evento real de produção nem a ativação do plano.
 - Aberto o campo de CPF/CNPJ no plano Comunidade, de **R$ 79 por mês**.
   O campo estava vazio e o botão de continuar estava desabilitado.
-  Nenhum checkout foi enviado nesta preparação.
+  Nenhum checkout foi enviado pelo agente nessa preparação inicial.
+- Continuação: a geração de boleto pelo checkout foi verificada na interface
+  do provedor. A confirmação de pagamento e a ativação automática continuam
+  pendentes. Dados financeiros específicos, identificadores da fatura, CPF,
+  códigos de pagamento e links de acesso foram omitidos deste registro técnico.
 
 ## Próxima ação
 
-O responsável deve preencher seu CPF/CNPJ diretamente no formulário do Esdras.
-Não registrar o documento em chat, Git ou nos relatórios de homologação.
-Antes de continuar, confirmar no seletor a instituição de teste acima.
-Depois gerar e conferir o pedido, o valor, o recebedor e o link de pagamento.
+O pedido já foi emitido e conferido; não gerar outro para o mesmo teste.
 O pagamento será realizado manualmente pelo usuário. Somente após a confirmação
 real verificar o webhook e a mudança do plano gratuito para Comunidade.
+Emissão de boleto não comprova liquidação nem ativação. Os registros internos
+do pedido e do evento em produção devem ser consultados na verificação final.
 O cancelamento da recorrência e eventual estorno são operações separadas.
 
 ## Problemas observados e cuidados para retomar
@@ -48,6 +51,6 @@ O cancelamento da recorrência e eventual estorno são operações separadas.
 ## Progresso e publicação
 
 Sistema **96,35%**, LP **99%**, limite gratuito **50 membros**: sem incremento
-por preparação de um teste que ainda não foi concluído.
+por emissão de um boleto cujo ciclo de pagamento ainda não foi concluído.
 Esta etapa altera apenas a documentação; não requer novo deploy de código.
 Versão web de referência: `e97e2b56-a074-4afa-90ee-c02db3b8add0`.
