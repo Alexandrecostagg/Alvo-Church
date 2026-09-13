@@ -7,6 +7,10 @@
 > encerrar o receptor temporário. Cobrança real em produção, migrações legadas,
 > processamento assíncrono e capturas definitivas da LP continuam pendentes.
 > Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
+> Preparação posterior: instituição isolada de faturamento criada; interface
+> confirmou Asaas conectado em produção e webhook ativo para nove eventos.
+> Pedido ainda não enviado: falta CPF/CNPJ do responsável no formulário.
+> Ver [teste de produção em andamento](homologacao-asaas-producao-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
