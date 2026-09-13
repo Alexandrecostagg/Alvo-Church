@@ -262,8 +262,15 @@ export async function startBilling(
       : { asaasCustomerId: customerId, asaasSubscriptionId: resourceId }),
   };
 }
+export function billingEventId(value: unknown): string {
+  // Asaas delivery IDs can contain an ampersand suffix (evt_...&12345).
+  // Keep the original ID for idempotency; never relax tenant/path validation.
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]+(?:&[A-Za-z0-9_-]+)*$/.test(value) || value.length > 128)
+    throw new AccountError(400, "Evento inválido.");
+  return value;
+}
 export async function billingEvent(payload: any, gateway: Gateway = asaas) {
-  const eventId = documentId(payload.id, "Evento"),
+  const eventId = billingEventId(payload.id),
     event = textField(payload.event, "Evento", 100);
   const resource = event.startsWith("SUBSCRIPTION_")
     ? payload.subscription

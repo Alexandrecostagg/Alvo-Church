@@ -3,9 +3,9 @@ import { isLocalQaFirebase } from "../apps/web/app/api/_lib/firebase-server-env"
 import { safeStringCompare } from "../apps/web/app/api/_lib/safe-compare";
 import { POST } from "../apps/web/app/api/billing/webhook/route";
 
-export const sandboxOrg = "qa_asaas_sandbox";
+export const sandboxOrg = process.env.ASAAS_QA_ORG_ID || "qa_asaas_sandbox";
 export function assertSandbox() {
-  if (!isLocalQaFirebase() || process.env.FIREBASE_PROJECT_ID !== "demo-alvo-qa" ||
+  if (!/^qa_asaas_[a-z0-9_-]{1,80}$/.test(sandboxOrg) || !isLocalQaFirebase() || process.env.FIREBASE_PROJECT_ID !== "demo-alvo-qa" ||
       process.env.ASAAS_API_BASE_URL !== "https://api-sandbox.asaas.com/v3" ||
       !process.env.ASAAS_API_KEY || !/^\S{32,255}$/.test(process.env.ASAAS_WEBHOOK_TOKEN || "") ||
       process.env.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -47,9 +47,11 @@ export function createSandboxReceiver() {
         method: "POST", headers: { "content-type": "application/json", "asaas-access-token": token }, body,
       });
       const result = await POST(request as Parameters<typeof POST>[0]);
+      const resultText = await result.text();
       res.writeHead(result.status, Object.fromEntries(result.headers));
-      res.end(await result.text());
+      res.end(resultText);
       console.log(`Sandbox webhook: HTTP ${result.status}`);
+      if (!result.ok) console.log(JSON.stringify({ error: JSON.parse(resultText).error, eventIdLength: String(payload.id || "").length, dateCreatedPresent: Boolean(payload.dateCreated) }));
     } catch {
       if (!res.headersSent) reply(503, { error: "Receptor indisponível; tente novamente." });
       else res.end();

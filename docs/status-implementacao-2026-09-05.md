@@ -1,21 +1,20 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 26: **96,35%**, sem incremento. A LP ganhou
-> demonstrações ilustrativas baseadas na interface; Pessoas e o estado vazio
-> da IA pastoral foram corrigidos. A homologação real do Asaas e as capturas
-> definitivas continuam pendentes. Em 13/09, o webhook do Esdras e sua fila
-> foram ativados no Asaas de produção; o recebimento autenticado ainda precisa de teste.
-> No Sandbox, a fila antiga que apontava para produção foi pausada; receptor
-> isolado preparado e 32 verificações locais passaram. Falta a credencial para
-> homologação externa: [estado do Sandbox](homologacao-asaas-sandbox-2026-09-13.md).
+> Atualização após entrega 27: **96,35%**, sem incremento; LP **99%**.
+> Asaas Sandbox validado com assinatura, pagamento, webhook real, ativação,
+> cancelamento e replay. Corrigida rejeição de IDs de evento contendo `&`.
+> 401 testes e 32 verificações locais passaram. A fila Sandbox é pausada ao
+> encerrar o receptor temporário. Cobrança real em produção, migrações legadas,
+> processamento assíncrono e capturas definitivas da LP continuam pendentes.
+> Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base funcional: entrega 26, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–26 estão validadas e
+Base funcional: entrega 27, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–27 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`349d1fb8-761e-4694-9e2a-2994386ae6a9`, e a API de snapshots no Worker
+`e97e2b56-a074-4afa-90ee-c02db3b8add0`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.

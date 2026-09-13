@@ -58,7 +58,7 @@ async function main() {
       return { status: res.status, body: await res.json() };
     }
     const event = (name: string, offset = 0) => {
-      const id = `evt_${randomUUID()}`;
+      const id = `evt_${randomUUID()}&19713993`;
       eventIds.push(id);
       return { id, event: name, dateCreated: new Date(Date.now() + offset).toISOString(), payment };
     };

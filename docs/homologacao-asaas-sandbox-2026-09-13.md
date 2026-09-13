@@ -1,5 +1,11 @@
 # Homologação Asaas Sandbox — 13/09/2026
 
+> **Atualização final:** a chave foi salva pelo titular e o cenário real Sandbox
+> de pagamento, ativação, cancelamento e replay foi concluído na
+> [entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
+> As seções abaixo registram a preparação inicial. A fila é pausada ao encerrar
+> o túnel; não reativar para um endereço temporário encerrado.
+
 ## Estado verificado
 
 O webhook Sandbox `Plataforma Esdras - Billing` estava ativo, com fila ligada,

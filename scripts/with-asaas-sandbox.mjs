@@ -6,7 +6,8 @@ import { randomBytes } from "node:crypto";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const mode = process.argv[2];
-if (!["serve", "verify", "status"].includes(mode)) throw new Error("Use serve, verify ou status.");
+const liveModes = ["connect", "checkout", "inspect", "confirm", "cancel", "pause"];
+if (!["serve", "verify", "status", ...liveModes].includes(mode)) throw new Error("Modo Sandbox inválido.");
 const selfTest = mode === "verify";
 let config = {};
 if (!selfTest) {
@@ -30,9 +31,10 @@ Object.assign(env, {
   FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
   ASAAS_API_BASE_URL: "https://api-sandbox.asaas.com/v3",
   ASAAS_API_KEY: key, ASAAS_WEBHOOK_TOKEN: token,
+  ASAAS_QA_ORG_ID: selfTest ? `qa_asaas_verify_${randomBytes(8).toString("hex")}` : "qa_asaas_sandbox",
 });
-const script = selfTest ? "scripts/verify-asaas-sandbox.ts" : "scripts/asaas-sandbox.ts";
-const child = spawn(process.execPath, ["--import", "tsx", script, mode], { cwd: root, env, stdio: "inherit" });
+const script = selfTest ? "scripts/verify-asaas-sandbox.ts" : liveModes.includes(mode) ? "scripts/asaas-sandbox-live.ts" : "scripts/asaas-sandbox.ts";
+const child = spawn(process.execPath, ["--import", "tsx", script, mode, ...process.argv.slice(3)], { cwd: root, env, stdio: "inherit" });
 child.on("error", () => { console.error("Não foi possível iniciar a homologação."); process.exitCode = 1; });
 child.on("exit", code => { process.exitCode = code ?? 1; });
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => child.kill(signal));
