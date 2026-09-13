@@ -69,3 +69,34 @@ remoção do segredo remoto, cuja presença foi reconferida.
 
 A primeira publicação pela resolução padrão do ambiente encontrou Node 20;
 o deploy foi concluído usando explicitamente o Node 22 já instalado.
+
+
+## Complemento operacional — Asaas, 13/09/2026
+
+Inspeção autorizada na sessão Asaas aberta no Safari, conta Bird Atacadista Ltda:
+
+- Chave identificada como **Alvo Church (Plataforma Esdras)** habilitada no painel.
+  Seu valor não foi exibido; não foi comprovado que corresponde à chave no Worker.
+- Webhook **Alvo Church - Financeiro Esdras** e sua fila estavam desativados.
+- Destino existente confirmado:
+  `https://alvo-church-web.alexandrecostagg.workers.dev/api/billing/webhook`.
+- API v3 e envio sequencial mantidos. Token mascarado preservado, sem geração,
+  substituição ou exposição de credenciais.
+- Webhook e fila foram ligados; adicionados os eventos
+  `PAYMENT_CHARGEBACK_REQUESTED`, `PAYMENT_CHARGEBACK_DISPUTE` e
+  `PAYMENT_AWAITING_CHARGEBACK_REVERSAL`, já tratados pelo código.
+- Mantidos `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
+  `PAYMENT_DELETED`, `PAYMENT_REFUNDED` e `SUBSCRIPTION_DELETED`: nove eventos.
+- Após salvar, o Asaas exibiu **Webhook salvo com sucesso!** e a lista apresentou
+  o webhook do Esdras como **Ativado**, com zero eventos penalizados.
+- Antes da ativação, a consulta da API v3 nos últimos 30 dias e a consulta de
+  webhooks nos últimos 14 dias não apresentaram registros nos filtros usados.
+- Um POST sem credencial ao receptor retornou HTTP 401, como esperado. Isso
+  confirma acesso ao receptor e rejeição sem autenticação, não o aceite do token.
+
+O arquivo `Downloads/webhook` informado pelo usuário tinha zero bytes e não
+continha configuração ou credencial. Nenhuma cobrança foi criada nesta operação.
+A confirmação ponta a ponta continua pendente: é necessário um evento de teste
+controlado, autenticação aceita e atualização correta do pedido/plano.
+A configuração ativada não equivale a uma homologação financeira completa.
+Percentual mantido: LP **99%**, sistema **96,35%**, Gratuito **50 membros**.

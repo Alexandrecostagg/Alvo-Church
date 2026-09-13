@@ -3,7 +3,8 @@
 > Atualização após entrega 26: **96,35%**, sem incremento. A LP ganhou
 > demonstrações ilustrativas baseadas na interface; Pessoas e o estado vazio
 > da IA pastoral foram corrigidos. A homologação real do Asaas e as capturas
-> definitivas continuam pendentes.
+> definitivas continuam pendentes. Em 13/09, o webhook do Esdras e sua fila
+> foram ativados no Asaas; o recebimento autenticado ainda precisa de teste.
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
