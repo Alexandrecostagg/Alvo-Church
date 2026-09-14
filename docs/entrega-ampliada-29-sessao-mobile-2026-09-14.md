@@ -51,3 +51,14 @@ não justificam aumento. LP permanece em 100% do escopo atual. Gratuito: 50 memb
 
 O novo código requer um novo AAB para chegar aos testadores. As versões web,
 LP, regras Firebase e API não são alteradas por esta entrega mobile.
+
+## AAB 13
+
+Código commitado e enviado: `da873ac`. Build Android 1.0.0 (13), perfil
+`store-test`, solicitado no EAS com a assinatura existente em 14/09.
+Identificador: `e1684b75-b21a-4666-b67f-c06733a079f0`.
+[Acompanhar build](https://expo.dev/accounts/alexandrecostagg/projects/plataforma-esdras/builds/e1684b75-b21a-4666-b67f-c06733a079f0).
+
+Estado observado na consulta de acompanhamento: na fila do Expo; nenhum novo pacote enviado
+ao Play Console nesta entrega até esse momento. Não confundir build solicitado
+com versão disponível aos testadores.
