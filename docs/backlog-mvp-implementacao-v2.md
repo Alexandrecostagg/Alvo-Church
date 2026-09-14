@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **14/09/2026**, após a entrega 28: **96,40%**; LP **100% do escopo atual**.
+Atualizado em **14/09/2026**, após a entrega 29: **96,40%**; LP **100% do escopo atual**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -27,7 +27,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P0.5 | Limites e proteção pública | Publicado e validado — entrega 15 | Recepção/dashboard/escalas usam API central; disputa 49→50 entre três origens validada. Público tem cota persistente, idempotência, conversão única e Turnstile com validação server-side por ação/hostname. Widget, secret criptografado, deploy e QA ao vivo confirmados. |
 | P0.6 | Administração central | Publicado e validado — entregas 16–17 | Admin Esdras altera instituição, situação, plano, cobrança, módulos e usuários por API autenticada e auditada. Pausas alcançam UI, APIs e Firestore direto; último admin e contas ligadas a pessoas são preservados. Gratuito mantém 50 membros. |
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
-| P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
+| P1.2 | App em aparelhos | Sessão corrigida/testada na entrega 29; físico pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Concluída no escopo atual — entrega 28 | Oferta de 50, narrativa e direção visual próprias, marca oficial, tipografia e ritmo compactos, domínio canônico, sitemap e analytics consentido com leitura administrativa. Cinco capturas reais e intactas em ambiente demonstrativo, ampliação acessível e QA desktop/celular concluídos; imagens generativas antigas removidas. |
 | P1.4 | Cobrança, comunicação e IA | Parcial — entregas 21, 25 e 27 | Asaas Sandbox validado ponta a ponta: assinatura, pagamento, ativação, cancelamento e replay. Corrigidos IDs de evento com `&`. Produção mantém base, segredos e webhook próprios. Pagamento real em produção recebido por webhook HTTP 200 e Comunidade ativado automaticamente. Faltam demais cenários financeiros, migrações, fila assíncrona do webhook e entrega por provedor de comunicação. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |

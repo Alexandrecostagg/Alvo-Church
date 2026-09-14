@@ -1,6 +1,11 @@
 # Testes nas lojas — EsdrasApp
 
-Atualizado em **07/09/2026**. Estado: **AAB 12 disponível no teste interno, com
+Atualizado em **14/09/2026**. A consulta EAS confirmou o AAB 12 como último
+Android concluído e nenhum build iOS no projeto. A entrega 29 corrige a sessão,
+retomada e bloqueio de acesso no código; requer novo AAB e QA físico.
+[Diagnóstico e validação](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
+
+Última inspeção do Play Console em **07/09/2026**. Estado então observado: **AAB 12 disponível no teste interno, com
 vínculo por lista e marca corrigida; sem homologação em aparelho comprovada**. A
 conta EAS, os AABs 8–12 e o Play Console foram inspecionados. O AAB 12 foi gerado
 do commit `fff1822`, teve assinatura comparada com as versões anteriores e foi

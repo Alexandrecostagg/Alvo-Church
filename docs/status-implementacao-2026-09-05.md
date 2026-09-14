@@ -1,11 +1,13 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização em 14/09, entrega 28: **96,40%**; LP **100% do escopo atual**.
+> Atualização em 14/09, entrega 29: **96,40%**; mobile **97%**; LP **100% do escopo atual**.
+> Sessão mobile revalidada no servidor ao retomar e durante o uso; 419 testes aprovados.
+> QA físico e distribuição do novo código pendentes. Ver [entrega 29](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
 > Capturas reais, ampliação e revisão desktop/celular concluídas. Asaas Sandbox validado com assinatura, pagamento, ativação,
 > cancelamento e replay. Em produção, o evento real `PAYMENT_RECEIVED` retornou
 > **HTTP 200** e ativou automaticamente o plano Comunidade na instituição de teste.
 > Webhook ativo, sem eventos penalizados. Divergência de token resolvida pelo
-> titular; não houve ativação manual. Suíte atual: **403 testes** aprovados.
+> titular; não houve ativação manual. Suíte atual: **419 testes** aprovados.
 > SaaS já estava em 100 na matriz; fechamento operacional sem dupla contagem.
 > Demais cenários financeiros, migrações legadas e processamento assíncrono
 > continuam pendentes. Gratuito: **50 membros**.
@@ -25,8 +27,9 @@ Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
 `a1ab6cda-048c-4865-aba5-00b96d629efc`.
-No Google Play, a versão 12 está disponível no teste interno e a versão
-10 do teste fechado está em análise após a correção de política. Instalação e QA
+Na inspeção do Google Play de 07/09, a versão 12 estava disponível no teste
+interno e a versão 10 do teste fechado estava em análise. Em 14/09, o EAS
+confirmou o AAB 12 como último build Android; não havia builds iOS no projeto. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
 com o remoto; `main` permaneceu intacta.
 

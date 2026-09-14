@@ -1,5 +1,6 @@
 import { KidsPrivateImage } from "./src/features/kids/kids-private-image";
 import { MemberPassCard } from "./src/features/profile/member-pass-card";
+import { MobileAccessBoundary } from "./src/features/session/mobile-access-boundary";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
@@ -8,7 +9,7 @@ import * as Crypto from "expo-crypto";
 import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -33,6 +34,7 @@ import {
 import {
   addPrayerRequest,
   fetchOrganizationById,
+  fetchMobileTenantAccess,
   fetchOrganizationDirectory,
   fetchPublicPrayerWall,
   fetchTenantUser,
@@ -151,15 +153,7 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState<AuthScreen>("splash");
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [linkedOrg, setLinkedOrg] = useState<Organization | null>(null);
-  const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [dataReady, setDataReady] = useState(false);
-  const [pushToken, setPushToken] = useState<string | null>(null);
-  const [organizationReady, setOrganizationReady] = useState(false);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
-
   // auth listener
   useEffect(() => {
     if (!configured) {
@@ -175,35 +169,70 @@ export default function App() {
     return () => unsub();
   }, [configured]);
 
-  // O vínculo é local apenas para abrir a organização correta; antes de usá-lo
-  // ele é sempre revalidado na coleção de usuários do tenant. Assim, remover
-  // alguém da igreja no painel corta o acesso também no aplicativo.
+
+  async function handleSignOut() {
+    try { await signOutFromFirebaseMobile(firebaseConfig); setAuthScreen("welcome"); }
+    catch { Alert.alert("Não foi possível sair", "Confira sua conexão e tente novamente."); }
+  }
+  if (!authReady || (!user && authScreen === "splash")) return <SplashScreen />;
+  if (!user) {
+    if (authScreen === "welcome") return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
+    if (authScreen === "login") return <LoginScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("splash")} onRegister={() => setAuthScreen("register")} />;
+    if (authScreen === "register") return <RegisterScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("link-institution")} onLogin={() => setAuthScreen("login")} />;
+    return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
+  }
+
+  // Identity changes synchronously discard every institution, screen and token.
+  return <AuthenticatedApp key={user.uid} user={user} configured={configured} onSignOut={handleSignOut} />;
+}
+
+function AuthenticatedApp({ user, configured, onSignOut }: {
+  user: FirebaseAuthUser; configured: boolean; onSignOut: () => void;
+}) {
+  const [linkedOrg, setLinkedOrg] = useState<Organization | null>(null);
+  const [organizationReady, setOrganizationReady] = useState(false);
   useEffect(() => {
-    if (!user || !configured) {
-      setLinkedOrg(null);
-      setOrganizationReady(true);
-      return;
-    }
     let cancelled = false;
-    setOrganizationReady(false);
     void (async () => {
       try {
         const raw = await SecureStore.getItemAsync(`esdras.organization.${user.uid}`);
         const cached = raw ? JSON.parse(raw) as Organization : null;
-        if (!cached?.id) return;
-        const sdk = await import("@alvo/firebase");
-        const membership = await sdk.fetchTenantUser(firebaseConfig, { organizationId: cached.id, userId: user.uid });
-        if (membership?.isActive && !cancelled) setLinkedOrg(cached);
-        else await SecureStore.deleteItemAsync(`esdras.organization.${user.uid}`);
-      } catch {
-        // Sem vínculo válido, a tela seguinte orienta a informar o código da igreja.
-      } finally {
-        if (!cancelled) setOrganizationReady(true);
-      }
+        // Cache chooses the institution only; the boundary checks live access.
+        if (!cancelled && typeof cached?.id === "string" && cached.id) setLinkedOrg(cached);
+      } catch { /* The member can select the institution again. */ }
+      finally { if (!cancelled) setOrganizationReady(true); }
     })();
     return () => { cancelled = true; };
-  }, [configured, user?.uid]);
+  }, [user.uid]);
+  const checkAccess = useCallback(
+    () => fetchMobileTenantAccess(firebaseConfig, linkedOrg?.id ?? "", user.uid),
+    [linkedOrg?.id, user.uid],
+  );
+  async function handleLinkOrganization(org: Organization) {
+    await SecureStore.setItemAsync(`esdras.organization.${user.uid}`, JSON.stringify(org));
+    setLinkedOrg(org);
+  }
+  async function chooseAnotherInstitution() {
+    try {
+      await SecureStore.deleteItemAsync(`esdras.organization.${user.uid}`);
+      setLinkedOrg(null);
+    } catch { Alert.alert("Não foi possível trocar a instituição", "Tente novamente."); }
+  }
+  if (!organizationReady) return <SplashScreen />;
+  if (!linkedOrg) return <LinkInstitutionScreen configured={configured} user={user} onLink={handleLinkOrganization} onSkip={onSignOut} />;
+  return <MobileAccessBoundary key={`${user.uid}:${linkedOrg.id}`} check={checkAccess} onSignOut={onSignOut} onChooseInstitution={chooseAnotherInstitution}>
+    <TenantApp user={user} configured={configured} linkedOrg={linkedOrg} onSignOut={onSignOut} />
+  </MobileAccessBoundary>;
+}
 
+function TenantApp({ user, configured, linkedOrg, onSignOut }: {
+  user: FirebaseAuthUser; configured: boolean; linkedOrg: Organization; onSignOut: () => void;
+}) {
+  const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [dataReady, setDataReady] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   // Push funciona apenas em builds próprios (preview, TestFlight ou Play), não no Expo Go.
   useEffect(() => {
     if (!user || !linkedOrg?.id || !configured) return;
@@ -230,6 +259,7 @@ export default function App() {
       if (!projectId) return;
 
       const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      if (cancelled) return;
       await saveMobilePushToken(
         firebaseConfig,
         { organizationId },
@@ -269,51 +299,9 @@ export default function App() {
     return () => { cancelled = true; };
   }, [user, linkedOrg, configured]);
 
-  async function handleSignOut() {
-    try {
-      await signOutFromFirebaseMobile(firebaseConfig);
-      setLinkedOrg(null); setTenantRuntime(null); setEvents([]); setGroups([]); setDataReady(false);
-      setAuthScreen("welcome");
-    } catch {}
-  }
 
-  async function handleLinkOrganization(org: Organization) {
-    if (!user) return;
-    await SecureStore.setItemAsync(`esdras.organization.${user.uid}`, JSON.stringify(org));
-    setLinkedOrg(org);
-    setAuthScreen("splash");
-  }
-
-  // Auth screens
-  if (!authReady || (!user && authScreen === "splash")) return <SplashScreen />;
-  if (user && !organizationReady) return <SplashScreen />;
-  if (user && !linkedOrg) {
-    return <LinkInstitutionScreen
-      configured={configured}
-      user={user}
-      onLink={handleLinkOrganization}
-      onSkip={() => { void handleSignOut(); }}
-    />;
-  }
-  if (!user) {
-    if (authScreen === "welcome") return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
-    if (authScreen === "login") return <LoginScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("splash")} onRegister={() => setAuthScreen("register")} />;
-    if (authScreen === "register") return <RegisterScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("link-institution")} onLogin={() => setAuthScreen("login")} />;
-    return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
-  }
-
-  return (
-    <MainApp
-      user={user}
-      tenantRuntime={tenantRuntime}
-      events={events}
-      groups={groups}
-      dataReady={dataReady}
-      linkedOrg={linkedOrg}
-      pushToken={pushToken}
-      onSignOut={handleSignOut}
-    />
-  );
+  return <MainApp user={user} tenantRuntime={tenantRuntime} events={events} groups={groups}
+    dataReady={dataReady} linkedOrg={linkedOrg} pushToken={pushToken} onSignOut={onSignOut} />;
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
