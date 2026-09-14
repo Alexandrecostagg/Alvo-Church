@@ -9,10 +9,9 @@
 > Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 > Preparação posterior: instituição isolada de faturamento criada; interface
 > confirmou Asaas conectado em produção e webhook ativo para nove eventos.
-> Geração de boleto verificada. Token corrigido e publicado no receptor de
-> produção; diagnóstico com o token esperado passou. Após o titular informar
-> salvamento no Asaas, o reenvio original ainda retornou 401. Campo preparado
-> para conferir o valor salvo; ativação automática continua pendente.
+> Geração de boleto verificada. Diagnóstico seguro publicado: o Asaas envia
+> token de 49 caracteres; o receptor espera 64. Cópia privada preparada para
+> sincronização pelo titular. Reenvio e ativação automática continuam pendentes.
 > Detalhes financeiros omitidos do relatório.
 > Ver [teste de produção em andamento](homologacao-asaas-producao-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
@@ -22,7 +21,7 @@ Base funcional: entrega 27, branch
 `codex/consolidacao-local-2026-09-05`. As entregas 17–27 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`411e7bf9-995e-4797-a055-393ed41617c1`, e a API de snapshots no Worker
+`4f332bf6-770d-43d3-9ae0-e0ab26a21c22`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.

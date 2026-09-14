@@ -1,8 +1,8 @@
 # Asaas em produção — teste em 13/09/2026
 
 Estado: checkout verificado; autenticação corrigida no receptor de produção.
-Após o titular informar o salvamento no Asaas, o reenvio ainda retornou 401.
-É necessário conferir o valor salvo antes de validar o evento original.
+Diagnóstico confirmado: a tentativa do Asaas enviou um token de 49 caracteres,
+enquanto o receptor espera 64. A sincronização da credencial continua pendente.
 Esta etapa complementa a [homologação Sandbox da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
 
 ## Verificado
@@ -66,10 +66,29 @@ sem referência financeira e sem escrita no banco. A consulta somente leitura
 confirmou plano `free`, pedido `ready`, vínculo de assinatura correspondente
 ao pedido e nenhum evento persistido. Não houve ativação manual.
 
-O formulário do Asaas ficou novamente em edição para o titular substituir todo
-o campo pelo valor do arquivo privado (somente os 64 caracteres após `=`).
-A entrada e o salvamento de credenciais no navegador exigem intervenção do
-titular. Conferir o salvamento e reprocessar o evento original após a correção.
+Após nova orientação visual e salvamento informado pelo titular, o controle do
+Safari foi recuperado e confirmou a remoção da penalização. O reenvio ainda
+retornou 401. Foi publicado diagnóstico restrito ao formato do token: presença,
+comprimento limitado e indicadores de atribuição, espaços, aspas, máscara e
+formato hexadecimal. Valores, hashes, demais cabeçalhos e dados de pagamento
+não são registrados. A resposta pública e a validação permanecem inalteradas.
+
+Uma tentativa real confirmou token esperado com 64 caracteres e recebido com
+49 caracteres, não hexadecimal, sem atribuição, espaços, aspas ou máscara.
+Isso comprova divergência no valor recebido; não permite inferir qual valor foi
+salvo nem atribuir a causa a uma ação específica do titular. O plano continua
+`free` na última consulta e o evento original ainda não foi persistido.
+
+Foi preparada `.env.asaas-token-copy.local`, cópia temporária com somente o valor
+correto, permissão 0600 e ignorada pelo Git, para facilitar a cópia integral.
+O titular deve colar esse conteúdo no campo Token de autenticação e salvar.
+Após autenticação confirmada, remover a cópia auxiliar e reprocessar o evento
+original; comprovar ativação e idempotência antes de encerrar a homologação.
+
+Validação da alteração: cinco testes direcionados passaram, incluindo recusa
+sem processamento de pagamento, ausência de segredos no log e caminho válido.
+Build OpenNext, TypeScript e geração das 82 páginas concluídos.
+Na retomada de 14/09, a suíte completa passou: 403 testes em 38 arquivos.
 
 ## Problemas observados e cuidados para retomar
 
@@ -92,4 +111,4 @@ titular. Conferir o salvamento e reprocessar o evento original após a correçã
 Sistema **96,35%**, LP **99%**, limite gratuito **50 membros**: sem incremento
 enquanto a ativação via webhook não for comprovada.
 Correção de autenticação publicada em 100% do tráfego.
-Versão web ativa: `411e7bf9-995e-4797-a055-393ed41617c1`.
+Versão web ativa: `4f332bf6-770d-43d3-9ae0-e0ab26a21c22`.
