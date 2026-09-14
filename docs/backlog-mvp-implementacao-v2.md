@@ -1,6 +1,6 @@
 # Backlog ativo de implementação — Plataforma Esdras
 
-Atualizado em **13/09/2026**, após a entrega ampliada 26: **96,35% (sem incremento)**.
+Atualizado em **14/09/2026**, após a entrega 27 e validação em produção: **96,35% (sem incremento)**.
 Substitui os status de junho; mantém os números dos épicos para rastreabilidade.
 Responsável técnico atual: desenvolvimento local nesta tarefa. Nenhum prazo de
 calendário foi estimado. [Diagnóstico e porcentagens](status-implementacao-2026-09-05.md).
@@ -29,7 +29,7 @@ envolver autorização. Segurança pode bloquear a liberação de qualquer épic
 | P1.1 | Verdade dos dados | Parcial — entrega 19 | EAD/eventos sem demos; portal usa dados reais; rede não permite gravação cliente e o cron calcula agregados reais com cobertura explícita. Células, escalas, follow-ups e transparência só confirmam persistência. Falta revisar dados externos. |
 | P1.2 | App em aparelhos | Pendente | Preview Android/iOS com login, vínculo, revogação, QR/câmera, foto e push real; registrar resultados e bugs antes de loja. |
 | P1.3 | Consolidação da LP | Parcial — entregas 22–26 | Oferta de 50, narrativa e direção visual próprias, marca oficial, tipografia e ritmo compactos, domínio canônico, sitemap e analytics consentido com leitura administrativa. Demonstrações ilustrativas baseadas na interface publicadas; faltam capturas intactas aprovadas do produto. |
-| P1.4 | Cobrança, comunicação e IA | Parcial — entregas 21, 25 e 27 | Asaas Sandbox validado ponta a ponta: assinatura, pagamento, ativação, cancelamento e replay. Corrigidos IDs de evento com `&`. Produção mantém base, segredos e webhook próprios. Faltam cobrança real em produção, demais cenários financeiros, migrações, fila assíncrona do webhook e entrega por provedor de comunicação. |
+| P1.4 | Cobrança, comunicação e IA | Parcial — entregas 21, 25 e 27 | Asaas Sandbox validado ponta a ponta: assinatura, pagamento, ativação, cancelamento e replay. Corrigidos IDs de evento com `&`. Produção mantém base, segredos e webhook próprios. Pagamento real em produção recebido por webhook HTTP 200 e Comunidade ativado automaticamente. Faltam demais cenários financeiros, migrações, fila assíncrona do webhook e entrega por provedor de comunicação. |
 | P2.1 | Otimizações Jules | Pendente | Revisar os dois diffs preservados nas sessões pausadas, limites, índices e regras; medir antes/depois. |
 
 ## Épico 1 — Pessoas, famílias, identidade e jornadas
@@ -111,8 +111,10 @@ Checkout e webhook vinculados à ordem foram validados com provedor simulado na
 entrega 7. A entrega 25 adicionou diagnóstico da credencial, webhook e última
 sincronização; a base de produção e os nomes dos segredos foram confirmados no
 Worker. A entrega 27 homologou assinatura, pagamento, cancelamento e replay
-com o Asaas Sandbox real em receptor isolado. Faltam cobrança em produção,
-demais cenários financeiros, migração legada e processamento assíncrono do webhook.
+com o Asaas Sandbox real em receptor isolado. Em 14/09, o pagamento real em
+produção foi recebido por webhook HTTP 200 e ativou automaticamente o Comunidade.
+Faltam demais cenários financeiros, migração legada e processamento assíncrono
+do webhook. Ver [validação em produção](homologacao-asaas-producao-2026-09-13.md).
 
 Convites de rede agora aplicam plano e limite de 50 instituições em transação.
 A sede pode reemitir, revogar e desvincular; aceite usa a instituição da sessão,

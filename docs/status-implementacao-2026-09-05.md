@@ -1,19 +1,16 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização após entrega 27: **96,35%**, sem incremento; LP **99%**.
-> Asaas Sandbox validado com assinatura, pagamento, webhook real, ativação,
-> cancelamento e replay. Corrigida rejeição de IDs de evento contendo `&`.
-> 401 testes e 32 verificações locais passaram. A fila Sandbox é pausada ao
-> encerrar o receptor temporário. Cobrança real em produção, migrações legadas,
-> processamento assíncrono e capturas definitivas da LP continuam pendentes.
-> Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md).
-> Preparação posterior: instituição isolada de faturamento criada; interface
-> confirmou Asaas conectado em produção e webhook ativo para nove eventos.
-> Geração de boleto verificada. Diagnóstico seguro publicado: o Asaas envia
-> token de 49 caracteres; o receptor espera 64. Cópia privada preparada para
-> sincronização pelo titular. Reenvio e ativação automática continuam pendentes.
-> Detalhes financeiros omitidos do relatório.
-> Ver [teste de produção em andamento](homologacao-asaas-producao-2026-09-13.md).
+> Atualização em 14/09, complemento da entrega 27: **96,35%**, sem incremento;
+> LP **99%**. Asaas Sandbox validado com assinatura, pagamento, ativação,
+> cancelamento e replay. Em produção, o evento real `PAYMENT_RECEIVED` retornou
+> **HTTP 200** e ativou automaticamente o plano Comunidade na instituição de teste.
+> Webhook ativo, sem eventos penalizados. Divergência de token resolvida pelo
+> titular; não houve ativação manual. Suíte atual: **403 testes** aprovados.
+> SaaS já estava em 100 na matriz; fechamento operacional sem dupla contagem.
+> Demais cenários financeiros, migrações legadas, processamento assíncrono e
+> capturas definitivas da LP continuam pendentes. Gratuito: **50 membros**.
+> Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md) e
+> [validação em produção](homologacao-asaas-producao-2026-09-13.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
