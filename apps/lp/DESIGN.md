@@ -34,7 +34,9 @@ ritmo; nenhum texto, logotipo, fotografia ou componente foi copiado.
 ## Regras de composição
 
 - Use uma promessa completa e concreta no primeiro título.
-- Mostre capacidades que existem e identifique demonstrações ilustrativas.
+- Mostre capacidades que existem. Use capturas reais sem edição de conteúdo,
+  com instituição fictícia e legenda de ambiente demonstrativo. Permita ampliar
+  as telas no celular sem aumentar a largura da página.
 - Use o laranja no CTA principal e em pequenos sinais de leitura.
 - Prefira linhas, mudança de fundo e espaço para separar argumentos.
 - Mantenha uma única ação dominante: `Criar conta grátis`.

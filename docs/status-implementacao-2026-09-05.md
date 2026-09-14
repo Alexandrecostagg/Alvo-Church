@@ -1,29 +1,30 @@
 # Estado da implementação — 05/09/2026
 
-> Atualização em 14/09, complemento da entrega 27: **96,35%**, sem incremento;
-> LP **99%**. Asaas Sandbox validado com assinatura, pagamento, ativação,
+> Atualização em 14/09, entrega 28: **96,40%**; LP **100% do escopo atual**.
+> Capturas reais, ampliação e revisão desktop/celular concluídas. Asaas Sandbox validado com assinatura, pagamento, ativação,
 > cancelamento e replay. Em produção, o evento real `PAYMENT_RECEIVED` retornou
 > **HTTP 200** e ativou automaticamente o plano Comunidade na instituição de teste.
 > Webhook ativo, sem eventos penalizados. Divergência de token resolvida pelo
 > titular; não houve ativação manual. Suíte atual: **403 testes** aprovados.
 > SaaS já estava em 100 na matriz; fechamento operacional sem dupla contagem.
-> Demais cenários financeiros, migrações legadas, processamento assíncrono e
-> capturas definitivas da LP continuam pendentes. Gratuito: **50 membros**.
+> Demais cenários financeiros, migrações legadas e processamento assíncrono
+> continuam pendentes. Gratuito: **50 membros**.
 > Ver [evidências da entrega 27](entrega-ampliada-27-asaas-sandbox-2026-09-13.md) e
 > [validação em produção](homologacao-asaas-producao-2026-09-13.md).
+> Ver [fechamento da LP](entrega-ampliada-28-capturas-reais-lp-2026-09-14.md).
 > Ver [evidências e limites](entrega-ampliada-26-demonstracoes-lp-2026-09-13.md) e [cálculo](entregas-2026-09-05.md).
 > A tabela abaixo preserva a linha de base inicial de 63,25% para comparação.
 
-Base funcional: entrega 27, branch
-`codex/consolidacao-local-2026-09-05`. As entregas 17–27 estão validadas e
+Base funcional: entrega 28, branch
+`codex/consolidacao-local-2026-09-05`. As entregas 17–28 estão validadas e
 publicadas na branch de trabalho.
 O painel está no Worker `alvo-church-web`, versão
-`4f332bf6-770d-43d3-9ae0-e0ab26a21c22`, e a API de snapshots no Worker
+`509fa4c5-ebe7-4d89-acc6-5887866a86ad`, e a API de snapshots no Worker
 `alvo-church-worker-api`, versão `29ee2174-583c-41b7-951e-39700c53a6f9`.
 Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
-`d4be745b-d430-4533-bbb2-89e1455f8f25`.
+`a1ab6cda-048c-4865-aba5-00b96d629efc`.
 No Google Play, a versão 12 está disponível no teste interno e a versão
 10 do teste fechado está em análise após a correção de política. Instalação e QA
 em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada

@@ -296,7 +296,7 @@ function ModuleShowcase() {
         <Reveal>
           <div className="lp-section-header">
             <h2>Veja como funciona na prática</h2>
-            <p>Conheça a interface em demonstrações ilustrativas com dados fictícios.</p>
+            <p>Explore capturas reais da plataforma em um ambiente de demonstração, com dados fictícios.</p>
           </div>
         </Reveal>
         <ModuleShowcaseClient />

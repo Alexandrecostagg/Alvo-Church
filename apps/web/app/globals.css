@@ -11169,3 +11169,24 @@ h1.page-title,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Capturas reais: ampliação preserva a imagem inteira e o foco do teclado. */
+.lp-product-shot figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
+.lp-capture-open { flex-shrink: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #123f34; border-radius: 4px; background: transparent; color: #123f34; font-size: 12px; font-weight: 650; cursor: pointer; }
+.lp-capture-open:focus-visible, .lp-capture-toolbar button:focus-visible { outline: 3px solid #db6a2c; outline-offset: 3px; }
+.lp-capture-dialog { width: min(1480px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid #123f34; border-radius: 8px; background: #fffefa; color: #20251f; }
+.lp-capture-dialog::backdrop { background: rgba(11,48,39,.78); }
+.lp-capture-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; font-size: 13px; }
+.lp-capture-toolbar button { min-height: 44px; padding: 8px 14px; border: 0; border-radius: 4px; background: #123f34; color: white; cursor: pointer; }
+.lp-capture-scroll { max-height: calc(100dvh - 112px); overflow: auto; }
+.lp-capture-scroll img { width: 100%; min-width: 1000px; height: auto; display: block; }
+@media (max-width: 540px) {
+  .lp-product-shot figcaption { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .lp-capture-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .lp-capture-toolbar { padding: 8px; font-size: 12px; }
+  .lp-capture-toolbar button { flex-shrink: 0; }
+}
+
+.lp-capture-hint { display: none; }
+@media (max-width: 780px) { .lp-capture-hint { display: block; margin-top: 4px; font-size: 11px; } }
+.lp-root section[id] { scroll-margin-top: 100px; }

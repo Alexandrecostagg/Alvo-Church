@@ -1,0 +1,35 @@
+{
+  "totalBytes": 1520590,
+  "images": [
+    {
+      "name": "members",
+      "bytes": 277284,
+      "pixelsIdentical": true,
+      "sha256": "81bebfad3c0a6dcc6a19c421e79bf20248338bae14dc16e33dfbbecd9d4a62cd"
+    },
+    {
+      "name": "groups",
+      "bytes": 344780,
+      "pixelsIdentical": true,
+      "sha256": "fd3e9d847763d229ff3fc4536c55e1a9f765b80ac23d8ea2b3f58ba35c2fadde"
+    },
+    {
+      "name": "pastoral-ai",
+      "bytes": 339300,
+      "pixelsIdentical": true,
+      "sha256": "70b98249590a9ec3b95716be8c69fdb41c9db31db577572230db70d550fdf8e1"
+    },
+    {
+      "name": "serving",
+      "bytes": 356960,
+      "pixelsIdentical": true,
+      "sha256": "7e0388fa031c1996964b2304d95fbceb783921e1f19e726b75b859cca2a0f3a8"
+    },
+    {
+      "name": "finance",
+      "bytes": 202266,
+      "pixelsIdentical": true,
+      "sha256": "c39f6c8d58b88c9bde4232efb24a14d56d9a3759c329f6e1d1c311d652135dba"
+    }
+  ]
+}
