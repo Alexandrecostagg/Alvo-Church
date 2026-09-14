@@ -2,7 +2,7 @@
 
 > Atualização em 14/09, entrega 29: **96,40%**; mobile **97%**; LP **100% do escopo atual**.
 > Sessão mobile revalidada no servidor ao retomar e durante o uso; 419 testes aprovados.
-> QA físico e distribuição do novo código pendentes. Ver [entrega 29](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
+> AAB 13 disponível no teste interno do Google Play; QA físico pendente. Ver [entrega 29](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
 > Capturas reais, ampliação e revisão desktop/celular concluídas. Asaas Sandbox validado com assinatura, pagamento, ativação,
 > cancelamento e replay. Em produção, o evento real `PAYMENT_RECEIVED` retornou
 > **HTTP 200** e ativou automaticamente o plano Comunidade na instituição de teste.
@@ -27,11 +27,10 @@ Os índices compostos necessários estão `READY` no projeto `alvo-church`.
 O Worker canônico e as regras Firestore/Storage foram verificados após o deploy.
 A LP está no Worker `plataformaesdras-lp`, versão
 `a1ab6cda-048c-4865-aba5-00b96d629efc`.
-Na inspeção do Google Play de 07/09, a versão 12 estava disponível no teste
-interno e a versão 10 do teste fechado estava em análise. Em 14/09, o EAS
-confirmou o AAB 12 como último build Android; não havia builds iOS no projeto. Instalação e QA
-em aparelho continuam pendentes. Até a entrega 14, a branch estava sincronizada
-com o remoto; `main` permaneceu intacta.
+Em 14/09, o Google Play confirmou a versão **13 (1.0.0)** disponível no teste
+interno. A faixa fechada Esdras 1 permanece na 12. Assinatura e compatibilidade
+conferidas; instalação e QA em aparelho continuam pendentes. Nenhum build iOS
+foi encontrado no EAS. Código mobile da entrega 29: `da873ac`.
 
 ## Onde estão os planos
 

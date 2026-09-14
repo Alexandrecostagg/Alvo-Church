@@ -49,7 +49,7 @@ Mobile permanece em **97%** e global em **96,40%**. A correção fortalece um
 critério já contabilizado; os testes físicos e a distribuição atualizada ainda
 não justificam aumento. LP permanece em 100% do escopo atual. Gratuito: 50 membros.
 
-O novo código requer um novo AAB para chegar aos testadores. As versões web,
+O código foi distribuído no AAB 13 para testadores internos. As versões web,
 LP, regras Firebase e API não são alteradas por esta entrega mobile.
 
 ## AAB 13
@@ -59,6 +59,26 @@ Código commitado e enviado: `da873ac`. Build Android 1.0.0 (13), perfil
 Identificador: `e1684b75-b21a-4666-b67f-c06733a079f0`.
 [Acompanhar build](https://expo.dev/accounts/alexandrecostagg/projects/plataforma-esdras/builds/e1684b75-b21a-4666-b67f-c06733a079f0).
 
-Estado observado na consulta de acompanhamento: na fila do Expo; nenhum novo pacote enviado
-ao Play Console nesta entrega até esse momento. Não confundir build solicitado
-com versão disponível aos testadores.
+EAS concluiu o build em 14/09/2026 às 16:33 UTC. O Google Play aceitou o
+arquivo e confirmou a versão **13 (1.0.0) disponível para testadores internos**
+em 14/09, às 14:31, horário exibido no Console. A faixa fechada permanece na 12;
+produção pública não foi alterada.
+
+- Tamanho: 60.903.658 bytes.
+- SHA-256: `79e81e6b1d8f2aaa43842f7fe85c4ffd11b0f1a4b9ab058af6a5dd34e22158d7`.
+- `jarsigner -verify`: assinatura verificada. Avisos de certificado autoassinado,
+  ausência de timestamp e ordem de entradas do ZIP; a aceitação da loja é
+  verificada separadamente.
+- Certificado SHA-256 igual ao AAB 12:
+  `97:2E:DE:AD:36:87:1F:9D:DB:8F:18:CF:52:12:01:81:CA:D7:15:60:EB:76:E7:6C:D9:6E:CE:79:3D:D8:BE:C6`.
+- Na inspeção de hoje, a faixa fechada Esdras 1 já estava na versão 12;
+  o registro anterior de versão 10 em análise era histórico.
+
+Compatibilidade conferida na revisão da loja: 12.410 telefones e 6.417 tablets,
+sem dispositivos removidos em relação à versão anterior. Instalação estimada
+em 16,9 MB; atualização em 5,2 MB. SDK de destino 36.
+
+[Faixa interna](https://play.google.com/console/u/0/developers/6634974275284956398/app/4974621366811081252/tracks/4701732869010871749?tab=releases).
+[Link dos testadores](https://play.google.com/apps/internaltest/4701732869010871749).
+O aviso da loja informa que a atualização costuma aparecer em até uma hora,
+podendo levar mais tempo. A publicação não comprova instalação ou QA físico.

@@ -1,15 +1,11 @@
 # Testes nas lojas — EsdrasApp
 
-Atualizado em **14/09/2026**. A consulta EAS confirmou o AAB 12 como último
-Android concluído e nenhum build iOS no projeto. A entrega 29 corrige a sessão,
-retomada e bloqueio de acesso no código; requer novo AAB e QA físico.
-[Diagnóstico e validação](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
-
-Última inspeção do Play Console em **07/09/2026**. Estado então observado: **AAB 12 disponível no teste interno, com
-vínculo por lista e marca corrigida; sem homologação em aparelho comprovada**. A
-conta EAS, os AABs 8–12 e o Play Console foram inspecionados. O AAB 12 foi gerado
-do commit `fff1822`, teve assinatura comparada com as versões anteriores e foi
-publicado apenas na faixa interna. Ver [entrega 14](entrega-ampliada-14-aab12-google-play-2026-09-07.md).
+Atualizado em **14/09/2026**. **AAB 13 (1.0.0) disponível para testadores internos**,
+confirmado no Play Console às 14:31. EAS concluído, assinatura conferida e igual
+à versão anterior. Inclui revalidação da sessão, retomada, isolamento de conta e
+orientações de acesso. A faixa fechada Esdras 1 permanece na versão 12. Nenhum
+build iOS encontrado na consulta EAS; App Store Connect não inspecionado.
+[Diagnóstico, distribuição e validação](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
 
 Antes do roteiro de distribuição abaixo, fechar escala/sala/evento Kids e papéis.
 Dependências, vínculo/Passe e mídia Kids foram validados localmente nas entregas
