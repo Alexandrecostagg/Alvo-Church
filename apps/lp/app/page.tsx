@@ -35,15 +35,20 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className="lp-root">
+      <a href="#conteudo" className="lp-skip-link">
+        Pular para o conteúdo
+      </a>
       <LPNav />
-      <Hero />
-      <TrustBar />
-      <Features />
-      <ModuleShowcase />
-      <Pricing />
-      <FAQClient />
-      <Contact />
-      <FinalCTA />
+      <main id="conteudo">
+        <Hero />
+        <TrustBar />
+        <Features />
+        <ModuleShowcase />
+        <Pricing />
+        <FAQClient />
+        <Contact />
+        <FinalCTA />
+      </main>
       <LPFooter />
       <ConversionAnalytics />
     </div>
