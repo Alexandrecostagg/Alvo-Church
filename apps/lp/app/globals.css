@@ -1,6 +1,5 @@
 :root {
   --paper: #f3f0e4;
-  --paper-deep: #e9e4d4;
   --ink: #20251f;
   --muted: #60675e;
   --forest: #123f34;
@@ -12,14 +11,13 @@
   --orange-hover: #bd5420;
   --line: rgba(32, 37, 31, 0.18);
   --white: #fffefa;
-  --on-dark: #fffefa;
   --on-dark-strong: rgba(255, 255, 255, 0.75);
   --on-dark-muted: rgba(255, 255, 255, 0.68);
   --on-dark-faint: rgba(255, 255, 255, 0.58);
   --hairline-dark: rgba(255, 255, 255, 0.12);
   --overlay-light: rgba(255, 255, 255, 0.1);
-  --focus-ring: var(--orange);
-  --focus-ring-contrast: #0b3027;
+  --focus-ring: var(--forest);
+  --focus-ring-contrast: var(--white);
   --section-space: clamp(32px, 3vw, 44px);
   --section-space-compact: clamp(28px, 2.5vw, 36px);
   --font-sans: var(--font-dm-sans), "Aptos", "Segoe UI", sans-serif;
@@ -34,25 +32,26 @@ button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 3px;
+  outline: 2px solid var(--focus-ring-contrast);
+  outline-offset: -4px;
+  box-shadow: 0 0 0 4px var(--focus-ring);
   border-radius: 2px;
 }
 
 .lp-skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; padding: 12px 18px; border-radius: 0 0 8px 0; background: var(--forest); color: var(--white); font-size: 14px; font-weight: 650; }
-.lp-skip-link:focus-visible { left: 0; outline: 3px solid var(--focus-ring); outline-offset: 0; }
+.lp-skip-link:focus-visible { left: 0; outline: 2px solid var(--focus-ring-contrast); outline-offset: -4px; box-shadow: 0 0 0 4px var(--focus-ring); }
 
 .lp-root { min-height: 100vh; overflow-x: clip; background: var(--paper); }
 .lp-container { width: min(calc(100% - 48px), 1200px); margin-inline: auto; }
 
 .lp-announcement { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 7px 20px; background: var(--orange-hover); color: var(--white); font-size: 12px; font-weight: 650; letter-spacing: .025em; text-align: center; }
-.lp-nav { position: sticky; top: 0; z-index: 100; background: var(--forest); color: var(--white); border-bottom: 1px solid rgba(255,255,255,.12); }
+.lp-nav { position: sticky; top: 0; z-index: 100; background: var(--forest); color: var(--white); border-bottom: 1px solid var(--hairline-dark); }
 .lp-nav-inner { min-height: 74px; display: flex; align-items: center; gap: 36px; }
 .lp-logo { display: inline-flex; align-items: center; gap: 11px; }
 .lp-logo-mark { width: 36px; height: 36px; display: block; border-radius: 10px; object-fit: cover; }
 .lp-logo-name { color: var(--white); font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
 .lp-nav-links { display: flex; gap: 28px; margin-left: auto; }
-.lp-nav-link { position: relative; padding: 8px 0; color: rgba(255,255,255,.75); font-size: 13px; font-weight: 500; }
+.lp-nav-link { position: relative; padding: 8px 0; color: var(--on-dark-strong); font-size: 13px; font-weight: 500; }
 .lp-nav-link::after { content: ""; position: absolute; right: 0; bottom: 2px; left: 0; height: 1px; background: var(--peach); transform: scaleX(0); transform-origin: right; transition: transform 180ms ease; }
 .lp-nav-link:hover, .lp-nav-link:focus-visible { color: var(--white); }
 .lp-nav-link:hover::after, .lp-nav-link:focus-visible::after { transform: scaleX(1); transform-origin: left; }
@@ -62,7 +61,7 @@ a { color: inherit; text-decoration: none; }
 .lp-btn-primary { border: 1px solid var(--orange-hover); background: var(--orange-hover); color: var(--white); }
 .lp-btn-primary:hover, .lp-btn-primary:focus-visible { border-color: var(--forest); background: var(--forest); }
 .lp-btn-ghost { border: 1px solid currentColor; background: transparent; color: inherit; }
-.lp-btn-ghost:hover, .lp-btn-ghost:focus-visible { background: rgba(255,255,255,.1); }
+.lp-btn-ghost:hover, .lp-btn-ghost:focus-visible { background: var(--overlay-light); }
 .lp-btn-lg { min-height: 52px; padding-inline: 27px; font-size: 15px; }
 
 .lp-hero { padding: clamp(40px,4.5vw,64px) 0 var(--section-space); border-bottom: 1px solid var(--line); }
@@ -85,7 +84,7 @@ a { color: inherit; text-decoration: none; }
 .lp-story-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 13px 0; border-top: 1px solid rgba(255,255,255,.16); }
 .lp-story-steps > li > span { color: var(--peach); font-family: var(--font-editorial); font-size: 17px; }
 .lp-story-steps strong { display: block; margin-bottom: 3px; font-size: 14px; }
-.lp-story-steps p { margin: 0; color: rgba(255,255,255,.68); font-size: 12px; line-height: 1.5; }
+.lp-story-steps p { margin: 0; color: var(--on-dark-muted); font-size: 12px; line-height: 1.5; }
 .lp-story-foot { justify-content: flex-start; gap: 8px; margin-top: 18px; color: var(--forest-dark); }
 .lp-story-foot span { padding: 7px 10px; border-radius: 999px; background: var(--sage); letter-spacing: 0; text-transform: none; }
 
@@ -152,7 +151,7 @@ a { color: inherit; text-decoration: none; }
 .lp-plan-annual-note { margin: -4px 0 10px; }
 .lp-plan-features { flex: 1; display: grid; align-content: start; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; }
 .lp-plan-features li { display: flex; gap: 8px; color: var(--muted); font-size: 12px; line-height: 1.45; }
-.lp-plan-card.highlight .lp-plan-features li { color: rgba(255,255,255,.75); }
+.lp-plan-card.highlight .lp-plan-features li { color: var(--on-dark-strong); }
 .lp-check { color: var(--orange); font-weight: 800; }
 .lp-plan-cta { width: 100%; border: 1px solid var(--forest); color: var(--forest); }
 .lp-plan-cta:hover, .lp-plan-cta:focus-visible, .lp-plan-cta.primary { background: var(--forest); color: var(--white); }
@@ -185,17 +184,17 @@ a { color: inherit; text-decoration: none; }
 .lp-final-cta { padding: clamp(44px,4vw,56px) 0; background: var(--forest); color: var(--white); }
 .lp-final-cta-inner { text-align: center; }
 .lp-final-cta h2 { max-width: 780px; margin-inline: auto; color: var(--white); font-size: clamp(36px,4.2vw,52px); }
-.lp-final-cta p { margin: 18px 0 24px; color: rgba(255,255,255,.68); font-size: 15px; line-height: 1.6; }
+.lp-final-cta p { margin: 18px 0 24px; color: var(--on-dark-muted); font-size: 15px; line-height: 1.6; }
 .lp-final-cta-guarantee { display: inline-block; margin-top: 5px; font-size: 11px; }
 .lp-final-cta .lp-hero-ctas { justify-content: center; }
 .lp-final-cta .lp-btn-white { border-color: var(--white); background: var(--white); color: var(--forest); }
 .lp-final-cta .lp-btn-white:hover, .lp-final-cta .lp-btn-white:focus-visible { border-color: var(--peach); background: var(--peach); }
 .lp-btn-network { color: var(--white); }
 
-.lp-footer { padding: 26px 0; border-top: 1px solid rgba(255,255,255,.12); background: var(--forest-dark); color: var(--white); }
+.lp-footer { padding: 26px 0; border-top: 1px solid var(--hairline-dark); background: var(--forest-dark); color: var(--white); }
 .lp-footer-inner { display: flex; align-items: center; gap: 30px; }
 .lp-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
-.lp-footer-links a, .lp-footer-copy { color: rgba(255,255,255,.58); font-size: 11px; }
+.lp-footer-links a, .lp-footer-copy { color: var(--on-dark-faint); font-size: 11px; }
 .lp-footer-links a:hover, .lp-footer-links a:focus-visible { color: var(--white); }
 .lp-footer-copy { margin: 0 0 0 auto; }
 
@@ -284,7 +283,7 @@ a { color: inherit; text-decoration: none; }
 /* Capturas reais: ampliação preserva a imagem inteira e o foco do teclado. */
 .lp-product-shot figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
 .lp-capture-open { flex-shrink: 0; min-height: 44px; padding: 8px 10px; border: 1px solid var(--forest); border-radius: 4px; background: transparent; color: var(--forest); font-size: 12px; font-weight: 650; cursor: pointer; }
-.lp-capture-open:focus-visible, .lp-capture-toolbar button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.lp-capture-open:focus-visible, .lp-capture-toolbar button:focus-visible { outline: 2px solid var(--focus-ring-contrast); outline-offset: -4px; box-shadow: 0 0 0 4px var(--focus-ring); }
 .lp-capture-dialog { width: min(1480px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--forest); border-radius: 8px; background: var(--white); color: var(--ink); }
 .lp-capture-dialog::backdrop { background: rgba(11,48,39,.78); }
 .lp-capture-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; font-size: 13px; }
