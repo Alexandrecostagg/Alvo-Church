@@ -1,5 +1,8 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: [prévia local da marca livro e pena na LP](previa-marca-lp-2026-09-28.md),
+> aguardando avaliação visual do usuário. Percentuais abaixo mantidos.
+
 > Atualização em 14/09, entrega 29: **96,40%**; mobile **97%**; LP **100% do escopo atual**.
 > Sessão mobile revalidada no servidor ao retomar e durante o uso; 419 testes aprovados.
 > AAB 13 disponível no teste interno do Google Play; QA físico pendente. Ver [entrega 29](entrega-ampliada-29-sessao-mobile-2026-09-14.md).

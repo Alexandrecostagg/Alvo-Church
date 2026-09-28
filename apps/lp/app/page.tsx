@@ -8,6 +8,7 @@ import { ModuleShowcaseClient } from "./components/ModuleShowcaseClient";
 import { PricingClient } from "./components/PricingClient";
 import { FAQClient } from "./components/FAQClient";
 import { ConversionAnalytics } from "./components/ConversionAnalytics";
+import { BrandLogo } from "./components/BrandLogo";
 
 export const metadata: Metadata = {
   metadataBase: new URL(LP_URL),
@@ -65,10 +66,7 @@ function LPNav() {
       </div>
       <header className="lp-nav">
         <div className="lp-container lp-nav-inner">
-          <div className="lp-logo">
-            <img className="lp-logo-mark" src="/esdrasapp-icon.png" width="36" height="36" alt="" />
-            <span className="lp-logo-name">Plataforma Esdras</span>
-          </div>
+          <BrandLogo />
           <nav className="lp-nav-links" aria-label="Navegação principal">
             <a href="#modulos" className="lp-nav-link">
               Produto
@@ -352,10 +350,7 @@ function LPFooter() {
   return (
     <footer className="lp-footer">
       <div className="lp-container lp-footer-inner">
-        <div className="lp-logo">
-          <img className="lp-logo-mark" src="/esdrasapp-icon.png" width="36" height="36" alt="" />
-          <span className="lp-logo-name">Plataforma Esdras</span>
-        </div>
+        <BrandLogo />
         <div className="lp-footer-links">
           <a href="#modulos">Módulos</a>
           <a href="#planos">Planos</a>
