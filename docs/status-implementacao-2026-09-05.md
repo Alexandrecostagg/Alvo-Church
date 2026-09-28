@@ -1,5 +1,8 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: [demonstração via WhatsApp, Quem Somos e Blog](entrega-lp-conteudo-demonstracao-2026-09-28.md)
+> implementados e validados na LP local. Publicação pendente; percentuais mantidos.
+
 > 28/09: marca livro e pena aprovada na [prévia local da LP](previa-marca-lp-2026-09-28.md).
 > Aplicação no app e Google Play adiada pelo usuário para o [próximo AAB](marca-proximo-aab-2026-09-28.md).
 > Percentuais abaixo mantidos.

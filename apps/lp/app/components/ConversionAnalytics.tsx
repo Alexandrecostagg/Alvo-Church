@@ -40,7 +40,8 @@ function sendEvent(event: string, placement: string, target: string) {
 }
 
 export function ConversionAnalytics() {
-  const [consent, setConsent] = useState<Consent>(null);
+  // Wait for stored consent before showing a prompt on each public page.
+  const [consent, setConsent] = useState<Consent | undefined>(undefined);
 
   useEffect(() => {
     const saved = localStorage.getItem(CONSENT_KEY);

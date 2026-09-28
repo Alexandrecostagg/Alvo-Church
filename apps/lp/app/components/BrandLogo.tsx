@@ -1,6 +1,6 @@
 export function BrandLogo() {
   return (
-    <a className="lp-logo" href="#conteudo" aria-label="Plataforma Esdras — início">
+    <a className="lp-logo" href="/" aria-label="Plataforma Esdras — início">
       <img
         className="lp-logo-mark"
         src="/esdras-book-quill-preview.png"

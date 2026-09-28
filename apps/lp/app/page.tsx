@@ -8,7 +8,8 @@ import { ModuleShowcaseClient } from "./components/ModuleShowcaseClient";
 import { PricingClient } from "./components/PricingClient";
 import { FAQClient } from "./components/FAQClient";
 import { ConversionAnalytics } from "./components/ConversionAnalytics";
-import { BrandLogo } from "./components/BrandLogo";
+import { LPNav, LPFooter } from "./components/SiteChrome";
+import { DemoInvitation, AboutTeaser, BlogTeaser } from "./components/EditorialSections";
 
 export const metadata: Metadata = {
   metadataBase: new URL(LP_URL),
@@ -40,12 +41,15 @@ export default function LandingPage() {
         Pular para o conteúdo
       </a>
       <LPNav />
-      <main id="conteudo">
+      <main id="conteudo" tabIndex={-1}>
         <Hero />
         <TrustBar />
         <Features />
         <ModuleShowcase />
+        <DemoInvitation />
         <Pricing />
+        <AboutTeaser />
+        <BlogTeaser />
         <FAQClient />
         <Contact />
         <FinalCTA />
@@ -53,45 +57,6 @@ export default function LandingPage() {
       <LPFooter />
       <ConversionAnalytics />
     </div>
-  );
-}
-
-function LPNav() {
-  return (
-    <>
-      <div className="lp-announcement">
-        <span>Plano gratuito para igrejas com até 50 membros</span>
-        <span aria-hidden="true">·</span>
-        <span>Sem cartão de crédito</span>
-      </div>
-      <header className="lp-nav">
-        <div className="lp-container lp-nav-inner">
-          <BrandLogo />
-          <nav className="lp-nav-links" aria-label="Navegação principal">
-            <a href="#modulos" className="lp-nav-link">
-              Produto
-            </a>
-            <a href="#planos" className="lp-nav-link">
-              Planos
-            </a>
-            <a href="#trust" className="lp-nav-link">
-              Segurança
-            </a>
-            <a href="#perguntas" className="lp-nav-link">
-              Dúvidas
-            </a>
-          </nav>
-          <div className="lp-nav-ctas">
-            <a href={`${WEB_APP_URL}/login`} className="lp-btn-ghost" data-analytics-event="secondary_cta_click" data-analytics-placement="navigation" data-analytics-target="login">
-              Entrar
-            </a>
-            <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary" data-analytics-event="primary_cta_click" data-analytics-placement="navigation" data-analytics-target="signup">
-              Criar conta grátis
-            </a>
-          </div>
-        </div>
-      </header>
-    </>
   );
 }
 
@@ -112,8 +77,8 @@ function Hero() {
             <a href={`${WEB_APP_URL}/signup`} className="lp-btn-primary lp-btn-lg" data-analytics-event="primary_cta_click" data-analytics-placement="hero" data-analytics-target="signup">
               Criar conta grátis
             </a>
-            <a href="#modulos" className="lp-btn-ghost lp-btn-lg" data-analytics-event="secondary_cta_click" data-analytics-placement="hero" data-analytics-target="modules">
-              Conhecer a plataforma
+            <a href="/demonstracao" className="lp-btn-ghost lp-btn-lg" data-analytics-event="secondary_cta_click" data-analytics-placement="hero" data-analytics-target="whatsapp">
+              Agendar demonstração
             </a>
           </div>
           <p className="lp-hero-note">
@@ -343,27 +308,5 @@ function Contact() {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-function LPFooter() {
-  return (
-    <footer className="lp-footer">
-      <div className="lp-container lp-footer-inner">
-        <BrandLogo />
-        <div className="lp-footer-links">
-          <a href="#modulos">Módulos</a>
-          <a href="#planos">Planos</a>
-          <a href="#perguntas">Perguntas frequentes</a>
-          <a href="#contato">Fale conosco</a>
-          <a href={`${WEB_APP_URL}/privacy`}>Privacidade</a>
-          <a href={`${WEB_APP_URL}/account-deletion`}>Exclusão de conta</a>
-          <a href={`${WEB_APP_URL}/login`}>Entrar</a>
-        </div>
-        <p className="lp-footer-copy">
-          © {new Date().getFullYear()} Plataforma Esdras. Feito com propósito.
-        </p>
-      </div>
-    </footer>
   );
 }
