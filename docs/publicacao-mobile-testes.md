@@ -1,5 +1,9 @@
 # Testes nas lojas — EsdrasApp
 
+> Pendência para o próximo AAB, registrada em 28/09: aplicar a marca livro e pena
+> aprovada na LP ao app e à ficha Google Play. O usuário pediu para adiar essa
+> aplicação; [arte preparada e roteiro](marca-proximo-aab-2026-09-28.md).
+
 Atualizado em **14/09/2026**. **AAB 13 (1.0.0) disponível para testadores internos**,
 confirmado no Play Console às 14:31. EAS concluído, assinatura conferida e igual
 à versão anterior. Inclui revalidação da sessão, retomada, isolamento de conta e

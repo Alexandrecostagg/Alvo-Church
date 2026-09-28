@@ -4,8 +4,10 @@ Livro aberto e pena aplicados ao cabeçalho e rodapé da LP, acompanhados do
 nome Esdras em Newsreader e do descritor Plataforma. Componente compartilhado
 `BrandLogo`; removida a antiga letra E decorativa do cartão principal.
 
-Prévia local: http://localhost:3004. A decisão final de identidade permanece
-com o usuário; esta entrega não publica a marca nem altera o aplicativo.
+Prévia local: http://localhost:3004. Identidade aprovada pelo usuário em 28/09.
+A aplicação no app e Google Play foi adiada a seu pedido para o próximo AAB;
+ver [registro e próximos passos](marca-proximo-aab-2026-09-28.md).
+Esta entrega não publica a marca nem altera o aplicativo.
 
 Build de produção e TypeScript aprovados. Conferência no navegador em 1440,
 390 e 320 px: imagens carregadas, sem rolagem horizontal e sem sobreposição
