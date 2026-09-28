@@ -16,7 +16,7 @@ export default function QuemSomosPage() {
     <div className="lp-values">
       <article><span>01</span><h2>Pessoas antes dos registros</h2><p>Um cadastro tem valor quando ajuda alguém a acolher, acompanhar ou servir melhor. É esse uso que orienta nossa proposta.</p></article>
       <article><span>02</span><h2>Responsabilidade compartilhada</h2><p>Secretaria, liderança e ministérios precisam colaborar com clareza sobre suas funções e seus acessos.</p></article>
-      <article><span>03</span><h2>Tecnologia com discernimento</h2><p>A IA pode apoiar a organização e a reflexão. A escuta, as decisões e a responsabilidade pastoral permanecem com as pessoas.</p></article>
+      <article><span>03</span><h2>Tecnologia com discernimento</h2><p>A Sabedoria Pastoral pode apoiar a organização e a reflexão. A escuta, as decisões e a responsabilidade pastoral permanecem com as pessoas.</p></article>
     </div>
     <div className="lp-inline-cta"><div><h2>Conheça antes de decidir.</h2><p>Explore os recursos ou converse com a equipe sobre a realidade da sua instituição.</p></div><a href="/demonstracao" className="lp-btn-primary">Agendar demonstração</a></div>
   </section></SitePage>;

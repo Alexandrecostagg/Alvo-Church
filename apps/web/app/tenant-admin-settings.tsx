@@ -552,7 +552,7 @@ export function TenantAdminSettings() {
               }
             />
             <LabeledNumber
-              label="Cota de IA"
+              label="Cota de Sabedoria Pastoral"
               value={draft.subscription.aiQuota ?? 0}
               onChange={(value) =>
                 setDraft({

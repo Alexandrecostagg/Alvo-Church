@@ -246,14 +246,14 @@ export function CommunicationView() {
         <section className="content-section">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
             <div><strong>Mensagem</strong><p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>Revise o texto antes de abrir as conversas.</p></div>
-            <button className="btn-secondary btn-sm" type="button" onClick={() => setAiOpen((value) => !value)}><Sparkles size={14} /> Criar rascunho com IA</button>
+            <button className="btn-secondary btn-sm" type="button" onClick={() => setAiOpen((value) => !value)}><Sparkles size={14} /> Criar rascunho com Sabedoria Pastoral</button>
           </div>
           {aiOpen && <div style={{ display: "grid", gap: 10, padding: 14, border: "1px solid var(--alvo-line)", borderRadius: 10, marginBottom: 12, background: "var(--alvo-surface-soft, var(--alvo-surface))" }}>
             <input value={aiObjective} onChange={(event) => setAiObjective(event.target.value)} maxLength={500} placeholder="Objetivo: lembrar o culto de domingo..." style={inputStyle} />
             <input value={aiAudience} onChange={(event) => setAiAudience(event.target.value)} maxLength={200} placeholder="Público do comunicado" style={inputStyle} />
             <textarea value={aiDetails} onChange={(event) => setAiDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Detalhes confirmados: data, horário, local e chamada para ação" style={{ ...inputStyle, resize: "vertical" }} />
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><select value={aiTone} onChange={(event) => setAiTone(event.target.value)} style={inputStyle}><option value="acolhedor">Acolhedor</option><option value="objetivo">Objetivo</option><option value="celebrativo">Celebrativo</option><option value="pastoral">Pastoral</option></select><button className="btn-primary btn-sm" type="button" disabled={generatingDraft || !aiObjective.trim() || !aiAudience.trim()} onClick={() => void generateDraft()}><Sparkles size={14} /> {generatingDraft ? "Gerando..." : "Gerar para revisar"}</button></div>
-            <small style={{ color: "var(--alvo-ink-soft)" }}>Não inclua dados pessoais ou pastorais. A geração usa a cota mensal da instituição e fica registrada sem salvar o conteúdo no log de IA.</small>
+            <small style={{ color: "var(--alvo-ink-soft)" }}>Não inclua dados pessoais ou pastorais. A geração usa a cota mensal da instituição e fica registrada sem salvar o conteúdo no log de Sabedoria Pastoral.</small>
           </div>}
           <textarea
             value={message}

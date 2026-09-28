@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://alvo-church-web.alexandrecostagg.workers.dev"),
   title: "Plataforma Esdras — Gestão para Igrejas e Redes",
   description:
-    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado. Grátis até 50 membros, sem cartão de crédito.",
+    "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e Sabedoria Pastoral — tudo integrado. Grátis até 50 membros, sem cartão de crédito.",
   alternates: { canonical: "/landing" },
   openGraph: {
     title: "Plataforma Esdras — Gestão para Igrejas e Redes",
     description:
-      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado.",
+      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e Sabedoria Pastoral — tudo integrado.",
     type: "website",
     url: "https://alvo-church-web.alexandrecostagg.workers.dev",
     siteName: "Plataforma Esdras",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Plataforma Esdras — Gestão para Igrejas e Redes",
     description:
-      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e IA — tudo integrado.",
+      "Toda a sua igreja, finalmente em um só lugar. Membros, células, finanças, pastoral e Sabedoria Pastoral — tudo integrado.",
   },
 };
 
@@ -90,7 +90,7 @@ function Hero() {
           Toda a sua igreja,<br />finalmente em um só lugar.
         </h1>
         <p className="lp-hero-subtitle">
-          Membros, células, finanças, escalas e cuidado pastoral com IA —
+          Membros, células, finanças, escalas e cuidado pastoral com Sabedoria Pastoral —
           integrados, simples, e feitos para a realidade da igreja brasileira.
         </p>
         <div className="lp-hero-ctas">
@@ -134,7 +134,7 @@ function Hero() {
                     "Pessoas",
                     "Células",
                     "Finanças",
-                    "IA Pastoral",
+                    "Sabedoria Pastoral",
                   ].map((item, i) => (
                     <div
                       key={item}
@@ -250,7 +250,7 @@ const FEATURES = [
     icon: "🏕️",
     title: "Tribos & Células",
     body:
-      "Classifique membros por vocação (tribos) e comunidade (células). A IA sugere pertencimento; o pastor decide.",
+      "Classifique membros por vocação (tribos) e comunidade (células). A Sabedoria Pastoral sugere pertencimento; o pastor decide.",
     tag: "Comunidade +",
   },
   {

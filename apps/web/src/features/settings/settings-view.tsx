@@ -50,7 +50,7 @@ type ModuleDef = {
 const MODULE_DEFS: ModuleDef[] = [
   { key: "visitors",      label: "Recepção & Visitantes",  desc: "Formulários de visita, painel do pastor, triagem de novos contatos", icon: Users,             color: "#3b82f6" },
   { key: "groups",        label: "Células",                desc: "Grupos de discipulado, reuniões, chamadas e relatórios de célula",   icon: Waypoints,         color: "#10b981" },
-  { key: "tribes",        label: "Tribos Ministeriais",    desc: "Classificação vocacional por IA, perfil ministerial e indicação",    icon: Tent,              color: "#f97316" },
+  { key: "tribes",        label: "Tribos Ministeriais",    desc: "Classificação vocacional por Sabedoria Pastoral, perfil ministerial e indicação",    icon: Tent,              color: "#f97316" },
   { key: "journeys",      label: "Jornadas & EAD",         desc: "Trilha de integração de novos membros e escola de discipulado EAD",  icon: MapIcon,           color: "#8b5cf6" },
   { key: "events",        label: "Eventos",                desc: "Agenda estratégica, inscrições, check-in e relatórios de presença",  icon: CalendarRange,     color: "#06b6d4" },
   { key: "volunteers",    label: "Escalas & Louvor",       desc: "Escalas de serviço, gestão de equipes e cifras para músicos",        icon: Handshake,         color: "#ec4899" },

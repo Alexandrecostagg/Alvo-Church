@@ -344,7 +344,7 @@ export function OrganizationNewView() {
               </label>
             </div>
             <label>
-              Cota mensal de IA
+              Cota mensal de Sabedoria Pastoral
               <input name="aiQuota" type="number" min="0" value={planConfig.aiQuota} readOnly />
               <p className="field-hint">A cota alimenta os limites iniciais do Cuidado Pastoral para esse tenant.</p>
             </label>

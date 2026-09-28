@@ -109,7 +109,7 @@ function Hero() {
           </ol>
           <div className="lp-story-foot">
             <span>Kids com retirada vinculada</span>
-            <span>IA com revisão humana</span>
+            <span>Sabedoria Pastoral com revisão humana</span>
           </div>
         </div>
       </div>
@@ -156,7 +156,7 @@ const FEATURES = [
     tag: "Todos os planos",
   },
   {
-    title: "IA que auxilia, sem ocupar o lugar do pastor",
+    title: "Sabedoria Pastoral para apoiar o cuidado",
     body:
       "Apoio ao pastor com análise de situações delicadas, orientação bíblica contextualizada e acompanhamento de membros em crise — com limites éticos claros.",
     tag: "Plano Pastoral +",
@@ -170,7 +170,7 @@ const FEATURES = [
   {
     title: "Tribos & Células",
     body:
-      "Classifique membros por vocação (tribos) e comunidade (células). A IA sugere pertencimento; o pastor decide.",
+      "Classifique membros por vocação (tribos) e comunidade (células). A Sabedoria Pastoral sugere pertencimento; o pastor decide.",
     tag: "Comunidade +",
   },
   {

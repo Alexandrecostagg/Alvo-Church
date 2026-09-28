@@ -1,5 +1,9 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: [nomenclatura Sabedoria Pastoral](entrega-sabedoria-pastoral-2026-09-28.md)
+> aplicada às interfaces, planos e mensagens da plataforma/LP. Captura real da LP
+> refeita; textos mobile preparados para o próximo AAB. Sem deploy; percentuais mantidos.
+
 > 28/09: [dois artigos recomendados da Portas Abertas](entrega-lp-artigos-recomendados-2026-09-28.md)
 > adicionados ao blog local com resumos próprios e links. Artigos públicos do IPE
 > não localizados; cursos excluídos conforme preferência do usuário. Percentuais mantidos.

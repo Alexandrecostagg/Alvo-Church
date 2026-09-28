@@ -143,7 +143,7 @@ export function PlatformAdminView() {
         </h1>
         <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0 }}>
           {tab === "overview"
-            ? "Todas as organizações, planos e uso de IA em um só lugar."
+            ? "Todas as organizações, planos e uso de Sabedoria Pastoral em um só lugar."
             : tab === "acquisition"
               ? "Interações consentidas na página pública nos últimos sete dias."
               : "Catálogo de trilhas vendidas às igrejas na Loja de Capacitação."}
@@ -187,7 +187,7 @@ export function PlatformAdminView() {
             <StatCard icon={<Building2 size={16} />} label="Organizações" value={String(orgs.length)} />
             <StatCard icon={<Users size={16} />} label="Membros na plataforma" value={stats.totalMembers.toLocaleString("pt-BR")} />
             <StatCard icon={<TrendingUp size={16} />} label="MRR estimado" value={formatBRL(stats.mrr)} sub="baseado no plano atual de cada igreja" />
-            <StatCard icon={<Sparkles size={16} />} label="Uso de IA este mês" value={`${stats.aiUsedTotal} / ${stats.aiLimitTotal || "—"}`} />
+            <StatCard icon={<Sparkles size={16} />} label="Uso de Sabedoria Pastoral este mês" value={`${stats.aiUsedTotal} / ${stats.aiLimitTotal || "—"}`} />
           </div>
 
           <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
@@ -229,7 +229,7 @@ export function PlatformAdminView() {
                   <th style={thStyle}>Organização</th>
                   <th style={thStyle}>Plano</th>
                   <th style={thStyle}>Membros</th>
-                  <th style={thStyle}>IA (mês)</th>
+                  <th style={thStyle}>Sabedoria Pastoral (mês)</th>
                   <th style={thStyle}>Última atividade</th>
                   <th style={thStyle}>Situação</th>
                   <th style={thStyle}>Ações</th>

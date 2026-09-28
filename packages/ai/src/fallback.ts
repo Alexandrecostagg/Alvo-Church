@@ -30,5 +30,5 @@ export async function callChatWithFallback(
     return callGroqWithCascade(keys.groqApiKey, messages, opts);
   }
 
-  throw new Error("Nenhuma API de IA configurada (defina DEEPSEEK_API_KEY e/ou GROQ_API_KEY).");
+  throw new Error("Nenhuma API de Sabedoria Pastoral configurada (defina DEEPSEEK_API_KEY e/ou GROQ_API_KEY).");
 }

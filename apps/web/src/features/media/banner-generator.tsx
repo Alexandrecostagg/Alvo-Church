@@ -990,7 +990,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
       <div className="banner-gen-form">
         <h2 className="banner-gen-title">Gerador de Banner</h2>
         <p className="banner-gen-desc">
-          Crie banners de <strong>{brand.churchName}</strong>. Texto e imagem consomem, cada um, uma unidade da cota mensal de IA. Tentativas iniciadas no provedor também contam em caso de falha.
+          Crie banners de <strong>{brand.churchName}</strong>. Texto e imagem consomem, cada um, uma unidade da cota mensal de Sabedoria Pastoral. Tentativas iniciadas no provedor também contam em caso de falha.
         </p>
 
         <div className="banner-field">
@@ -1148,7 +1148,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
             <div className="banner-canvas-placeholder">
               <Loader2 size={36} className="spin" strokeWidth={1.5} />
               <p>{
-                status === "generating-copy" ? "Gerando texto com IA..." :
+                status === "generating-copy" ? "Gerando texto com Sabedoria Pastoral..." :
                 status === "generating-bg"   ? "Gerando arte (pode levar 20s)..." :
                 "Compondo..."
               }</p>
@@ -1179,7 +1179,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
         )}
 
         <p className="banner-credit">
-          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>IA (DeepSeek)</strong> · conforme a cota do plano
+          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>Sabedoria Pastoral (DeepSeek)</strong> · conforme a cota do plano
         </p>
       </div>
 

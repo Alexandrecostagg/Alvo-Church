@@ -12,8 +12,8 @@ const FAQS = [
     a: "Até 50 membros cadastrados. É suficiente para igrejas que estão começando a organizar a gestão. Conforme a comunidade cresce, basta upgrade.",
   },
   {
-    q: "A IA Pastoral substitui o pastor?",
-    a: "Jamais. A IA é um auxiliar que sugere versículos, abordagens e próximos passos — mas a decisão final e o cuidado humano sempre são do pastor. Os limites éticos estão travados no sistema.",
+    q: "A Sabedoria Pastoral substitui o pastor?",
+    a: "Jamais. A Sabedoria Pastoral é uma ferramenta de apoio que sugere versículos, abordagens e próximos passos — mas a decisão final e o cuidado humano sempre são do pastor. Os limites éticos estão travados no sistema.",
   },
   {
     q: "Consigo migrar os dados de outra plataforma?",

@@ -77,7 +77,7 @@ async function callAi(task: string, input: unknown, idToken: string, organizatio
     body: JSON.stringify({ task, input, organizationId })
   });
   const data = await res.json() as { ok: boolean; content: string; error?: string };
-  if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na IA");
+  if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na Sabedoria Pastoral");
   return data.content;
 }
 
@@ -1248,7 +1248,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
         </View>
         <View style={s.fill}>
           <Text style={[s.liderBannerTitle, { color: primary }]}>Área do Líder</Text>
-          <Text style={s.liderBannerSub}>Roteiro, dinâmica e ferramentas de IA para o seu encontro</Text>
+          <Text style={s.liderBannerSub}>Roteiro, dinâmica e ferramentas de Sabedoria Pastoral para o seu encontro</Text>
         </View>
         <Text style={[s.menuChev, { color: primary }]}>›</Text>
       </TouchableOpacity>
@@ -2712,7 +2712,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {activeTool === "roteiro" && (
           <>
             <View style={[s.infoBox, { marginBottom: 16 }]}>
-              <Text style={s.infoText}>A IA monta um roteiro completo com abertura, quebra-gelo, estudo bíblico, aplicação e encerramento.</Text>
+              <Text style={s.infoText}>A Sabedoria Pastoral monta um roteiro completo com abertura, quebra-gelo, estudo bíblico, aplicação e encerramento.</Text>
             </View>
             <Field label="Tema do encontro *" value={theme} onChange={setTheme} placeholder="Ex: Fé em tempos difíceis" />
             <Field label="Passagem bíblica" value={verse} onChange={setVerse} placeholder="Ex: Hebreus 11:1" />
@@ -2747,7 +2747,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {activeTool === "relatorio" && (
           <>
             <View style={[s.infoBox, { marginBottom: 16 }]}>
-              <Text style={s.infoText}>Preencha os dados do encontro. A IA gera um relatório formatado para enviar ao pastor.</Text>
+              <Text style={s.infoText}>Preencha os dados do encontro. A Sabedoria Pastoral gera um relatório formatado para enviar ao pastor.</Text>
             </View>
             <Field label="Nome do grupo *" value={repGroupName} onChange={setRepGroupName} placeholder="Ex: CG Centro-Norte" />
             <Field label="Tema do encontro *" value={repTheme} onChange={setRepTheme} placeholder="Ex: Servindo com alegria" />
@@ -2771,7 +2771,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {error && <Text style={s.errorText}>{error}</Text>}
 
         <Btn
-          label={loading ? "Gerando com IA..." : "Gerar com IA"}
+          label={loading ? "Gerando com Sabedoria Pastoral..." : "Gerar com Sabedoria Pastoral"}
           onPress={run}
           loading={loading}
           color={primary}
@@ -2781,7 +2781,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
           <View style={[s.card, { marginTop: 20, backgroundColor: "#fff" }]}>
             <View style={[s.row, { marginBottom: 12 }]}>
               <Text style={{ fontSize: 16, marginRight: 6 }}>✨</Text>
-              <Text style={[s.eyebrow, { color: primary }]}>GERADO PELA IA</Text>
+              <Text style={[s.eyebrow, { color: primary }]}>GERADO PELA SABEDORIA PASTORAL</Text>
             </View>
             <Text style={[s.cardMeta, { lineHeight: 22, color: BRAND_DARK }]}>{result}</Text>
           </View>

@@ -35,7 +35,7 @@ const PLANS: Array<{
     priceAnual: "",
     limit: "até 50 membros cadastrados",
     features: ["Cadastro de membros", "Recepção e visitantes", "App mobile membros", "Dashboard básico"],
-    locked: ["Agenda e eventos", "Comunicados", "Tribos e vocações", "Finanças", "Doações (PIX)", "Células ilimitadas", "IA Pastoral", "Marketplace"],
+    locked: ["Agenda e eventos", "Comunicados", "Tribos e vocações", "Finanças", "Doações (PIX)", "Células ilimitadas", "Sabedoria Pastoral", "Marketplace"],
   },
   {
     id: "comunidade",
@@ -51,9 +51,9 @@ const PLANS: Array<{
       "Finanças",
       "Doações (PIX)",
       "Células ilimitadas",
-      "50 consultas IA/mês (prévia)",
+      "50 consultas de Sabedoria Pastoral/mês (prévia)",
     ],
-    locked: ["IA Pastoral completa", "Escalas", "Kids check-in", "Escola EAD", "Marketplace"],
+    locked: ["Sabedoria Pastoral completa", "Escalas", "Kids check-in", "Escola EAD", "Marketplace"],
   },
   {
     id: "pastoral",
@@ -64,7 +64,7 @@ const PLANS: Array<{
     highlight: true,
     features: [
       "Tudo do Comunidade",
-      "IA Pastoral completa — 500 consultas/mês",
+      "Sabedoria Pastoral completa — 500 consultas/mês",
       "Escalas de servir",
       "Kids check-in",
       "Escola EAD",
@@ -86,7 +86,7 @@ const PLANS: Array<{
       "Multi-tenant (várias igrejas)",
       "Painel da denominação",
       "Relatórios consolidados",
-      "IA em todas as igrejas",
+      "Sabedoria Pastoral em todas as igrejas",
       "Onboarding dedicado",
     ],
     locked: [],
@@ -207,7 +207,7 @@ export function PlanoView() {
     <div style={{ padding: "2rem 1.5rem", maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 4px" }}>Plano e faturamento</h1>
       <p style={{ margin: "0 0 2rem", color: "var(--color-text-secondary)", fontSize: 14 }}>
-        Gerencie seu plano e acompanhe o uso de IA.
+        Gerencie seu plano e acompanhe o uso de Sabedoria Pastoral.
       </p>
 
       {ready && billingStatus !== "active" && (
@@ -248,7 +248,7 @@ export function PlanoView() {
               <div style={{ width: 1, height: 16, background: "var(--color-border-tertiary)" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Sparkles size={14} style={{ color: "#f59e0b" }} />
-                IA: <strong style={{ fontWeight: 500 }}>{aiQuota.used}</strong>/{aiQuota.limit} gerações (texto e imagem) em {aiQuota.month}
+                Sabedoria Pastoral: <strong style={{ fontWeight: 500 }}>{aiQuota.used}</strong>/{aiQuota.limit} gerações (texto e imagem) em {aiQuota.month}
                 {!aiQuota.allowed && (
                   <span style={{ color: "var(--color-text-danger)", fontSize: 12 }}>— cota esgotada</span>
                 )}
@@ -325,7 +325,7 @@ export function PlanoView() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
               {p.features.map((f) => (
                 <div key={f} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                  {f.includes("IA") || f.includes("consultas") ? (
+                  {f.includes("Sabedoria Pastoral") || f.includes("consultas") ? (
                     <Sparkles size={13} style={{ color: "#f59e0b", marginTop: 2, flexShrink: 0 }} />
                   ) : (
                     <Check size={13} style={{ color: "var(--color-text-success)", marginTop: 2, flexShrink: 0 }} />
@@ -475,7 +475,7 @@ export function PlanoView() {
       )}
 
       <div style={{ marginTop: "1.5rem", background: "var(--color-background-secondary)", borderRadius: 10, padding: "1rem 1.25rem", fontSize: 13, color: "var(--color-text-secondary)" }}>
-        <div style={{ fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Proteção de margem da IA</div>
+        <div style={{ fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Proteção de margem da Sabedoria Pastoral</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
           <span><Sparkles size={12} style={{ marginRight: 4, verticalAlign: -1, color: "#f59e0b" }} />Comunidade: 50 consultas/mês</span>
           <span><Sparkles size={12} style={{ marginRight: 4, verticalAlign: -1, color: "#f59e0b" }} />Pastoral: 500 consultas/mês</span>

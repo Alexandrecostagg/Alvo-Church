@@ -52,7 +52,7 @@ const MODULE_LABELS: Record<(typeof MODULES)[number], string> = {
   giving: "Doações",
   publicForms: "Formulários públicos",
   finance: "Finanças",
-  ai: "IA pastoral",
+  ai: "Sabedoria Pastoral",
 };
 const ROLES: { value: AppRole; label: string }[] = [
   { value: "super_admin", label: "Super Admin da igreja" },

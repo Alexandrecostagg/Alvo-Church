@@ -21,7 +21,7 @@ export const AI_TASKS = [
 ] as const;
 export function aiTask(value: unknown): string {
   if (typeof value !== "string" || !AI_TASKS.includes(value as any))
-    throw new AccountError(400, "Tarefa de IA inválida.");
+    throw new AccountError(400, "Tarefa de Sabedoria Pastoral inválida.");
   return value;
 }
 // A single monthly allowance and short-window cap cover all generation routes.
@@ -92,21 +92,21 @@ export async function aiGate(
     )
       throw new AccountError(
         403,
-        "Assinatura suspensa. Regularize o plano para usar IA.",
+        "Assinatura suspensa. Regularize o plano para usar Sabedoria Pastoral.",
       );
     const limit = PLAN_LIMITS[plan].aiQueriesPerMonth,
       used = usage?.count ?? 0;
     if (!Number.isInteger(used) || used < 0)
-      throw new AccountError(503, "Contador de IA precisa de conferência.");
+      throw new AccountError(503, "Contador de Sabedoria Pastoral precisa de conferência.");
     if (used >= limit)
       throw new AccountError(
         429,
-        `Cota mensal de IA esgotada (${used}/${limit}). Texto, banner e imagem usam a mesma cota.`,
+        `Cota mensal de Sabedoria Pastoral esgotada (${used}/${limit}). Texto, banner e imagem usam a mesma cota.`,
       );
     const orgCount = burst?.window === minute ? burst.count : 0,
       userCount = personal?.window === minute ? personal.count : 0;
     if (![orgCount, userCount].every((n) => Number.isInteger(n) && n >= 0))
-      throw new AccountError(503, "Contador temporário de IA inválido.");
+      throw new AccountError(503, "Contador temporário de Sabedoria Pastoral inválido.");
     if (orgCount >= 10 || userCount >= 3)
       throw new AccountError(
         429,
@@ -134,7 +134,7 @@ export async function completeAi(
   status: "completed" | "failed",
 ) {
   documentId(orgId, "Igreja");
-  documentId(auditId, "Registro de IA");
+  documentId(auditId, "Registro de Sabedoria Pastoral");
   await accountTransaction(async (tx) => {
     const path = `organizations/${orgId}/aiAudit/${auditId}`,
       [row] = await tx.read(path);

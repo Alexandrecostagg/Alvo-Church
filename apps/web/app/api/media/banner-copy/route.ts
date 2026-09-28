@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Nenhuma API de IA configurada (DEEPSEEK_API_KEY/GROQ_API_KEY).",
+            "Nenhuma API de Sabedoria Pastoral configurada (DEEPSEEK_API_KEY/GROQ_API_KEY).",
         },
         { status: 500 },
       );
@@ -131,7 +131,7 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
     try {
       copy = JSON.parse(cleaned) as BannerCopy;
     } catch {
-      throw new AccountError(502, "Resposta de IA inválida.");
+      throw new AccountError(502, "Resposta de Sabedoria Pastoral inválida.");
     }
 
     await completeAi(orgId, ticket.auditId, "completed");

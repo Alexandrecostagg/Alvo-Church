@@ -28,6 +28,11 @@ Manter o nome EsdrasApp, os identificadores, a titularidade e as permissões.
 
 ## Executar junto à próxima versão Android
 
+Atualização de nomenclatura em 28/09: os textos do aplicativo já usam
+**Sabedoria Pastoral** no código. A mudança aparecerá para os usuários após a
+próxima distribuição; verificar roteiros, relatórios e mensagens de geração
+nesse AAB. Nenhum novo build foi feito para esta troca de texto.
+
 1. Gerar os ícones de app/iOS, a camada transparente do ícone adaptativo Android,
    a versão monocromática e o ícone próprio para notificações. Preservar a área
    segura do Android para não cortar o livro ou a pena.

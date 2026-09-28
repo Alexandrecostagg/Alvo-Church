@@ -28,15 +28,15 @@ const MODULES = [
       "Captura real do ambiente demonstrativo Esdras: gestão de células e integração de pessoas",
   },
   {
-    tag: "IA Pastoral",
-    title: "Cuidado Pastoral com IA",
+    tag: "Sabedoria Pastoral",
+    title: "Apoio ao cuidado pastoral",
     subtitle: "Pedidos organizados, revisão humana sempre",
     description:
-      "Organize solicitações e responsáveis pelo acompanhamento. Os rascunhos de IA dependem da configuração e da cota do plano e passam por revisão da liderança. A captura mostra a fila antes do primeiro pedido.",
+      "Organize solicitações e responsáveis pelo acompanhamento. Os rascunhos da Sabedoria Pastoral dependem da configuração e da cota do plano e passam por revisão da liderança. A captura mostra a fila antes do primeiro pedido.",
     visual: "ai",
-    image: "/product/pastoral-ai-capture.webp",
+    image: "/product/sabedoria-pastoral-capture.png",
     imageAlt:
-      "Captura real do ambiente demonstrativo Esdras: cuidado pastoral supervisionado com IA",
+      "Captura real do ambiente demonstrativo Esdras: cuidado pastoral supervisionado com Sabedoria Pastoral",
   },
   {
     tag: "Escalas",

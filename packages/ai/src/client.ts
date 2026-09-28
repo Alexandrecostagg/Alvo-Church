@@ -34,7 +34,7 @@ export async function callAiTask(
   const data = (await res.json()) as AiApiResponse;
 
   if (!res.ok || !data.ok) {
-    throw new Error(data.error ?? "Erro na API de IA");
+    throw new Error(data.error ?? "Erro na API de Sabedoria Pastoral");
   }
 
   return data.content;

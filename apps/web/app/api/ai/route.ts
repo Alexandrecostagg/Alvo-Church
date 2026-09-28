@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     if (task.startsWith("banner_"))
       throw new AccountError(400, "Use o gerador de banners para esta tarefa.");
     if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput))
-      throw new AccountError(400, "Dados de IA inválidos.");
+      throw new AccountError(400, "Dados de Sabedoria Pastoral inválidos.");
     const input =
       task === "communication_draft"
         ? communicationDraftInput(rawInput as Record<string, unknown>)
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       groqApiKey: process.env.GROQ_API_KEY,
     };
     if (!keys.deepseekApiKey && !keys.groqApiKey)
-      throw new AccountError(503, "Serviço de IA não configurado.");
+      throw new AccountError(503, "Serviço de Sabedoria Pastoral não configurado.");
     const ticket = await aiGate(organizationId, uid, task);
     auditId = ticket.auditId;
     orgId = organizationId;

@@ -600,7 +600,7 @@ export function PastoralAiView() {
             <div className="empty-request-list">
               <span className="eyebrow">Pedido de cuidado</span>
               <strong>Nenhuma solicitação selecionada</strong>
-              <span>Cadastre uma entrada pastoral para iniciar o acompanhamento com apoio da IA.</span>
+              <span>Cadastre uma entrada pastoral para iniciar o acompanhamento com apoio da Sabedoria Pastoral.</span>
             </div>
           )}
         </article>

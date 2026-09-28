@@ -41,6 +41,11 @@ ritmo; nenhum texto, logotipo, fotografia ou componente foi copiado.
 - Prefira linhas, mudança de fundo e espaço para separar argumentos.
 - Mantenha uma única ação dominante: `Criar conta grátis`.
 - Preserve `50 membros` em toda menção ao plano gratuito.
+- Use **Sabedoria Pastoral** como nome público dos recursos de assistência
+  automatizada, conforme decisão de 28/09/2026. Aplicar também a botões, planos,
+  textos alternativos, mensagens de erro e capturas. Preservar a indicação de
+  geração automatizada, revisão humana e limites de uso; não apresentar a
+  ferramenta como substituta da liderança. Identificadores técnicos permanecem.
 - No mobile, CTA, promessa e explicação precisam caber sem overflow horizontal.
 - Mantenha a transição entre seções compacta: 28–44 px por lado no desktop e
   28–32 px no celular; duas seções consecutivas não devem somar mais de 80 px.
