@@ -1,5 +1,9 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: avatar da [nova marca para Instagram](marca-proximo-aab-2026-09-28.md)
+> preparado. Troca de foto pendente de identificar/acessar o perfil Esdras;
+> percentuais mantidos.
+
 > 28/09: [commit, push e deploy da LP e do painel](deploy-2026-09-28.md)
 > concluídos e conferidos nos endereços públicos. Mobile aguarda o próximo AAB;
 > percentuais mantidos.

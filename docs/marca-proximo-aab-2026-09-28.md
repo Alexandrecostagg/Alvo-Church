@@ -17,6 +17,9 @@ Google Play até a próxima geração de AAB.
 
 - [Símbolo vetorial de trabalho](brand/esdras-book-quill-draft.svg).
 - [Prévia do ícone da loja, 512 × 512](brand/esdras-play-icon-draft.png).
+- [Avatar quadrado para Instagram, 512 × 512](brand/esdras-instagram-avatar-512.png),
+  derivado da mesma arte aprovada; o livro e a pena permanecem dentro da área
+  de recorte circular da foto de perfil.
 - Referência visual aprovada: `apps/lp/public/esdras-book-quill-preview.png`.
 
 A versão vetorial foi preparada a partir da composição aprovada; conferir sua
@@ -25,6 +28,14 @@ não são consumidas pelo app e não alteram o próximo build automaticamente.
 
 Direção: símbolo claro sobre verde `#123f34`, livro e pena sem a antiga letra E.
 Manter o nome EsdrasApp, os identificadores, a titularidade e as permissões.
+
+## Instagram
+
+O avatar está pronto para publicação. A sessão aberta no navegador Chrome
+mostrou apenas os perfis salvos `@alvorecerstudio` e `@alvoprompter`; não foi
+identificado nela um perfil oficial do Esdras. Antes de trocar a foto,
+confirmar o `@` correto e ter acesso à conta. A mudança da foto do Instagram
+pode ocorrer independentemente da geração do próximo AAB.
 
 ## Executar junto à próxima versão Android
 
