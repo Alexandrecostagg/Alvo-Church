@@ -1,5 +1,9 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: [dois artigos recomendados da Portas Abertas](entrega-lp-artigos-recomendados-2026-09-28.md)
+> adicionados ao blog local com resumos próprios e links. Artigos públicos do IPE
+> não localizados; cursos excluídos conforme preferência do usuário. Percentuais mantidos.
+
 > 28/09: [demonstração via WhatsApp, Quem Somos e Blog](entrega-lp-conteudo-demonstracao-2026-09-28.md)
 > implementados e validados na LP local. Publicação pendente; percentuais mantidos.
 

@@ -369,6 +369,12 @@ a { color: inherit; text-decoration: none; }
 .lp-article-card :is(h2,h3) { font: 500 27px/1.13 var(--font-editorial); letter-spacing: -.015em; margin: 0 0 12px; }
 .lp-article-card :is(h2,h3) a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .lp-article-card p:not(.lp-article-category) { color: var(--muted); font-size: 14px; line-height: 1.6; text-align: justify; hyphens: auto; margin: 0 0 12px; }
+.lp-recommended { margin-top: 32px; scroll-margin-top: 120px; }
+.lp-recommended .lp-editorial-heading { margin-bottom: 12px; }
+.lp-recommended-intro { max-width: 740px; margin: 0 0 18px; color: var(--muted); font-size: 14px; line-height: 1.6; text-align: justify; hyphens: auto; }
+.lp-recommended-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.lp-article-card .lp-source-credit { font-size: 12px; text-align: left; }
+.lp-recommended-teaser { margin-top: 12px; }
 .lp-reading { max-width: 780px; }
 .lp-article-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: var(--muted); padding-block: 8px 22px; border-bottom: 1px solid var(--line); }
 .lp-prose section { margin-top: 28px; }
