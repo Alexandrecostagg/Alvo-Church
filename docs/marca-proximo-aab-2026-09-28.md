@@ -20,6 +20,11 @@ Google Play até a próxima geração de AAB.
 - [Avatar quadrado para Instagram, 512 × 512](brand/esdras-instagram-avatar-512.png),
   derivado da mesma arte aprovada; o livro e a pena permanecem dentro da área
   de recorte circular da foto de perfil.
+- [Prévia colorida do avatar, 512 × 512](brand/esdras-instagram-pena-cobre-512.png)
+  e [vetor correspondente](brand/esdras-instagram-pena-cobre.svg): livro claro,
+  pena em cobre `#dc7938` e fundo verde `#123f34`. Variante proposta em resposta
+  ao pedido de testar um pouco de cor; aguardando a escolha do usuário. Não
+  substitui o avatar monocromático nem foi aplicada ao perfil.
 - Referência visual aprovada: `apps/lp/public/esdras-book-quill-preview.png`.
 
 A versão vetorial foi preparada a partir da composição aprovada; conferir sua
