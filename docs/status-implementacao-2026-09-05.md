@@ -1,5 +1,9 @@
 # Estado da implementação — 05/09/2026
 
+> 28/09: [commit, push e deploy da LP e do painel](deploy-2026-09-28.md)
+> concluídos e conferidos nos endereços públicos. Mobile aguarda o próximo AAB;
+> percentuais mantidos.
+
 > 28/09: [nomenclatura Sabedoria Pastoral](entrega-sabedoria-pastoral-2026-09-28.md)
 > aplicada às interfaces, planos e mensagens da plataforma/LP. Captura real da LP
 > refeita; textos mobile preparados para o próximo AAB. Sem deploy; percentuais mantidos.
