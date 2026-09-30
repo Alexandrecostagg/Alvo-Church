@@ -33,7 +33,7 @@ const MODULES = [
     description:
       "Organize solicitações e responsáveis pelo acompanhamento. Os rascunhos da Sabedoria Pastoral dependem da configuração e da cota do plano e passam por revisão da liderança. A captura mostra a fila antes do primeiro pedido.",
     visual: "ai",
-    image: "/product/sabedoria-pastoral-capture.png",
+    image: "/product/sabedoria-pastoral-capture.webp",
     imageAlt:
       "Captura real do ambiente demonstrativo Esdras: cuidado pastoral supervisionado com Sabedoria Pastoral",
   },

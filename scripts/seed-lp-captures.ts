@@ -44,7 +44,8 @@ async function run() {
   batch.set(org.collection("serviceTeams").doc("team_reception"), { id: "team_reception", organizationId, code: "reception", name: "Recepção e acolhimento", summary: "Receber pessoas e orientar visitantes.", targetVolunteers: 3, status: "active" });
   for (const [i, person] of seedPeople.entries()) {
     const id = `assignment_demo_${i}`;
-    batch.set(org.collection("serviceAssignments").doc(id), { id, organizationId, serviceTeamId: "team_reception", ministryCode: "reception", personId: person.id, role: "Acolhimento", serviceDate, status: i === 0 ? "confirmed" : "pending", createdAt: date, updatedAt: date });
+    const assignmentDate = i === 0 ? serviceDate : new Date(new Date(`${serviceDate}T12:00:00Z`).getTime() + i * 7 * 86400000).toISOString().slice(0, 10);
+    batch.set(org.collection("serviceAssignments").doc(id), { id, organizationId, serviceTeamId: "team_reception", ministryCode: "reception", personId: person.id, role: "Acolhimento", serviceDate: assignmentDate, status: i === 0 ? "confirmed" : "pending", createdAt: date, updatedAt: date });
   }
   for (const [i, [label, kind, amount]] of [["Contribuições — demonstração", "income", 1200], ["Manutenção — demonstração", "expense", 350], ["Apoio a missões — demonstração", "missions", 200]].entries()) {
     const id = `finance_demo_${i}`;

@@ -13,7 +13,7 @@ export default function AccountDeletionPage() {
     <main className="legal-page">
       <div className="legal-shell">
         <Link className="legal-brand" href="/landing" aria-label="Voltar para a Plataforma Esdras">
-          <span className="legal-brand-mark">E</span>
+          <img className="legal-brand-mark" src="/brand/esdras-icon.png" width="34" height="34" alt="" />
           <span>Plataforma Esdras</span>
         </Link>
 

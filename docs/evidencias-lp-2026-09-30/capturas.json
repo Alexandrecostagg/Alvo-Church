@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-30",
+  "source": "real browser captures of local demo-alvo-qa emulator; no image compositing or pixel edits",
+  "dimensions": [
+    1433,
+    1000
+  ],
+  "images": [
+    {
+      "name": "members",
+      "file": "members-capture.webp",
+      "sourceJpegSha256": "9c8dbcdde56e256520c8d685b03dccc8344da479fb3f32d2b11897049d2eb9b4",
+      "webpSha256": "a392a5d553a19d26ff9ff47e56127e80fbf8211dfa7f2033e71a50c492e40776",
+      "pixelSha256": "20da775be7d36855654d2b814d08fe05c65563f4c444e72b2b7a8ac904015227",
+      "bytes": 274302,
+      "pixelsIdenticalToBrowserCapture": true
+    },
+    {
+      "name": "groups",
+      "file": "groups-capture.webp",
+      "sourceJpegSha256": "a4e95d2b64b10c1ea903537b0e4094d46f9506ee4b5e12d8103b967b15817b88",
+      "webpSha256": "396970a83b1a6b4fe25da291a873b1e68641d2bdfdf9397697a425f0cd634a5a",
+      "pixelSha256": "b8eb618cace795550edcf14a9b437748d85e1bd6b978ccb0f1497f060b177e8d",
+      "bytes": 343332,
+      "pixelsIdenticalToBrowserCapture": true
+    },
+    {
+      "name": "pastoral",
+      "file": "sabedoria-pastoral-capture.webp",
+      "sourceJpegSha256": "66257d828a3e4146de82f8f6b2f5278474ad5d6cbc8c16dd4bc5bd645eda4aaf",
+      "webpSha256": "a9dba4fe0f7c11c6ea401a6271e24ff9373cea93508a2305af31cb65a842180f",
+      "pixelSha256": "948a7c5f4b17e33a112895265ac77b74b02d3c58ba9c5cc399904632dbe51dcb",
+      "bytes": 340286,
+      "pixelsIdenticalToBrowserCapture": true
+    },
+    {
+      "name": "serving",
+      "file": "serving-capture.webp",
+      "sourceJpegSha256": "a03c7b270707eb22453ddb2df041629fa7db93f54245f0fc95fe7a6893d51c01",
+      "webpSha256": "0a77695aabb6d6f564a927ce689671ad04c8b73e8a571f1d494c0f671313765c",
+      "pixelSha256": "4a3d2205bbb3374fc4b58734cb495d47e4855e243ea8f45e83bdf4e9c93cc6be",
+      "bytes": 353432,
+      "pixelsIdenticalToBrowserCapture": true
+    },
+    {
+      "name": "finance",
+      "file": "finance-capture.webp",
+      "sourceJpegSha256": "4f19f85d35c30297faca2fd0d07d988b2a3710ba0b180e74361695fe5c114584",
+      "webpSha256": "1f32d667ce030a18c1efd0bb99b2e6a459a25b9f6058d43bbbbea5d714781511",
+      "pixelSha256": "b40629e4ffab33f6726424cc293c4a6faf4873eeadb2d20f843c3900cb641263",
+      "bytes": 198714,
+      "pixelsIdenticalToBrowserCapture": true
+    }
+  ]
+}

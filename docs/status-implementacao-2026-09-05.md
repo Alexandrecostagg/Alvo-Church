@@ -1,5 +1,9 @@
 # Estado da implementação — 05/09/2026
 
+> 30/09: [marca aprovada aplicada ao painel web e às cinco capturas reais da LP](entrega-marca-painel-capturas-lp-2026-09-30.md).
+> Marcas próprias das instituições preservadas. App nativo e Google Play seguem
+> reservados ao próximo AAB. Sistema **96,40%**, mobile **97%**, LP **100%**.
+
 > 28/09: avatar da [nova marca para Instagram](marca-proximo-aab-2026-09-28.md)
 > preparado. Troca de foto pendente de identificar/acessar o perfil Esdras;
 > percentuais mantidos.
