@@ -52,7 +52,7 @@ function LPNav() {
     <header className="lp-nav">
       <div className="lp-container lp-nav-inner">
         <div className="lp-logo">
-          <img className="lp-logo-mark" src="/brand/esdras-icon.png" width="32" height="32" alt="" />
+          <img className="lp-logo-mark" src="/brand/esdras-icon-cobre.png" width="32" height="32" alt="" />
           <span className="lp-logo-name">Plataforma Esdras</span>
         </div>
         <nav className="lp-nav-links" aria-label="Navegação principal">
@@ -365,7 +365,7 @@ function LPFooter() {
     <footer className="lp-footer">
       <div className="lp-container lp-footer-inner">
         <div className="lp-logo">
-          <img className="lp-logo-mark" src="/brand/esdras-icon.png" width="32" height="32" alt="" />
+          <img className="lp-logo-mark" src="/brand/esdras-icon-cobre.png" width="32" height="32" alt="" />
           <span className="lp-logo-name">Plataforma Esdras</span>
         </div>
         <div className="lp-footer-links">

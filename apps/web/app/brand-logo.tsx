@@ -14,7 +14,7 @@ export function BrandLogo({
 }) {
   const { tenantRuntime } = useAppAuth();
   const brandTheme = createBrandTheme(tenantRuntime?.settings?.branding);
-  const markUrl = brandTheme.brand.logoUrl ?? brandTheme.brand.markUrl ?? "/brand/esdras-icon.png";
+  const markUrl = brandTheme.brand.logoUrl ?? brandTheme.brand.markUrl ?? "/brand/esdras-icon-cobre.png";
 
   return (
     <div

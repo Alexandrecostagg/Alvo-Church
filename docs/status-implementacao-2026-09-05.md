@@ -1,5 +1,10 @@
 # Estado da implementação — 05/09/2026
 
+> 30/09: [variante com pena cobre aplicada ao painel e cinco capturas da LP](entrega-marca-colorida-painel-2026-09-30.md).
+> As capturas agora identificam a demonstração como **Plataforma Esdras**.
+> App nativo e Google Play continuam reservados ao próximo AAB. Percentuais
+> mantidos: sistema **96,40%**, mobile **97%**, LP **100%**.
+
 > 30/09: [marca aprovada aplicada ao painel web e às cinco capturas reais da LP](entrega-marca-painel-capturas-lp-2026-09-30.md).
 > Marcas próprias das instituições preservadas. App nativo e Google Play seguem
 > reservados ao próximo AAB. Sistema **96,40%**, mobile **97%**, LP **100%**.

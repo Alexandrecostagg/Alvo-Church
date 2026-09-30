@@ -22,14 +22,14 @@ Google Play até a próxima geração de AAB.
   de recorte circular da foto de perfil.
 - [Prévia colorida do avatar, 512 × 512](brand/esdras-instagram-pena-cobre-512.png)
   e [vetor correspondente](brand/esdras-instagram-pena-cobre.svg): livro claro,
-  pena em cobre `#dc7938` e fundo verde `#123f34`. Variante proposta em resposta
-  ao pedido de testar um pouco de cor; aguardando a escolha do usuário. Não
-  substitui o avatar monocromático nem foi aplicada ao perfil.
+  pena em cobre `#dc7938` e fundo verde `#123f34`. Em 30/09, o usuário escolheu
+  esta variante para o painel web e para as capturas de produto da LP. A troca
+  da foto do perfil do Instagram ainda depende de identificar a conta oficial.
 - Referência visual aprovada: `apps/lp/public/esdras-book-quill-preview.png`.
 
 A versão vetorial foi preparada a partir da composição aprovada; conferir sua
 fidelidade à LP antes de adotá-la como fonte definitiva. As artes desta pasta
-não são consumidas pelo app e não alteram o próximo build automaticamente.
+não são consumidas pelo app mobile e não alteram o próximo build automaticamente.
 
 Direção: símbolo claro sobre verde `#123f34`, livro e pena sem a antiga letra E.
 Manter o nome EsdrasApp, os identificadores, a titularidade e as permissões.

@@ -25,9 +25,9 @@ async function run() {
   await auth.setCustomUserClaims(uid, { organizationId });
   const org = db.collection("organizations").doc(organizationId);
   const batch = db.batch();
-  batch.set(org, { id: organizationId, name: "Comunidade Esperança", displayName: "Comunidade Esperança", slug: "comunidade-demonstracao", status: "active", timezone: "America/Belem", locale: "pt-BR", countryCode: "BR", ownerUid: uid, memberCount: seedPeople.length, organizationTier: "solo" });
+  batch.set(org, { id: organizationId, name: "Plataforma Esdras", displayName: "Plataforma Esdras", slug: "plataforma-esdras-demonstracao", status: "active", timezone: "America/Belem", locale: "pt-BR", countryCode: "BR", ownerUid: uid, memberCount: seedPeople.length, organizationTier: "solo" });
   batch.set(org.collection("users").doc(uid), { id: uid, organizationId, email, displayName: user.displayName, roles: ["church_admin"], campusIds: [], isActive: true });
-  batch.set(org.collection("settings").doc("branding"), { organizationId, brandMode: "co_branded", publicProductName: "Comunidade Esperança", publicShortName: "Esperança", primaryColor: "#d27836", secondaryColor: "#1c2433", accentColor: "#e8dcc7", surfaceColor: "#f7f3ea", textColor: "#1c2433", showPoweredByAlvo: true });
+  batch.set(org.collection("settings").doc("branding"), { organizationId, brandMode: "alvo_managed", publicProductName: "Plataforma Esdras", publicShortName: "Esdras", primaryColor: "#d27836", secondaryColor: "#1c2433", accentColor: "#e8dcc7", surfaceColor: "#f7f3ea", textColor: "#1c2433", showPoweredByAlvo: false });
   batch.set(org.collection("settings").doc("subscription"), { organizationId, plan: "pastoral", billingStatus: "active" });
   batch.set(org.collection("settings").doc("features"), { organizationId, modules: seedOrganizationFeatures.modules });
   for (const [collection, rows] of [["people", seedPeople], ["families", seedFamilies], ["familyMembers", seedFamilyMembers], ["groups", seedGroups]] as const) {

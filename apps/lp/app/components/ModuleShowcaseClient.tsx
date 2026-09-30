@@ -11,7 +11,7 @@ const MODULES = [
     description:
       "Organize os cadastros de membros e visitantes, suas famílias e vínculos com a instituição. A equipe consulta as informações conforme suas permissões de acesso.",
     visual: "reception",
-    image: "/product/members-capture.webp",
+    image: "/product/members-cobre.webp",
     imageAlt:
       "Captura real do ambiente demonstrativo Esdras: gestão de membros, famílias e visitantes",
   },
@@ -22,7 +22,7 @@ const MODULES = [
     description:
       "Vincule participantes, abra encontros e registre presenças. A liderança acompanha a capacidade dos grupos e os sinais de cuidado a partir dos registros da equipe.",
     visual: "groups",
-    image: "/product/groups-capture.webp",
+    image: "/product/groups-cobre.webp",
     imageAlt:
       "Captura real do ambiente demonstrativo Esdras: gestão de células e integração de pessoas",
   },
@@ -33,7 +33,7 @@ const MODULES = [
     description:
       "Organize solicitações e responsáveis pelo acompanhamento. Os rascunhos da Sabedoria Pastoral dependem da configuração e da cota do plano e passam por revisão da liderança. A captura mostra a fila antes do primeiro pedido.",
     visual: "ai",
-    image: "/product/sabedoria-pastoral-capture.webp",
+    image: "/product/sabedoria-pastoral-cobre.webp",
     imageAlt:
       "Captura real do ambiente demonstrativo Esdras: cuidado pastoral supervisionado com Sabedoria Pastoral",
   },
@@ -44,7 +44,7 @@ const MODULES = [
     description:
       "Monte a escala de louvor, portaria e kids, acompanhe confirmações e organize trocas. Cada voluntário confirma presença pelo celular quando a conta está vinculada.",
     visual: "serving",
-    image: "/product/serving-capture.webp",
+    image: "/product/serving-cobre.webp",
     imageAlt: "Captura real do ambiente demonstrativo Esdras: escalas e voluntários",
   },
   {
@@ -54,7 +54,7 @@ const MODULES = [
     description:
       "Consulte entradas, despesas e registros de missões, filtre lançamentos e exporte o relatório mensal em CSV. O acesso segue as permissões da equipe; os registros não substituem o extrato bancário.",
     visual: "finance",
-    image: "/product/finance-capture.webp",
+    image: "/product/finance-cobre.webp",
     imageAlt:
       "Captura real do ambiente demonstrativo Esdras: gestão financeira e transparência",
   },
