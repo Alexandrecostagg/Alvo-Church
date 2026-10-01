@@ -340,7 +340,7 @@ export function PastoralAiView() {
   };
 
   return (
-    <main className="form-page pastoral-ai-page animate-entrance">
+    <main className="form-page pastoral-ai-page">
       <header className="pastoral-ai-hero">
         <div>
           <span className="eyebrow-premium">

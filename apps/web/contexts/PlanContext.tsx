@@ -1,8 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { PlanId, PlanFeatureKey, AiQuotaStatus } from "@alvo/firebase";
-import { fetchOrgBillingInfo, getAiQuotaStatus, planHasFeature } from "@alvo/firebase";
+import type { PlanId, PlanFeatureKey, AiQuotaStatus, OrgBillingInfo } from "@alvo/firebase";
+import {
+  fetchOrgBillingInfo,
+  getAiQuotaStatus,
+  planHasFeature,
+  resolveBillingStatus,
+} from "@alvo/firebase";
 import { useAppAuth } from "../app/providers";
 
 type BillingStatus = "active" | "overdue" | "suspended";
@@ -21,38 +26,56 @@ interface PlanContextValue {
 const PlanContext = createContext<PlanContextValue | null>(null);
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const { firebaseConfig, organizationId, tenantReady, roles } = useAppAuth();
-  const [plan, setPlan] = useState<PlanId>("free");
-  const [ready, setReady] = useState(false);
+  const { firebaseConfig, organizationId, tenantReady, tenantRuntime, roles } = useAppAuth();
+  const [fallbackBilling, setFallbackBilling] = useState<{
+    organizationId: string;
+    info: OrgBillingInfo;
+  } | null>(null);
   const [aiQuota, setAiQuota] = useState<AiQuotaStatus | null>(null);
-  const [billingStatus, setBillingStatus] = useState<BillingStatus>("active");
-  const [overdueSince, setOverdueSince] = useState<string | null>(null);
-
   const isSuperAdmin = roles.includes("super_admin");
 
-  const context = { organizationId };
+  // O bootstrap do tenant já trouxe a assinatura. Usá-la aqui evita outra
+  // leitura do Firestore antes de liberar todas as telas protegidas.
+  const subscription = tenantRuntime?.organization.id === organizationId
+    ? tenantRuntime.settings?.subscription
+    : null;
+  // O parser de dados legados preenche planTier com um padrão; nesses casos
+  // consultamos o documento original para não ampliar o acesso por engano.
+  const snapshotBilling: OrgBillingInfo | null = subscription?.plan
+    ? {
+        plan: subscription.plan,
+        billingStatus: resolveBillingStatus(subscription.billingStatus, subscription.overdueSince),
+        overdueSince: subscription.overdueSince,
+      }
+    : null;
+  const billing = snapshotBilling ?? (
+    fallbackBilling?.organizationId === organizationId ? fallbackBilling.info : null
+  );
+  const ready = tenantReady && billing !== null;
+  const plan: PlanId = isSuperAdmin ? "enterprise" : (ready ? billing.plan : "free");
+  const billingStatus: BillingStatus = isSuperAdmin ? "active" : (ready ? billing.billingStatus : "active");
+  const overdueSince = ready ? (billing.overdueSince ?? null) : null;
 
-  async function loadPlan() {
-    if (!tenantReady || !organizationId) return;
-    try {
-      const info = await fetchOrgBillingInfo(firebaseConfig, context);
-      setPlan(isSuperAdmin ? "enterprise" : info.plan);
-      // super_admin (equipe interna) nunca fica travado por inadimplência.
-      setBillingStatus(isSuperAdmin ? "active" : info.billingStatus);
-      setOverdueSince(info.overdueSince ?? null);
-    } catch {
-      setPlan("free");
-      setBillingStatus("active");
-      setOverdueSince(null);
-    } finally {
-      setReady(true);
-    }
-  }
+  // Compatibilidade com organizações antigas sem snapshot completo.
+  useEffect(() => {
+    if (!tenantReady || !organizationId || subscription?.plan) return;
+    let cancelled = false;
+    fetchOrgBillingInfo(firebaseConfig, { organizationId })
+      .then((info) => {
+        if (!cancelled) setFallbackBilling({ organizationId, info });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFallbackBilling({ organizationId, info: { plan: "free", billingStatus: "active" } });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [tenantReady, organizationId, subscription, firebaseConfig]);
 
   async function refreshAiQuota() {
     if (!tenantReady || !organizationId) return;
     try {
-      const quota = await getAiQuotaStatus(firebaseConfig, context);
+      const quota = await getAiQuotaStatus(firebaseConfig, { organizationId });
       setAiQuota(isSuperAdmin ? { ...quota, plan: "enterprise", limit: 9999, allowed: true } : quota);
     } catch {
       setAiQuota(null);
@@ -72,8 +95,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (tenantReady) {
-      loadPlan();
-      refreshAiQuota();
+      void refreshAiQuota();
+    } else {
+      setAiQuota(null);
     }
   }, [tenantReady, organizationId]);
 

@@ -290,7 +290,7 @@ export function FinanceView() {
   const handleDeleteEntry = (id: string, source: "tx" | "contrib") => { if (source === "tx") openDecision(id,"void"); };
 
   return (
-    <main className="finance-workbench animate-entrance">
+    <main className="finance-workbench">
       {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
       
       <section style={{ padding: 16 }}>

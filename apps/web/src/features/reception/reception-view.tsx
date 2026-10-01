@@ -330,7 +330,7 @@ export function ReceptionView() {
   const firebaseConnected = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   return (
-    <main className="form-page reception-page animate-entrance">
+    <main className="form-page reception-page">
       
       {/* 1. MODO TOTEM DE AUTOATENDIMENTO (Fullscreen Tablet/Kiosk Mode) */}
       {kioskMode && (

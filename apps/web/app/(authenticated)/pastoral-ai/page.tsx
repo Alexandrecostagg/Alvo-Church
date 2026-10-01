@@ -4,10 +4,11 @@ import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { PlanGuard } from "../../../src/components/plan-guard";
 import { RoleGuard } from "../../../src/components/role-guard";
+import { ModuleLoading } from "../../../src/components/module-loading";
 
 const PastoralAiWithRadarView = dynamic(
   () => import("../../../src/features/pastoral-ai/pastoral-ai-with-radar-view").then((mod) => mod.PastoralAiWithRadarView),
-  { ssr: false }
+  { ssr: false, loading: () => <ModuleLoading label="Abrindo Cuidado Pastoral" /> }
 );
 
 export default function PastoralAiPage() {

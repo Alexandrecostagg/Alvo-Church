@@ -1,5 +1,10 @@
 # Estado da implementação — 05/09/2026
 
+> 01/10: [entrega 30 — navegação do painel e marca demonstrativa](entrega-30-navegacao-marca-2026-10-01.md).
+> Recepção, Cuidado Pastoral e Finanças validados no Safari após o deploy;
+> a identidade Getro do tenant demonstrativo foi corrigida no banco.
+> Sistema **96,40%**, mobile **97%**, LP **100%**; Gratuito **50 membros**.
+
 > 30/09: [variante com pena cobre aplicada ao painel e cinco capturas da LP](entrega-marca-colorida-painel-2026-09-30.md).
 > As capturas agora identificam a demonstração como **Plataforma Esdras**.
 > App nativo e Google Play continuam reservados ao próximo AAB. Percentuais

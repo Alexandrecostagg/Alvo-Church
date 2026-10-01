@@ -23,10 +23,11 @@ import type {
 
 export const seedOrganization: Organization = {
   id: "org_alvo_demo",
-  name: "Getro Church",
-  legalName: "Getro Church Tecnologia para Igrejas Ltda.",
-  publicName: "Getro Church",
-  displayName: "Getro Church",
+  name: "Plataforma Esdras",
+  legalName: "Plataforma Esdras",
+  publicName: "Plataforma Esdras",
+  displayName: "Plataforma Esdras",
+  // Slug legado preservado para não quebrar links públicos já distribuídos.
   slug: "getro-church",
   status: "active",
   timezone: "America/Belem",
@@ -38,14 +39,14 @@ export const seedOrganization: Organization = {
 export const seedOrganizationBranding: OrganizationBrandingSettings = {
   organizationId: seedOrganization.id,
   brandMode: "co_branded",
-  publicProductName: "Getro Church",
-  publicShortName: "Getro",
+  publicProductName: "Plataforma Esdras",
+  publicShortName: "Esdras",
   primaryColor: "#d27836",
   secondaryColor: "#1c2433",
   accentColor: "#e8dcc7",
   surfaceColor: "#f7f3ea",
   textColor: "#1c2433",
-  showPoweredByAlvo: true,
+  showPoweredByAlvo: false,
   poweredByLabel: "by Esdras"
 };
 

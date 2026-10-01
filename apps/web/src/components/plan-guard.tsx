@@ -6,6 +6,7 @@ import { usePlan } from "../../contexts/PlanContext";
 import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
 import type { PlanFeatureKey, PlanId } from "@alvo/firebase";
 import type { ModuleKey } from "@alvo/domain";
+import { ModuleLoading } from "./module-loading";
 
 const PLAN_LABELS: Record<PlanId, string> = {
   free:       "Gratuito",
@@ -67,7 +68,7 @@ export function PlanGuard({ feature, children, silent = false }: PlanGuardProps)
   const allowedByPlan = hasFeature(feature);
   const allowedByPlatform = !moduleKey || isEnabled(moduleKey);
 
-  if (!ready) return null;
+  if (!ready) return silent ? null : <ModuleLoading />;
   if (allowedByPlan && allowedByPlatform) return <>{children}</>;
 
   if (silent) return null;

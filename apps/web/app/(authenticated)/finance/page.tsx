@@ -4,10 +4,11 @@ import dynamic from "next/dynamic";
 import { ModuleGuard } from "../../../contexts/ModuleGuard";
 import { RoleGuard } from "../../../src/components/role-guard";
 import { PlanGuard } from "../../../src/components/plan-guard";
+import { ModuleLoading } from "../../../src/components/module-loading";
 
 const FinanceView = dynamic(
   () => import("../../../src/features/finance/finance-view").then((mod) => mod.FinanceView),
-  { ssr: false }
+  { ssr: false, loading: () => <ModuleLoading label="Abrindo Finanças" /> }
 );
 
 export default function FinancePage() {
