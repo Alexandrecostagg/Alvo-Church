@@ -26,7 +26,12 @@ na lista de apps e no TestFlight.
 
 Três imagens de iPhone e três de iPad foram aceitas na ficha, com estilo
 AlvoPrompter e logo Esdras colorida. [Arquivos e reprodução](../apps/mobile/store-assets/README.md).
-Metadados de publicação, organização dos testes e QA físico continuam pendentes; não
+Textos, contato comercial, categoria, classificação etária, política e preço
+inicial gratuito foram cadastrados. Faltam três detalhes da etiqueta de
+privacidade, direitos de conteúdo confirmados, disponibilidade e credenciais
+de demonstração. Exclusão de conta dentro do app exige implementação e novo
+build antes da revisão pública; organização dos testes e QA físico permanecem
+pendentes (ver complemento da entrega 31); não
 houve envio para revisão pública. O archive está em
 `apps/mobile/build/ios/EsdrasApp-1.0.0-1.xcarchive` (ignorado pelo Git).
 Ver [validações](entrega-31-mobile-marca-integracoes-2026-10-02.md).

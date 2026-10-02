@@ -98,3 +98,67 @@ O AAB 15 também foi copiado e conferido por SHA-256 em
 
 Estimativa funcional mantida: sistema **96,40%**, mobile **97%**, LP **100%**.
 Esta entrega valida e empacota a marca, sem concluir o push nem o aceite físico.
+
+
+## Complemento — cadastro para revisão pública (02/10)
+
+O aviso “Não foi possível adicionar para revisão” corresponde aos metadados
+obrigatórios da App Store, não a falha do upload iOS. Foram preenchidos e salvos:
+
+- Nome existente EsdrasApp, subtítulo “Sua comunidade mais perto” e categoria
+  primária **Estilo de vida**.
+- Descrição em português, texto promocional, palavras-chave, URL de suporte
+  `https://plataformaesdras.com.br/#contato` e URL de marketing.
+- Copyright `2026 Alexandre Gomes da Costa` e contato de revisão com o nome do
+  titular, e-mail e telefone comerciais já publicados no projeto.
+- Política de privacidade
+  `https://alvo-church-web.alexandrecostagg.workers.dev/privacy`, validada com HTTP 200.
+- Preço inicial **zero** confirmado no assistente da Apple. A disponibilidade
+  territorial ainda precisa ser configurada.
+- Questionário etário concluído: classificação calculada **13+** global
+  (com exceções regionais). Declarados conteúdo gerado por usuários, mural social
+  sem bloqueio etário específico, temas de bem-estar e temas adultos/sensíveis
+  pouco frequentes. Sem controles parentais, verificação etária, navegador
+  irrestrito, chat direto, publicidade paga, apostas ou violência prevista.
+  Essas respostas devem ser reavaliadas se o conteúdo oferecido pelas instituições
+  mudar; o módulo Kids destina-se aos responsáveis e operadores.
+
+### Ficha de privacidade — rascunho parcial
+
+A Apple recebeu o inventário de 14 tipos de dados. Onze tiveram os detalhes
+salvos como **Funcionalidade do app**, **vinculados à identidade** e **sem
+rastreamento publicitário**: nome, e-mail, telefone, saúde (alergias do Kids),
+dados de pagamento (comprovantes), outras informações financeiras (renda e
+contribuições), fotos/vídeos, outros conteúdos de usuário, ID do usuário,
+ID do dispositivo (push) e interações com o produto (progresso/participação).
+
+Permanecem três tipos selecionados, mas sem concluir seus detalhes: informações
+confidenciais (vínculo religioso), histórico de compras (inscrições pagas) e
+outros tipos de dados (perfil ministerial/educação/ocupação). O Safari expõe
+seus botões como blocos de texto agregados e os cliques não abriram os formulários;
+cliques por coordenadas/rolagem retornaram ausência de janela disponível.
+Foi solicitado ao usuário deixar a janela visível em primeiro plano.
+A ficha permanece em rascunho, **sem publicação da etiqueta de privacidade**.
+Não declarar “não coleta dados” para contornar esse bloqueio.
+
+### Pendências antes de revisão pública
+
+1. Concluir/publicar os três detalhes de privacidade e definir disponibilidade.
+2. Confirmação do titular sobre autorizações de conteúdos de terceiros — pergunta
+   enviada e ainda sem resposta; declaração de direitos não foi preenchida.
+3. Acesso de demonstração, com dados fictícios e vínculo funcional à instituição,
+   para a equipe Apple. Campos de usuário/senha não foram inventados nem preenchidos.
+4. O build 1 oferece criação de conta, mas não oferece início de exclusão dentro
+   do app. A página web atual orienta contato por e-mail; esse fluxo sozinho não
+   atende à orientação Apple para apps fora de setores altamente regulados.
+   Implementar fluxo efetivo e validá-lo em novo build antes da revisão pública.
+5. Homologação em aparelho, revisão da moderação/denúncia do mural e atualização
+   da política para refletir explicitamente Kids/fotos/alergias, perfil ministerial
+   e provedores utilizados no conteúdo de Sabedoria Pastoral.
+
+Referências oficiais consultadas:
+[privacidade](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/)
+e [exclusão de conta](https://developer.apple.com/support/offering-account-deletion-in-your-app/).
+Nenhuma solicitação de revisão pública foi enviada nesta etapa.
+Percentuais funcionais mantidos: sistema **96,40%**, mobile **97%**, LP **100%**;
+eles não medem o preenchimento da ficha Apple nem certificam aprovação da loja.
