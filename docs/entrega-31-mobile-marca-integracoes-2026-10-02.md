@@ -56,7 +56,7 @@ marca e o bundle ID correto. Em complemento à entrega, o App ID foi registrado
 na equipe **LCN99JS59U**, com Push Notifications correspondente ao entitlement
 já existente no app. O **EsdrasApp** foi criado no App Store Connect: Apple ID
 **6818541001**, idioma Português (Brasil), SKU `esdrasapp-ios`, acesso limitado.
-O TestFlight foi inspecionado e aguarda a primeira compilação.
+O primeiro build iOS foi enviado em 02/10, conforme complemento abaixo.
 
 Assinatura automática e equipe foram fixadas no projeto Xcode e no Expo;
 `eas.json` recebeu o destino iOS correto. `xcodebuild -showBuildSettings`
@@ -69,10 +69,30 @@ Distribution instalados pertencem à **mesma equipe LCN99JS59U**, conforme OU
 lido em ambos os certificados públicos. O sufixo do nome do certificado
 Development foi confundido com o Team ID na análise inicial.
 
-Archive nativo completo e upload não foram executados. Há cerca de **4,4 GiB**
-livres no disco; a próxima etapa exige espaço para compilação e archive.
-As imagens de divulgação deverão seguir o estilo das imagens do **AlvoPrompter**,
-com a marca Esdras colorida aprovada, conforme pedido do usuário em 02/10.
+Após liberar caches reconstruíveis, `xcodebuild archive` e `-exportArchive`
+concluíram com sucesso. A Apple confirmou o upload às **11:27 de 02/10/2026**.
+O build **1 (1.0.0)** foi processado e selecionado na ficha iOS 1.0. O archive
+assinado está em `apps/mobile/build/ios/EsdrasApp-1.0.0-1.xcarchive` (ignorado
+pelo Git), com a logo livro/pena cobre no catálogo AppIcon.
+
+Foram criadas e enviadas **3 imagens iPhone (1284 × 2778)** e **3 imagens iPad
+(2732 × 2048)**, com composição inspirada na ficha AlvoPrompter e cores Esdras.
+As telas Início, Agenda e Célula são renderizadas do componente real `MainApp`,
+com fixtures fictícias e sem acesso ao backend. As duas abas do App Store Connect
+confirmaram “3 de 10 capturas de tela”. Fontes e arquivos finais estão em
+[store-assets](../apps/mobile/store-assets/README.md).
+
+O upload gerou avisos não bloqueantes de dSYM ausente para frameworks pré-compilados
+ExpoCameraBarcodeScanning, React, ReactNativeDependencies e Hermes. Isso limita a
+simbolicação de crashes desses frameworks; não impediu a aceitação do build.
+A declaração técnica de criptografia foi preenchida com “Nenhum dos algoritmos
+mencionados acima”: o app usa recursos do sistema (HTTPS/Keychain), e expo-crypto
+é utilizado apenas para UUIDs, sem implementação própria de algoritmos.
+O TestFlight passou para **“Pronta para envio — Expira em 90 dias”**.
+A associação do build à versão 1.0 foi confirmada após reabrir a ficha; a logo
+colorida foi conferida visualmente na lista de apps e no TestFlight.
+Não houve envio para revisão pública nem convite a testadores. Metadados de
+publicação, organização do teste e QA em aparelhos continuam pendentes.
 O AAB 15 também foi copiado e conferido por SHA-256 em
 `/Users/alexandregomesdacosta/Downloads/esdrasapp-v15.aab`.
 

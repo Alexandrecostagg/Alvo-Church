@@ -17,17 +17,18 @@ de equipes distintas foi corrigida.
 
 O [EsdrasApp no App Store Connect](https://appstoreconnect.apple.com/apps/6818541001/distribution)
 foi criado em português do Brasil, SKU `esdrasapp-ios`, Apple ID **6818541001**,
-com acesso limitado e sem adicionar usuários. O TestFlight aguarda o primeiro
-build. `eas.json` também aponta para esse app/equipe no perfil de envio iOS.
-Para enviar pelo Xcode: selecionar destino genérico iOS, Product > Archive,
-Distribute App > App Store Connect. O archive completo e o upload ainda não
-foram executados. O Mac tinha cerca de **4,4 GiB livres** na configuração;
-liberar espaço para a compilação antes de prosseguir.
+com acesso limitado e sem adicionar usuários. Em 02/10 às 11:27, o archive
+assinado e upload iOS **1.0.0 (1)** concluíram com sucesso. O build foi processado
+e associado à ficha 1.0. A declaração técnica de criptografia foi concluída;
+o TestFlight confirmou **“Pronta para envio”**. A logo colorida está visível
+na lista de apps e no TestFlight.
+`eas.json` também aponta para esse app/equipe no perfil de envio iOS.
 
-As imagens da ficha Esdras devem seguir o **mesmo estilo visual das imagens
-do AlvoPrompter**, conforme orientação do usuário em 02/10, preservando a logo
-Esdras com livro claro, pena cobre e fundo verde. Capturas e metadados de
-publicação ainda precisam ser preparados; isso não impede receber o build.
+Três imagens de iPhone e três de iPad foram aceitas na ficha, com estilo
+AlvoPrompter e logo Esdras colorida. [Arquivos e reprodução](../apps/mobile/store-assets/README.md).
+Metadados de publicação, organização dos testes e QA físico continuam pendentes; não
+houve envio para revisão pública. O archive está em
+`apps/mobile/build/ios/EsdrasApp-1.0.0-1.xcarchive` (ignorado pelo Git).
 Ver [validações](entrega-31-mobile-marca-integracoes-2026-10-02.md).
 
 > Pendência para o próximo AAB, registrada em 28/09: aplicar a marca livro e pena
