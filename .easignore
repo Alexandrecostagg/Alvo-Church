@@ -1,0 +1,52 @@
+.DS_Store
+.local-backups/
+.pnpm-store/
+*.tsbuildinfo
+node_modules
+.turbo
+.next
+dist
+build
+coverage
+.expo
+.expo-shared
+apps/mobile/.expo
+apps/mobile/dist
+apps/web/.next
+apps/web/.cloudflare-bin
+apps/web/.open-next
+.wrangler/
+*.log
+.env
+.env.local
+.env.*.local
+firebase-debug.log
+wrangler*.log
+apps/web/dist-cloudflare
+.claude/
+apps/web/.vercel/
+apps/lp/out/
+apps/lp/playwright-html*.html
+
+# Chave de service account do Firebase (NUNCA commitar — vaza credencial)
+service-account.json
+*service-account*.json
+serviceAccount*.json
+
+# Arquivos de configuração de build que podem conter credenciais
+wrangler.jsonc
+eas.json
+credentials.json
+google-services.json
+
+# Chaves privadas (pem, key) — NUNCA commitar
+*.pem
+*.key
+
+# Apenas no pacote de build EAS; permanece fora do Git.
+apps/mobile/ios/Pods/
+apps/mobile/ios/DerivedData/
+apps/mobile/ios/xcuserdata/
+apps/mobile/ios/*.ipa
+apps/mobile/ios/*.jsbundle
+!apps/mobile/google-services.json

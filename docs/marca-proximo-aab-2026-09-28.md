@@ -1,5 +1,10 @@
 # Identidade aprovada — aplicar no próximo AAB
 
+> Atualização em 02/10: a marca foi aplicada ao código mobile e aos recursos
+> nativos iOS; AAB 15 concluído. Ver [entrega 31](entrega-31-mobile-marca-integracoes-2026-10-02.md).
+> A ficha Google Play, a instalação em aparelho e o envio à Apple continuam
+> etapas separadas.
+
 Em 28/09/2026, o usuário aprovou a marca **livro aberto com pena** apresentada
 na LP. Depois, pediu expressamente para adiar a aplicação no aplicativo e no
 Google Play até a próxima geração de AAB.

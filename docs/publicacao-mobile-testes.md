@@ -1,5 +1,19 @@
 # Testes nas lojas — EsdrasApp
 
+> 02/10/2026: nova identidade livro/pena aplicada ao app e ao projeto Xcode;
+> AAB Android 15 concluído e assinado; arquivo local
+> `apps/mobile/build/esdrasapp-v15.aab`. Ver [entrega 31](entrega-31-mobile-marca-integracoes-2026-10-02.md).
+> AAB 13 permanece como última versão confirmada na Play até novo envio.
+
+Para preparar o upload iOS **nesta máquina**, executar na raiz do repositório
+`node scripts/prepare-mobile-xcode-env.mjs` e abrir
+`apps/mobile/ios/EsdrasApp.xcworkspace` no Xcode. O arquivo local gerado
+contém somente `EXPO_PUBLIC_*` e não entra no Git. Selecionar em Signing &
+Capabilities a equipe que detém `com.plataformaesdras.app`; os certificados
+Development e Distribution instalados aqui são de equipes distintas. Após
+confirmar o perfil de distribuição, usar Product > Archive e enviar para
+App Store Connect. Ver [limites e validações](entrega-31-mobile-marca-integracoes-2026-10-02.md).
+
 > Pendência para o próximo AAB, registrada em 28/09: aplicar a marca livro e pena
 > aprovada na LP ao app e à ficha Google Play. O usuário pediu para adiar essa
 > aplicação; [arte preparada e roteiro](marca-proximo-aab-2026-09-28.md).

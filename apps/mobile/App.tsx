@@ -310,9 +310,9 @@ function SplashScreen() {
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
-      <View style={[s.fill, s.center, { backgroundColor: BRAND_DARK }]}>
-        <Image source={require("./assets/generated/esdras-app-icon.png")} style={s.logoMarkImage} />
-        <ActivityIndicator color={BRAND} style={{ marginTop: 32 }} />
+      <View style={[s.fill, s.center, { backgroundColor: "#123f34" }]}>
+        <Image source={require("./assets/generated/esdras-mark.png")} style={s.logoMarkImage} />
+        <ActivityIndicator color="#dc7938" style={{ marginTop: 32 }} />
       </View>
     </SafeAreaView>
   );

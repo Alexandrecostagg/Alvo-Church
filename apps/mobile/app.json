@@ -10,8 +10,8 @@
       "android"
     ],
     "userInterfaceStyle": "light",
-    "backgroundColor": "#eef2f6",
-    "primaryColor": "#f97316",
+    "backgroundColor": "#123f34",
+    "primaryColor": "#dc7938",
     "icon": "./assets/generated/esdras-app-icon.png",
     "assetBundlePatterns": [
       "**/*"
@@ -26,7 +26,7 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/generated/esdras-adaptive-foreground.png",
-        "backgroundColor": "#111827"
+        "backgroundColor": "#123f34"
       },
       "package": "com.plataformaesdras.app",
       "versionCode": 6,
@@ -54,18 +54,18 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/generated/esdras-app-icon.png",
-          "color": "#f97316",
+          "icon": "./assets/generated/esdras-notification-icon.png",
+          "color": "#123f34",
           "defaultChannel": "default"
         }
       ],
       [
         "expo-splash-screen",
         {
-          "image": "./assets/generated/esdras-app-icon.png",
+          "image": "./assets/generated/esdras-mark.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#eef2f6"
+          "backgroundColor": "#123f34"
         }
       ],
       [
