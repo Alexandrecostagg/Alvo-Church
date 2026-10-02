@@ -13,6 +13,7 @@ import {
 } from "@alvo/firebase";
 import type { Course, CourseModule, Lesson } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { COURSE_RIGHTS_DECLARATION, COURSE_RIGHTS_VERSION } from "../../lib/course-content-rights";
 
 function newId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1e6).toString(36)}`;
@@ -38,6 +39,8 @@ export function CourseManagerView() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [rightsAccepted, setRightsAccepted] = useState(false);
+  const [rightsReference, setRightsReference] = useState("");
 
   // Formulário do curso selecionado (edição do cabeçalho).
   const [courseForm, setCourseForm] = useState({ title: "", description: "", thumbnailUrl: "", instructorName: "", instructorTitle: "" });
@@ -59,6 +62,10 @@ export function CourseManagerView() {
   }, [ready, firebaseConfig, organizationId]);
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId) ?? null;
+
+  useEffect(() => { setRightsAccepted(false); }, [selectedCourseId, courseForm, rightsReference, modules, lessons]);
+  useEffect(() => { setRightsReference(""); }, [selectedCourseId]);
+  const canPublish = rightsAccepted && rightsReference.trim().length >= 10;
 
   async function managementRequest(body: Record<string, unknown>) {
     if (!user) throw new Error("Entre na sua conta.");
@@ -124,6 +131,10 @@ export function CourseManagerView() {
 
   async function handleSaveCourse(nextActive = selectedCourse?.isActive ?? false) {
     if (!ready || !selectedCourse || !courseForm.title.trim()) return;
+    if (nextActive && !canPublish) {
+      setStatus("Confira os direitos de conteúdo e informe a referência antes de publicar.");
+      return;
+    }
     setSaving(true);
     const updated: Course = {
       ...selectedCourse,
@@ -135,10 +146,11 @@ export function CourseManagerView() {
       isActive: nextActive,
     };
     try {
-      const data = await managementRequest({ action: "save_course", courseId: updated.id, ...updated });
+      const data = await managementRequest({ action: "save_course", courseId: updated.id, ...updated, contentRights: nextActive ? { accepted: rightsAccepted, version: COURSE_RIGHTS_VERSION, reference: rightsReference.trim() } : null });
       const saved = data.course as Course;
       setCourses((cur) => cur.map((c) => (c.id === saved.id ? saved : c)));
       setStatus(saved.isActive ? "Curso publicado e salvo." : "Rascunho salvo.");
+      setRightsAccepted(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Não foi possível salvar o curso.");
     } finally {
@@ -298,7 +310,7 @@ export function CourseManagerView() {
           ) : (
             <>
               <div className="section-header"><h2 className="section-title">Editar curso</h2>
-                <button className="btn-secondary btn-sm" onClick={() => void handleSaveCourse(!selectedCourse.isActive)} disabled={saving} style={{ color: selectedCourse.isActive ? "#b45309" : "#15803d", display: "flex", alignItems: "center", gap: 4, opacity: saving ? 0.6 : 1 }}>
+                <button className="btn-secondary btn-sm" onClick={() => void handleSaveCourse(!selectedCourse.isActive)} disabled={saving || (!selectedCourse.isActive && !canPublish)} style={{ color: selectedCourse.isActive ? "#b45309" : "#15803d", display: "flex", alignItems: "center", gap: 4, opacity: saving || (!selectedCourse.isActive && !canPublish) ? 0.6 : 1 }}>
                   <GraduationCap size={14} /> {selectedCourse.isActive ? "Retirar da Escola" : "Publicar curso"}
                 </button>
               </div>
@@ -321,7 +333,19 @@ export function CourseManagerView() {
                 <label style={labelStyle}>Imagem de capa (link, opcional)
                   <input type="url" placeholder="https://..." value={courseForm.thumbnailUrl} onChange={(e) => setCourseForm((f) => ({ ...f, thumbnailUrl: e.target.value }))} style={inputStyle} />
                 </label>
-                <button className="btn-primary" onClick={() => void handleSaveCourse()} disabled={saving} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
+                <fieldset style={{ border: "1px solid var(--alvo-line)", borderRadius: 10, padding: 14 }} disabled={saving}>
+                  <legend>Direitos de conteúdo</legend>
+                  <p style={{ fontSize: 13 }}>Antes de publicar, confira também a capa, os vídeos e os materiais de todas as aulas. Um link público ou a indicação do autor não comprova autorização. Se houver dúvida, mantenha o curso como rascunho.</p>
+                  <label style={labelStyle}>Autoria ou referência das autorizações
+                    <textarea rows={3} maxLength={1000} value={rightsReference} onChange={(e) => setRightsReference(e.target.value)} placeholder="Informe quem criou o material ou identifique a licença/autorização, sua data e onde o comprovante está guardado. Não inclua senhas nem dados pessoais sensíveis." style={{ ...inputStyle, fontFamily: "inherit" }} />
+                  </label>
+                  <label style={{ display: "flex", gap: 8, marginTop: 12, fontSize: 13, alignItems: "flex-start" }}>
+                    <input type="checkbox" checked={rightsAccepted} onChange={(e) => setRightsAccepted(e.target.checked)} />
+                    {COURSE_RIGHTS_DECLARATION}
+                  </label>
+                  <p style={{ fontSize: 12 }}>A declaração fica registrada com sua conta, data e conteúdo publicado. Ela não substitui os comprovantes de autorização.</p>
+                </fieldset>
+                <button className="btn-primary" onClick={() => void handleSaveCourse()} disabled={saving || (selectedCourse.isActive && !canPublish)} style={{ justifySelf: "start", opacity: saving || (selectedCourse.isActive && !canPublish) ? 0.6 : 1 }}>
                   <Save size={16} /> Salvar curso
                 </button>
               </div>

@@ -58,6 +58,7 @@ async function run() {
 
   const courseId = "course_delivery9";
   const courseDraft = { action: "save_course", requestId: randomUUID(), courseId, title: "Curso seguro", description: "QA", thumbnailUrl: "", instructorName: "", instructorTitle: "", isActive: false };
+  const contentRights = { accepted: true, version: "2026-10-02", reference: "Material fictício criado exclusivamente para QA." };
   equal((await api("learning/manage", courseDraft)).status, 401, "Curso exige login");
   equal((await api("learning/manage", courseDraft, memberToken)).status, 403, "Membro não administra curso");
   const createdCourse = await api("learning/manage", courseDraft, adminToken);
@@ -66,14 +67,15 @@ async function run() {
   equal(createdCourse.cache, "private, no-store", "Administração EAD não usa cache");
   equal((await api("learning/manage", courseDraft, adminToken)).data.replayed, true, "Criação de curso é idempotente");
   equal(await direct(`courses/${courseId}`, adminToken, { title: { stringValue: "Bypass" } }), 403, "Curso recusa escrita direta");
-  equal((await api("learning/manage", { ...courseDraft, requestId: randomUUID(), isActive: true }, adminToken)).status, 409, "Curso vazio não é publicado");
+  equal((await api("learning/manage", { ...courseDraft, requestId: randomUUID(), isActive: true, contentRights }, adminToken)).status, 409, "Curso vazio não é publicado");
 
   const moduleBody = { action: "save_module", requestId: randomUUID(), courseId, moduleId: "module_1", title: "Módulo 1", sortOrder: 0 };
   equal((await api("learning/manage", moduleBody, adminToken)).status, 200, "Módulo salvo pelo servidor");
   equal((await api("learning/manage", { action: "save_lesson", requestId: randomUUID(), courseId, moduleId: "module_1", lessonId: "lesson_bad", title: "Aula ruim", videoUrl: "https://youtube.com.evil.test/video", durationMinutes: 10, sortOrder: 0, materialUrl: "" }, adminToken)).status, 400, "Host de vídeo forjado é recusado");
   const lessonBody = { action: "save_lesson", requestId: randomUUID(), courseId, moduleId: "module_1", lessonId: "lesson_1", title: "Aula 1", videoUrl: "https://youtu.be/abc", durationMinutes: 10, sortOrder: 0, materialUrl: "https://example.test/material.pdf" };
   equal((await api("learning/manage", lessonBody, adminToken)).status, 200, "Aula válida salva pelo servidor");
-  const published = await api("learning/manage", { ...courseDraft, requestId: randomUUID(), isActive: true }, adminToken);
+  equal((await api("learning/manage", { ...courseDraft, requestId: randomUUID(), isActive: true }, adminToken)).status, 400, "Curso não é publicado sem declaração de direitos");
+  const published = await api("learning/manage", { ...courseDraft, requestId: randomUUID(), isActive: true, contentRights }, adminToken);
   equal(published.data.course.isActive, true, "Curso com conteúdo pode ser publicado");
   equal((await api("learning/manage", { ...moduleBody, requestId: randomUUID(), moduleId: "module_2" }, adminToken)).status, 409, "Conteúdo publicado não muda silenciosamente");
   equal((await org.collection("courseManagementAudit").get()).size >= 4, true, "Alterações EAD geram auditoria");

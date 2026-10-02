@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
 import { assertModuleEnabled } from "./module-access";
+import { COURSE_RIGHTS_DECLARATION, COURSE_RIGHTS_VERSION } from "../../../src/lib/course-content-rights";
 
 const COURSE_MANAGERS = ["super_admin", "church_admin", "pastor", "secretary"];
 const VIDEO_HOSTS = [
@@ -14,7 +15,7 @@ const VIDEO_HOSTS = [
 ];
 
 type CourseOperation =
-  | { action: "save_course"; organizationId: string; requestId: string; courseId: string; title: string; description: string; thumbnailUrl: string | null; instructorName: string; instructorTitle: string; isActive: boolean }
+  | { action: "save_course"; organizationId: string; requestId: string; courseId: string; title: string; description: string; thumbnailUrl: string | null; instructorName: string; instructorTitle: string; isActive: boolean; contentRights: { accepted: true; version: string; reference: string } | null }
   | { action: "save_module"; organizationId: string; requestId: string; courseId: string; moduleId: string; title: string; sortOrder: number }
   | { action: "save_lesson"; organizationId: string; requestId: string; courseId: string; moduleId: string; lessonId: string; title: string; videoUrl: string; durationMinutes: number; sortOrder: number; materialUrl: string | null }
   | { action: "delete_module"; organizationId: string; requestId: string; courseId: string; moduleId: string }
@@ -71,6 +72,16 @@ function common(raw: unknown): CourseOperation {
   };
   if (action === "save_course") {
     if (typeof data.isActive !== "boolean") throw new AccountError(400, "Estado de publicação inválido.");
+    let contentRights: Extract<CourseOperation, { action: "save_course" }>["contentRights"] = null;
+    if (data.isActive) {
+      const rights = data.contentRights as Record<string, unknown> | undefined;
+      if (!rights || rights.accepted !== true || rights.version !== COURSE_RIGHTS_VERSION) {
+        throw new AccountError(400, "Confirme os direitos de conteúdo antes de publicar ou atualizar um curso publicado.");
+      }
+      const reference = text(rights.reference, "Referência da autoria ou autorização", 1000);
+      if (reference.length < 10) throw new AccountError(400, "Descreva a autoria ou a referência das autorizações (ao menos 10 caracteres).");
+      contentRights = { accepted: true, version: COURSE_RIGHTS_VERSION, reference };
+    }
     return {
       ...base,
       action: "save_course",
@@ -80,6 +91,7 @@ function common(raw: unknown): CourseOperation {
       instructorName: text(data.instructorName ?? "", "Ministrante", 160, false),
       instructorTitle: text(data.instructorTitle ?? "", "Título do ministrante", 120, false),
       isActive: data.isActive,
+      contentRights,
     };
   }
   const moduleId = documentId(data.moduleId, "Módulo");
@@ -135,16 +147,29 @@ export async function manageCourse(raw: unknown, uid: string) {
     const coursePath = `${root}/courses/${input.courseId}`;
     const now = new Date().toISOString();
     let result: Record<string, unknown>;
+    let rightsAudit: Record<string, unknown> | null = null;
 
     if (input.action === "save_course") {
       const [existing] = await tx.read(coursePath);
       if (existing && existing.organizationId !== input.organizationId) throw new AccountError(404, "Curso não encontrado.");
       if (input.isActive) {
         const [modules, lessons] = await Promise.all([
-          tx.query(coursePath, "modules", undefined, undefined, "EQUAL", 2),
-          tx.query(coursePath, "lessons", undefined, undefined, "EQUAL", 2),
+          tx.query(coursePath, "modules", undefined, undefined, "EQUAL", 401),
+          tx.query(coursePath, "lessons", undefined, undefined, "EQUAL", 401),
         ]);
         if (!modules.length || !lessons.length) throw new AccountError(409, "Adicione ao menos um módulo e uma aula antes de publicar.");
+        if (modules.length > 400 || lessons.length > 400) throw new AccountError(409, "Curso grande demais para registrar os direitos com segurança. Procure o suporte.");
+        rightsAudit = {
+          ...input.contentRights,
+          declaration: COURSE_RIGHTS_DECLARATION,
+          acceptedBy: uid,
+          acceptedAt: now,
+          // Snapshot privado: conserva quais URLs e materiais o responsável conferiu.
+          content: { title: input.title, description: input.description, thumbnailUrl: input.thumbnailUrl, instructorName: input.instructorName, instructorTitle: input.instructorTitle, modules, lessons },
+        };
+        if (new TextEncoder().encode(JSON.stringify(rightsAudit)).length > 500000) {
+          throw new AccountError(409, "Registro de conteúdo grande demais. Divida o curso antes de publicar.");
+        }
       }
       const course = {
         id: input.courseId,
@@ -213,6 +238,7 @@ export async function manageCourse(raw: unknown, uid: string) {
       moduleId: "moduleId" in input ? input.moduleId : null,
       lessonId: "lessonId" in input ? input.lessonId : null,
       at: now,
+      ...(rightsAudit ? { contentRights: rightsAudit } : {}),
     });
     tx.set(attemptPath, { organizationId: input.organizationId, fingerprint: digest, result, createdAt: now });
     return { ...result, replayed: false };

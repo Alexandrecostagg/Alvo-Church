@@ -144,8 +144,9 @@ Não declarar “não coleta dados” para contornar esse bloqueio.
 ### Pendências antes de revisão pública
 
 1. Concluir/publicar os três detalhes de privacidade e definir disponibilidade.
-2. Confirmação do titular sobre autorizações de conteúdos de terceiros — pergunta
-   enviada e ainda sem resposta; declaração de direitos não foi preenchida.
+2. Conferir autorizações de conteúdos de terceiros. O titular informou que não
+   sabe se existem; declaração de direitos na Apple não foi preenchida. Ver
+   complemento de direitos abaixo.
 3. Acesso de demonstração, com dados fictícios e vínculo funcional à instituição,
    para a equipe Apple. Campos de usuário/senha não foram inventados nem preenchidos.
 4. O build 1 oferece criação de conta, mas não oferece início de exclusão dentro
@@ -162,3 +163,53 @@ e [exclusão de conta](https://developer.apple.com/support/offering-account-dele
 Nenhuma solicitação de revisão pública foi enviada nesta etapa.
 Percentuais funcionais mantidos: sistema **96,40%**, mobile **97%**, LP **100%**;
 eles não medem o preenchimento da ficha Apple nem certificam aprovação da loja.
+
+## Complemento — direitos de conteúdo da Escola (02/10)
+
+O titular não confirmou ter as autorizações. A inspeção do código encontrou
+consentimentos específicos para fotos Kids, contato e dados do Esdras Passe,
+mas nenhum aceite de direitos autorais na publicação de cursos. No mobile,
+`CursosScreen` abre os vídeos cadastrados pela instituição; no painel, o gestor
+informa capa, vídeos externos e materiais de apoio. Os consentimentos de dados
+pessoais não comprovam direitos sobre esses materiais.
+
+Foi implementado no gerenciamento web um aceite explícito por publicação e por
+atualização de curso publicado. O responsável informa a autoria ou referência
+das licenças/autorizações e confirma que pode disponibilizar todo o curso pelo
+Esdras. A API exige booleano verdadeiro, versão atual e referência preenchida;
+registra conta autenticada, data do servidor, texto da declaração e snapshot do
+conteúdo na auditoria privada existente. As informações de autorização não são
+incluídas no documento de curso lido pelos alunos. Alterações no formulário
+limpam o aceite; não há aceite previamente marcado. Rascunhos e retirada da
+Escola continuam disponíveis sem declarar direitos. O backend recusa snapshots
+excessivos antes de qualquer escrita e preserva a idempotência.
+
+Limites: trata-se de declaração do responsável, não de verificação independente
+da licença. Cursos legados não são automaticamente regularizados ou retirados
+do ar. Não foram inspecionados comprovantes externos nem o catálogo de produção.
+Este controle cobre cursos institucionais; não constitui aceite geral para o
+mural, eventos ou catálogo global da plataforma. O build iOS 1 e AAB 15 não foram
+regerados; esta alteração foi implantada no painel/API web.
+
+Antes de preencher Direitos de conteúdo na Apple:
+
+1. Levantar os materiais efetivamente acessíveis no app e seus responsáveis.
+2. Para conteúdo próprio, registrar autoria e autorização da instituição/autores;
+   para terceiros, guardar a licença ou autorização aplicável ao uso no app.
+3. Sem comprovação, retirar o curso da Escola ou substituir seus materiais por
+   conteúdo próprio/autorizado; não basta um link público nem dar crédito.
+4. Publicar novamente apenas após conferência, registrando a declaração. Revisar
+   também conteúdo fora da Escola, inclusive materiais cadastrados por usuários.
+5. Responder à Apple conforme o catálogo real e as autorizações comprovadas.
+   Não selecionar “não contém” apenas porque os vídeos abrem em outro aplicativo.
+
+Fonte: [Apple — Content Rights](https://developer.apple.com/help/app-store-connect/reference/app-information/app-information).
+Validação: 25 testes de URLs/publicação/auditoria e TypeScript web aprovados.
+O roteiro integrado `verify-qa-delivery9.ts` foi atualizado, mas não executado
+nesta etapa. Build Next/OpenNext e deploy Cloudflare concluídos, versão
+`0bc3ad01-aa8c-4d87-ac91-44cf48298958`. O módulo JavaScript público confirmou o
+novo formulário e a versão da declaração; API sem credencial retornou HTTP 401.
+O aviso de Turnstile ausente no ambiente local foi conferido: o segredo continua
+cadastrado no Worker remoto (somente os nomes foram consultados). Conferência
+visual autenticada ainda pendente. Percentuais funcionais
+mantidos: sistema **96,40%**, mobile **97%**, LP **100%**.

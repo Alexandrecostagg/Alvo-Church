@@ -9,6 +9,9 @@
 > “Pronta para envio”. Cadastro da loja parcialmente concluído: faltam detalhes
 > de privacidade, direitos de conteúdo, disponibilidade e conta de demonstração.
 > Exclusão de conta no app, testadores e QA físico seguem pendentes.
+> Direitos EAD: declaração obrigatória por publicação implementada no painel/API,
+> com auditoria privada e deploy concluído. Comprovação dos materiais legados e
+> declaração Apple continuam pendentes (ver complemento da entrega 31).
 > Sistema **96,40%**, mobile **97%**, LP **100%**; Gratuito **50 membros**.
 
 > 01/10: [entrega 30 — navegação do painel e marca demonstrativa](entrega-30-navegacao-marca-2026-10-01.md).
