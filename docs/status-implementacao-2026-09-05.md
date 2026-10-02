@@ -12,6 +12,9 @@
 > Direitos EAD: declaração obrigatória por publicação implementada no painel/API,
 > com auditoria privada e deploy concluído. Comprovação dos materiais legados e
 > declaração Apple continuam pendentes (ver complemento da entrega 31).
+> A pedido do titular, 18 cursos foram arquivados com duas cópias verificadas;
+> Escola e catálogo global vazios em produção. Restauração apenas como rascunho,
+> seguida de conferência de direitos; backups em Downloads e `.local-backups`.
 > Sistema **96,40%**, mobile **97%**, LP **100%**; Gratuito **50 membros**.
 
 > 01/10: [entrega 30 — navegação do painel e marca demonstrativa](entrega-30-navegacao-marca-2026-10-01.md).

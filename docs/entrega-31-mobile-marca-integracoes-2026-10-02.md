@@ -213,3 +213,47 @@ O aviso de Turnstile ausente no ambiente local foi conferido: o segredo continua
 cadastrado no Worker remoto (somente os nomes foram consultados). Conferência
 visual autenticada ainda pendente. Percentuais funcionais
 mantidos: sistema **96,40%**, mobile **97%**, LP **100%**.
+
+## Complemento — cursos arquivados por solicitação do titular (02/10)
+
+Após o titular solicitar catálogo vazio durante os testes, foram inventariados
+e exportados os **6 cursos institucionais** e **12 programas da plataforma**
+presentes no Firebase `alvo-church`. A cópia contém **169 documentos**: 18 raízes,
+9 módulos e 142 aulas. Os documentos preservam os tipos Firestore, identificadores,
+textos e URLs originais. Vídeos e PDFs externos não foram baixados; seus links
+foram preservados. O arquivo não equivale a cópia binária desses materiais.
+
+Antes de remover qualquer documento foram criadas e conferidas duas cópias:
+
+- `.local-backups/courses-2026-10-02/` na raiz deste projeto, ignorada pelo Git;
+- `/Users/alexandregomesdacosta/Downloads/Esdras-cursos-arquivados-2026-10-02/`.
+
+Ambas contêm `courses.json`, `courses.sha256`, `LEIA-ME.txt` e o comprovante
+`archived.json`. SHA-256 do JSON:
+`e627837e5bc4090a0380ca06fe75c859b49f7665b9590cb8be71246d7db24087`.
+**São arquivos valiosos, não reconstruíveis pelo build: preservar em limpezas.**
+Não versionar nem publicar seu conteúdo.
+
+A remoção ocorreu em um único commit atômico Firestore, com precondições de
+`updateTime` e nova comparação do inventário contra o backup. A consulta posterior
+confirmou zero cursos nos dois catálogos e nenhum dos 169 documentos arquivados
+remanescente. Nenhum documento de pessoa, progresso, pagamento ou entitlement
+foi modificado. Os cursos foram retirados para todos os usuários, sem condição
+especial para a revisão Apple. Sessões já abertas podem manter a lista em memória;
+fechar/reabrir o app atualiza o catálogo.
+
+Ferramenta versionada: `scripts/course-archive.mjs`, com modos `backup`, `archive`,
+`verify` e `restore-drafts`. O último exige checksum válido, restaura **como
+rascunho**, mantém os IDs e recusa sobrescrever documentos existentes. Executar
+da raiz do projeto com `service-account.json` já existente. Instruções estão
+também no LEIA-ME da cópia. Seis testes `node --test scripts/course-archive.test.mjs`
+passaram, cobrindo escopo, revisão, checksum e restauração sem republicação.
+
+Não executar seeds de cursos para repor o catálogo sem revisão dos direitos.
+A restauração/publicação só deve ocorrer após conferir autoria e autorizações;
+o painel institucional exige a declaração adicionada nesta entrega. Esvaziar
+cursos não comprova direitos sobre imagens, mural ou outros conteúdos do app.
+A resposta de Direitos de conteúdo na Apple não foi alterada automaticamente.
+Não houve novo build mobile ou deploy de código: o catálogo é remoto. Estimativas
+funcionais mantidas: sistema **96,40%**, mobile **97%**, LP **100%**; nenhuma
+conclusão de aprovação da loja foi atribuída a esses percentuais.
