@@ -52,15 +52,29 @@ e a impressão digital do certificado coincide com a do AAB 13 já aceito na
 Play. O pacote **não** foi enviado à Play Store nesta entrega.
 
 O projeto iOS versionado em `apps/mobile/ios/EsdrasApp.xcworkspace` tem a nova
-marca e o bundle ID correto. Há certificados Apple Development e Apple
-Distribution instalados, porém vinculados a **equipes diferentes**; nenhuma
-`DEVELOPMENT_TEAM` foi fixada para evitar trocar a titularidade do app.
-Para arquivar e enviar pelo Xcode, selecionar a equipe proprietária do
-identificador na aba Signing & Capabilities, confirmar o provisioning profile,
-arquivar em Product > Archive e distribuir para App Store Connect. A compilação
-nativa completa, assinatura e upload à Apple ainda não foram executados; há
-aproximadamente 3 GiB livres no disco ao fim da entrega, insuficientes para presumir que um
-archive React Native caberá com segurança.
+marca e o bundle ID correto. Em complemento à entrega, o App ID foi registrado
+na equipe **LCN99JS59U**, com Push Notifications correspondente ao entitlement
+já existente no app. O **EsdrasApp** foi criado no App Store Connect: Apple ID
+**6818541001**, idioma Português (Brasil), SKU `esdrasapp-ios`, acesso limitado.
+O TestFlight foi inspecionado e aguarda a primeira compilação.
+
+Assinatura automática e equipe foram fixadas no projeto Xcode e no Expo;
+`eas.json` recebeu o destino iOS correto. `xcodebuild -showBuildSettings`
+confirmou equipe, bundle ID e assinatura automática; `plutil` validou o projeto.
+O Xcode abriu o workspace e confirmou perfil gerenciado criado em 02/10/2026,
+com App ID, certificado, equipe, capabilities e entitlements válidos.
+
+Correção do diagnóstico anterior: os certificados Apple Development e Apple
+Distribution instalados pertencem à **mesma equipe LCN99JS59U**, conforme OU
+lido em ambos os certificados públicos. O sufixo do nome do certificado
+Development foi confundido com o Team ID na análise inicial.
+
+Archive nativo completo e upload não foram executados. Há cerca de **4,4 GiB**
+livres no disco; a próxima etapa exige espaço para compilação e archive.
+As imagens de divulgação deverão seguir o estilo das imagens do **AlvoPrompter**,
+com a marca Esdras colorida aprovada, conforme pedido do usuário em 02/10.
+O AAB 15 também foi copiado e conferido por SHA-256 em
+`/Users/alexandregomesdacosta/Downloads/esdrasapp-v15.aab`.
 
 Estimativa funcional mantida: sistema **96,40%**, mobile **97%**, LP **100%**.
 Esta entrega valida e empacota a marca, sem concluir o push nem o aceite físico.

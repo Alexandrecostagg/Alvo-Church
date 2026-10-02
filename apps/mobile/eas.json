@@ -40,7 +40,10 @@
         "track": "internal",
         "releaseStatus": "draft"
       },
-      "ios": {}
+      "ios": {
+        "ascAppId": "6818541001",
+        "appleTeamId": "LCN99JS59U"
+      }
     }
   }
 }

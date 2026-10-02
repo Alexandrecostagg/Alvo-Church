@@ -20,7 +20,8 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "icon": "./assets/generated/esdras-app-icon.png",
-      "bundleIdentifier": "com.plataformaesdras.app"
+      "bundleIdentifier": "com.plataformaesdras.app",
+      "appleTeamId": "LCN99JS59U"
     },
     "android": {
       "googleServicesFile": "./google-services.json",

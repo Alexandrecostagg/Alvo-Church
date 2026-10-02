@@ -3,7 +3,8 @@
 > 02/10: [entrega 31 — app mobile, integrações e marca](entrega-31-mobile-marca-integracoes-2026-10-02.md).
 > Nova marca aplicada aos recursos Android/iOS; QA local de WhatsApp, Esdras
 > Pass, Segurança Kids e instituições aprovado. AAB 15 concluído e assinado;
-> Apple depende da equipe correta no Xcode e de archive assinado.
+> EsdrasApp criado na Apple (6818541001), equipe e perfil confirmados no Xcode;
+> archive assinado e upload ao TestFlight ainda pendentes.
 > Sistema **96,40%**, mobile **97%**, LP **100%**; Gratuito **50 membros**.
 
 > 01/10: [entrega 30 — navegação do painel e marca demonstrativa](entrega-30-navegacao-marca-2026-10-01.md).

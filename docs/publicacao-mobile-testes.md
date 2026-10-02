@@ -8,11 +8,27 @@
 Para preparar o upload iOS **nesta máquina**, executar na raiz do repositório
 `node scripts/prepare-mobile-xcode-env.mjs` e abrir
 `apps/mobile/ios/EsdrasApp.xcworkspace` no Xcode. O arquivo local gerado
-contém somente `EXPO_PUBLIC_*` e não entra no Git. Selecionar em Signing &
-Capabilities a equipe que detém `com.plataformaesdras.app`; os certificados
-Development e Distribution instalados aqui são de equipes distintas. Após
-confirmar o perfil de distribuição, usar Product > Archive e enviar para
-App Store Connect. Ver [limites e validações](entrega-31-mobile-marca-integracoes-2026-10-02.md).
+contém somente `EXPO_PUBLIC_*` e não entra no Git. A equipe **LCN99JS59U** já
+está configurada com assinatura automática. Em 02/10 o Xcode confirmou o perfil
+`iOS Team Provisioning Profile: com.plataformaesdras.app`, com App ID,
+certificado, equipe e capabilities válidos. Os certificados Development e
+Distribution pertencem à mesma equipe (OU confirmado); a informação anterior
+de equipes distintas foi corrigida.
+
+O [EsdrasApp no App Store Connect](https://appstoreconnect.apple.com/apps/6818541001/distribution)
+foi criado em português do Brasil, SKU `esdrasapp-ios`, Apple ID **6818541001**,
+com acesso limitado e sem adicionar usuários. O TestFlight aguarda o primeiro
+build. `eas.json` também aponta para esse app/equipe no perfil de envio iOS.
+Para enviar pelo Xcode: selecionar destino genérico iOS, Product > Archive,
+Distribute App > App Store Connect. O archive completo e o upload ainda não
+foram executados. O Mac tinha cerca de **4,4 GiB livres** na configuração;
+liberar espaço para a compilação antes de prosseguir.
+
+As imagens da ficha Esdras devem seguir o **mesmo estilo visual das imagens
+do AlvoPrompter**, conforme orientação do usuário em 02/10, preservando a logo
+Esdras com livro claro, pena cobre e fundo verde. Capturas e metadados de
+publicação ainda precisam ser preparados; isso não impede receber o build.
+Ver [validações](entrega-31-mobile-marca-integracoes-2026-10-02.md).
 
 > Pendência para o próximo AAB, registrada em 28/09: aplicar a marca livro e pena
 > aprovada na LP ao app e à ficha Google Play. O usuário pediu para adiar essa
@@ -22,7 +38,7 @@ Atualizado em **14/09/2026**. **AAB 13 (1.0.0) disponível para testadores inter
 confirmado no Play Console às 14:31. EAS concluído, assinatura conferida e igual
 à versão anterior. Inclui revalidação da sessão, retomada, isolamento de conta e
 orientações de acesso. A faixa fechada Esdras 1 permanece na versão 12. Nenhum
-build iOS encontrado na consulta EAS; App Store Connect não inspecionado.
+build iOS encontrado na consulta EAS naquela data. Cadastro Apple criado em 02/10, conforme atualização acima.
 [Diagnóstico, distribuição e validação](entrega-ampliada-29-sessao-mobile-2026-09-14.md).
 
 Antes do roteiro de distribuição abaixo, fechar escala/sala/evento Kids e papéis.
