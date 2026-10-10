@@ -1,20 +1,12 @@
+import { getGoogleAccessToken } from "./google-service-account";
+import { activeAuthSession } from "./auth-session";
 import type { NextRequest } from "next/server";
 import { isLocalQaFirebase } from "./firebase-server-env";
 
 /**
- * Valida o Firebase ID token enviado no header Authorization: Bearer <token>.
- *
- * Caminho rápido: valida a assinatura RS256 localmente via Web Crypto contra
- * as chaves públicas do Google (JWKS), sem round-trip de rede por request —
- * as chaves ficam cacheadas em memória do Worker e são renovadas conforme o
- * Cache-Control da resposta do Google.
- *
- * Fallback: se a validação local não confirmar o token por qualquer motivo
- * (JWKS indisponível, kid desconhecido, projectId ausente…), cai para o
- * endpoint accounts:lookup do Identity Toolkit — o comportamento original.
- * Assim, qualquer token que era aceito antes continua sendo aceito.
- *
- * Retorna o uid ou null se inválido/ausente.
+ * Valida assinatura, emissor e validade do ID token e consulta o estado atual
+ * da conta no Auth. As chaves públicas ficam em cache; a verificação de conta
+ * desativada/sessão revogada não usa cache e falha fechada.
  */
 
 const JWKS_URL =
@@ -157,16 +149,25 @@ async function verifyIdTokenRemotely(idToken: string): Promise<string | null> {
 export async function verifyFirebaseIdToken(req: NextRequest): Promise<string | null> {
   const authorization = req.headers.get("authorization") ?? "";
   const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : null;
-  if (!idToken) return null;
-
+  if (!idToken || idToken.length > 16384) return null;
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  if (projectId) {
-    try {
-      return await verifyIdTokenLocally(idToken, projectId);
-    } catch {
-      // Não foi possível decidir localmente — usa o caminho remoto original.
-    }
-  }
-
-  return verifyIdTokenRemotely(idToken);
+  if (!projectId || !/^[a-z0-9-]+$/.test(projectId)) return null;
+  try {
+    let uid: string | null;
+    try { uid = await verifyIdTokenLocally(idToken, projectId); }
+    catch { uid = await verifyIdTokenRemotely(idToken); }
+    if (!uid) return null;
+    const payload = decodeJwtSection<{ auth_time?: number }>(idToken.split(".")[1]);
+    // Signature validity alone does not establish that an account is still active.
+    // Fail closed on lookup failure; no cache delays disable/revoke operations.
+    const token = isLocalQaFirebase() ? "owner" : await getGoogleAccessToken("https://www.googleapis.com/auth/identitytoolkit");
+    const host = isLocalQaFirebase() ? "http://127.0.0.1:9099/identitytoolkit.googleapis.com" : "https://identitytoolkit.googleapis.com";
+    const response = await fetch(`${host}/v1/projects/${projectId}/accounts:lookup`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ localId: [uid] }), signal: AbortSignal.timeout(5000), cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { users?: Array<{ localId?: string; disabled?: boolean; validSince?: string }> };
+    return activeAuthSession(data.users?.[0], uid, payload.auth_time) ? uid : null;
+  } catch { return null; }
 }

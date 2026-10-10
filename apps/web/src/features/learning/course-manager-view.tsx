@@ -55,7 +55,7 @@ export function CourseManagerView() {
 
   useEffect(() => {
     if (!ready) return;
-    fetchCourses(firebaseConfig, { organizationId }).then((list) => {
+    fetchCourses(firebaseConfig, { organizationId }, true).then((list) => {
       setCourses(list);
       setSelectedCourseId((cur) => cur ?? list[0]?.id ?? null);
     }).catch((e) => console.error("Falha ao carregar cursos:", e));

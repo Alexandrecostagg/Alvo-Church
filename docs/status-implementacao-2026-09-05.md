@@ -1,5 +1,8 @@
 # Estado da implementação — 05/09/2026
 
+> Remediação em 10/10: [correções, validações e pendências](correcoes-seguranca-2026-10-10.md). O diagnóstico original abaixo registra o estado anterior.
+
+
 > 10/10: [auditoria de segurança da plataforma, LP e mobile](auditoria-seguranca-2026-10-10.md).
 > Confirmadas permissões excessivas de leitura interna, alteração de IDs Asaas
 > pelo cliente e acesso a aulas sem publicação/liberação; regras publicadas

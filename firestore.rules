@@ -164,18 +164,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Loja de Capacitação: catálogo GLOBAL de trilhas autoradas pela Esdras.
-    // Qualquer membro autenticado navega/lê (a loja mostra só publicadas via
-    // query where isPublished==true; membros com entitlement também leem
-    // trilhas despublicadas que já compraram). Escrita só do platform admin.
+    // Public catalog contains metadata only. Paid/private lessons require the
+    // tenant-scoped content API; only platform editors use the direct SDK.
     match /platformPrograms/{programId} {
-      allow get: if signedIn();
-      allow list: if signedIn();
+      allow read: if isPlatformAdmin() || (signedIn() && resource.data.isPublished == true);
       allow write: if isPlatformAdmin();
-
-      match /{sub}/{subDoc} { // modules + lessons
-        allow read: if signedIn();
-        allow write: if isPlatformAdmin();
+      match /{sub}/{subDoc} {
+        allow read, write: if isPlatformAdmin();
       }
     }
 
@@ -310,20 +305,26 @@ service cloud.firestore {
     // liberar recursos nem alterar o plano por chamada direta ao Firestore.
     match /organizations/{orgId}/settings/subscription {
       allow read: if hasTenantAccount(orgId) || isPlatformAdmin();
-      // A primeira assinatura vem exclusivamente do cadastro público e deve
-      // iniciar no plano gratuito. Alterações posteriores passam pelo backend
-      // de cobrança (Admin SDK) ou por um administrador da plataforma.
-      allow create: if isPlatformAdmin()
-        || (isOrgOwner(orgId)
-          && request.resource.data.organizationId == orgId
-          && request.resource.data.plan == "free");
-      // O checkout pode apenas vincular os IDs retornados pelo gateway; nunca
-      // troca plano, status ou limites diretamente no cliente. A gestão Esdras
-      // também passa pela API auditada, que usa credencial de servidor.
-      allow update: if isTenantAdmin(orgId)
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["asaasCustomerId", "asaasSubscriptionId"]);
-      allow delete: if false;
+      // Only the fixed free bootstrap is accepted from a client. Payment IDs,
+      // plan changes and subsequent writes belong exclusively to server APIs.
+      allow create: if isOrgOwner(orgId)
+        && request.resource.data.keys().hasOnly([
+          "organizationId", "plan", "planCode", "planTier", "billingCycle",
+          "memberRange", "seatLimit", "campusLimit", "aiQuota", "whiteLabelEnabled",
+          "coBrandingEnabled", "multiCampusEnabled", "denominationalModeEnabled", "startedAt"
+        ])
+        && request.resource.data.organizationId == orgId
+        && request.resource.data.plan == "free"
+        && request.resource.data.planCode == "gratuito"
+        && request.resource.data.planTier == "base"
+        && request.resource.data.seatLimit == 4
+        && request.resource.data.campusLimit == 1
+        && request.resource.data.aiQuota == 0
+        && request.resource.data.whiteLabelEnabled == false
+        && request.resource.data.coBrandingEnabled == true
+        && request.resource.data.multiCampusEnabled == false
+        && request.resource.data.denominationalModeEnabled == false;
+      allow update, delete: if false;
     }
 
     match /organizations/{orgId}/settings/features {
@@ -429,7 +430,7 @@ service cloud.firestore {
       // Recepção autenticada continua podendo registrar atendimento interno;
       // o visitante público só entra pela API server-side.
       allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
-      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "visitors");
+      allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
       allow update, delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
     }
 
@@ -537,10 +538,10 @@ service cloud.firestore {
     }
 
     // Histórico de tribo do membro: auditoria de classificações (IA) e ajustes
-    // manuais. Membro do tenant lê; só admin grava (registro é imutável — sem
+    // manuais. Titular e administrador leem; só admin grava (registro é imutável — sem
     // update/delete pelo cliente).
     match /organizations/{orgId}/people/{personId}/tribeHistory/{entryId} {
-      allow read: if isTenantMember(orgId);
+      allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
       allow create: if isTenantAdmin(orgId);
       allow update, delete: if false;
     }
@@ -548,11 +549,13 @@ service cloud.firestore {
     // Conteúdo EAD é administrado pelo backend para validar publicação,
     // hierarquia módulo/aula e preservar progresso durante alterações.
     match /organizations/{orgId}/courses/{courseId} {
-      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys");
+      allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys")
+        && (isTenantAdmin(orgId) || resource.data.isActive == true);
       allow write: if false;
 
       match /{sub}/{subDoc} {
-        allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys") && (sub == "modules" || sub == "lessons");
+        allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "journeys") && (sub == "modules" || sub == "lessons")
+          && (isTenantAdmin(orgId) || get(/databases/$(database)/documents/organizations/$(orgId)/courses/$(courseId)).data.isActive == true);
         allow write: if false;
       }
     }
@@ -722,12 +725,21 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    function canReadOperational(orgId, collection) {
+      return isTenantAdmin(orgId)
+        || (collection == "financeReports" && resource.data.status == "published")
+        || !["families", "financeReports", "followUpTasks", "memberTribeProfiles",
+          "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests",
+          "journeyProfiles", "visitorJourneys"].hasAny([collection]);
+    }
+
     // Coleções operacionais de primeiro nível. A lista fechada acima evita
     // que uma coleção nova herde acesso por acidente.
     match /organizations/{orgId}/{collection}/{documentId} {
       allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
-        && collection != "events" && collection != "courses";
+        && collection != "events" && collection != "courses"
+        && canReadOperational(orgId, collection);
       allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
@@ -741,7 +753,8 @@ service cloud.firestore {
       // e presença contêm dados pessoais e transições financeiras.
       allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
-        && collection != "events" && collection != "courses";
+        && collection != "events" && collection != "courses"
+        && (isTenantAdmin(orgId) || (!["families", "financeReports", "followUpTasks", "memberTribeProfiles", "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests", "journeyProfiles", "visitorJourneys"].hasAny([collection])));
       allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";

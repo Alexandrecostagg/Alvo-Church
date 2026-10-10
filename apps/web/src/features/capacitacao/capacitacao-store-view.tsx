@@ -169,6 +169,7 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
   const [progress, setProgress] = useState<MemberCourseProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [contentError, setContentError] = useState("");
 
   const ready = configured && firebaseReady && !!user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
@@ -176,8 +177,11 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
     let cancelled = false;
     async function run() {
       setLoading(true);
+      setContentError("");
+      setLessons([]);
       try {
-        const ls = await fetchTrainingLessons(firebaseConfig, program.id);
+        if (!user) return;
+        const ls = await fetchTrainingLessons(firebaseConfig, program.id, { organizationId, idToken: await user.getIdToken() });
         if (cancelled) return;
         setLessons(ls);
         setActiveLessonId(ls[0]?.id ?? null);
@@ -192,6 +196,8 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
           isCompleted: false,
           updatedAt: new Date().toISOString()
         });
+      } catch {
+        if (!cancelled) { setLessons([]); setContentError("Não foi possível liberar esta trilha. Verifique seu acesso com a instituição."); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -210,7 +216,7 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
     try {
       const result = await progressRequest(user!, { action: "toggle", organizationId, courseId: program.id, lessonId, catalog: "platform", requestId: crypto.randomUUID() });
       setProgress(result.progress);
-    } catch (e) { console.error(e); }
+    } catch { setContentError("Não foi possível salvar o progresso. Tente novamente."); }
   }
 
   if (loading) {
@@ -220,6 +226,7 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 1100, margin: "0 auto" }}>
       <button onClick={onBack} style={{ ...secondaryBtn, marginBottom: 16 }}><ArrowLeft size={15} /> Voltar à loja</button>
+      {contentError && <p role="alert">{contentError}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 20, alignItems: "start" }}>
         <div>

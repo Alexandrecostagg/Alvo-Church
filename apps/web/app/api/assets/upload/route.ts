@@ -1,20 +1,22 @@
+import { boundedForm, rasterImageType, UploadError } from "@alvo/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseIdToken } from "../../_lib/verify-auth";
 import { hasAnyRoleInOrg, TENANT_ADMIN_ROLES } from "../../_lib/tenant-role";
 
 const ALLOWED_ASSET_KINDS = new Set(["logoLight", "logoDark", "icon", "favicon"]);
-const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml", "image/x-icon"]);
+const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 
 // Mediação autenticada para o Worker R2. O segredo de upload permanece no
 // servidor: Firebase ID token nunca é aceito como credencial pelo Worker.
 export async function POST(req: NextRequest) {
+ try {
   const authorization = req.headers.get("authorization") ?? "";
   const idToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const uid = await verifyFirebaseIdToken(req);
   if (!uid || !idToken) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
-  const formData = await req.formData().catch(() => null);
+  const formData = await boundedForm(req, MAX_ASSET_BYTES + 64 * 1024);
   if (!formData) return NextResponse.json({ error: "Formulário de upload inválido." }, { status: 422 });
   const organizationId = String(formData.get("organizationId") ?? "").trim();
   const assetKind = String(formData.get("assetKind") ?? "");
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Você não tem permissão para alterar a marca desta organização." }, { status: 403 });
   }
 
+  rasterImageType(new Uint8Array(await file.arrayBuffer()), file.type);
   const workerBase = process.env.WORKER_API_BASE_URL ?? "";
   const bearerToken = process.env.UPLOAD_API_BEARER_TOKEN;
   if (!workerBase || !bearerToken) return NextResponse.json({ error: "Serviço de upload indisponível." }, { status: 503 });
@@ -46,4 +49,7 @@ export async function POST(req: NextRequest) {
   const payload = await upstream.json().catch(() => ({}));
   if (!upstream.ok) return NextResponse.json({ error: (payload as { error?: string }).error ?? "Não foi possível enviar o arquivo." }, { status: upstream.status });
   return NextResponse.json(payload);
+ } catch (e) {
+    return NextResponse.json({ error: e instanceof UploadError ? e.message : "Serviço de upload indisponível." }, { status: e instanceof UploadError ? e.status : 503 });
+  }
 }

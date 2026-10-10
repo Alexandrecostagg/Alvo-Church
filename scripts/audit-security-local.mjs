@@ -21,6 +21,7 @@ const storageBase = `http://127.0.0.1:9199/v0/b/${bucket}/o`;
 const headers = token => token ? { Authorization: `Bearer ${token}` } : {};
 function encode(value) {
   if (typeof value === 'string') return { stringValue: value };
+  if (typeof value === 'number') return { integerValue: String(value) };
   if (typeof value === 'boolean') return { booleanValue: value };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(encode) } };
   throw new Error('Only strings, booleans and arrays used by these probes.');
@@ -45,8 +46,13 @@ async function storageUpload(name, token, type = 'text/html') {
   const body = type === 'image/png'
     ? Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWZkAAAAASUVORK5CYII=', 'base64')
     : '<p>synthetic security fixture</p>';
-  const response = await fetch(storageBase + '?uploadType=media&name=' + encodeURIComponent(name), {
-    method: 'POST', headers: { ...headers(token), 'content-type': type }, body,
+  const boundary = `security-${randomUUID()}`;
+  const multipart = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ name, contentType: type })}\r\n--${boundary}\r\nContent-Type: ${type}\r\n\r\n`),
+    Buffer.from(body), Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  const response = await fetch(storageBase + '?name=' + encodeURIComponent(name), {
+    method: 'POST', headers: { ...headers(token), 'x-goog-upload-protocol': 'multipart', 'content-type': `multipart/related; boundary=${boundary}` }, body: multipart,
   });
   await response.arrayBuffer();
   if (response.ok) storageObjects.push(name);
@@ -109,12 +115,53 @@ try {
   await probe('Inactive institution Firestore data denied', `${root}/families/private`, 'member');
   await db.doc(root).update({ status: 'active' });
 
-  const logo = `${root}/branding/logo/security.txt`;
+  // Positive controls: operators, published reports/courses and private drafts.
+  for (const path of ['families/private', 'visitorIntakes/private', 'followUpTasks/private', 'financeReports/draft']) {
+    await probe(`Admin retains access to ${path}`, `${root}/${path}`, 'admin', 200);
+  }
+  await db.doc(`${root}/financeReports/public`).set({ organizationId: orgId, status: 'published' });
+  await probe('Member reads published transparency report', `${root}/financeReports/public`, 'member', 200);
+  await db.doc(`${root}/families/private/notes/private`).set({ status: 'published' });
+  await probe('Published flag cannot bypass a private descendant', `${root}/families/private/notes/private`, 'member');
+  await db.doc(`${root}/courses/live`).set({ organizationId: orgId, isActive: true });
+  await db.doc(`${root}/courses/live/lessons/sample`).set({ title: 'Synthetic lesson' });
+  await probe('Member reads active institutional lesson', `${root}/courses/live/lessons/sample`, 'member', 200);
+  await probe('Admin reads institutional draft', `${root}/courses/draft/lessons/private`, 'admin', 200);
+  await db.doc(program).update({ isPublished: true });
+  await probe('Signed-in user sees published catalog metadata', program, 'outsider', 200);
+  await probe('Published catalog does not expose paid lessons', `${program}/lessons/private`, 'outsider');
+  await db.doc(program).update({ isPublished: false });
+  await db.doc(`platformAdmins/${identities.admin.uid}`).set({ active: true });
+  await probe('Platform editor can review private lessons', `${program}/lessons/private`, 'admin', 200);
+  await db.doc(`platformAdmins/${identities.admin.uid}`).delete();
+  await db.doc(foreign).update({ ownerUid: identities.admin.uid });
+  const bootstrap = { organizationId: otherOrg, plan: 'free', planCode: 'gratuito', planTier: 'base', seatLimit: 4, campusLimit: 1, aiQuota: 0, whiteLabelEnabled: false, coBrandingEnabled: true, multiCampusEnabled: false, denominationalModeEnabled: false };
+  await probe('Bootstrap cannot inject billing IDs', `${foreign}/settings/subscription`, 'admin', 403, { ...bootstrap, asaasSubscriptionId: 'foreign' });
+  await probe('Bootstrap cannot inject a paid quota', `${foreign}/settings/subscription`, 'admin', 403, { ...bootstrap, aiQuota: 9999 });
+  await probe('Free bootstrap still works', `${foreign}/settings/subscription`, 'admin', 200, bootstrap);
+  if (process.env.SECURITY_AUDIT_API === '1') {
+    const contentPath = `/api/learning/content?${new URLSearchParams({ organizationId: orgId, programId: program.split('/')[1] })}`;
+    const api = async (path, actor) => {
+      const response = await fetch('http://127.0.0.1:3001' + path, { headers: headers(identities[actor]?.token) });
+      await response.arrayBuffer(); return response.status;
+    };
+    check('Content API denies missing entitlement', await api(contentPath, 'member'), 403);
+    await db.doc(`${root}/programEntitlements/${program.split('/')[1]}`).set({ programId: program.split('/')[1], status: 'active' });
+    check('Content API permits purchased lesson for active member', await api(contentPath, 'member'), 200);
+    check('Content API denies unrelated user', await api(contentPath, 'outsider'), 403);
+    await db.doc(`${root}/programEntitlements/${program.split('/')[1]}`).update({ status: 'revoked' });
+    check('Content API denies revoked purchase', await api(contentPath, 'member'), 403);
+    await auth.updateUser(identities.member.uid, { disabled: true });
+    check('Disabled Auth account cannot reuse an issued token', await api(contentPath, 'member'), 401);
+    await auth.updateUser(identities.member.uid, { disabled: false });
+  }
+
+  const logo = `${root}/branding/logoLight/security.txt`;
   assert.equal(await storageUpload(logo, 'owner'), 200, 'Storage fixture setup');
   check('Storage anonymous branding read denied', await storageRead(logo, null), 403);
   check('Storage active member branding read allowed', await storageRead(logo, 'member'), 200, 'SEC-04');
-  check('Storage admin image upload allowed (positive control)', await storageUpload(`${root}/branding/logo/security.png`, identities.admin.token, 'image/png'), 200, 'SEC-04');
-  check('Storage admin HTML upload denied', await storageUpload(`${root}/branding/logo/security.html`, identities.admin.token), 403, 'SEC-04');
+  check('Storage admin image upload allowed (positive control)', await storageUpload(`${root}/branding/logoLight/security.png`, identities.admin.token, 'image/png'), 200, 'SEC-04');
+  check('Storage admin HTML upload denied', await storageUpload(`${root}/branding/logoLight/security.html`, identities.admin.token), 403, 'SEC-04');
   await db.doc(root).update({ status: 'inactive' });
   check('Storage inactive institution read denied', await storageRead(logo, 'member'), 403, 'SEC-04');
 } finally {
@@ -122,6 +169,7 @@ try {
   await db.recursiveDelete(db.doc(root));
   await db.recursiveDelete(db.doc(foreign));
   await db.recursiveDelete(db.doc(program));
+  if (identities.admin) await db.doc(`platformAdmins/${identities.admin.uid}`).delete();
   for (const { uid } of Object.values(identities)) await auth.deleteUser(uid);
   await deleteApp(app);
 }

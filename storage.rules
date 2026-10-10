@@ -16,9 +16,10 @@ service firebase.storage {
 
     function isTenantMember(orgId) {
       return signedIn()
-        && tenantUser(orgId).exists()
+        && firestore.exists(userDocPath(orgId))
         && tenantUser(orgId).data.organizationId == orgId
-        && tenantUser(orgId).data.isActive == true;
+        && tenantUser(orgId).data.isActive == true
+        && firestore.get(/databases/(default)/documents/organizations/$(orgId)).data.status == "active";
     }
 
     function isTenantAdmin(orgId) {
@@ -42,12 +43,15 @@ service firebase.storage {
 
     match /organizations/{orgId}/branding/{assetKind}/{fileName} {
       allow read: if isTenantMember(orgId);
-      allow write: if isTenantAdmin(orgId);
+      allow create, update: if isTenantAdmin(orgId)
+        && assetKind in ["logoLight", "logoDark", "icon", "favicon"]
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ["image/png", "image/jpeg", "image/webp"];
+      allow delete: if isTenantAdmin(orgId);
     }
 
     match /organizations/{orgId}/{allPaths=**} {
-      allow read: if isTenantMember(orgId);
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }

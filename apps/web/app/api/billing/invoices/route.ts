@@ -5,6 +5,7 @@ import { accountTransaction } from "../../_lib/member-account-store";
 import { financeActor } from "../../_lib/finance-operations";
 import { asaas, checkoutUrl } from "../../_lib/billing-operations";
 import { documentId } from "../../_lib/member-account";
+import { verifiedBillingBinding } from "../../_lib/billing-binding";
 export async function GET(req: NextRequest) {
   try {
     const uid = await verifyFirebaseIdToken(req);
@@ -13,24 +14,23 @@ export async function GET(req: NextRequest) {
       req.nextUrl.searchParams.get("organizationId"),
       "Igreja",
     );
-    const subscription = await accountTransaction(async (tx) => {
+    const binding = await accountTransaction(async (tx) => {
       const { root } = await financeActor(tx, orgId, uid);
-      return (await tx.read(`${root}/settings/subscription`))[0];
+      const [subscription, order] = await tx.read(`${root}/settings/subscription`, `${root}/billingOrders/subscription`);
+      return verifiedBillingBinding(orgId, subscription, order);
     });
-    if (!subscription?.asaasSubscriptionId)
+    if (!binding)
       return NextResponse.json(
         { ok: true, invoices: [] },
         { headers: privateHeaders },
       );
     const data = await asaas(
-      `/subscriptions/${documentId(subscription.asaasSubscriptionId, "Assinatura")}/payments?limit=12`,
+      `/subscriptions/${binding.subscriptionId}/payments?limit=12`,
     );
     const invoices = (data.data || [])
       .filter(
         (p: any) =>
-          p.subscription === subscription.asaasSubscriptionId &&
-          (!subscription.asaasCustomerId ||
-            p.customer === subscription.asaasCustomerId),
+          p.subscription === binding.subscriptionId && p.customer === binding.customerId,
       )
       .map((p: any) => ({
         id: p.id,

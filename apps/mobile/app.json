@@ -21,7 +21,8 @@
       "requireFullScreen": true,
       "icon": "./assets/generated/esdras-app-icon.png",
       "bundleIdentifier": "com.plataformaesdras.app",
-      "appleTeamId": "LCN99JS59U"
+      "appleTeamId": "LCN99JS59U",
+      "buildNumber": "2"
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -35,21 +36,27 @@
         "android.permission.CAMERA"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "allowBackup": false
     },
     "plugins": [
       "expo-status-bar",
       [
         "expo-camera",
         {
-          "cameraPermission": "O app usa a câmera para escanear o QR de retirada da Segurança Kids."
+          "cameraPermission": "O app usa a câmera para escanear o QR de retirada da Segurança Kids.",
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in."
+          "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in.",
+          "microphonePermission": false,
+          "photosPermission": "O EsdrasApp acessa a foto selecionada para o cadastro autorizado na instituição."
         }
       ],
       [
@@ -75,7 +82,8 @@
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "enablePngCrunchInReleaseBuilds": true
+            "enablePngCrunchInReleaseBuilds": true,
+            "usesCleartextTraffic": false
           }
         }
       ]

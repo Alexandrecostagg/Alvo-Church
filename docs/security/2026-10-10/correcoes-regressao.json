@@ -1,0 +1,317 @@
+{
+  "date": "2026-10-10T13:09:48.820Z",
+  "environment": "demo-alvo-qa local emulators; synthetic data only",
+  "total": 44,
+  "passed": 44,
+  "findings": 0,
+  "results": [
+    {
+      "label": "Anonymous private person denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Member private person denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin private person allowed (positive control)",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Cross-tenant family denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Member self role escalation denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Tenant admin cannot become platform admin",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Client plan upgrade denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Client payment IDs must be immutable",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-01"
+    },
+    {
+      "label": "Member cannot read internal families/private",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-02"
+    },
+    {
+      "label": "Member cannot read internal visitorIntakes/private",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-02"
+    },
+    {
+      "label": "Member cannot read internal followUpTasks/private",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-02"
+    },
+    {
+      "label": "Member cannot read internal financeReports/draft",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-02"
+    },
+    {
+      "label": "Member cannot read another guardian Kids record",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Direct Kids checkout denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Anonymous global program denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Unrelated account cannot read unpublished program",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-03"
+    },
+    {
+      "label": "Unrelated account without entitlement cannot read lesson",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-03"
+    },
+    {
+      "label": "Member cannot read inactive course lesson",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-03"
+    },
+    {
+      "label": "Inactive account data denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Inactive institution Firestore data denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin retains access to families/private",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin retains access to visitorIntakes/private",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin retains access to followUpTasks/private",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin retains access to financeReports/draft",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Member reads published transparency report",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Published flag cannot bypass a private descendant",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Member reads active institutional lesson",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Admin reads institutional draft",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Signed-in user sees published catalog metadata",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Published catalog does not expose paid lessons",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Platform editor can review private lessons",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Bootstrap cannot inject billing IDs",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Bootstrap cannot inject a paid quota",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Free bootstrap still works",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Content API denies missing entitlement",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Content API permits purchased lesson for active member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Content API denies unrelated user",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Content API denies revoked purchase",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Disabled Auth account cannot reuse an issued token",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Storage anonymous branding read denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": null
+    },
+    {
+      "label": "Storage active member branding read allowed",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": "SEC-04"
+    },
+    {
+      "label": "Storage admin image upload allowed (positive control)",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "finding": "SEC-04"
+    },
+    {
+      "label": "Storage admin HTML upload denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-04"
+    },
+    {
+      "label": "Storage inactive institution read denied",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "finding": "SEC-04"
+    }
+  ]
+}

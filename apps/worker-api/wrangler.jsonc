@@ -11,6 +11,8 @@
   "triggers": {
     "crons": ["0 6 * * *"]
   },
+  "durable_objects": { "bindings": [{ "name": "WIFI_RATE_LIMIT", "class_name": "WifiRateLimit" }] },
+  "migrations": [{ "tag": "security-wifi-v1", "new_sqlite_classes": ["WifiRateLimit"] }],
   "r2_buckets": [
     {
       "binding": "BRAND_ASSETS_BUCKET",

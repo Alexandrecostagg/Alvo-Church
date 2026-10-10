@@ -1079,7 +1079,7 @@ export async function provisionSelfServeOrganization(
     memberRange: "up_to_100",
     seatLimit: 4,
     campusLimit: 1,
-    aiQuota: 50,
+    aiQuota: 0,
     whiteLabelEnabled: false,
     coBrandingEnabled: true,
     multiCampusEnabled: false,
@@ -1513,6 +1513,7 @@ export async function fetchFinancialTransparencyReports(
   const firestore = getFirebaseFirestore(config);
   const reportsQuery = query(
     collection(firestore, getFinanceReportsCollectionPath(context)),
+    where("status", "==", "published"),
     limit(maxItems)
   );
   const snapshot = await getDocs(reportsQuery);
@@ -2748,10 +2749,12 @@ export async function saveGroupBannerConfig(
 
 export async function fetchCourses(
   config: FirebaseWebRuntimeConfig,
-  context: TenantContext
+  context: TenantContext,
+  includeDrafts = false
 ): Promise<Course[]> {
   const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(collection(firestore, getCoursesCollectionPath(context)));
+  const col = collection(firestore, getCoursesCollectionPath(context));
+  const snap = await getDocs(includeDrafts ? col : query(col, where("isActive", "==", true)));
   return snap.docs.map((d) => toCourse(d.id, d.data()));
 }
 
@@ -2876,8 +2879,15 @@ export async function fetchTrainingProgramModules(
 
 export async function fetchTrainingLessons(
   config: FirebaseWebRuntimeConfig,
-  programId: string
+  programId: string,
+  access?: { organizationId: string; idToken: string }
 ): Promise<TrainingLesson[]> {
+  if (access) {
+    const response = await fetch(`/api/learning/content?${new URLSearchParams({ organizationId: access.organizationId, programId })}`, { headers: { Authorization: `Bearer ${access.idToken}` }, cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Conteúdo indisponível.");
+    return body.lessons.map((row: any) => toTrainingLesson(row.id, row)).sort((a: TrainingLesson, b: TrainingLesson) => a.sortOrder - b.sortOrder);
+  }
   const firestore = getFirebaseFirestore(config);
   const snap = await getDocs(collection(firestore, getPlatformProgramLessonsCollectionPath(programId)));
   return snap.docs.map((d) => toTrainingLesson(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);

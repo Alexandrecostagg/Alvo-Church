@@ -2,9 +2,8 @@
 // access token OAuth2, usando Web Crypto (funciona no runtime do Cloudflare
 // Workers — o SDK oficial firebase-admin/googleapis não roda lá).
 //
-// Usado só por rotas server-to-server sem usuário logado (ex: webhook do
-// Asaas), onde a escrita no Firestore precisa ignorar as regras de tenant
-// normais (que exigem um Firebase Auth ID token de um membro da org).
+// Usado por operações privilegiadas no servidor e verificação de revogação
+// no Firebase Auth. Nunca retorna a credencial ao cliente.
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
@@ -80,11 +79,12 @@ export async function getGoogleAccessToken(scope: string): Promise<string> {
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion: jwt
-    })
+    }),
+    signal: AbortSignal.timeout(8000)
   });
 
   if (!res.ok) {
-    throw new Error(`Falha ao obter access token do Google: ${await res.text()}`);
+    throw new Error(`Falha ao autenticar serviço Google (HTTP ${res.status}).`);
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };

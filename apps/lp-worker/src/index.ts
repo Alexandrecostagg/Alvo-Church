@@ -8,11 +8,6 @@ export default {
 
     // Se for plataformaesdras.com.br ou www.plataformaesdras.com.br → mostra a LP
     if (host === "plataformaesdras.com.br" || host === "www.plataformaesdras.com.br") {
-      // Redirecionar assets para a LP
-      if (url.pathname.startsWith("/_next/") || url.pathname.endsWith(".css") || url.pathname.endsWith(".js")) {
-        return Response.redirect(LP_URL + url.pathname + url.search, 301);
-      }
-      
       const lpRequest = new Request(LP_URL + url.pathname + url.search, request);
       const response = await fetch(lpRequest);
       

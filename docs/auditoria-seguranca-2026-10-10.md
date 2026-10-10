@@ -1,5 +1,8 @@
 # Auditoria de segurança — plataforma, LP e mobile
 
+> Remediação em 10/10: [correções, validações e pendências](correcoes-seguranca-2026-10-10.md). O diagnóstico original abaixo registra o estado anterior.
+
+
 Data: 10/10/2026. Base: commit `5c56b4e`, branch `codex/consolidacao-local-2026-09-05`.
 
 **Resultado: há falhas confirmadas que impedem considerar a segurança homologada.**

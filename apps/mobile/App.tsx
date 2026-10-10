@@ -1,3 +1,4 @@
+import { trustedExternalUrl } from "./src/security/external-url";
 import { KidsPrivateImage } from "./src/features/kids/kids-private-image";
 import { MemberPassCard } from "./src/features/profile/member-pass-card";
 import { MobileAccessBoundary } from "./src/features/session/mobile-access-boundary";
@@ -676,7 +677,9 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
 
   async function watchLesson(lesson: Lesson) {
     try {
-      await Linking.openURL(lesson.videoUrl);
+      const url = trustedExternalUrl(lesson.videoUrl);
+      if (!url) throw new Error("Link da aula inválido. Procure o suporte da instituição.");
+      await Linking.openURL(url);
     } catch {
       Alert.alert("Não foi possível abrir", "O link do vídeo desta aula parece inválido.");
     }
@@ -793,7 +796,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
                           </TouchableOpacity>
                         </View>
                         {les.materialUrl ? (
-                          <TouchableOpacity onPress={() => { void Linking.openURL(les.materialUrl!); }} style={{ marginTop: 10 }}>
+                          <TouchableOpacity onPress={() => { const url = trustedExternalUrl(les.materialUrl!); if (url) void Linking.openURL(url).catch(() => Alert.alert("Não foi possível abrir o material.")); else Alert.alert("Link inválido", "Procure o suporte da instituição."); }} style={{ marginTop: 10 }}>
                             <Text style={{ color: primary, fontWeight: "600" }}>📎 Material de apoio</Text>
                           </TouchableOpacity>
                         ) : null}
@@ -1477,7 +1480,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
-      console.error(e);
+      if (__DEV__) console.error("Não foi possível salvar o perfil.");
     } finally {
       setSaving(false);
     }

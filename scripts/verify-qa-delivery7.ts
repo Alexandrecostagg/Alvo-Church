@@ -889,7 +889,7 @@ async function run() {
     .doc("subscription")
     .set({ plan: "free", billingStatus: "active" });
   equal(
-    (await api("ai", { task: "cell_script", input: {} }, m)).status,
+    (await api("ai", { task: "cell_script", input: { theme: "Encontro de teste" } }, m)).status,
     429,
     "IA gratuita não ultrapassa cota zero",
   );

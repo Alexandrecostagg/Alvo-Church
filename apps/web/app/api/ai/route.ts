@@ -21,44 +21,7 @@ import { verifyFirebaseIdToken } from "../_lib/verify-auth";
 import { AccountError, boundedJson, privateHeaders } from "../_lib/kids-media";
 import { aiTask, aiGate, completeAi } from "../_lib/ai-quota";
 
-function communicationDraftInput(
-  raw: Record<string, unknown>,
-): CommunicationDraftInput {
-  const text = (
-    value: unknown,
-    label: string,
-    max: number,
-    optional = false,
-  ) => {
-    if (optional && (value === undefined || value === "")) return "";
-    if (
-      typeof value !== "string" ||
-      !value.trim() ||
-      value.trim().length > max
-    ) {
-      throw new AccountError(400, `${label} inválido.`);
-    }
-    return value.trim();
-  };
-  const allowedTones = [
-    "acolhedor",
-    "objetivo",
-    "celebrativo",
-    "pastoral",
-  ] as const;
-  if (
-    raw.tone !== undefined &&
-    !allowedTones.includes(raw.tone as (typeof allowedTones)[number])
-  ) {
-    throw new AccountError(400, "Tom inválido.");
-  }
-  return {
-    objective: text(raw.objective, "Objetivo", 500),
-    audience: text(raw.audience, "Público", 200),
-    details: text(raw.details, "Detalhes", 1000, true),
-    tone: raw.tone as CommunicationDraftInput["tone"],
-  };
-}
+import { validatedAiInput } from "../_lib/ai-input";
 
 export async function POST(req: NextRequest) {
   let auditId = "",
@@ -74,10 +37,7 @@ export async function POST(req: NextRequest) {
       throw new AccountError(400, "Use o gerador de banners para esta tarefa.");
     if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput))
       throw new AccountError(400, "Dados de Sabedoria Pastoral inválidos.");
-    const input =
-      task === "communication_draft"
-        ? communicationDraftInput(rawInput as Record<string, unknown>)
-        : rawInput;
+    const input = validatedAiInput(task, rawInput as Record<string, unknown>);
     await aiGate(organizationId, uid, task, false);
     const keys = {
       deepseekApiKey: process.env.DEEPSEEK_API_KEY,
@@ -92,40 +52,40 @@ export async function POST(req: NextRequest) {
 
     switch (task) {
       case "cell_script":
-        result = await generateCellScript(keys, input as CellScriptInput);
+        result = await generateCellScript(keys, input as unknown as CellScriptInput);
         break;
       case "cell_dynamic":
-        result = await generateCellDynamic(keys, input as CellDynamicInput);
+        result = await generateCellDynamic(keys, input as unknown as CellDynamicInput);
         break;
       case "cell_meeting_summary":
         result = await generateCellMeetingSummary(
           keys,
-          input as CellMeetingSummaryInput,
+          input as unknown as CellMeetingSummaryInput,
         );
         break;
       case "absence_message":
         result = await generateAbsenceMessage(
           keys,
-          input as AbsenceMessageInput,
+          input as unknown as AbsenceMessageInput,
         );
         break;
       case "care_reply":
-        result = await generateCareReply(keys, input as CareReplyInput);
+        result = await generateCareReply(keys, input as unknown as CareReplyInput);
         break;
       case "communication_draft":
         result = await generateCommunicationDraft(
           keys,
-          input as CommunicationDraftInput,
+          input as unknown as CommunicationDraftInput,
         );
         break;
       case "pastoral_suggestion":
         result = await generatePastoralSuggestion(
           keys,
-          input as PastoralSuggestionInput,
+          input as unknown as PastoralSuggestionInput,
         );
         break;
       case "tribe_classify":
-        result = await classifyTribe(keys, input as TribeClassifyInput);
+        result = await classifyTribe(keys, input as unknown as TribeClassifyInput);
         break;
       default:
         return NextResponse.json(
