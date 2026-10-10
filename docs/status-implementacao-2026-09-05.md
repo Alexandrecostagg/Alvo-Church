@@ -1,5 +1,16 @@
 # Estado da implementação — 05/09/2026
 
+> 10/10: [auditoria de segurança da plataforma, LP e mobile](auditoria-seguranca-2026-10-10.md).
+> Confirmadas permissões excessivas de leitura interna, alteração de IDs Asaas
+> pelo cliente e acesso a aulas sem publicação/liberação; regras publicadas
+> idênticas às reproduzidas no emulador. Storage com erro de avaliação.
+> 434 testes existentes e 258 verificações de integração Kids/Pass aprovados;
+> 25 probes adicionais com 10 divergências. Dependências e headers da LP
+> também exigem revisão. Entrega de diagnóstico, sem correções/deploy de runtime.
+> Percentuais funcionais mantidos: sistema **96,40%**, mobile **97%**, LP **100%**.
+> **Segurança ainda não homologada**; esses percentuais não são nota de segurança.
+> Gratuito **50 membros** preservado; não restaurar cursos antes de fechar o acesso.
+
 > 02/10: [entrega 31 — app mobile, integrações e marca](entrega-31-mobile-marca-integracoes-2026-10-02.md).
 > Nova marca aplicada aos recursos Android/iOS; QA local de WhatsApp, Esdras
 > Pass, Segurança Kids e instituições aprovado. AAB 15 concluído e assinado;
