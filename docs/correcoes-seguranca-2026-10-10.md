@@ -14,7 +14,7 @@ Continuação da [auditoria](auditoria-seguranca-2026-10-10.md), autorizada pelo
 | SEC-06 | Corpo de upload limitado durante leitura; PNG/JPEG/WEBP conferidos pelos bytes e tipo; SVG/ICO recusados; nomes gerados no servidor | Testes de conteúdo disfarçado, payload anexado e tamanho. Não é antivírus nem decodificação/re-encodificação completa |
 | SEC-07 | Headers de proteção e CSP na LP; assets do domínio próprio passam pelo proxy; câmera permitida somente na própria origem do painel para Kids | Conferência HTTP após publicação. CSP ainda aceita scripts inline por compatibilidade; endurecimento com nonce/hash segue separado |
 | SEC-08 | Toda API que usa o verificador comum consulta conta desativada e validSince no Firebase Auth; falha fechada e timeout | Conta desativada com token emitido retorna 401 no emulador; algoritmo de revogação testado; permissão IAM de produção confirmada consultando UID inexistente |
-| SEC-09 | Mobile rejeita esquemas externos inseguros, restringe links variáveis a HTTPS, remove log sensível e permissão de microfone; iOS sem exceção de rede local | Exportações Android/iOS aprovadas. Manifesto/assinatura dos novos pacotes e teste físico ainda precisam confirmação |
+| SEC-09 | Mobile rejeita esquemas externos inseguros, restringe links variáveis a HTTPS, remove log sensível e permissão de microfone; iOS sem exceção de rede local | Exportações e pacotes Android/iOS aprovados; manifestos, assinatura e entitlements conferidos. Teste físico e distribuição ainda pendentes |
 | SEC-10 | Endpoint legado de comprovantes em bucket público retirado (410); fluxo atual privado mantido | Não foram apagados objetos antigos. Inventário histórico do R2 ainda pendente |
 | SEC-11 | Limitador Wi-Fi persistente em Durable Object compartilhado entre instâncias; SSID obrigatório; corpo limitado e erros genéricos | Teste de persistência, janela e limpeza. O endpoint legado não implementa por si só a persistência cadastral/integração de roteador |
 
@@ -23,9 +23,11 @@ Sabedoria Pastoral também valida os oito tipos de entrada no servidor, antes de
 ## Validação
 
 - 47 arquivos, **464 testes unitários** aprovados (incluindo autorização de cobrança, uploads, revogação, URLs, limitador e entradas).
+- As novas provas também foram adicionadas à rotina de autorização do GitHub Actions, incluindo a API local.
 - [44 provas de segurança](security/2026-10-10/correcoes-regressao.json): **44 respostas esperadas**, com acessos legítimos e tentativas indevidas, exclusivamente em emuladores com dados fictícios.
 - QA: cadastro; entrega 6 (101), entrega 7 (136), entrega 8 (43), entrega 9 (36), entrega 10 (20), custódia Kids (77), mídia Kids (62), vínculo/Pass (78), parceiros (41). O cenário da cota gratuita usa agora entrada válida para testar 429; campos inválidos têm testes próprios.
 - Typecheck de todos os pacotes aprovado no estado final.
+- GitHub Actions do commit `68f6ffc`: todos os cinco jobs aprovados ([execução 38056065305](https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/38056065305)).
 - Build LP, dry-run Worker, build Cloudflare do painel e exportação Hermes Android/iOS aprovados.
 - Nenhuma cobrança real, mudança de titularidade, restauração de cursos ou exclusão de dados pessoais.
 
@@ -48,7 +50,7 @@ O inventário somente de metadados do prefixo `events/` no R2 foi tentado pelo p
 
 O iOS foi compilado localmente porque o Expo não tinha credenciais de distribuição configuradas para o projeto. Archive Release **1.0.0 (2)** e IPA exportados; `codesign --verify --deep --strict` aprovado com acesso normal ao Keychain. [Entitlements conferidos](security/2026-10-10/ios2.json): `get-task-allow=false`, APNs `production`, sem microfone, `NSAllowsArbitraryLoads=false`. A logo colorida foi preservada. IPA em `apps/mobile/build/ios/security-2-distribution/EsdrasApp.ipa`, pronto para upload; não enviado à Apple nesta entrega.
 
-O Android 16 foi inspecionado e revelou `allowBackup=true` e `SYSTEM_ALERT_WINDOW` herdado. A versão **17** remove ambos e explicita `usesCleartextTraffic=false`; verificar o AAB final antes da entrega. A versão 16 não deve ser enviada às lojas.
+O Android 16 foi inspecionado e revelou `allowBackup=true` e `SYSTEM_ALERT_WINDOW` herdado. O [AAB definitivo **17**](security/2026-10-10/android17.json) foi validado pelo bundletool e pelo jarsigner: `allowBackup=false`, `usesCleartextTraffic=false`, sem `SYSTEM_ALERT_WINDOW` nem microfone, sem modo debug. O certificado de assinatura coincide com o da versão 15. Arquivo entregue em `/Users/alexandregomesdacosta/Downloads/EsdrasApp-v17-seguranca.aab`. A versão 16 foi substituída e não deve ser enviada às lojas.
 
 Um build gerado não é automaticamente publicado nas lojas.
 

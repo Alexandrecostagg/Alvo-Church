@@ -38,5 +38,8 @@
     "me.everything.badger.permission.BADGE_COUNT_WRITE"
   ],
   "sha256": "6023ea061aec934dee31b970bd2fef71b954ba967a0ac86f64d3d30076fc4718",
-  "path": "/Users/alexandregomesdacosta/Downloads/EsdrasApp-v16-seguranca.aab"
+  "path": "/Users/alexandregomesdacosta/Downloads/EsdrasApp-v16-seguranca.aab",
+  "supersededByVersion": 17,
+  "approvedForUpload": false,
+  "localSupersededCopyRemoved": true
 }

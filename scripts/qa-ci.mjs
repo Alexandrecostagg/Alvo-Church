@@ -2,9 +2,9 @@ import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-const run = (args) =>
+const run = (args, env = {}) =>
   new Promise((resolve, reject) => {
-    const child = spawn("corepack", ["pnpm", ...args], { stdio: "inherit" });
+    const child = spawn("corepack", ["pnpm", ...args], { stdio: "inherit", env: { ...process.env, ...env } });
     child.on("error", reject);
     child.on("exit", (code) =>
       code === 0
@@ -59,6 +59,7 @@ try {
     "qa:delivery10",
   ])
     await run([task]);
+  await run(["qa:security"], { SECURITY_AUDIT_API: "1" });
 } finally {
   if (web.pid) {
     try {
