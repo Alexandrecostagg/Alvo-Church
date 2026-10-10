@@ -40,10 +40,11 @@ export async function POST(req: NextRequest) {
     const input = validatedAiInput(task, rawInput as Record<string, unknown>);
     await aiGate(organizationId, uid, task, false);
     const keys = {
-      deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      geminiApiKey: process.env.GEMINI_API_KEY,
+      geminiModel: process.env.GEMINI_MODEL,
       groqApiKey: process.env.GROQ_API_KEY,
     };
-    if (!keys.deepseekApiKey && !keys.groqApiKey)
+    if (!keys.geminiApiKey && !keys.groqApiKey)
       throw new AccountError(503, "Serviço de Sabedoria Pastoral não configurado.");
     const ticket = await aiGate(organizationId, uid, task);
     auditId = ticket.auditId;

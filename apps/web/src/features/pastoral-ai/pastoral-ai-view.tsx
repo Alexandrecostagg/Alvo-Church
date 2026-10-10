@@ -161,7 +161,7 @@ export function PastoralAiView() {
   useEffect(() => { void reloadPrayers(); }, [reloadPrayers]);
 
   // Resposta sugerida: gera com IA de verdade (task care_reply via /api/ai,
-  // DeepSeek→Groq em cascata). Enquanto carrega, mostra um rascunho base; se a
+  // Gemini→Groq em cascata). Enquanto carrega, mostra um rascunho base; se a
   // IA falhar ou não estiver configurada, o rascunho base permanece.
   useEffect(() => {
     if (!selectedRequest) return;

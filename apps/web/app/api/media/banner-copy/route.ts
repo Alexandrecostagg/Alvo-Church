@@ -60,17 +60,18 @@ export async function POST(req: NextRequest) {
     textField(body.data, "Data", 100, true);
     textField(body.estilo, "Estilo", 100, true);
     await aiGate(organizationId, uid, "banner_copy", false);
-    // Cascata de provedores: DeepSeek (principal) → Groq (fallback). Basta uma
+    // Cascata de provedores: Gemini (principal) → Groq (fallback). Basta uma
     // das chaves estar configurada — a troca de provedor acontece no @alvo/ai.
     const keys = {
-      deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      geminiApiKey: process.env.GEMINI_API_KEY,
+      geminiModel: process.env.GEMINI_MODEL,
       groqApiKey: process.env.GROQ_API_KEY,
     };
-    if (!keys.deepseekApiKey && !keys.groqApiKey) {
+    if (!keys.geminiApiKey && !keys.groqApiKey) {
       return NextResponse.json(
         {
           error:
-            "Nenhuma API de Sabedoria Pastoral configurada (DEEPSEEK_API_KEY/GROQ_API_KEY).",
+            "Serviço de Sabedoria Pastoral não configurado.",
         },
         { status: 500 },
       );
@@ -98,7 +99,7 @@ Retorne APENAS um JSON válido (sem markdown, sem explicações) com este format
   "imagemPrompt": "descrição EM INGLÊS de uma imagem de FUNDO cinematográfica e VIBRANTE que represente o tema visualmente para um cartaz de igreja. Descreva a cena, elementos simbólicos, iluminação (ex: warm golden light, volumetric god rays, glowing embers) e paleta de cores ricas. Deve ser luminosa e cheia de vida, NUNCA escura/apagada. NÃO inclua texto, letras, palavras ou pessoas com rosto reconhecível. Exemplo: 'two human hands reaching toward each other over glowing golden fire, warm amber and orange tones, volumetric light rays from above, dramatic cinematic poster art, luminous, rich vivid colors, ultra detailed'"
 }`;
 
-    // DeepSeek (principal) → cascata Groq (fallback). response_format json
+    // Gemini (principal) → cascata Groq (fallback). response_format json
     // elimina fences de markdown e retries por JSON malformado; o JSON de copy
     // tem ~300 tokens, então o modelo rápido já basta.
     let raw: string;

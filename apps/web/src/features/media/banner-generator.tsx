@@ -846,7 +846,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
     setStatus("generating-copy");
     setErrorMsg("");
 
-    // 1 — copy (DeepSeek → Groq)
+    // 1 — copy (Gemini → Groq)
     let bannerCopy: BannerCopy;
     try {
       const res = await fetch("/api/media/banner-copy", {
@@ -1179,7 +1179,7 @@ export function BannerGenerator({ churchName: churchNameProp }: { churchName?: s
         )}
 
         <p className="banner-credit">
-          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>Sabedoria Pastoral (DeepSeek)</strong> · conforme a cota do plano
+          Arte gerada por <strong>Pollinations.ai</strong> (FLUX) · texto por <strong>Sabedoria Pastoral</strong> · conforme a cota do plano
         </p>
       </div>
 

@@ -1,16 +1,17 @@
-// Cascata de provedores de IA: DeepSeek (principal) → Groq (fallback).
-// Se a DeepSeek falhar por QUALQUER motivo (timeout, 5xx, auth, rede), cai
+// Cascata de provedores de IA: Gemini (principal) → Groq (fallback).
+// Se o Gemini falhar (timeout, 5xx, auth, rede), cai
 // para a cascata interna de modelos do Groq. Assim uma indisponibilidade do
 // provedor principal não derruba a IA do produto.
 
-import { callDeepSeek, type AiMessage, type AiResponse } from "./deepseek";
+import { callGemini, type AiMessage, type AiResponse } from "./gemini";
 import { callGroqWithCascade } from "./groq";
 
-export type { AiMessage, AiResponse } from "./deepseek";
+export type { AiMessage, AiResponse } from "./gemini";
 
 export interface AiKeys {
-  deepseekApiKey?: string;
+  geminiApiKey?: string;
   groqApiKey?: string;
+  geminiModel?: string;
 }
 
 export async function callChatWithFallback(
@@ -18,11 +19,12 @@ export async function callChatWithFallback(
   messages: AiMessage[],
   opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean }
 ): Promise<AiResponse> {
-  if (keys.deepseekApiKey) {
+  if (keys.geminiApiKey) {
     try {
-      return await callDeepSeek(keys.deepseekApiKey, messages, opts);
-    } catch (e) {
-      console.warn(`[ai] DeepSeek falhou, caindo para Groq: ${(e as Error).message}`);
+      return await callGemini(keys.geminiApiKey, messages, { ...opts, model: keys.geminiModel });
+    } catch {
+      if (!keys.groqApiKey) throw new Error("Serviço de Sabedoria Pastoral indisponível.");
+      console.warn("[ai] Gemini indisponível; tentando Groq.");
     }
   }
 
@@ -30,5 +32,5 @@ export async function callChatWithFallback(
     return callGroqWithCascade(keys.groqApiKey, messages, opts);
   }
 
-  throw new Error("Nenhuma API de Sabedoria Pastoral configurada (defina DEEPSEEK_API_KEY e/ou GROQ_API_KEY).");
+  throw new Error("Nenhuma API de Sabedoria Pastoral configurada (defina GEMINI_API_KEY e/ou GROQ_API_KEY).");
 }
