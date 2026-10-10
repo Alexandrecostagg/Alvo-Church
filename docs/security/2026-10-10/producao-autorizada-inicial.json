@@ -1,0 +1,53 @@
+{
+  "startedAt": "2026-10-10T13:56:17.575Z",
+  "project": "alvo-church",
+  "fixtureId": "security_probe_071c04da-8f4e-436e-a50c-2d7bddd00905",
+  "results": [
+    {
+      "label": "Active administrator can upload PNG through Storage rules",
+      "actual": 404,
+      "expected": 200,
+      "passed": false
+    },
+    {
+      "label": "Active session reaches entitlement authorization",
+      "actual": 401,
+      "expected": 403,
+      "passed": false
+    },
+    {
+      "label": "Active session specifically denied missing synthetic entitlement",
+      "actual": false,
+      "expected": true,
+      "passed": false
+    },
+    {
+      "label": "Existing token rejected immediately after Auth disable",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "label": "Reenabled user with new session reaches authorization",
+      "actual": 401,
+      "expected": 403,
+      "passed": false
+    },
+    {
+      "label": "Existing token rejected after session revocation",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    }
+  ],
+  "cleanup": {
+    "storageObject": "confirmed absent by authenticated Google Cloud Storage REST: HTTP 404, bucket does not exist",
+    "institutionUserDocument": "confirmed absent",
+    "institutionDocument": "confirmed absent",
+    "authAccount": "confirmed absent"
+  },
+  "scope": "Only one synthetic Auth account, one organization, its user document, and one PNG. No customer data read.",
+  "finishedAt": "2026-10-10T13:56:31.426Z",
+  "passed": false,
+  "interpretation": "The active-session positive control failed; 401 responses for disabled/revoked sessions are inconclusive until a valid session is accepted."
+}

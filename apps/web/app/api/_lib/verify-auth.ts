@@ -1,5 +1,5 @@
-import { getGoogleAccessToken } from "./google-service-account";
-import { activeAuthSession } from "./auth-session";
+import { getGoogleAccessToken, googleServiceAccountIdentity } from "./google-service-account";
+import { activeAuthSession, safeAuthLookupFailure } from "./auth-session";
 import type { NextRequest } from "next/server";
 import { isLocalQaFirebase } from "./firebase-server-env";
 
@@ -152,6 +152,7 @@ export async function verifyFirebaseIdToken(req: NextRequest): Promise<string | 
   if (!idToken || idToken.length > 16384) return null;
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!projectId || !/^[a-z0-9-]+$/.test(projectId)) return null;
+  let stage = "token-verification";
   try {
     let uid: string | null;
     try { uid = await verifyIdTokenLocally(idToken, projectId); }
@@ -160,14 +161,24 @@ export async function verifyFirebaseIdToken(req: NextRequest): Promise<string | 
     const payload = decodeJwtSection<{ auth_time?: number }>(idToken.split(".")[1]);
     // Signature validity alone does not establish that an account is still active.
     // Fail closed on lookup failure; no cache delays disable/revoke operations.
+    stage = "service-credential";
     const token = isLocalQaFirebase() ? "owner" : await getGoogleAccessToken("https://www.googleapis.com/auth/identitytoolkit");
     const host = isLocalQaFirebase() ? "http://127.0.0.1:9099/identitytoolkit.googleapis.com" : "https://identitytoolkit.googleapis.com";
+    stage = "account-lookup";
     const response = await fetch(`${host}/v1/projects/${projectId}/accounts:lookup`, {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ localId: [uid] }), signal: AbortSignal.timeout(5000), cache: "no-store",
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null);
+      console.warn("[auth] account lookup unavailable", { status: response.status, serviceAccount: googleServiceAccountIdentity(), ...safeAuthLookupFailure(failure) });
+      return null;
+    }
     const data = await response.json() as { users?: Array<{ localId?: string; disabled?: boolean; validSince?: string }> };
     return activeAuthSession(data.users?.[0], uid, payload.auth_time) ? uid : null;
-  } catch { return null; }
+  } catch {
+    // Log only a fixed stage: never tokens, account data or provider payloads.
+    console.warn("[auth] verification unavailable", { stage });
+    return null;
+  }
 }

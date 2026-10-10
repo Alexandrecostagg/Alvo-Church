@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { getGoogleAccessToken } from "./google-service-account";
+import { getGoogleAccessToken, googleServiceAccountIdentity } from "./google-service-account";
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 it("não reutiliza token do Firestore para Storage com outro escopo", async () => {
   const key = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
@@ -16,4 +16,13 @@ it("não reutiliza token do Firestore para Storage com outro escopo", async () =
   expect(await getGoogleAccessToken("storage-test")).toBe("token-storage-test");
   expect(await getGoogleAccessToken("datastore-test")).toBe("token-datastore-test");
   expect(scopes).toEqual(["datastore-test", "storage-test"]);
+});
+
+it("exposes only a validated service identity for backend diagnostics", () => {
+  vi.stubEnv("GOOGLE_SERVICE_ACCOUNT_JSON", JSON.stringify({ client_email: "runtime@alvo-church.iam.gserviceaccount.com", private_key: "must-not-leak" }));
+  expect(googleServiceAccountIdentity()).toBe("runtime@alvo-church.iam.gserviceaccount.com");
+  vi.stubEnv("GOOGLE_SERVICE_ACCOUNT_JSON", JSON.stringify({ client_email: "not-a-service-account", private_key: "must-not-leak" }));
+  expect(googleServiceAccountIdentity()).toBe("unavailable");
+  vi.stubEnv("GOOGLE_SERVICE_ACCOUNT_JSON", "invalid-json-secret");
+  expect(googleServiceAccountIdentity()).toBe("unavailable");
 });

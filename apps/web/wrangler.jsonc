@@ -13,6 +13,12 @@
   "assets": {
     "directory": ".open-next/assets"
   },
+  "r2_buckets": [
+    {
+      "binding": "ESDRAS_PRIVATE_MEDIA",
+      "bucket_name": "esdras-private-media"
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",

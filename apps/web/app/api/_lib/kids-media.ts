@@ -5,6 +5,7 @@ import { documentId } from "./member-account";
 import { assertModuleEnabled } from "./module-access";
 import { isLocalQaFirebase } from "./firebase-server-env";
 import { getGoogleAccessToken } from "./google-service-account";
+import { cloudflarePrivateImages } from "./private-r2";
 export { AccountError };
 export const privateHeaders = { "cache-control": "private, no-store", Vary: "Authorization", "x-content-type-options": "nosniff" };
 const MAX_PHOTO_BYTES = 512000;
@@ -74,6 +75,7 @@ function bucket() {
   return value;
 }
 export async function putPhoto(path: string, bytes: Uint8Array, contentType: string) {
+  if (!isLocalQaFirebase()) return (await cloudflarePrivateImages()).put(path, bytes, contentType);
   const boundary = `kids_${crypto.randomUUID()}`;
   const body = new Blob([
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: path, contentType, cacheControl: "private, no-store" })}\r\n--${boundary}\r\nContent-Type: ${contentType}\r\n\r\n`,
@@ -83,6 +85,7 @@ export async function putPhoto(path: string, bytes: Uint8Array, contentType: str
   if (!response.ok) throw new Error("Falha ao salvar foto privada.");
 }
 export async function deletePhoto(path: string) {
+  if (!isLocalQaFirebase()) return (await cloudflarePrivateImages()).remove(path);
   const response = await fetch(`${storageBase()}/storage/v1/b/${bucket()}/o/${encodeURIComponent(path)}`, { method: "DELETE", headers: await storageHeaders(), signal: AbortSignal.timeout(10000) });
   if (!response.ok && response.status !== 404) throw new Error("Falha ao remover foto privada.");
 }
@@ -93,6 +96,12 @@ export function validPhotoPath(path: unknown, orgId: string, id: string): path i
   return typeof path === "string" && path.startsWith(photoObjectPrefix(orgId, id)) && /^[a-zA-Z0-9_/-]+$/.test(path) && path.split("/").length === 4;
 }
 export async function getPhoto(path: string) {
+  if (!isLocalQaFirebase()) {
+    const { bytes, contentType } = await (await cloudflarePrivateImages()).get(path);
+    const dataUrl = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`;
+    photoBytes(dataUrl);
+    return dataUrl;
+  }
   const response = await fetch(`${storageBase()}/storage/v1/b/${bucket()}/o/${encodeURIComponent(path)}?alt=media`, { headers: await storageHeaders(), cache: "no-store", signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error("Foto privada indisponível.");
   const bytes = new Uint8Array(await response.arrayBuffer());

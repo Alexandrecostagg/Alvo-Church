@@ -91,3 +91,12 @@ export async function getGoogleAccessToken(scope: string): Promise<string> {
   cachedTokens.set(scope, { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 });
   return data.access_token;
 }
+
+/** Public service identity only; never returns the key or credential JSON. */
+export function googleServiceAccountIdentity(): string {
+  try {
+    const value = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "{}").client_email;
+    return typeof value === "string" && /^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(value)
+      ? value : "unavailable";
+  } catch { return "unavailable"; }
+}

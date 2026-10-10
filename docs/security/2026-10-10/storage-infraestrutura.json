@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-10T14:01:57.935959+00:00",
+  "project": "alvo-church",
+  "configuredBucket": "alvo-church.firebasestorage.app",
+  "configuredBucketMetadataHttpStatus": 404,
+  "legacyBucketMetadataHttpStatus": 404,
+  "syntheticObjectConfirmedAbsent": true,
+  "projectResourcesHaveDefaultStorageBucket": false,
+  "consoleBillingPlan": "Spark",
+  "consoleMessage": "Para usar Storage, faça upgrade do plano de preços do seu projeto",
+  "bucketListingViaServiceAccountHttpStatus": 403,
+  "productionStorageVerification": "Private R2 deployed; authenticated end-to-end test pending firebaseauth.users.get approval.",
+  "billingPlanChanged": false,
+  "decision": "User explicitly keeps Firebase Spark and uses Cloudflare for complementary storage; no Blaze upgrade.",
+  "r2": {
+    "bucket": "esdras-private-media",
+    "binding": "ESDRAS_PRIVATE_MEDIA",
+    "storageClass": "Standard",
+    "publicDevUrlEnabled": false,
+    "customDomains": [],
+    "initialObjectCount": 0,
+    "initialBytes": 0,
+    "createdAt": "2026-10-10T14:11:09.033Z"
+  },
+  "webDeployment": "c72a207d-913f-43bb-a829-5e28398365a0"
+}
