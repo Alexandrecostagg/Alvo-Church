@@ -1,0 +1,85 @@
+{
+  "at": "2026-10-10T15:05:40.305Z",
+  "fixtureId": "ai_probe_b8ab9ddd-17e9-42ee-8492-0f7e1606881c",
+  "scope": "Only synthetic institution/account and generic prompts; no customer data",
+  "checks": [
+    {
+      "label": "Anonymous generation denied",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "label": "Authenticated generation",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Gemini serves production text",
+      "actual": "gemini-3.5-flash-lite",
+      "expected": "gemini-3.5-flash-lite",
+      "passed": true
+    },
+    {
+      "label": "Generated text nonempty",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Private no-store",
+      "actual": "private, no-store",
+      "expected": "private, no-store",
+      "passed": true
+    },
+    {
+      "label": "Banner JSON generation",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Banner title nonempty",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Banner background prompt nonempty",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Two authenticated attempts counted once each",
+      "actual": 2,
+      "expected": 2,
+      "passed": true
+    },
+    {
+      "label": "Two completed audits",
+      "actual": 2,
+      "expected": 2,
+      "passed": true
+    },
+    {
+      "label": "Free plan still denies generation",
+      "actual": 429,
+      "expected": 429,
+      "passed": true
+    }
+  ],
+  "cleanup": true,
+  "text": {
+    "status": 200,
+    "model": "gemini-3.5-flash-lite",
+    "seconds": 3.617,
+    "characters": 586
+  },
+  "banner": {
+    "status": 200,
+    "seconds": 2.63
+  },
+  "passed": true
+}

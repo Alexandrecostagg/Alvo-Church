@@ -43,10 +43,16 @@ export async function callGroq(
   opts?: { model?: GroqModel; maxTokens?: number; temperature?: number; jsonMode?: boolean }
 ): Promise<GroqResponse> {
   const model = opts?.model ?? CASCADE[1];
+  const reasoning = model.startsWith("openai/gpt-oss-");
   const body = {
     model,
     messages,
-    max_tokens: opts?.maxTokens ?? 1024,
+    // Reasoning shares the completion budget; short task limits can otherwise
+    // produce HTTP 200 with no visible answer. Never return internal reasoning.
+    max_completion_tokens: reasoning
+      ? Math.max(2048, (opts?.maxTokens ?? 1024) + 1024)
+      : opts?.maxTokens ?? 1024,
+    ...(reasoning ? { reasoning_effort: "low", include_reasoning: false } : {}),
     temperature: opts?.temperature ?? 0.7,
     ...(opts?.jsonMode ? { response_format: { type: "json_object" as const } } : {})
   };
@@ -62,25 +68,35 @@ export async function callGroq(
   });
 
   if (!res.ok) {
-    const err = await res.text();
+    await res.body?.cancel();
     if (res.status === 400 || res.status === 401 || res.status === 403) {
-      throw new GroqRequestError(`Groq error ${res.status}: ${err}`, res.status);
+      throw new GroqRequestError(`Groq HTTP ${res.status}`, res.status);
     }
-    throw new Error(`Groq error ${res.status}: ${err}`);
+    throw new Error(`Groq HTTP ${res.status}`);
   }
 
   const data = (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
     model: string;
     usage: { prompt_tokens: number; completion_tokens: number };
   };
 
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content;
+  if (typeof content !== "string" || !content.trim() || choice?.finish_reason !== "stop") {
+    throw new Error("Groq returned an incomplete or empty answer");
+  }
+  if (opts?.jsonMode) {
+    try { JSON.parse(content); }
+    catch { throw new Error("Groq returned invalid JSON"); }
+  }
+
   return {
-    content: data.choices[0]?.message?.content ?? "",
+    content,
     model: data.model as GroqModel,
     usage: {
-      promptTokens: data.usage.prompt_tokens,
-      completionTokens: data.usage.completion_tokens
+      promptTokens: data.usage?.prompt_tokens ?? 0,
+      completionTokens: data.usage?.completion_tokens ?? 0
     }
   };
 }

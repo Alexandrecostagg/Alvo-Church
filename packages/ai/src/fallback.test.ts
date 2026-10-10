@@ -65,6 +65,28 @@ describe("Gemini → Groq", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("api.groq.com");
   });
 
+  it("reserva tokens de raciocínio no Groq sem expor o raciocínio", async () => {
+    fetchMock.mockResolvedValueOnce(answer("openai/gpt-oss-20b"));
+    await callChatWithFallback({ groqApiKey: keys.groqApiKey }, messages, { maxTokens: 100 });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+      max_completion_tokens: 2048, reasoning_effort: "low", include_reasoning: false,
+    });
+  });
+
+  it.each([["", "stop"], ["Incompleto", "length"], ["not-json", "stop"]])("não aceita sucesso HTTP com resposta Groq inválida", async (content, finish) => {
+    fetchMock.mockResolvedValueOnce(answer("openai/gpt-oss-20b", content, finish))
+      .mockResolvedValueOnce(answer("llama-3.3-70b-versatile", "{}"));
+    expect((await callChatWithFallback({ groqApiKey: keys.groqApiKey }, messages, { jsonMode: true })).model)
+      .toBe("llama-3.3-70b-versatile");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).not.toHaveProperty("reasoning_effort");
+  });
+
+  it("falha se nenhum modelo Groq produzir resposta válida", async () => {
+    fetchMock.mockImplementation(async () => answer("any", ""));
+    await expect(callChatWithFallback({ groqApiKey: keys.groqApiKey }, messages)).rejects.toThrow("empty answer");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("permite configurar o modelo Gemini no servidor", async () => {
     fetchMock.mockResolvedValueOnce(answer("gemini-override"));
     await callChatWithFallback({ ...keys, geminiModel: "gemini-override" }, messages);
