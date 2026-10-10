@@ -9,7 +9,7 @@
   "consoleBillingPlan": "Spark",
   "consoleMessage": "Para usar Storage, faça upgrade do plano de preços do seu projeto",
   "bucketListingViaServiceAccountHttpStatus": 403,
-  "productionStorageVerification": "Private R2 deployed; authenticated end-to-end test pending firebaseauth.users.get approval.",
+  "productionStorageVerification": "Private R2 authenticated upload/read/delete and authorization verified in production: 22 checks passed; all synthetic fixtures confirmed absent.",
   "billingPlanChanged": false,
   "decision": "User explicitly keeps Firebase Spark and uses Cloudflare for complementary storage; no Blaze upgrade.",
   "r2": {
@@ -22,5 +22,6 @@
     "initialBytes": 0,
     "createdAt": "2026-10-10T14:11:09.033Z"
   },
-  "webDeployment": "c72a207d-913f-43bb-a829-5e28398365a0"
+  "webDeployment": "c72a207d-913f-43bb-a829-5e28398365a0",
+  "productionEvidence": "producao-r2-autorizada.json"
 }

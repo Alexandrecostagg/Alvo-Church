@@ -1,0 +1,136 @@
+{
+  "startedAt": "2026-10-10T14:43:44.356Z",
+  "project": "alvo-church",
+  "fixtureId": "security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3",
+  "results": [
+    {
+      "label": "Active session reaches entitlement authorization",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Active session specifically denied missing synthetic entitlement",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Anonymous image request denied",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "label": "Image requires consent",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "SVG upload denied",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "Spoofed PNG denied",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "Authorized image stored in private R2",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Authorized image read",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Stored image matches synthetic PNG",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Private response never cached publicly",
+      "actual": "private, no-store",
+      "expected": "private, no-store",
+      "passed": true
+    },
+    {
+      "label": "Unrelated member cannot read image",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Member cannot replace image",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Linked guardian can read image",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Inactive account denied",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Suspended institution denied",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Restored institution regains access",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Authorized image deletion",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Deleted image no longer returned",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    }
+  ],
+  "cleanup": {
+    "r2Object:kids-private/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3/82e1a61d7ac60710e60ff11cd574a50abd9034d518c9e90f446c9ae78e1779ae/342101cb-be3e-4181-b505-262463a86bb0": "FAILED: ERR_ASSERTION",
+    "organizations/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3/kidsCheckIns/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3": "confirmed absent",
+    "organizations/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3/kidsOperationSessions/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3": "confirmed absent",
+    "organizations/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3/users/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3": "confirmed absent",
+    "organizations/security_probe_c7a69b8e-b5c5-45d4-9109-4334471a29e3": "confirmed absent",
+    "authAccount": "confirmed absent"
+  },
+  "scope": "One synthetic Auth account, one organization and its user/session/check-in documents, one 1px PNG. No customer data.",
+  "error": {
+    "name": "AssertionError",
+    "code": "ERR_ASSERTION"
+  },
+  "finishedAt": "2026-10-10T14:44:10.824Z",
+  "passed": false,
+  "followup": {
+    "checkedAt": "2026-10-10T14:44:42.248Z",
+    "objectAbsenceConfirmed": true,
+    "cliMessage": "The specified key does not exist.",
+    "note": "Wrangler missing-key wording differed from the assertion. API upload/read/delete checks passed, but the probe stopped before Auth disable/revoke. The sole synthetic R2 object was confirmed absent independently; all synthetic documents/account had been removed."
+  }
+}

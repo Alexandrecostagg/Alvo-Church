@@ -1,0 +1,150 @@
+{
+  "startedAt": "2026-10-10T14:44:46.528Z",
+  "project": "alvo-church",
+  "fixtureId": "security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570",
+  "results": [
+    {
+      "label": "Active session reaches entitlement authorization",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Active session specifically denied missing synthetic entitlement",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Anonymous image request denied",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "label": "Image requires consent",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "SVG upload denied",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "Spoofed PNG denied",
+      "actual": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "label": "Authorized image stored in private R2",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Authorized image read",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Stored image matches synthetic PNG",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Private response never cached publicly",
+      "actual": "private, no-store",
+      "expected": "private, no-store",
+      "passed": true
+    },
+    {
+      "label": "Unrelated member cannot read image",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Member cannot replace image",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Linked guardian can read image",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Inactive account denied",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Suspended institution denied",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Restored institution regains access",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Authorized image deletion",
+      "actual": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "label": "Deleted image no longer returned",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "label": "R2 object physically absent after API deletion",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "label": "Existing token denied immediately after Auth disable",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "label": "Reenabled user with new session reaches authorization",
+      "actual": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "label": "Existing token denied after session revocation",
+      "actual": 401,
+      "expected": 401,
+      "passed": true
+    }
+  ],
+  "cleanup": {
+    "r2Object:kids-private/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570/3d04ee5ae14055c235d2bd55efcac2d4b4cd8649a0effcc8cdbab8d1ec59b81f/d7dee64d-f019-494f-b365-71e26e8188f6": "confirmed absent",
+    "organizations/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570/kidsCheckIns/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570": "confirmed absent",
+    "organizations/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570/kidsOperationSessions/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570": "confirmed absent",
+    "organizations/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570/users/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570": "confirmed absent",
+    "organizations/security_probe_b2146abe-c85c-4ac5-a36e-9bc0f32d4570": "confirmed absent",
+    "authAccount": "confirmed absent"
+  },
+  "scope": "One synthetic Auth account, one organization and its user/session/check-in documents, one 1px PNG. No customer data.",
+  "finishedAt": "2026-10-10T14:45:12.737Z",
+  "passed": true
+}

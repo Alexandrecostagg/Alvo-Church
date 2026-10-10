@@ -60,7 +60,7 @@ async function r2(command, key) {
 async function absent(key) {
   try { await r2('get', key); throw new Error('Object still exists'); }
   catch (error) {
-    assert.ok(/(object does not exist|object not found|NoSuchKey|404)/i.test(`${error.stdout ?? ''} ${error.stderr ?? ''}`), 'Could not confirm object absence');
+    assert.ok(/(object does not exist|object not found|The specified key does not exist\.|NoSuchKey|404)/i.test(`${error.stdout ?? ''} ${error.stderr ?? ''}`), 'Could not confirm object absence');
   }
 }
 async function createDoc(ref, value) { await ref.create(value); createdDocs.push(ref); }
