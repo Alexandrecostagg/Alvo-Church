@@ -58,7 +58,7 @@ Todos os recursos automáticos começam desativados. A indicação “configurad
 
 ## Processamento periódico
 
-O Worker `apps/worker-api` mantém o cron diário de snapshots e ganha um cron por minuto para a fila do WhatsApp. Quando não há configuração, este cron não faz requisições.
+O Worker `apps/worker-api` usa um único cron por minuto para a fila do WhatsApp e executa os snapshots diários somente às 06:00 UTC. O compartilhamento preserva o limite de cinco agendamentos da conta Cloudflare. Sem configuração do WhatsApp, o processamento da fila não faz requisições.
 
 Configurar no Worker:
 
@@ -100,4 +100,13 @@ Os fluxos de cadastro público mantêm triagem humana; o bot não transforma aut
 - `corepack pnpm qa:whatsapp` aprovado com Firestore e Auth reais nos emuladores e Graph API simulada. Valida confirmação/cancelamento, duplicidade, cuidado privado, visitante, inscrição, opt-out, última vaga concorrente, rejeição de igreja inválida, vínculo verificado e presença própria.
 - As regras reais do emulador negaram a um membro comum leitura de conversas, configurações privadas e tentativas de participação.
 - Navegador: pedido privado enviado e confirmado, inscrição sem login com comprovante, configuração institucional salva e aviso de conexão pendente conferidos.
-- Nenhuma mensagem real foi enviada. Não houve publicação em produção ou configuração de credenciais Meta nesta entrega. A ativação depende do provisionamento do número, dos segredos, da publicação das regras/índice e do teste com o provedor real.
+- Nenhuma mensagem real foi enviada. A ativação do WhatsApp depende do provisionamento do número, dos segredos e do teste com o provedor real.
+
+## Publicação em produção — 16/10/2026
+
+- Implementação enviada ao GitHub no commit `11a07a9`, branch `codex/consolidacao-local-2026-09-05`.
+- Web publicada: https://alvo-church-web.alexandrecostagg.workers.dev — versão `8f0b35f8-701a-49fd-8c68-239b71b2bc0a`.
+- Worker publicado com o cron compartilhado: versão `5e15915f-d68e-4a9c-bc7a-1aafc099ca42`. Os quatro testes do agendador e o typecheck do Worker passaram após o ajuste.
+- Regras Firestore publicadas pelo script existente com a conta de serviço: ruleset `b3efb46a-eba7-473c-b19b-6046f0c7b15d`. O login pessoal do Firebase CLI estava expirado.
+- Índice `whatsappOutbox(status ASC, scheduledAt ASC)` publicado via Google Cloud CLI autenticado e confirmado como `READY` (operação `SUCCESSFUL`, índice `CICAgJjUgIcK`). A conta de serviço permite publicar regras, mas não criar índices; nenhuma permissão foi alterada.
+- Verificação HTTPS: página inicial após redirecionamento `200`, saúde do Worker `200`, gestão WhatsApp sem autenticação `401`. Webhook retorna `503` com aviso de WhatsApp não configurado, conforme esperado enquanto faltam as credenciais Meta.

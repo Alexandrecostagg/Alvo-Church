@@ -2,7 +2,7 @@ export { WifiRateLimit } from "./wifi-rate-limit";
 import { boundedForm, boundedBody, rasterImageType, UploadError } from "@alvo/utils";
 import { Hono } from "hono";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
-import { processWhatsappQueue } from "./whatsapp-scheduler";
+import { isDailySnapshotTime, processWhatsappQueue } from "./whatsapp-scheduler";
 import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
 function safeStringCompare(a: string, b: string): boolean {
@@ -220,7 +220,9 @@ export default {
   // NetworkSnapshot de cada organização via agregações no servidor, sem
   // baixar documentos — substitui o cálculo pesado que rodava no navegador.
   scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
-    if(event.cron === "* * * * *") ctx.waitUntil(processWhatsappQueue(env));
-    else ctx.waitUntil(writeDailyNetworkSnapshots(env));
+    ctx.waitUntil(processWhatsappQueue(env));
+    if (isDailySnapshotTime(event.scheduledTime)) {
+      ctx.waitUntil(writeDailyNetworkSnapshots(env));
+    }
   }
 };

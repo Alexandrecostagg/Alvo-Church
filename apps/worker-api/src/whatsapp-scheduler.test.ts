@@ -1,5 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { processWhatsappQueue } from "./whatsapp-scheduler";
+import { isDailySnapshotTime, processWhatsappQueue } from "./whatsapp-scheduler";
+it("keeps daily snapshots at 06:00 UTC when sharing the minute trigger", () => {
+  expect(isDailySnapshotTime(Date.parse("2026-10-16T06:00:00Z"))).toBe(true);
+  expect(isDailySnapshotTime(Date.parse("2026-10-16T06:01:00Z"))).toBe(false);
+  expect(isDailySnapshotTime(Date.parse("2026-10-16T05:00:00Z"))).toBe(false);
+});
 afterEach(() => vi.unstubAllGlobals());
 it("does nothing before the queue is configured", async () => {
   const fetcher = vi.fn();

@@ -28,3 +28,7 @@ export async function processWhatsappQueue(env: WhatsappSchedulerEnv) {
       throw new Error(`WhatsApp processor HTTP ${response.status}`);
   }
 }
+export function isDailySnapshotTime(scheduledTime: number): boolean {
+  const time = new Date(scheduledTime);
+  return time.getUTCHours() === 6 && time.getUTCMinutes() === 0;
+}
