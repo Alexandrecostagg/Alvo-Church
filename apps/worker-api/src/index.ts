@@ -2,6 +2,7 @@ export { WifiRateLimit } from "./wifi-rate-limit";
 import { boundedForm, boundedBody, rasterImageType, UploadError } from "@alvo/utils";
 import { Hono } from "hono";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
+import { processWhatsappQueue } from "./whatsapp-scheduler";
 import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
 function safeStringCompare(a: string, b: string): boolean {
@@ -25,6 +26,9 @@ function safeStringCompare(a: string, b: string): boolean {
 }
 
 type WorkerEnv = {
+  WHATSAPP_PROCESS_ORIGIN?: string;
+  WHATSAPP_PROCESS_TOKEN?: string;
+  WHATSAPP_PROCESS_ORGANIZATIONS?: string;
   WIFI_RATE_LIMIT?: DurableObjectNamespace;
   BRAND_ASSETS_BUCKET?: R2Bucket;
   PUBLIC_BRAND_BASE_URL?: string;
@@ -215,7 +219,8 @@ export default {
   // Cron diário (configurado em wrangler.jsonc → triggers.crons): grava o
   // NetworkSnapshot de cada organização via agregações no servidor, sem
   // baixar documentos — substitui o cálculo pesado que rodava no navegador.
-  scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
-    ctx.waitUntil(writeDailyNetworkSnapshots(env));
+  scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
+    if(event.cron === "* * * * *") ctx.waitUntil(processWhatsappQueue(env));
+    else ctx.waitUntil(writeDailyNetworkSnapshots(env));
   }
 };

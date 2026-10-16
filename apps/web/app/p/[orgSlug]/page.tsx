@@ -24,11 +24,12 @@ export default async function PublicOrgPortal({ params }: Props) {
             </span>
           </div>
           <h1 style={churchNameStyle}>{portal.displayName}</h1>
-          <p style={taglineStyle}>Bem-vindo!</p>
+          <p style={taglineStyle}>Participe sem instalar aplicativo</p>
         </div>
 
         {/* Quick actions */}
         <div style={actionsStyle}>
+          {portal.whatsappPhone && <a href={`https://wa.me/${portal.whatsappPhone}?text=MENU`} target="_blank" rel="noopener noreferrer" style={actionCardStyle}><ClipboardList size={24}/><div><strong style={actionTitleStyle}>Conversar pelo WhatsApp</strong><p style={actionDescStyle}>Agenda, inscrições e atendimento da igreja</p></div></a>}
           <Link href={`/p/${orgSlug}/visit`} style={actionCardStyle}>
             <ClipboardList size={24} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
             <div>
@@ -37,6 +38,9 @@ export default async function PublicOrgPortal({ params }: Props) {
             </div>
           </Link>
 
+          <Link href={`/p/${orgSlug}/care`} style={actionCardStyle}><Heart size={24} /><div><strong style={actionTitleStyle}>Pedir oração e cuidado</strong><p style={actionDescStyle}>Converse com a equipe com privacidade</p></div></Link>
+
+          <Link href={`/p/${orgSlug}/connect`} style={actionCardStyle}><ClipboardList size={24}/><div><strong style={actionTitleStyle}>Meu WhatsApp na igreja</strong><p style={actionDescStyle}>Vincule sua conta para declarar presença na célula</p></div></Link>
           <Link href={`/p/${orgSlug}/give`} style={actionCardStyle}>
             <Heart size={24} strokeWidth={1.8} style={{ color: "var(--alvo-accent-dark, var(--esdras-primary-dark))" }} />
             <div>

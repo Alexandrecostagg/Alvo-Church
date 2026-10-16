@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
 import {
@@ -1302,17 +1304,8 @@ function getFirstName(name: string) {
   return name.split(" ").filter(Boolean)[0] ?? "tudo bem";
 }
 
-function getWhatsappHref(person: Person, message: string) {
-  const rawPhone = person.whatsappPhone || person.mobilePhone;
-
-  if (!rawPhone) {
-    return null;
-  }
-
-  const digits = rawPhone.replace(/\D/g, "");
-  const phone = digits.startsWith("55") ? digits : `55${digits}`;
-
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+function getWhatsappHref(person: Person | undefined, message: string) {
+  return manualWhatsappLink(person, message);
 }
 
 function isWithinDays(value: string, days: number) {

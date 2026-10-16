@@ -58,6 +58,7 @@ export async function capturePublicVisitor(
   raw: unknown,
   clientKey: string,
   now = Date.now(),
+  source: "public_form" | "whatsapp" = "public_form",
 ) {
   const input = validateVisitor(raw);
   if (input.companyWebsite) return { ok: true };
@@ -65,7 +66,7 @@ export async function capturePublicVisitor(
     hour = Math.floor(now / 3600000),
     minute = Math.floor(now / 60000);
   // Stable for retransmission of the same form that day. No raw IP in storage.
-  const id = hash(JSON.stringify({ ...input, day }));
+  const id = hash(JSON.stringify({ ...input, day, source }));
   return accountTransaction(async (tx) => {
     const [slug] = await tx.read(`org_slugs/${input.orgSlug}`);
     const orgId = slug?.organizationId;
@@ -111,7 +112,7 @@ export async function capturePublicVisitor(
       ...data,
       id: `public_${id}`,
       organizationId: orgId,
-      source: "public_form",
+      source,
       status: "captured",
       createdAt: new Date(now).toISOString(),
     });

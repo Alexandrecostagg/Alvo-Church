@@ -1,3 +1,4 @@
+import { pastoralContextMessage, type PastoralContext } from "./pastoral-context";
 // Cascata de provedores de IA: Gemini (principal) → Groq (fallback).
 // Se o Gemini falhar (timeout, 5xx, auth, rede), cai
 // para a cascata interna de modelos do Groq. Assim uma indisponibilidade do
@@ -9,6 +10,7 @@ import { callGroqWithCascade } from "./groq";
 export type { AiMessage, AiResponse } from "./gemini";
 
 export interface AiKeys {
+  pastoralContext?: Partial<PastoralContext>;
   geminiApiKey?: string;
   groqApiKey?: string;
   geminiModel?: string;
@@ -19,9 +21,10 @@ export async function callChatWithFallback(
   messages: AiMessage[],
   opts?: { maxTokens?: number; temperature?: number; jsonMode?: boolean }
 ): Promise<AiResponse> {
+  const contextualMessages: AiMessage[] = keys.pastoralContext ? [{ role: "system", content: pastoralContextMessage(keys.pastoralContext) }, ...messages] : messages;
   if (keys.geminiApiKey) {
     try {
-      return await callGemini(keys.geminiApiKey, messages, { ...opts, model: keys.geminiModel });
+      return await callGemini(keys.geminiApiKey, contextualMessages, { ...opts, model: keys.geminiModel });
     } catch {
       if (!keys.groqApiKey) throw new Error("Serviço de Sabedoria Pastoral indisponível.");
       console.warn("[ai] Gemini indisponível; tentando Groq.");
@@ -29,7 +32,7 @@ export async function callChatWithFallback(
   }
 
   if (keys.groqApiKey) {
-    return callGroqWithCascade(keys.groqApiKey, messages, opts);
+    return callGroqWithCascade(keys.groqApiKey, contextualMessages, opts);
   }
 
   throw new Error("Nenhuma API de Sabedoria Pastoral configurada (defina GEMINI_API_KEY e/ou GROQ_API_KEY).");

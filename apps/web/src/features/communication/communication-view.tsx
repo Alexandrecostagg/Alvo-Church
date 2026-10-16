@@ -1,5 +1,7 @@
 "use client";
 
+import { WhatsappChannelView } from "./whatsapp-channel-view";
+
 import { useEffect, useMemo, useState } from "react";
 import { MessageSquareText, Bell, Mail, Smartphone, Plus, Send, Search, X, CheckCircle2, AlertTriangle, Trash2, Save, Sparkles } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
@@ -23,6 +25,9 @@ interface PreparedRecipient { personId: string; name: string; whatsapp: string }
 export function CommunicationView() {
   const { user, organizationId, firebaseConfig, configured } = useAppAuth();
 
+  const [directPhone, setDirectPhone] = useState("");
+  const [directPersonId, setDirectPersonId] = useState("");
+  const [directUrl, setDirectUrl] = useState("");
   const [composing, setComposing] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(false);
@@ -57,6 +62,9 @@ export function CommunicationView() {
   useEffect(() => {
     const compose = new URLSearchParams(window.location.search).get("compose");
     if (compose) {
+      const params = new URLSearchParams(window.location.search);
+      setDirectPhone(params.get("phone") ?? "");
+      setDirectPersonId(params.get("personId") ?? "");
       setMessage(compose);
       setComposing(true);
     }
@@ -186,10 +194,13 @@ export function CommunicationView() {
     }
   }
 
-  function openWhatsapp(recipient: PreparedRecipient) {
+  async function openWhatsapp(recipient: PreparedRecipient) {
     if (!message.trim()) return;
-    window.open(`https://wa.me/${recipient.whatsapp}?text=${encodeURIComponent(message.trim())}`, "_blank", "noopener");
-    setOpened((prev) => new Set(prev).add(recipient.personId));
+    try {
+      const data = await campaignRequest({ action: "contact", organizationId, requestId: crypto.randomUUID(), phone: recipient.whatsapp, personId: recipient.personId, message: message.trim() });
+      const popup=window.open(data.url, "_blank", "noopener,noreferrer");
+      setOpened((prev) => new Set(prev).add(recipient.personId));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Contato indisponível."); }
   }
 
   function toggleConfirmed(personId: string) {
@@ -221,6 +232,22 @@ export function CommunicationView() {
       setLoggingCampaign(false);
     }
   }
+
+  if (composing && directPhone) return <div className="page-root">
+    <header className="page-header"><h1 className="page-title">Preparar conversa no WhatsApp</h1></header>
+    <section className="content-section"><p>Confira o texto. A preferência atual de contato será validada no servidor antes de abrir o WhatsApp.</p>
+      <p>Contato: +{directPhone}</p>
+      <textarea aria-label="Mensagem" rows={6} maxLength={4000} value={message} onChange={e=>{setMessage(e.target.value);setDirectUrl("");}} style={{...inputStyle,width:"100%"}} />
+      {error&&<p role="alert">{error}</p>}
+      <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}><button className="btn-primary" disabled={loggingCampaign || !message.trim()} onClick={()=>{
+        setLoggingCampaign(true);setError(null);setDirectUrl("");
+        void campaignRequest({action:"contact",organizationId,requestId:crypto.randomUUID(),phone:directPhone,personId:directPersonId || undefined,message:message.trim()}).then(result=>setDirectUrl(result.url)).catch(cause=>setError(cause.message)).finally(()=>setLoggingCampaign(false));
+      }}>{loggingCampaign?"Conferindo…":"Conferir preferência de contato"}</button>
+      {directUrl&&<a className="btn-secondary" href={directUrl} target="_blank" rel="noopener noreferrer">Abrir conversa para envio manual</a>}
+      <button className="btn-secondary" onClick={()=>{setDirectPhone("");setDirectUrl("");setComposing(false);}}>Voltar à comunicação</button></div>
+      <p>Abertura da conversa não comprova envio ou entrega.</p>
+    </section>
+  </div>;
 
   if (composing) {
     return (
@@ -358,6 +385,8 @@ export function CommunicationView() {
           </button>
         </div>
       </header>
+
+      <WhatsappChannelView />
 
       <div className="stats-row">
         {CHANNELS.map((ch) => (

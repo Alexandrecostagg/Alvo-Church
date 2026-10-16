@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import { useEffect, useState } from "react";
 import {
   savePersonProfile,
@@ -902,7 +904,7 @@ function buildTribeNotifyHref(
     `O que significa: ${tribeDescription}\n` +
     `Onde você mais floresce servindo: ${tribeMinistry}\n\n` +
     `Que alegria caminhar com você!`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  return manualWhatsappLink(person, msg) ?? "";
 }
 
 function getInitials(person: Person) {

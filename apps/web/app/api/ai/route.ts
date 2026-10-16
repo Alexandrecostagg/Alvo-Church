@@ -43,10 +43,12 @@ export async function POST(req: NextRequest) {
       geminiApiKey: process.env.GEMINI_API_KEY,
       geminiModel: process.env.GEMINI_MODEL,
       groqApiKey: process.env.GROQ_API_KEY,
+      pastoralContext: {} as Record<string, string>,
     };
     if (!keys.geminiApiKey && !keys.groqApiKey)
       throw new AccountError(503, "Serviço de Sabedoria Pastoral não configurado.");
     const ticket = await aiGate(organizationId, uid, task);
+    keys.pastoralContext = ticket.pastoralContext;
     auditId = ticket.auditId;
     orgId = organizationId;
     let result;

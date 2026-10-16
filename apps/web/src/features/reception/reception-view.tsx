@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
 import {
@@ -38,6 +40,7 @@ type CapturedVisitor = {
   source: string;
   status: string;
   note?: string;
+  consentMarketing?: boolean;
 };
 
 function mapIntakeToCapturedVisitor(
@@ -53,6 +56,7 @@ function mapIntakeToCapturedVisitor(
     phone: intake.phone || undefined,
     source: intake.source,
     status: getVisitorIntakeStatusLabel(intake.status),
+    consentMarketing: intake.consentMarketing,
     note: intake.greeting || undefined
   };
 }
@@ -91,7 +95,7 @@ function getVisitorIntakeStatusLabel(status: VisitorIntake["status"]) {
 }
 
 export function ReceptionView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
   
   const attempt = useRef(crypto.randomUUID());
   const busy = useRef(false);
@@ -229,7 +233,7 @@ export function ReceptionView() {
   // Prepara WhatsApp Follow-up com Templates Reativos
   const openWhatsAppTemplateModal = (visitor: CapturedVisitor) => {
     setActiveTemplateVisitor(visitor);
-    const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na Plataforma Esdras! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
+    const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na ${tenantRuntime?.organization?.displayName || tenantRuntime?.organization?.name || "nossa igreja"}! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
     setCustomMsg(templateText);
   };
 
@@ -242,8 +246,9 @@ export function ReceptionView() {
       return;
     }
 
-    const textEncoded = encodeURIComponent(customMsg);
-    window.open(`https://web.whatsapp.com/send?phone=55${phoneClean}&text=${textEncoded}`, "_blank");
+    const url = manualWhatsappLink({ id: activeTemplateVisitor.personId, whatsappPhone: activeTemplateVisitor.phone, communicationOptOut: activeTemplateVisitor.consentMarketing === false }, customMsg);
+    if (!url) { setStatus("Confira o telefone e a autorização de contato do visitante."); return; }
+    window.open(url, "_blank", "noopener,noreferrer");
 
     // Marca como completado reativamente no painel
     setPreparedCommunicationIds((current) =>
@@ -603,7 +608,7 @@ export function ReceptionView() {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   onClick={() => {
-                    const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na Plataforma Esdras! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
+                    const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na ${tenantRuntime?.organization?.displayName || tenantRuntime?.organization?.name || "nossa igreja"}! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
                     setCustomMsg(text);
                   }}
                   style={{

@@ -269,3 +269,7 @@ Base funcional em estabilização: estimativa gerencial atual de aproximadamente
 operacional avaliado ([entregas e cálculo](docs/entregas-2026-09-05.md)), com critérios e limites no [diagnóstico atual](docs/status-implementacao-2026-09-05.md).
 Não equivale a prontidão para produção. Os planos ativos foram atualizados em
 08/09; documentos conceituais e registros datados preservam a história do projeto.
+
+## Participação sem aplicativo
+
+Portal público e atendimento pela API oficial do WhatsApp: veja [fluxos implementados, configuração e homologação](docs/whatsapp-sem-app-2026-10-16.md). O roteiro `corepack pnpm qa:whatsapp` usa somente emuladores e simula o provedor, sem enviar mensagens reais.

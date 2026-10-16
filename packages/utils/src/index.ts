@@ -8,3 +8,5 @@ export function toSlug(value: string) {
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 }
+
+export { whatsappPhone, whatsappHref, manualWhatsappLink, type WhatsappContact } from "./whatsapp";

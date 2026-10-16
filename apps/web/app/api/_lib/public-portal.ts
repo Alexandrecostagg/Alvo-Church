@@ -1,3 +1,4 @@
+import { channelForOrg } from "./whatsapp-config";
 import { AccountError, accountTransaction } from "./member-account-store";
 import { publicEventProjection } from "./event-management";
 import { assertModuleEnabled } from "./module-access";
@@ -27,9 +28,10 @@ export async function publicPortalSnapshot(rawSlug: unknown, now = Date.now()) {
     if (!organizationId || !/^[A-Za-z0-9_-]{1,128}$/.test(organizationId)) throw new AccountError(404, "Igreja não encontrada.");
     const root = `organizations/${organizationId}`;
     await assertModuleEnabled(tx, root, "publicForms");
-    const [organization, events] = await Promise.all([
+    const [organization, events, assistant] = await Promise.all([
       tx.read(root).then(([value]) => value),
       tx.query(root, "events", "status", "published", "EQUAL", 100),
+      tx.read(`${root}/settings/pastoralAssistant`).then(([value]) => value),
     ]);
     if (!organization || organization.status !== "active") throw new AccountError(404, "Igreja indisponível.");
     const projectedEvents = events
@@ -42,6 +44,7 @@ export async function publicPortalSnapshot(rawSlug: unknown, now = Date.now()) {
       .find((value) => typeof value === "string" && value.trim()) as string | undefined;
     return {
       slug,
+      whatsappPhone: assistant?.enabled === true ? channelForOrg(organizationId)?.publicPhone ?? null : null,
       displayName: displayName?.trim().slice(0, 160) || slug.replace(/-/g, " "),
       timeZone: publicTimeZone(organization.timezone),
       events: projectedEvents,

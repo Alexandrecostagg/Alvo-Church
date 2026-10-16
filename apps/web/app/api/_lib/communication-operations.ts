@@ -1,3 +1,4 @@
+import { whatsappPhone } from "@alvo/utils";
 import { createHash } from "node:crypto";
 import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
@@ -22,13 +23,7 @@ function ids(value: unknown, label: string) {
   return result;
 }
 
-export function normalizeBrazilianWhatsapp(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  let digits = value.replace(/\D/g, "");
-  if (digits.startsWith("55") && digits.length >= 12) digits = digits.slice(2);
-  if (!/^[1-9]{2}9?\d{8}$/.test(digits)) return null;
-  return `55${digits}`;
-}
+export const normalizeBrazilianWhatsapp = whatsappPhone;
 
 export function manualCampaignInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new AccountError(400, "Campanha inválida.");
@@ -87,13 +82,14 @@ export async function prepareManualWhatsapp(raw: unknown, uid: string) {
 
     const recipients: Array<{ personId: string; name: string; whatsapp: string }> = [];
     const skipped: Array<{ personId: string; reason: string }> = [];
+    const contactStates = await tx.read(...people.map(p => `${root}/whatsappContacts/${createHash("sha256").update(whatsappPhone(p?.whatsappPhone || p?.mobilePhone) ?? "invalid").digest("hex")}`));
     people.forEach((person, index) => {
       const personId = input.recipientIds[index];
       if (!person || person.organizationId !== input.organizationId || person.status !== "active") {
         skipped.push({ personId, reason: "cadastro inativo ou inexistente" });
         return;
       }
-      if (person.communicationOptOut === true || person.whatsappOptOutAt) {
+      if (person.communicationOptOut === true || person.whatsappOptOutAt || contactStates[index]?.optOut) {
         skipped.push({ personId, reason: "pessoa optou por não receber mensagens" });
         return;
       }
@@ -193,4 +189,38 @@ export async function completeManualWhatsapp(raw: unknown, uid: string) {
     });
     return { campaignId: input.campaignId, status: patch.status, sentCount: patch.sentCount, replayed: false };
   });
+}
+
+export async function prepareManualContact(raw: Record<string,any>,uid:string) {
+  const orgId=documentId(raw.organizationId,"Igreja"),requestId=documentId(raw.requestId,"Tentativa");
+  const phone=whatsappPhone(raw.phone),message=requiredText(raw.message,"Mensagem",4000);
+  if(!phone)throw new AccountError(400,"Confira o WhatsApp com DDD.");
+  return accountTransaction(async tx=>{
+    const root=await authorize(tx,orgId,uid);
+    const [contact,person]=await tx.read(`${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`,...(raw.personId?[`${root}/people/${documentId(raw.personId,"Pessoa")}`]:[]));
+    if(contact?.optOut || (raw.personId && (!person || person.organizationId!==orgId || person.status!=="active" || person.communicationOptOut || person.whatsappOptOutAt)))throw new AccountError(409,"O contato não permite mensagens ou não está disponível.");
+    // Handle legacy records whose contact came from a prayer/visitor form without personId.
+    for(const field of ["whatsappPhone","mobilePhone"]){
+      for(const candidate of [phone,phone.slice(2)]){
+        const matches=await tx.query(root,"people",field,candidate,"EQUAL",20);
+        if(matches.some(p=>p.communicationOptOut || p.whatsappOptOutAt))throw new AccountError(409,"Este telefone possui preferência de não receber mensagens.");
+      }
+    }
+    tx.set(`${root}/communicationAudit/contact_${uid}_${requestId}`,{organizationId:orgId,action:"manual_contact_prepared",actorId:uid,at:new Date().toISOString()});
+    return {url:`https://wa.me/${phone}?text=${encodeURIComponent(message)}`,status:"prepared"};
+  });
+}
+
+/** Shared check for provider sends and leadership shortcuts, including legacy phone fields. */
+export async function assertWhatsappContactAllowed(tx: AccountTransaction, root: string, phone: string) {
+  const [contact] = await tx.read(`${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`);
+  if (contact?.optOut) throw new AccountError(409,"Este contato interrompeu as mensagens.");
+  if(contact?.personId){
+    const [person]=await tx.read(`${root}/people/${documentId(contact.personId,"Pessoa")}`);
+    if(!person || person.status!=="active" || person.communicationOptOut || person.whatsappOptOutAt)throw new AccountError(409,"Este cadastro não permite mensagens.");
+  }
+  for (const field of ["whatsappPhone", "mobilePhone"]) for (const candidate of [phone, phone.slice(2)]) {
+    const matches=await tx.query(root,"people",field,candidate,"EQUAL",20);
+    if(matches.some(p=>p.communicationOptOut || p.whatsappOptOutAt))throw new AccountError(409,"Este telefone possui preferência de não receber mensagens.");
+  }
 }

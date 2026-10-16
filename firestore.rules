@@ -337,11 +337,12 @@ service cloud.firestore {
     }
 
     match /organizations/{orgId}/settings/{documentId} {
-      allow read: if isTenantMember(orgId) || isPlatformAdmin();
+      allow read: if (documentId != "pastoralAssistant" && isTenantMember(orgId)) || isTenantAdmin(orgId) || isPlatformAdmin();
       // Mantém configurações operacionais permitidas (marca, PIX, Kids etc.)
       // nas mãos da igreja, sem reabrir subscription/features por este match.
       allow write: if documentId != "subscription"
         && documentId != "features"
+        && documentId != "pastoralAssistant"
         && (isTenantAdmin(orgId) || isPlatformAdmin());
     }
 
@@ -675,6 +676,17 @@ service cloud.firestore {
       allow read: if isTenantAdmin(orgId);
       allow write: if false;
     }
+
+    match /organizations/{orgId}/whatsappLinkTokens/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappLinkAttempts/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappBindings/{id} { allow read, write: if false; }
+    // WhatsApp and anonymous-participation state is server-owned. It contains private conversations.
+    match /organizations/{orgId}/whatsappContacts/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappReceipts/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappInbox/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappOutbox/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/whatsappHandoffs/{id} { allow read, write: if false; }
+    match /organizations/{orgId}/participationAttempts/{id} { allow read, write: if false; }
 
     // Personal wellbeing records are visible to their author and pastoral staff.
     match /organizations/{orgId}/leaderEmotionalPulse/{id} {

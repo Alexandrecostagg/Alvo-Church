@@ -152,6 +152,8 @@ export function SettingsView() {
   const publicLinks = orgSlug ? [
     { key: "visit",  label: "Formulário de Visitante", desc: "Exiba este QR Code na entrada do culto", path: `/p/${orgSlug}/visit`, highlight: true },
     { key: "give",   label: "Link de Doação",          desc: "Compartilhe para receber dízimos e ofertas", path: `/p/${orgSlug}/give`, highlight: false },
+    { key: "care", label: "Pedido de oração e cuidado", desc: "Atendimento privado sem aplicativo", path: `/p/${orgSlug}/care`, highlight: false },
+    { key: "events", label: "Agenda e inscrições", desc: "Participação sem aplicativo", path: `/p/${orgSlug}/events`, highlight: false },
     { key: "portal", label: "Portal Público",          desc: "Página pública da organização", path: `/p/${orgSlug}`, highlight: false },
   ] : [];
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -49,7 +51,7 @@ type ActivityLog = {
   createdAt: string;
 };
 
-const assistantStatus: AssistantStatus = "online";
+const assistantStatus: AssistantStatus = "review";
 
 const priorityLabel: Record<RequestPriority, string> = {
   urgent: "Urgente",
@@ -90,6 +92,7 @@ function prayerToRequest(p: PrayerRequest): PastoralRequest {
     resolved: "resolved"
   };
   const channelMap: Record<PrayerRequest["source"], string> = {
+    whatsapp: "WhatsApp",
     public_form: "Formulário público",
     app: "App",
     reception: "Recepção"
@@ -135,13 +138,7 @@ export function PastoralAiView() {
   const filteredRequests = requests.filter((request) =>
     requestFilter === "all" ? true : request.status === requestFilter
   );
-  const selectedPhoneDigits = selectedRequest?.phone?.replace(/\D/g, "") ?? "";
-  const whatsappNumber = selectedPhoneDigits
-    ? (selectedPhoneDigits.startsWith("55") ? selectedPhoneDigits : `55${selectedPhoneDigits}`)
-    : "";
-  const whatsappUrl = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(responseDraft)}`
-    : "";
+  const whatsappUrl = selectedRequest?.phone ? manualWhatsappLink({ mobilePhone: selectedRequest.phone }, responseDraft) : null;
 
   // Carrega os pedidos reais (prayerRequests, unificados com o Radar Pastoral).
   // Uma fila vazia permanece vazia.
@@ -160,46 +157,23 @@ export function PastoralAiView() {
 
   useEffect(() => { void reloadPrayers(); }, [reloadPrayers]);
 
-  // Resposta sugerida: gera com IA de verdade (task care_reply via /api/ai,
-  // Gemini→Groq em cascata). Enquanto carrega, mostra um rascunho base; se a
-  // IA falhar ou não estiver configurada, o rascunho base permanece.
+  const [generatingReply, setGeneratingReply] = useState(false);
   useEffect(() => {
     if (!selectedRequest) return;
-    const first = selectedRequest.person.split(" ")[0];
-    setResponseDraft(
-      `Olá, ${first}. Recebemos sua mensagem e vamos caminhar com você. Podemos combinar o melhor horário para conversar?`
-    );
-    if (!configured || !user) return;
-
-    let cancelled = false;
-    const requestId = selectedRequest.id;
-    (async () => {
-      try {
-        const idToken = await user.getIdToken();
-        const res = await fetch("/api/ai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({
-            task: "care_reply",
-            organizationId,
-            input: {
-              personName: selectedRequest.person,
-              request: selectedRequest.summary,
-              category: selectedRequest.category
-            }
-          })
-        });
-        const data = (await res.json()) as { ok?: boolean; content?: string };
-        // Só aplica se ainda for o mesmo pedido selecionado.
-        if (!cancelled && res.ok && data.content && requestId === selectedRequest.id) {
-          setResponseDraft(data.content.trim());
-        }
-      } catch {
-        // Mantém o rascunho base em caso de erro/limite de cota.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedRequest?.id, configured, user, organizationId]);
+    setResponseDraft(`Olá, ${selectedRequest.person.split(" ")[0]}. Recebemos sua mensagem e vamos caminhar com você. Podemos combinar o melhor horário para conversar?`);
+  }, [selectedRequest?.id]);
+  async function generateSelectedReply() {
+    if (!selectedRequest || !user || generatingReply) return;
+    const selectedId=selectedRequest.id;
+    setGeneratingReply(true);
+    try {
+      const res=await fetch("/api/ai",{method:"POST",headers:{"content-type":"application/json",Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({task:"care_reply",organizationId,input:{personName:selectedRequest.person,request:selectedRequest.summary,category:selectedRequest.category}})});
+      const data=await res.json();
+      if(!res.ok || !data.content)throw new Error(data.error || "Geração indisponível.");
+      setSelectedRequestId(current=>{if(current===selectedId)setResponseDraft(data.content.trim());return current;});
+    }catch(error){addActivity("Geração indisponível",error instanceof Error?error.message:"Tente novamente.");}
+    finally{setGeneratingReply(false);}
+  }
 
   const metrics = useMemo(() => {
     const urgent = requests.filter((request) => request.priority === "urgent").length;
@@ -368,8 +342,8 @@ export function PastoralAiView() {
           <span className={`assistant-dot ${assistantStatus}`} />
           <div>
             <small>Serviço supervisionado</small>
-            <strong>Assistente Esdras ativo</strong>
-            <p>Respostas sugeridas, áudio e encaminhamentos ficam aguardando revisão da liderança autorizada.</p>
+            <strong>Atendimento com revisão da equipe</strong>
+            <p>Respostas sugeridas e encaminhamentos dependem da revisão da liderança autorizada.</p>
           </div>
         </div>
       </header>
@@ -558,6 +532,8 @@ export function PastoralAiView() {
               <Mic size={18} />
               <strong>Resposta sugerida</strong>
             </div>
+            <p>Para gerar uma sugestão, o conteúdo deste pedido será enviado aos provedores Gemini/Groq. Revise antes de usar.</p>
+            <button type="button" disabled={generatingReply} onClick={() => void generateSelectedReply()}>{generatingReply ? "Gerando…" : "Gerar sugestão com IA"}</button>
             <textarea
               value={responseDraft}
               onChange={(event) => setResponseDraft(event.target.value)}
@@ -575,7 +551,7 @@ export function PastoralAiView() {
               Copiar resposta
             </button>
             <button type="button" className="secondary-action" onClick={handleCreateTask}>
-              Criar tarefa pastoral
+              Encaminhar para acompanhamento
             </button>
             <a
               className={whatsappUrl ? "primary-action" : "primary-action is-disabled"}

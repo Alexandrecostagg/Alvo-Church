@@ -394,6 +394,7 @@ export async function registerMember(raw: unknown, uid: string) {
           primaryFamilyId: familyId,
           memberCardCode,
           consentLgpdAt: consent ? createdAt : undefined,
+          ...(intake?.consentMarketing === false ? { communicationOptOut: true, whatsappOptOutAt: createdAt } : {}),
           status: "active",
           createdAt,
         }),
@@ -410,7 +411,7 @@ export async function registerMember(raw: unknown, uid: string) {
         const intakeData = { organizationId, id: intakeId, personId, journeyId, name: `${person.firstName} ${person.lastName}`.trim(), phone: person.whatsappPhone ?? person.mobilePhone ?? null, source: reception.source, greeting: reception.note ?? "", status: "journey_created", capturedByUserId: uid, createdAt: intake?.createdAt ?? createdAt, integratedAt: createdAt };
         if (intake) writes.push({ update: { name: name(`${orgPath}/visitorIntakes/${intakeId}`), fields: encode(intakeData).mapValue.fields }, updateMask: { fieldPaths: Object.keys(intakeData) }, currentDocument: { exists: true } });
         else writes.push(create(`${orgPath}/visitorIntakes/${intakeId}`, intakeData));
-        writes.push(create(`${orgPath}/visitorJourneys/${journeyId}`, { id: journeyId, organizationId, personId, originChannel: "secretary", currentStage: "new_visitor", status: "active", assignedToUserId: uid, firstVisitDate: createdAt, nextActionAt: createdAt, createdAt }));
+        writes.push(create(`${orgPath}/visitorJourneys/${journeyId}`, { id: journeyId, organizationId, personId, originChannel: intake?.source === "whatsapp" ? "whatsapp" : intake?.source === "public_form" ? "form" : "secretary", currentStage: "new_visitor", status: "active", assignedToUserId: uid, firstVisitDate: createdAt, nextActionAt: createdAt, createdAt }));
         for (const [suffix, title, type] of [["welcome", "Enviar boas-vindas no WhatsApp", "welcome_message"], ["group", "Convidar para uma célula", "invite_to_group"]]) {
           const id = `followup_${requestId}_${suffix}`;
           writes.push(create(`${orgPath}/followUpTasks/${id}`, { id, organizationId, personId, visitorJourneyId: journeyId, assignedToUserId: uid, title, type, status: "open", createdAt, dueAt: createdAt }));

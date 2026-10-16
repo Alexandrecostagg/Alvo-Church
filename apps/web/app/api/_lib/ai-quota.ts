@@ -57,11 +57,12 @@ export async function aiGate(
     const monthPath = `${root}/aiUsage/${month}`,
       burstPath = `${root}/aiRateLimits/org`,
       userPath = `${root}/aiRateLimits/${uid}`;
-    const [subscription, usage, burst, personal] = await tx.read(
+    const [subscription, usage, burst, personal, pastoralContext] = await tx.read(
       `${root}/settings/subscription`,
       monthPath,
       burstPath,
       userPath,
+      `${root}/settings/pastoralAssistant`,
     );
     const candidate =
       subscription?.plan ?? planTierToPlanId(subscription?.planTier);
@@ -112,7 +113,7 @@ export async function aiGate(
         429,
         "Aguarde um minuto antes de gerar novamente.",
       );
-    if (!consume) return { plan, limit, used, auditId: "" };
+    if (!consume) return { plan, limit, used, auditId: "", pastoralContext: pastoralContext ?? {} };
     const auditId = crypto.randomUUID(),
       createdAt = new Date(now).toISOString();
     tx.set(monthPath, { count: used + 1, updatedAt: createdAt });
@@ -125,7 +126,7 @@ export async function aiGate(
       createdAt,
       status: "started",
     });
-    return { plan, limit, used: used + 1, auditId };
+    return { plan, limit, used: used + 1, auditId, pastoralContext: pastoralContext ?? {} };
   });
 }
 export async function completeAi(

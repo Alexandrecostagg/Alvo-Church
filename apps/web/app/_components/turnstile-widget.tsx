@@ -30,7 +30,7 @@ declare global {
 }
 
 interface Props {
-  action: "public_visit" | "public_giving";
+  action: "public_visit" | "public_giving" | "public_care" | "public_event";
   onTokenChange: (token: string) => void;
   resetKey?: number;
 }
@@ -40,6 +40,7 @@ export function TurnstileWidget({
   onTokenChange,
   resetKey = 0,
 }: Props) {
+  const localQa = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "demo-alvo-qa";
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef("");
   const callbackRef = useRef(onTokenChange);
@@ -53,6 +54,7 @@ export function TurnstileWidget({
   }, [onTokenChange]);
 
   useEffect(() => {
+    if (localQa) { callbackRef.current(`local-qa-turnstile:${action}`); return; }
     if (!scriptReady || !siteKey || !containerRef.current || !window.turnstile)
       return;
     const invalid = () => callbackRef.current("");
@@ -72,14 +74,17 @@ export function TurnstileWidget({
         widgetRef.current = "";
       }
     };
-  }, [action, scriptReady, siteKey]);
+  }, [action, scriptReady, siteKey, localQa]);
 
   useEffect(() => {
+    if (localQa) { callbackRef.current(`local-qa-turnstile:${action}`); return; }
     if (widgetRef.current && window.turnstile) {
       window.turnstile.reset(widgetRef.current);
       callbackRef.current("");
     }
-  }, [resetKey]);
+  }, [resetKey, localQa, action]);
+
+  if (localQa) return <p>Verificação local de homologação (somente emuladores).</p>;
 
   if (!siteKey)
     return (

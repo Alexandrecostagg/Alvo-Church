@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
@@ -419,17 +421,17 @@ export function ServingView() {
       .replace("[Data]", formattedDate)
       .replace("[Role]", assignment.role);
 
-    const phone = person.whatsappPhone || person.mobilePhone || "";
-    const cleanPhone = phone.replace(/\D/g, "");
+    const url = manualWhatsappLink(person, text);
+    if (!url) { window.alert("Contato indisponível: confira o telefone e a preferência de comunicação."); return; }
     
     const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     setAuditLogs(prev => [
-      { time: timeString, text: `Lembrete via WhatsApp disparado para ${getFullName(person)}.`, type: "success" },
+      { time: timeString, text: `Mensagem preparada para envio manual a ${getFullName(person)}.`, type: "success" },
       ...prev
     ]);
 
     setSelectedAssignmentForReminder(null);
-    window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   async function handleRequestSwap(assignmentId: string, replacementPersonId: string, note?: string) {
@@ -1095,7 +1097,7 @@ export function ServingView() {
           <div style={{ background: "rgba(255, 255, 255, 0.8)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.5)", borderRadius: "24px", padding: "2rem", maxWidth: "500px", width: "100%", margin: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
-                Disparador de Lembrete WhatsApp
+                Preparar lembrete no WhatsApp
               </h3>
               <button 
                 onClick={() => setSelectedAssignmentForReminder(null)}
@@ -1106,7 +1108,7 @@ export function ServingView() {
             </div>
 
             <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
-              Personalize a mensagem abaixo antes de disparar o WhatsApp automático para o voluntário pendente.
+              Revise a mensagem e abra a conversa para enviar manualmente ao voluntário.
             </p>
 
             <label style={{ display: "flex", flexDirection: "column", gap: 6, color: "var(--alvo-ink)", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
@@ -1131,7 +1133,7 @@ export function ServingView() {
                 onClick={() => handleSendReminder(selectedAssignmentForReminder)}
                 style={{ flex: 1, background: "var(--alvo-green)", color: "white", border: "none", padding: "10px", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               >
-                <Send size={15} /> Disparar WhatsApp
+                <Send size={15} /> Abrir WhatsApp
               </button>
             </div>
           </div>

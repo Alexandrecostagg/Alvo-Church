@@ -1,3 +1,4 @@
+import { ParticipationForm } from "../../../_components/participation-form";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Clock3, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -19,7 +20,7 @@ export default async function PublicEventsPage({ params }: Props) {
         </Link>
         <p style={{ margin: "0 0 6px", color: "#9a3412", fontWeight: 800, fontSize: 12, letterSpacing: 1.2 }}>AGENDA PÚBLICA</p>
         <h1 style={{ margin: 0, fontSize: "clamp(28px, 6vw, 44px)" }}>Eventos de {portal.displayName}</h1>
-        <p style={{ color: "#64748b", lineHeight: 1.6 }}>Informações publicadas pela igreja. Inscrições de membros são feitas com segurança pelo aplicativo.</p>
+        <p style={{ color: "#64748b", lineHeight: 1.6 }}>Confira a programação e faça sua inscrição aqui, sem instalar aplicativo.</p>
 
         <div style={{ display: "grid", gap: 14, marginTop: 28 }}>
           {portal.events.length === 0 ? (
@@ -42,6 +43,8 @@ export default async function PublicEventsPage({ params }: Props) {
                   </div>
                 </div>
               </div>
+              {portal.whatsappPhone && <a href={`https://wa.me/${portal.whatsappPhone}?text=${encodeURIComponent(`INSCREVER ${event.id}`)}`} target="_blank" rel="noopener noreferrer" style={{color:"#7c2d12",fontWeight:700}}>Inscrever-se pelo WhatsApp</a>}
+              <details><summary style={{ cursor: "pointer", fontWeight: 700, color: "#7c2d12" }}>Inscrever-se sem aplicativo</summary><ParticipationForm orgSlug={portal.slug} kind="event" eventId={event.id} isPaid={event.isPaid} /></details>
             </article>
           ))}
         </div>

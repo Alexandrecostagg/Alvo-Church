@@ -685,6 +685,7 @@ export type VisitorIntakeStatus =
   | "archived";
 
 export interface VisitorIntake {
+  consentMarketing?: boolean;
   id: string;
   organizationId: string;
   personId?: string;
@@ -1511,7 +1512,7 @@ export interface PrayerRequest {
   category?: string;
   priority?: "urgent" | "important" | "normal";
   careOwner?: string;
-  source: "public_form" | "app" | "reception";
+  source: "public_form" | "app" | "reception" | "whatsapp";
   createdAt: string;
   respondedAt?: string;
   respondedByUserId?: string;
