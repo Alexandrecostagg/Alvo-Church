@@ -13,6 +13,7 @@ export interface WhatsappChannel {
   accessToken: string;
   publicPhone: string;
   templates?: string[];
+  paidMessagesEnabled?: boolean;
 }
 /** Provisioned by platform operations, never written by tenant clients. */
 export function whatsappChannels(): WhatsappChannel[] {
@@ -46,6 +47,8 @@ export function whatsappChannels(): WhatsappChannel[] {
       );
     seen.add(item.phoneNumberId);
     seen.add(`org:${item.organizationId}`);
+    if (item.paidMessagesEnabled !== undefined && typeof item.paidMessagesEnabled !== "boolean")
+      throw new AccountError(503, "Confira a autorização de mensagens pagas.");
     if (
       item.templates !== undefined &&
       (!Array.isArray(item.templates) ||
@@ -62,6 +65,7 @@ export function whatsappChannels(): WhatsappChannel[] {
       accessToken: item.accessToken,
       publicPhone: item.publicPhone,
       templates: item.templates ?? [],
+      paidMessagesEnabled: item.paidMessagesEnabled === true,
     };
   });
 }
@@ -166,7 +170,8 @@ export async function whatsappSettings(
           process.env.PUBLIC_APP_ORIGIN,
         ),
         publicPhone: channel?.publicPhone ?? "",
-        templates: channel?.templates ?? [],
+        templates: channel?.paidMessagesEnabled ? channel.templates ?? [] : [],
+        paidMessagesEnabled: channel?.paidMessagesEnabled === true,
       },
       slug: org.slug ?? "",
       inbox: inbox

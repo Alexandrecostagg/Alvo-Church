@@ -59,7 +59,7 @@ vi.mock("@alvo/ai", async (importOriginal) => ({
   })),
 }));
 import { verifyWhatsappSignature, receiveWhatsapp } from "./whatsapp-webhook";
-import { dispatchWhatsapp, applyWhatsappStatus } from "./whatsapp-outbox";
+import { dispatchWhatsapp, applyWhatsappStatus, enqueueStaffWhatsapp } from "./whatsapp-outbox";
 import { submitParticipation } from "./participation";
 import { assistantSettings, whatsappChannels } from "./whatsapp-config";
 import { issueWhatsappLink, confirmOwnCellAttendance } from "./whatsapp-member";
@@ -137,6 +137,27 @@ beforeEach(() => {
 });
 
 describe("signed WhatsApp boundaries", () => {
+  it("blocks paid templates before enqueueing even when allowlisted", async () => {
+    await expect(enqueueStaffWhatsapp({organizationId:"igreja-a",requestId:"paid-attempt",to:phone,kind:"template",templateName:"lembrete",language:"pt_BR",parameters:[]},"staff")).rejects.toMatchObject({status:403});
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(whatsappChannels()[0].paidMessagesEnabled).toBe(false);
+  });
+  it("blocks previously queued templates when paid sends are disabled", async () => {
+    memory.docs.set(`${root}/whatsappContacts/${digest(phone)}`, {lastInboundAt:new Date().toISOString()});
+    memory.docs.set(`${root}/whatsappOutbox/paid`, {status:"pending",to:phone,kind:"template",templateName:"lembrete",language:"pt_BR",createdAt:new Date().toISOString(),createdBy:"staff"});
+    await dispatchWhatsapp("igreja-a","paid");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(memory.docs.get(`${root}/whatsappOutbox/paid`).status).toBe("blocked");
+  });
+  it("requires an explicit boolean to authorize paid sends", () => {
+    const channels=JSON.parse(process.env.WHATSAPP_CHANNELS_JSON!);
+    channels[0].paidMessagesEnabled="true";
+    process.env.WHATSAPP_CHANNELS_JSON=JSON.stringify(channels);
+    expect(()=>whatsappChannels()).toThrow();
+    channels[0].paidMessagesEnabled=true;
+    process.env.WHATSAPP_CHANNELS_JSON=JSON.stringify(channels);
+    expect(whatsappChannels()[0].paidMessagesEnabled).toBe(true);
+  });
   it("rejects forged and mutated signatures before processing", () => {
     const body = new TextEncoder().encode(
       '{"object":"whatsapp_business_account"}',

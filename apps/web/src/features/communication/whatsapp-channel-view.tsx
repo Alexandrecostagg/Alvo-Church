@@ -374,7 +374,9 @@ export function WhatsappChannelView() {
                 />
               </label>
               <p>
-                Fora da janela de atendimento, selecione um template aprovado.
+                {data.connection.paidMessagesEnabled
+                  ? "Fora da janela de atendimento, selecione um template aprovado."
+                  : "Envios potencialmente pagos estão bloqueados. O atendimento começa quando o membro envia uma mensagem; respostas em texto ficam disponíveis por 24 horas após a última mensagem dele."}
                 Envios agendados dependem do processador periódico da
                 plataforma. Resultado incerto exige conferência antes de uma
                 nova tentativa.

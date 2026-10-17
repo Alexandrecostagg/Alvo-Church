@@ -58,6 +58,10 @@ Todos os recursos automáticos começam desativados. A indicação “configurad
 
 ## Processamento periódico
 
+### Política inicial de custos — 17/10/2026
+
+O membro inicia o atendimento pelo link ou QR Code da igreja. Respostas em texto exigem mensagem recebida nas últimas 24 horas; o prazo é conferido novamente no envio. Templates ficam bloqueados por padrão, inclusive os já enfileirados, para impedir envios potencialmente pagos. A autorização `paidMessagesEnabled: true` só pode ser provisionada no canal pelo servidor após a definição do orçamento; a configuração da igreja no painel não libera essa autorização. A lista de templates aprovados continua obrigatória mesmo após a liberação. Este bloqueio não elimina custos de infraestrutura e IA nem garante preços futuros da Meta.
+
 O Worker `apps/worker-api` usa um único cron por minuto para a fila do WhatsApp e executa os snapshots diários somente às 06:00 UTC. O compartilhamento preserva o limite de cinco agendamentos da conta Cloudflare. Sem configuração do WhatsApp, o processamento da fila não faz requisições.
 
 Configurar no Worker:

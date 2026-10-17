@@ -142,7 +142,7 @@ export async function dispatchWhatsapp(
     }
     if (
       row.kind === "template" &&
-      !(channel.templates ?? []).includes(row.templateName)
+      (!channel.paidMessagesEnabled || !(channel.templates ?? []).includes(row.templateName))
     ) {
       tx.patch(path, {
         status: "blocked",
@@ -220,6 +220,8 @@ export async function enqueueStaffWhatsapp(
     throw new AccountError(400, "Mensagem deve ter até 4000 caracteres.");
   const channel = channelForOrg(orgId);
   if (!channel) throw new AccountError(503, "WhatsApp ainda não conectado.");
+  if (kind === "template" && !channel.paidMessagesEnabled)
+    throw new AccountError(403, "Envios potencialmente pagos estão desativados até a definição do orçamento.");
   if (
     kind === "template" &&
     (!(channel.templates ?? []).includes(raw.templateName) ||
