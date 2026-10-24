@@ -56,6 +56,10 @@ Na tela **Comunicação → Participação pelo WhatsApp**, a equipe pode:
 
 Todos os recursos automáticos começam desativados. A indicação “configurado” confirma a presença da configuração local; não prova validade do token nem homologação do número.
 
+## Pendência de ativação na Meta
+
+Em 24/10/2026, o processo foi pausado até a constituição da empresa responsável. Identificadores, etapas realizadas e roteiro para continuar estão em [WhatsApp / Meta — retomada](whatsapp-meta-retomada.md).
+
 ## Processamento periódico
 
 ### Política inicial de custos — 17/10/2026
