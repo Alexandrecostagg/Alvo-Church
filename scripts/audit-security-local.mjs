@@ -86,6 +86,8 @@ try {
     [`${root}/kidsCheckIns/private`]: { organizationId: orgId, parentId: identities.admin.uid, authorizedPickUpIds: [], status: 'checked_in' },
     [`${root}/courses/draft`]: { organizationId: orgId, isActive: false },
     [`${root}/courses/draft/lessons/private`]: { organizationId: orgId, videoUrl: 'https://example.test/private' },
+    [`${root}/givingCampaigns/closed`]: { organizationId: orgId, name: 'Campanha fictícia', status: 'closed', raisedAmount: 0, createdByUserId: identities.admin.uid },
+    [`${root}/givingCampaigns/active`]: { organizationId: orgId, name: 'Campanha pública fictícia', status: 'active', raisedAmount: 0, createdByUserId: identities.admin.uid },
     [`${foreign}/families/private`]: { organizationId: otherOrg, notes: 'Foreign fixture' },
     [program]: { isPublished: false, title: 'Unpublished synthetic program', price: 100 },
     [`${program}/lessons/private`]: { videoUrl: 'https://example.test/private' },
@@ -94,6 +96,12 @@ try {
   await probe('Anonymous private person denied', `${root}/people/private`, null);
   await probe('Member private person denied', `${root}/people/private`, 'member');
   await probe('Admin private person allowed (positive control)', `${root}/people/private`, 'admin', 200);
+  await probe('Anonymous direct closed campaign denied', `${root}/givingCampaigns/closed`, null);
+  await probe('Anonymous direct active campaign denied (use public projection API)', `${root}/givingCampaigns/active`, null);
+  await probe('Unrelated user direct campaign denied', `${root}/givingCampaigns/active`, 'outsider');
+  await probe('Member retains active campaign access', `${root}/givingCampaigns/active`, 'member', 200);
+  assert.equal((await db.doc(`${root}/givingCampaigns/active`).get()).data().status, 'active');
+  assert.deepEqual((await db.doc(`${root}/users/${identities.member.uid}`).get()).data().roles, ['member']);
   await probe('Cross-tenant family denied', `${foreign}/families/private`, 'member');
   await probe('Member self role escalation denied', `${root}/users/${identities.member.uid}`, 'member', 403, { roles: ['super_admin'] });
   await probe('Tenant admin cannot become platform admin', `platformAdmins/${identities.admin.uid}`, 'admin', 403, { active: true });

@@ -7,8 +7,6 @@ const ALLOWED_ORIGINS = new Set([
   "https://plataformaesdras.com.br",
   "https://www.plataformaesdras.com.br",
   "https://plataformaesdras-lp.alexandrecostagg.workers.dev",
-  "http://127.0.0.1:3000",
-  "http://localhost:3000",
 ]);
 
 function headers(origin: string) {
@@ -24,7 +22,9 @@ function headers(origin: string) {
 
 function allowed(req: NextRequest) {
   const origin = req.headers.get("origin") ?? "";
-  if (!ALLOWED_ORIGINS.has(origin))
+  const local = process.env.NODE_ENV !== "production" &&
+    ["http://127.0.0.1:3000", "http://localhost:3000"].includes(origin);
+  if (!ALLOWED_ORIGINS.has(origin) && !local)
     throw new AccountError(403, "Origem inválida.");
   return origin;
 }
@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
   let origin = "";
   try {
     origin = allowed(req);
-    const result = await recordLpEvent(await boundedJson(req, 2_048));
+    const clientKey = req.headers.get("cf-connecting-ip") || "unknown";
+    const result = await recordLpEvent(await boundedJson(req, 2_048), clientKey);
     return NextResponse.json(result, { headers: headers(origin) });
   } catch (error) {
     const status = error instanceof AccountError ? error.status : 503;

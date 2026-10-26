@@ -435,11 +435,12 @@ service cloud.firestore {
       allow update, delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
     }
 
-    // Campanhas de oferta (metas de arrecadação): gestão só do time (admin);
-    // membro lista; UMA campanha pode ser lida publicamente (get) pra o link
-    // público /p/{slug}/give?campanha={id} mostrar título/meta/progresso.
+    // Campanhas de oferta: gestão só do time; membros podem consultar.
+    // O link público recebe apenas a projeção explícita pela API pública.
     match /organizations/{orgId}/givingCampaigns/{campaignId} {
-      allow get: if moduleEnabled(orgId, "giving");
+      // Anonymous giving uses the backend's explicit public projection.
+      // Direct documents include internal fields such as createdByUserId.
+      allow get: if isTenantMember(orgId) && moduleEnabled(orgId, "giving");
       allow list: if isTenantMember(orgId) && moduleEnabled(orgId, "giving");
       allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && request.resource.data.organizationId == orgId && request.resource.data.raisedAmount == 0;
       allow update: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "raisedAmount"]);

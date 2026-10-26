@@ -33,7 +33,7 @@ export function validateLpEvent(raw: Record<string, unknown>) {
   };
 }
 
-export async function recordLpEvent(raw: Record<string, unknown>) {
+export async function recordLpEvent(raw: Record<string, unknown>, clientKey = "unknown") {
   const data = validateLpEvent(raw);
   const day = new Date().toISOString().slice(0, 10);
   const sessionHash = createHash("sha256")
@@ -42,12 +42,29 @@ export async function recordLpEvent(raw: Record<string, unknown>) {
   const key = `${data.event}:${data.placement}:${data.target}`;
   const sessionPath = `publicAnalyticsSessions/${day}_${sessionHash}`;
   const dailyPath = `publicAnalyticsDaily/${day}`;
+  const minute = Math.floor(Date.now() / 60000);
+  // Reuse one counter per client instead of creating a document each minute.
+  // Only a digest is stored; the raw address is never persisted.
+  const clientHash = createHash("sha256").update(clientKey.slice(0,128)).digest("hex");
+  const limitPath = `publicAnalyticsLimits/${clientHash}`;
   return accountTransaction(async (tx) => {
-    const [session, daily] = await tx.read(sessionPath, dailyPath);
+    const [session, daily, limit] = await tx.read(sessionPath, dailyPath, limitPath);
     const keys = Array.isArray(session?.keys) ? session.keys : [];
     if (keys.includes(key)) return { ok: true, replayed: true };
     if (keys.length >= 40)
       throw new AccountError(429, "Limite de eventos desta sessão atingido.");
+    const count = limit?.minute === minute ? limit.count : 0;
+    if (!Number.isSafeInteger(count) || count < 0 || count >= 120)
+      throw new AccountError(429, "Limite temporário de métricas atingido.");
+    const counts = daily?.counts && typeof daily.counts === "object" ? daily.counts : {};
+    if (!Object.hasOwn(counts, key) && Object.keys(counts).length >= 500)
+      throw new AccountError(429, "Limite de categorias de métricas atingido.");
+    const total = Object.values(counts).reduce<number>((sum, value) => {
+      return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+        ? sum + value : Number.NaN;
+    }, 0);
+    if (!Number.isSafeInteger(total) || total >= 50_000)
+      throw new AccountError(429, "Limite diário de métricas atingido.");
     const nextKeys = [...keys, key];
     const now = new Date().toISOString();
     if (session) tx.patch(sessionPath, { keys: nextKeys, updatedAt: now });
@@ -58,8 +75,7 @@ export async function recordLpEvent(raw: Record<string, unknown>) {
         createdAt: now,
         updatedAt: now,
       });
-    const counts =
-      daily?.counts && typeof daily.counts === "object" ? daily.counts : {};
+    tx.set(limitPath, { minute, count: count + 1 });
     const nextCounts = { ...counts, [key]: Number(counts[key] ?? 0) + 1 };
     if (daily) tx.patch(dailyPath, { counts: nextCounts, updatedAt: now });
     else
