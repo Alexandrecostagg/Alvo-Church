@@ -36,7 +36,8 @@
     "qa:delivery9": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery9.ts",
     "qa:delivery10": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery10.ts",
     "qa:whatsapp": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-whatsapp.ts",
-    "qa:security": "node scripts/with-qa-env.mjs node scripts/audit-security-local.mjs"
+    "qa:security": "node scripts/with-qa-env.mjs node scripts/audit-security-local.mjs",
+    "qa:cloudflare-runtime": "node scripts/verify-cloudflare-runtime.mjs"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

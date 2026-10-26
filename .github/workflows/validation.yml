@@ -44,6 +44,8 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - if: matrix.target == 'web'
         run: node scripts/with-qa-env.mjs corepack pnpm build:cloudflare:web
+      - if: matrix.target == 'web'
+        run: corepack pnpm qa:cloudflare-runtime
       - if: matrix.target == 'lp'
         run: corepack pnpm --filter @alvo/lp build
       - if: matrix.target == 'mobile'
