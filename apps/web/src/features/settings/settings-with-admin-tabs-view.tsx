@@ -14,20 +14,20 @@ import { useAppAuth } from "../../../app/providers";
 export function SettingsWithAdminTabsView() {
   const [tab, setTab] = useState<"settings" | "org" | "users" | "plano" | "kids">("settings");
   const { hasRole } = useAppAuth();
-  const isPlatformAdmin = hasRole("super_admin");
+  const canCreateInstitution = hasRole("super_admin");
   const canManageUsers = hasRole("super_admin") || hasRole("church_admin");
 
   return (
     <div>
       <div style={{ display: "flex", gap: 4, padding: "16px 20px 0", flexWrap: "wrap" }}>
         <TabButton active={tab === "settings"} onClick={() => setTab("settings")} icon={Settings} label="Geral" />
-        {isPlatformAdmin && <TabButton active={tab === "org"} onClick={() => setTab("org")} icon={Building2} label="Organizações" />}
+        {canCreateInstitution && <TabButton active={tab === "org"} onClick={() => setTab("org")} icon={Building2} label="Organizações" />}
         {canManageUsers && <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={UsersRound} label="Usuários" />}
         <TabButton active={tab === "plano"} onClick={() => setTab("plano")} icon={Layers} label="Plano" />
         <TabButton active={tab === "kids"} onClick={() => setTab("kids")} icon={ShieldCheck} label="Segurança Kids" />
       </div>
       {tab === "settings" && <SettingsView />}
-      {isPlatformAdmin && tab === "org" && <OrganizationNewView />}
+      {canCreateInstitution && tab === "org" && <OrganizationNewView />}
       {canManageUsers && tab === "users" && <UsersView />}
       {tab === "plano" && <PlanoView />}
       {tab === "kids" && <div style={{ padding: "20px" }}><KidsSettingsView /></div>}

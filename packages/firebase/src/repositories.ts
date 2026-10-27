@@ -11,6 +11,7 @@ import {
   orderBy,
   query,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   writeBatch,
@@ -852,9 +853,9 @@ export async function fetchTenantUser(
   if (!snap.exists()) return null;
   const data = snap.data();
   return {
-    roles: (data.roles ?? ["church_admin"]) as AppRole[],
+    roles: (Array.isArray(data.roles) ? data.roles : []) as AppRole[],
     email: data.email ?? "",
-    isActive: data.isActive ?? true,
+    isActive: data.isActive === true,
     ministerialInterests: data.ministerialInterests,
     servingProfile: data.servingProfile,
     availability: data.availability,
@@ -1051,14 +1052,23 @@ export async function provisionSelfServeOrganization(
     addressReference,
   };
 
-  await saveOrganizationProfile(config, organization);
-
-  await ensureTenantUserAccess(config, {
-    organizationId,
-    userId: ownerUid,
-    email: ownerEmail,
-    roles: ["church_admin"]
+  const firestore = getFirebaseFirestore(config);
+  const existingOrganization = await getDoc(doc(firestore, "organizations", organizationId)).catch(error => {
+    // A missing root is unreadable under tenant rules; create remains owner-checked.
+    if (error?.code === "permission-denied") return null;
+    throw error;
   });
+  if (existingOrganization?.exists() && existingOrganization.data().ownerUid !== ownerUid) {
+    throw new Error("Esta instituição pertence a outro responsável.");
+  }
+  if (!existingOrganization?.exists()) await saveOrganizationProfile(config, organization);
+
+  const existingUser = await getDoc(doc(firestore, getTenantUserDocumentPath({ organizationId }, ownerUid)));
+  if (existingUser.exists()) {
+    if (existingUser.data().organizationId !== organizationId || existingUser.data().isActive !== true) throw new Error("O acesso existente precisa ser revisado pela administração.");
+  } else {
+    await ensureTenantUserAccess(config, { organizationId, userId: ownerUid, email: ownerEmail, roles: ["church_admin"] });
+  }
 
   const branding: OrganizationBrandingSettings = {
     organizationId,
@@ -1109,10 +1119,16 @@ export async function provisionSelfServeOrganization(
     }
   };
 
+  // Bootstrap can be resumed after interruption without rewriting an existing plan.
+  const [existingBranding, existingSubscription, existingFeatures] = await Promise.all([
+    getDoc(doc(firestore, getOrganizationBrandingDocumentPath({ organizationId }))),
+    getDoc(doc(firestore, getOrganizationSubscriptionDocumentPath({ organizationId }))),
+    getDoc(doc(firestore, getOrganizationFeaturesDocumentPath({ organizationId }))),
+  ]);
   await Promise.all([
-    saveOrganizationBrandingSettings(config, branding),
-    saveOrganizationSubscriptionSettings(config, subscription),
-    saveOrganizationFeaturesSettings(config, features),
+    existingBranding.exists() ? Promise.resolve() : saveOrganizationBrandingSettings(config, branding),
+    existingSubscription.exists() ? Promise.resolve() : saveOrganizationSubscriptionSettings(config, subscription),
+    existingFeatures.exists() ? Promise.resolve() : saveOrganizationFeaturesSettings(config, features),
   ]);
 }
 
@@ -1125,6 +1141,11 @@ export async function claimOrganizationSlug(
   params: { slug: string; organizationId: string; displayName: string }
 ): Promise<void> {
   const firestore = getFirebaseFirestore(config);
+  const existing = await getDoc(doc(firestore, "org_slugs", params.slug));
+  if (existing.exists()) {
+    if (existing.data().organizationId === params.organizationId) return;
+    throw new Error("Este endereço público já pertence a outra instituição.");
+  }
   await setDoc(doc(firestore, "org_slugs", params.slug), {
     organizationId: params.organizationId,
     displayName: params.displayName
@@ -1908,6 +1929,31 @@ export async function fetchEvents(
   const snapshot = await getDocs(eventsQuery);
 
   return snapshot.docs.map((item) => toEvent(item.id, item.data()));
+}
+
+/** Paginate published events before filtering dates: keep ongoing events accessible. */
+export async function fetchUpcomingMemberEvents(config: FirebaseWebRuntimeConfig, context: TenantContext) {
+  const firestore = getFirebaseFirestore(config);
+  const events: Event[] = [];
+  let cursor: Awaited<ReturnType<typeof getDocs>>["docs"][number] | undefined;
+  const now = Date.now();
+  while (events.length < 100) {
+    const snapshot = await getDocs(query(
+      collection(firestore, getEventsCollectionPath(context)),
+      where("status", "==", "published"), orderBy("startsAt", "asc"),
+      ...(cursor ? [startAfter(cursor)] : []), limit(100),
+    ));
+    for (const item of snapshot.docs) {
+      const event = toEvent(item.id, item.data());
+      const start = Date.parse(event.startsAt);
+      // Undated end defaults to one day so the ticket remains available at the entrance.
+      const end = event.endsAt ? Date.parse(event.endsAt) : start + 24 * 60 * 60 * 1000;
+      if (Number.isFinite(start) && (start >= now || end >= now)) events.push(event);
+    }
+    if (snapshot.size < 100) break;
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+  }
+  return events.slice(0, 100);
 }
 
 export async function fetchEventRegistrations(

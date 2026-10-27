@@ -61,6 +61,10 @@ try {
   const admin = await request("/api/platform/lp-analytics");
   assert.equal(admin.status, 401);
   await admin.body?.cancel();
+  const mobile = await request("/api/mobile/member", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "groups", organizationId: "synthetic-runtime-probe" }) });
+  assert.equal(mobile.status, 401);
+  assert(mobile.headers.get("cache-control")?.includes("no-store"));
+  await mobile.body?.cancel();
   for (const [origin, expected] of [
     ["http://localhost:3000", 403],
     ["https://plataformaesdras.com.br", 204],
@@ -69,7 +73,7 @@ try {
     assert.equal(response.status, expected);
     await response.body?.cancel();
   }
-  console.log("Cloudflare runtime: landing, private QR, anonymous admin denial and production CORS passed.");
+  console.log("Cloudflare runtime: landing, private QR, anonymous admin/mobile denial and production CORS passed.");
 } finally {
   if (child.pid) {
     try { process.kill(-child.pid, "SIGTERM"); } catch {}

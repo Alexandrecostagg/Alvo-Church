@@ -57,6 +57,7 @@ try {
     "qa:delivery8",
     "qa:delivery9",
     "qa:delivery10",
+    "qa:mobile",
   ])
     await run([task]);
   await run(["qa:security"], { SECURITY_AUDIT_API: "1" });

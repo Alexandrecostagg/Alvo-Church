@@ -1,7 +1,7 @@
 import { UsersRound, ClipboardList, Trophy, Waypoints, Handshake, MessageSquareText, Landmark, Target, LayoutDashboard, Map as MapIcon, UserPlus } from "lucide-react";
 import type { ModuleKey } from "@alvo/domain";
 
-export function getModuleHighlights(isEnabled: (key: ModuleKey) => boolean, isPlatformAdmin: boolean) {
+export function getModuleHighlights(isEnabled: (key: ModuleKey) => boolean, canCreateInstitution: boolean) {
   return [
   {
     label: "Pessoas e familias",
@@ -28,13 +28,19 @@ export function getModuleHighlights(isEnabled: (key: ModuleKey) => boolean, isPl
     action: "Ver progresso"
   },
   {
-    label: "Celulas e eventos",
-    description: "Convites, presencas, check-ins e integracao pratica na agenda da igreja.",
+    label: "Células",
+    description: "Grupos, encontros e presenças da comunidade.",
     href: "/groups",
     icon: Waypoints,
-    enabled:
-      isEnabled("groups") &&
-      isEnabled("events"),
+    enabled: isEnabled("groups"),
+    action: "Ver células"
+  },
+  {
+    label: "Eventos",
+    description: "Agenda, inscrições e check-in dos eventos da igreja.",
+    href: "/events",
+    icon: Waypoints,
+    enabled: isEnabled("events"),
     action: "Organizar agenda"
   },
   {
@@ -48,7 +54,7 @@ export function getModuleHighlights(isEnabled: (key: ModuleKey) => boolean, isPl
   {
     label: "Comunicacao",
     description: "Fila viva para WhatsApp, convites, lembretes e retorno pastoral.",
-    href: "#actions",
+    href: "/communication",
     icon: MessageSquareText,
     enabled: isEnabled("communication"),
     action: "Ver fila"
@@ -56,17 +62,17 @@ export function getModuleHighlights(isEnabled: (key: ModuleKey) => boolean, isPl
   {
     label: "Transparencia",
     description: "Prestacao de contas, arrecadacoes e demonstrativos publicaveis para a igreja.",
-    href: "#transparency",
+    href: "/finance",
     icon: Landmark,
     enabled: isEnabled("finance"),
     action: "Publicar contas"
   },
   {
-    label: "SaaS e contratos",
-    description: "Onboarding de instituicoes contratantes com tenant, plano, marca e modulos.",
+    label: "Nova instituição",
+    description: "Cadastro de outra instituição no plano gratuito, vinculado à sua conta.",
     href: "/saas/organizations/new",
     icon: Target,
-    enabled: isPlatformAdmin,
+    enabled: canCreateInstitution,
     action: "Cadastrar instituicao"
   }
 ];

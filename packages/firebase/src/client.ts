@@ -1,4 +1,5 @@
 declare var process: any;
+import { mobileAuthPersistence, type MobileAuthStorage } from "./native-persistence";
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
@@ -27,6 +28,7 @@ export interface FirebaseWebRuntimeConfig {
   messagingSenderId?: string;
   appId?: string;
   useEmulator?: boolean;
+  mobileAuthStorage?: MobileAuthStorage;
 }
 
 export type FirebaseAuthUser = User;
@@ -166,7 +168,10 @@ export async function registerWithFirebaseEmailPassword(params: {
 export function getFirebaseMobileAuth(config: FirebaseRuntimeConfig) {
   if (!firebaseMobileAuth) {
     const app = getFirebaseWebApp(config);
-    firebaseMobileAuth = getAuth(app);
+    firebaseMobileAuth = config.mobileAuthStorage
+      ? initializeAuth(app, { persistence: mobileAuthPersistence(config.mobileAuthStorage) })
+      : getAuth(app);
+    if (config.useEmulator) connectAuthEmulator(firebaseMobileAuth, "http://127.0.0.1:9099", { disableWarnings: true });
   }
 
   return firebaseMobileAuth;
