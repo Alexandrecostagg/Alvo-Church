@@ -18,6 +18,7 @@ apps/web/.open-next
 .wrangler/
 *.log
 .env
+.env.*
 .env.local
 .env.*.local
 firebase-debug.log
