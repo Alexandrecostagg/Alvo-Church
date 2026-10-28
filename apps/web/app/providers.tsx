@@ -29,6 +29,7 @@ interface AuthContextValue {
   hasAnyRole: (roles: AppRole[]) => boolean;
   switchOrganization: (orgId: string) => void;
   refreshRoles: () => Promise<void>;
+  refreshTenantRuntime: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -65,6 +66,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
+  const [tenantAttempt, setTenantAttempt] = useState(0);
+  const refreshTenantRuntime = useCallback(() => setTenantAttempt(attempt => attempt + 1), []);
   // Só é true depois que o custom claim `organizationId` do usuário foi
   // resolvido — evita que o bootstrap de tenant rode com o organizationId
   // placeholder (localStorage/default) e depois DE NOVO com o real,
@@ -220,7 +223,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
     void loadTenantRuntime();
     return () => { cancelled = true; };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, orgResolved, user]);
+  }, [configured, firebaseConfig, firebaseReady, organizationId, orgResolved, user, tenantAttempt]);
 
   const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
   const hasAnyRole = useCallback((required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
@@ -274,6 +277,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       hasAnyRole,
       switchOrganization,
       refreshRoles,
+      refreshTenantRuntime,
       signIn,
       signOut
     }),
@@ -292,6 +296,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       hasAnyRole,
       switchOrganization,
       refreshRoles,
+      refreshTenantRuntime,
       signIn,
       signOut
     ]

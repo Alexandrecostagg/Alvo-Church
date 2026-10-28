@@ -4,6 +4,20 @@ import {
   type AccountTransaction,
 } from "./member-account-store";
 import { documentId } from "./member-account";
+import {
+  PLAN_LIMITS,
+  planHasModule,
+  planModuleDefaults,
+  planTierToPlanId,
+} from "@alvo/firebase/src/plans";
+import {
+  COMPANY_FIELDS,
+  type CompanyProfile,
+} from "../../../src/lib/platform-organization";
+import {
+  readPlatformAuthProfiles,
+  type PlatformAuthProfile,
+} from "./platform-auth-profiles";
 
 const PLANS = ["free", "comunidade", "pastoral", "rede", "enterprise"] as const;
 const BILLING = ["active", "overdue", "suspended"] as const;
@@ -162,42 +176,151 @@ function safeUser(row: Record<string, any>) {
   return {
     id: String(row.id ?? ""),
     email: String(row.email ?? ""),
+    displayName: String(row.displayName ?? row.name ?? ""),
+    phone: String(row.phone ?? row.mobilePhone ?? ""),
+    personId: String(row.personId ?? ""),
+    campusIds: Array.isArray(row.campusIds)
+      ? row.campusIds.filter((id): id is string => typeof id === "string")
+      : [],
+    createdBy: String(row.createdBy ?? row.createdByUserId ?? ""),
+    updatedAt: String(row.accessUpdatedAt ?? row.updatedAt ?? ""),
     roles: Array.isArray(row.roles)
       ? row.roles.filter((role): role is Role => ROLES.includes(role))
-      : ["member"],
+      : ([] as Role[]),
     isActive: row.isActive === true,
     linked: typeof row.personId === "string" && !!row.personId,
     createdAt: typeof row.createdAt === "string" ? row.createdAt : undefined,
   };
 }
 
-function activeAdminCount(
-  users: Record<string, any>[],
-  excludingId: string,
-  nextRoles?: Role[],
-  nextActive?: boolean,
+async function assertRemainingAdmin(
+  tx: AccountTransaction,
+  root: string,
+  targetId: string,
+  roles: string[],
+  active: boolean,
 ) {
-  return users.filter((row) => {
-    const active =
-      row.id === excludingId && nextActive !== undefined
-        ? nextActive
-        : row.isActive === true;
-    const roles =
-      row.id === excludingId && nextRoles
-        ? nextRoles
-        : Array.isArray(row.roles)
-          ? row.roles
-          : [];
-    return active && roles.some((role: string) => ADMIN_ROLES.has(role));
-  }).length;
+  if (active && roles.some((role) => ADMIN_ROLES.has(role))) return;
+  let cursor: string | undefined;
+  for (;;) {
+    const users = await tx.query(
+      root,
+      "users",
+      "isActive",
+      true,
+      "EQUAL",
+      100,
+      undefined,
+      { field: "__name__", direction: "ASCENDING" },
+      cursor,
+    );
+    if (
+      users.some(
+        (row) =>
+          row.id !== targetId &&
+          row.isActive === true &&
+          Array.isArray(row.roles) &&
+          row.roles.some((role: string) => ADMIN_ROLES.has(role)),
+      )
+    )
+      return;
+    if (users.length < 100)
+      throw new AccountError(
+        409,
+        "Mantenha ao menos um administrador ativo na instituição.",
+      );
+    cursor = String(users.at(-1)!.id);
+  }
 }
 
+const USER_PAGE_SIZE = 100;
+function subscriptionPlan(subscription: Record<string, any> | null): Plan {
+  return subscription && PLANS.includes(subscription.plan)
+    ? subscription.plan
+    : planTierToPlanId(subscription?.planTier);
+}
+async function userPage(tx: AccountTransaction, root: string, after?: string) {
+  const rows = await tx.query(
+    root,
+    "users",
+    undefined,
+    undefined,
+    "EQUAL",
+    USER_PAGE_SIZE + 1,
+    undefined,
+    { field: "__name__", direction: "ASCENDING" },
+    after,
+  );
+  return {
+    users: rows.slice(0, USER_PAGE_SIZE).map(safeUser),
+    usersPage: {
+      nextCursor:
+        rows.length > USER_PAGE_SIZE
+          ? String(rows[USER_PAGE_SIZE - 1].id)
+          : null,
+    },
+  };
+}
+async function enrichUsers(
+  users: ReturnType<typeof safeUser>[],
+  ownerUid = "",
+) {
+  let authWarning = "";
+  const profiles = await readPlatformAuthProfiles([
+    ...users.map((row) => row.id),
+    ownerUid,
+  ]).catch(() => {
+    authWarning =
+      "Não foi possível consultar os dados de autenticação. Os vínculos da instituição continuam disponíveis; tente atualizar a ficha.";
+    return new Map<string, PlatformAuthProfile>();
+  });
+  return {
+    users: users.map((row) => {
+      const profile = profiles.get(row.id);
+      return {
+        ...row,
+        displayName: profile?.displayName || row.displayName,
+        email: profile?.email || row.email,
+        phone: profile?.phone || row.phone,
+        authStatus: authWarning
+          ? "unavailable"
+          : profile
+            ? profile.disabled
+              ? "disabled"
+              : "active"
+            : "missing",
+        emailVerified: profile ? profile.emailVerified : null,
+        authCreatedAt: profile?.createdAt ?? "",
+        lastSignInAt: profile?.lastSignInAt ?? "",
+      };
+    }),
+    ownerProfile: profiles.get(ownerUid),
+    authWarning,
+  };
+}
+export async function readPlatformOrganizationUsers(
+  raw: Record<string, unknown>,
+  uid: string,
+) {
+  const organizationId = documentId(raw.organizationId, "Instituição");
+  const cursor = raw.cursor ? documentId(raw.cursor, "Página") : undefined;
+  const page = await accountTransaction(async (tx) => {
+    await authorizePlatformAdmin(tx, uid);
+    const root = `organizations/${organizationId}`;
+    const [organization] = await tx.read(root);
+    if (!organization)
+      throw new AccountError(404, "Instituição não encontrada.");
+    return userPage(tx, root, cursor);
+  });
+  const { users, authWarning } = await enrichUsers(page.users);
+  return { users, usersPage: page.usersPage, authWarning };
+}
 export async function readPlatformOrganization(
   raw: Record<string, unknown>,
   uid: string,
 ) {
   const organizationId = documentId(raw.organizationId, "Instituição");
-  return accountTransaction(async (tx) => {
+  const detail = await accountTransaction(async (tx) => {
     await authorizePlatformAdmin(tx, uid);
     const root = `organizations/${organizationId}`;
     const [organization, subscription, features] = await tx.read(
@@ -207,20 +330,28 @@ export async function readPlatformOrganization(
     );
     if (!organization)
       throw new AccountError(404, "Instituição não encontrada.");
-    const [users, entries] = await Promise.all([
-      tx.query(root, "users", undefined, undefined, "EQUAL", 250),
-      tx.query(root, "platformAdminAudit", undefined, undefined, "EQUAL", 30),
+    const ownerUid =
+      typeof organization.ownerUid === "string" &&
+      /^[A-Za-z0-9_-]{1,128}$/.test(organization.ownerUid)
+        ? organization.ownerUid
+        : "";
+    const [ownerUser] = ownerUid
+      ? await tx.read(`${root}/users/${ownerUid}`)
+      : [null];
+    const [page, entries] = await Promise.all([
+      userPage(tx, root),
+      tx.query(
+        root,
+        "platformAdminAudit",
+        undefined,
+        undefined,
+        "EQUAL",
+        30,
+        undefined,
+        { field: "createdAt", direction: "DESCENDING" },
+      ),
     ]);
-    const audits = entries
-      .map((entry) => ({
-        id: String(entry.id),
-        action: String(entry.action ?? ""),
-        targetId: String(entry.targetId ?? ""),
-        reason: String(entry.reason ?? ""),
-        actorId: String(entry.actorId ?? ""),
-        createdAt: String(entry.createdAt ?? ""),
-      }))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const plan = subscriptionPlan(subscription);
     return {
       organization: {
         id: organizationId,
@@ -234,32 +365,79 @@ export async function readPlatformOrganization(
         publicName: String(organization.publicName ?? ""),
         slug: String(organization.slug ?? ""),
         status: ORG_STATUSES.includes(organization.status)
-          ? organization.status
-          : "active",
+          ? (organization.status as OrgStatus)
+          : ("active" as OrgStatus),
         memberCount: Number(organization.memberCount ?? 0),
-        ownerUid: String(organization.ownerUid ?? ""),
+        ownerUid,
+        registrationEmail: String(
+          organization.registrationEmail ??
+            organization.ownerEmail ??
+            ownerUser?.email ??
+            "",
+        ),
+        createdAt: String(organization.createdAt ?? ""),
+        updatedAt: String(organization.updatedAt ?? ""),
+        organizationType: String(organization.organizationType ?? ""),
+        timezone: String(organization.timezone ?? ""),
+        locale: String(organization.locale ?? ""),
+        countryCode: String(organization.countryCode ?? ""),
       },
+      company: Object.fromEntries(
+        COMPANY_FIELDS.map(([key]) => [key, String(organization[key] ?? "")]),
+      ) as CompanyProfile,
       subscription: {
-        plan:
-          subscription && PLANS.includes(subscription.plan)
-            ? subscription.plan
-            : "free",
+        plan,
         billingStatus:
           subscription && BILLING.includes(subscription.billingStatus)
-            ? subscription.billingStatus
-            : "active",
+            ? (subscription.billingStatus as Billing)
+            : ("active" as Billing),
       },
       modules: Object.fromEntries(
         PLATFORM_MODULES.map((key) => [
           key,
-          features?.modules?.[key]?.enabled !== false,
+          planHasModule(plan, key) &&
+            features?.modules?.[key]?.enabled !== false,
         ]),
       ),
-      users: users.map(safeUser).sort((a, b) => a.email.localeCompare(b.email)),
-      audits,
+      ...page,
+      audits: entries
+        .map((entry) => ({
+          id: String(entry.id),
+          action: String(entry.action ?? ""),
+          targetId: String(entry.targetId ?? ""),
+          reason: String(entry.reason ?? ""),
+          actorId: String(entry.actorId ?? ""),
+          createdAt: String(entry.createdAt ?? ""),
+        }))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     };
   });
+  const { users, ownerProfile, authWarning } = await enrichUsers(
+    detail.users,
+    detail.organization.ownerUid,
+  );
+  return {
+    ...detail,
+    users,
+    authWarning,
+    organization: {
+      ...detail.organization,
+      registrationEmail:
+        detail.organization.registrationEmail || ownerProfile?.email || "",
+    },
+    owner: {
+      id: detail.organization.ownerUid,
+      displayName: ownerProfile?.displayName ?? "",
+      email: ownerProfile?.email ?? detail.organization.registrationEmail,
+      phone: ownerProfile?.phone ?? "",
+      createdAt: ownerProfile?.createdAt ?? "",
+    },
+  };
 }
+
+export type PlatformOrganizationDetail = Awaited<
+  ReturnType<typeof readPlatformOrganization>
+>;
 
 export async function updatePlatformOrganization(
   raw: Record<string, unknown>,
@@ -273,7 +451,33 @@ export async function updatePlatformOrganization(
     const [organization] = await tx.read(root);
     if (!organization)
       throw new AccountError(404, "Instituição não encontrada.");
+    const profile: Record<string, string> = {};
+    for (const [key, label, max] of COMPANY_FIELDS) {
+      if (raw[key] !== undefined)
+        profile[key] = text(raw[key], label, max, false);
+    }
+    if (
+      profile.contactEmail &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.contactEmail)
+    )
+      throw new AccountError(400, "E-mail de contato inválido.");
+    if (profile.addressState && !/^[A-Za-z]{2}$/.test(profile.addressState))
+      throw new AccountError(400, "Estado deve ter duas letras (UF).");
+    if (profile.addressState)
+      profile.addressState = profile.addressState.toUpperCase();
+    if (
+      profile.taxId &&
+      !/^(?:\d{11}|\d{14})$/.test(profile.taxId.replace(/\D/g, ""))
+    )
+      throw new AccountError(400, "Informe CPF com 11 ou CNPJ com 14 dígitos.");
+    if (profile.taxId) profile.taxId = profile.taxId.replace(/\D/g, "");
+    if (profile.website && !/^https?:\/\//i.test(profile.website))
+      throw new AccountError(
+        400,
+        "O site deve começar com https:// ou http://.",
+      );
     const next = {
+      ...profile,
       displayName: text(raw.displayName, "Nome de exibição", 160),
       publicName: text(raw.publicName, "Nome público", 160, false),
       status: choice(raw.status, ORG_STATUSES, "Status"),
@@ -291,6 +495,9 @@ export async function updatePlatformOrganization(
         displayName: organization.displayName,
         publicName: organization.publicName,
         status: organization.status,
+        ...Object.fromEntries(
+          Object.keys(profile).map((key) => [key, organization[key] ?? ""]),
+        ),
       },
       next,
     );
@@ -313,14 +520,15 @@ export async function updatePlatformPlan(
   return accountTransaction(async (tx) => {
     const actorId = await authorizePlatformAdmin(tx, uid);
     const root = `organizations/${organizationId}`;
-    const [organization, subscription] = await tx.read(
+    const [organization, subscription, features] = await tx.read(
       root,
       `${root}/settings/subscription`,
+      `${root}/settings/features`,
     );
     if (!organization)
       throw new AccountError(404, "Instituição não encontrada.");
     const memberCount = Number(organization.memberCount ?? 0);
-    const limit = plan === "free" ? 50 : plan === "comunidade" ? 300 : Infinity;
+    const limit = PLAN_LIMITS[plan].maxMembers;
     if (memberCount > limit && raw.confirmOverLimit !== true)
       throw new AccountError(
         409,
@@ -342,6 +550,17 @@ export async function updatePlatformPlan(
       updatedBy: actorId,
     };
     tx.set(`${root}/settings/subscription`, next);
+    const defaults = planModuleDefaults(plan);
+    const modules = { ...(features?.modules ?? {}) };
+    for (const [key, enabled] of Object.entries(defaults))
+      modules[key] = { ...(modules[key] ?? {}), enabled, source: "plan" };
+    tx.set(`${root}/settings/features`, {
+      ...(features ?? {}),
+      organizationId,
+      modules,
+      updatedAt: now,
+      updatedBy: actorId,
+    });
     audit(
       tx,
       organizationId,
@@ -352,13 +571,15 @@ export async function updatePlatformPlan(
       {
         plan: subscription?.plan ?? "free",
         billingStatus: subscription?.billingStatus ?? "active",
+        modules: features?.modules ?? {},
       },
-      { plan, billingStatus },
+      { plan, billingStatus, modules },
     );
     return {
       ok: true,
       memberCount,
       memberLimit: Number.isFinite(limit) ? limit : null,
+      modules: defaults,
     };
   });
 }
@@ -387,12 +608,23 @@ export async function updatePlatformModules(
   return accountTransaction(async (tx) => {
     const actorId = await authorizePlatformAdmin(tx, uid);
     const root = `organizations/${organizationId}`;
-    const [organization, features] = await tx.read(
+    const [organization, features, subscription] = await tx.read(
       root,
       `${root}/settings/features`,
+      `${root}/settings/subscription`,
     );
     if (!organization)
       throw new AccountError(404, "Instituição não encontrada.");
+    const plan = subscriptionPlan(subscription);
+    if (
+      PLATFORM_MODULES.some(
+        (key) => requested[key] === true && !planHasModule(plan, key),
+      )
+    )
+      throw new AccountError(
+        400,
+        "O plano atual não inclui uma das funções selecionadas. Aplique um plano compatível primeiro.",
+      );
     const before = features?.modules ?? {};
     const modules = {
       ...before,
@@ -455,22 +687,10 @@ export async function updatePlatformUser(
     );
     if (!organization || !target || target.organizationId !== organizationId)
       throw new AccountError(404, "Usuário não encontrado nesta instituição.");
-    const users = await tx.query(
-      root,
-      "users",
-      undefined,
-      undefined,
-      "EQUAL",
-      250,
-    );
     const nextRoles =
       roles ?? (Array.isArray(target.roles) ? target.roles : ["member"]);
     const nextActive = isActive ?? target.isActive === true;
-    if (activeAdminCount(users, userId, nextRoles, nextActive) === 0)
-      throw new AccountError(
-        409,
-        "Mantenha ao menos um administrador ativo na instituição.",
-      );
+    await assertRemainingAdmin(tx, root, userId, nextRoles, nextActive);
     const next = {
       roles: nextRoles,
       isActive: nextActive,
@@ -514,19 +734,7 @@ export async function removePlatformUser(
         409,
         "Este usuário possui cadastro vinculado. Desative o acesso para preservar o histórico.",
       );
-    const users = await tx.query(
-      root,
-      "users",
-      undefined,
-      undefined,
-      "EQUAL",
-      250,
-    );
-    if (activeAdminCount(users, userId, [], false) === 0)
-      throw new AccountError(
-        409,
-        "Mantenha ao menos um administrador ativo na instituição.",
-      );
+    await assertRemainingAdmin(tx, root, userId, [], false);
     tx.remove(`${root}/users/${userId}`);
     audit(
       tx,

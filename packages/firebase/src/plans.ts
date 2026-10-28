@@ -68,6 +68,11 @@ export function planHasModule(plan: PlanId, module: string): boolean {
   return feature === null || (feature !== undefined && planHasFeature(plan, feature));
 }
 
+/** Canonical defaults used when an administrator applies a subscription plan. */
+export function planModuleDefaults(plan: PlanId): Record<string, boolean> {
+  return Object.fromEntries(Object.keys(MODULE_PLAN_FEATURE).map(key => [key, planHasModule(plan, key)]));
+}
+
 // Dias de carência entre a fatura vencer (billingStatus "overdue") e o
 // acesso ser efetivamente suspenso ("suspended") — dá tempo do pagamento
 // via PIX/boleto compensar antes de travar o sistema do cliente.

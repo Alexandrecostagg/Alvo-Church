@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -13,6 +13,13 @@ import {
 } from "lucide-react";
 import type { FirebaseAuthUser } from "@alvo/firebase";
 import type { AppRole } from "@alvo/types";
+import { planHasModule, planModuleDefaults } from "@alvo/firebase/src/plans";
+import {
+  COMPANY_FIELDS,
+  emptyCompanyProfile,
+  type CompanyProfile,
+} from "../../lib/platform-organization";
+import type { PlatformOrganizationDetail } from "../../../app/api/_lib/platform-organization-admin";
 
 const PLANS = ["free", "comunidade", "pastoral", "rede", "enterprise"] as const;
 const PLAN_LABELS: Record<(typeof PLANS)[number], string> = {
@@ -64,39 +71,7 @@ const ROLES: { value: AppRole; label: string }[] = [
   { value: "member", label: "Membro" },
 ];
 
-type Detail = {
-  organization: {
-    id: string;
-    name: string;
-    displayName: string;
-    publicName: string;
-    slug: string;
-    status: "active" | "inactive" | "suspended";
-    memberCount: number;
-    ownerUid: string;
-  };
-  subscription: {
-    plan: (typeof PLANS)[number];
-    billingStatus: "active" | "overdue" | "suspended";
-  };
-  modules: Record<(typeof MODULES)[number], boolean>;
-  users: Array<{
-    id: string;
-    email: string;
-    roles: AppRole[];
-    isActive: boolean;
-    linked: boolean;
-    createdAt?: string;
-  }>;
-  audits: Array<{
-    id: string;
-    action: string;
-    targetId: string;
-    reason: string;
-    actorId: string;
-    createdAt: string;
-  }>;
-};
+type Detail = PlatformOrganizationDetail;
 
 async function platformRequest(
   user: FirebaseAuthUser,
@@ -110,8 +85,17 @@ async function platformRequest(
     },
     body: JSON.stringify(body),
     cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
+  }).catch(() => {
+    throw new Error(
+      "Não foi possível confirmar a operação. Confira a conexão e use Atualizar dados antes de tentar novamente.",
+    );
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => {
+    throw new Error(
+      "A resposta não pôde ser carregada. Atualize a ficha antes de tentar novamente.",
+    );
+  });
   if (!response.ok)
     throw new Error(data.error || "Não foi possível concluir a operação.");
   return data;
@@ -134,6 +118,12 @@ export function PlatformOrganizationManager({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [reason, setReason] = useState("");
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const busyRef = useRef(false);
+  const [companyDraft, setCompanyDraft] =
+    useState<CompanyProfile>(emptyCompanyProfile);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [feedbackAction, setFeedbackAction] = useState("");
   const [orgDraft, setOrgDraft] = useState({
     displayName: "",
     publicName: "",
@@ -163,12 +153,15 @@ export function PlatformOrganizationManager({
       });
       setPlanDraft(next.subscription);
       setModuleDraft(next.modules);
+      setCompanyDraft(next.company);
+      return true;
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
           : "Não foi possível carregar a instituição.",
       );
+      return false;
     } finally {
       setLoading(false);
     }
@@ -185,12 +178,21 @@ export function PlatformOrganizationManager({
     label: string,
     confirmOverLimit = false,
   ) {
+    setFeedbackAction(action);
+    setSuccess("");
+    if (busyRef.current && !confirmOverLimit) return;
     if (!reasonReady) {
       setError(
         "Informe um motivo com pelo menos 8 caracteres para registrar na auditoria.",
       );
+      reasonRef.current?.focus();
+      reasonRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       return;
     }
+    busyRef.current = true;
     setSaving(action);
     setError("");
     setSuccess("");
@@ -202,9 +204,13 @@ export function PlatformOrganizationManager({
         ...payload,
         confirmOverLimit,
       });
-      setSuccess(label);
       setReason("");
-      await load();
+      const refreshed = await load();
+      setSuccess(
+        refreshed
+          ? label
+          : `${label} Não foi possível atualizar a ficha; clique em Atualizar dados.`,
+      );
       onChanged();
     } catch (e) {
       const message =
@@ -220,9 +226,56 @@ export function PlatformOrganizationManager({
       }
       setError(message);
     } finally {
+      busyRef.current = false;
       setSaving("");
     }
   }
+
+  async function loadMoreUsers() {
+    if (!detail?.usersPage.nextCursor || loadingUsers) return;
+    setLoadingUsers(true);
+    try {
+      const page = await platformRequest(user, {
+        action: "users",
+        organizationId,
+        cursor: detail.usersPage.nextCursor,
+      });
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              users: [
+                ...current.users,
+                ...page.users.filter(
+                  (row: Detail["users"][number]) =>
+                    !current.users.some((old) => old.id === row.id),
+                ),
+              ],
+              usersPage: page.usersPage,
+              authWarning: page.authWarning || current.authWarning,
+            }
+          : current,
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar mais usuários.",
+      );
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
+  const resultFor = (action: string) =>
+    feedbackAction === action ? (
+      saving ? (
+        <p role="status">Salvando com auditoria…</p>
+      ) : error ? (
+        <Notice error>{error}</Notice>
+      ) : success ? (
+        <Notice>{success}</Notice>
+      ) : null
+    ) : null;
 
   const activeAdmins = useMemo(
     () =>
@@ -292,6 +345,67 @@ export function PlatformOrganizationManager({
 
       {error && <Notice error>{error}</Notice>}
       {success && <Notice>{success}</Notice>}
+      {detail.authWarning && <Notice error>{detail.authWarning}</Notice>}
+      <button
+        type="button"
+        style={secondaryButton}
+        disabled={!!saving || loading}
+        onClick={() => void load()}
+      >
+        {loading ? "Atualizando…" : "Atualizar dados"}
+      </button>
+      <EditorCard
+        title="Dados da instituição e responsável"
+        description="Informações cadastradas pela instituição. Campos sem registro aparecem como não informado."
+      >
+        <div style={gridStyle}>
+          <ReadValue
+            label="E-mail de cadastro / responsável"
+            value={detail.organization.registrationEmail}
+          />
+          <ReadValue label="Responsável" value={detail.owner.displayName} />
+          <ReadValue
+            label="E-mail atual do responsável"
+            value={detail.owner.email}
+          />
+          <ReadValue
+            label="Telefone do responsável"
+            value={detail.owner.phone}
+          />
+          <ReadValue label="UID do responsável" value={detail.owner.id} />
+          <ReadValue
+            label="Cadastro da instituição"
+            value={formatDate(detail.organization.createdAt)}
+          />
+          <ReadValue
+            label="Criação da conta responsável"
+            value={formatDate(detail.owner.createdAt)}
+          />
+          <ReadValue
+            label="Última atualização cadastral"
+            value={formatDate(detail.organization.updatedAt)}
+          />
+          <ReadValue
+            label="Tipo de instituição"
+            value={detail.organization.organizationType}
+          />
+          <ReadValue
+            label="País / idioma / fuso"
+            value={[
+              detail.organization.countryCode,
+              detail.organization.locale,
+              detail.organization.timezone,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+        </div>
+        <p style={muted}>
+          Em cadastros antigos sem e-mail original registrado, exibimos o e-mail
+          disponível do responsável. A ficha cadastral não altera a conta de
+          login.
+        </p>
+      </EditorCard>
       <div
         style={{
           padding: 14,
@@ -303,9 +417,12 @@ export function PlatformOrganizationManager({
         <label
           style={{ display: "grid", gap: 6, fontSize: 12, fontWeight: 700 }}
         >
-          Motivo obrigatório para qualquer alteração
+          Motivo obrigatório para qualquer alteração (mínimo de 8 caracteres)
           <textarea
+            ref={reasonRef}
+            aria-invalid={Boolean(error && !reasonReady)}
             value={reason}
+            disabled={!!saving}
             onChange={(event) => setReason(event.target.value)}
             placeholder="Ex.: solicitação do responsável em 08/09/2026"
             maxLength={500}
@@ -314,10 +431,62 @@ export function PlatformOrganizationManager({
         </label>
         <p style={{ ...muted, marginTop: 6 }}>
           O motivo, autor, alvo, estado anterior e novo estado ficam na
-          auditoria.
+          auditoria. Preencha o motivo antes de salvar cada alteração.
         </p>
       </div>
 
+      <EditorCard
+        title="Dados empresariais e endereço"
+        description="Complete ou corrija as informações fiscais e de contato da instituição."
+      >
+        <div style={gridStyle}>
+          {COMPANY_FIELDS.map(([key, label, maxLength]) => (
+            <Field key={key} label={label}>
+              <input
+                style={inputStyle}
+                type={
+                  key === "contactEmail"
+                    ? "email"
+                    : key === "website"
+                      ? "url"
+                      : "text"
+                }
+                value={companyDraft[key]}
+                maxLength={maxLength}
+                placeholder="Não informado"
+                disabled={!!saving}
+                onChange={(event) =>
+                  setCompanyDraft((current) => ({
+                    ...current,
+                    [key]: event.target.value,
+                  }))
+                }
+              />
+            </Field>
+          ))}
+        </div>
+        <button
+          style={primaryButton}
+          disabled={!!saving}
+          onClick={() =>
+            void mutate(
+              "updateOrganization",
+              { ...orgDraft, ...companyDraft },
+              "Dados da instituição atualizados.",
+            )
+          }
+        >
+          {saving === "updateOrganization" ? (
+            <Loader2 size={15} className="spin" />
+          ) : (
+            <Save size={15} />
+          )}{" "}
+          {saving === "updateOrganization"
+            ? "Salvando dados…"
+            : "Salvar dados da instituição"}
+        </button>
+        {resultFor("updateOrganization")}
+      </EditorCard>
       <div style={gridStyle}>
         <EditorCard
           title="Cadastro e situação"
@@ -327,6 +496,7 @@ export function PlatformOrganizationManager({
             <input
               style={inputStyle}
               value={orgDraft.displayName}
+              disabled={!!saving}
               onChange={(e) =>
                 setOrgDraft({ ...orgDraft, displayName: e.target.value })
               }
@@ -336,6 +506,7 @@ export function PlatformOrganizationManager({
             <input
               style={inputStyle}
               value={orgDraft.publicName}
+              disabled={!!saving}
               onChange={(e) =>
                 setOrgDraft({ ...orgDraft, publicName: e.target.value })
               }
@@ -345,6 +516,7 @@ export function PlatformOrganizationManager({
             <select
               style={inputStyle}
               value={orgDraft.status}
+              disabled={!!saving}
               onChange={(e) =>
                 setOrgDraft({
                   ...orgDraft,
@@ -359,17 +531,25 @@ export function PlatformOrganizationManager({
           </Field>
           <button
             style={primaryButton}
-            disabled={!reasonReady || !!saving}
+            disabled={!!saving}
             onClick={() =>
               void mutate(
                 "updateOrganization",
-                orgDraft,
+                { ...orgDraft, ...companyDraft },
                 "Cadastro da instituição atualizado.",
               )
             }
           >
-            <Save size={15} /> Salvar cadastro
+            {saving === "updateOrganization" ? (
+              <Loader2 size={15} className="spin" />
+            ) : (
+              <Save size={15} />
+            )}{" "}
+            {saving === "updateOrganization"
+              ? "Salvando cadastro…"
+              : "Salvar cadastro"}
           </button>
+          {resultFor("updateOrganization")}
         </EditorCard>
 
         <EditorCard
@@ -380,12 +560,17 @@ export function PlatformOrganizationManager({
             <select
               style={inputStyle}
               value={planDraft.plan}
-              onChange={(e) =>
-                setPlanDraft({
-                  ...planDraft,
-                  plan: e.target.value as typeof planDraft.plan,
-                })
-              }
+              disabled={!!saving}
+              onChange={(e) => {
+                const plan = e.target.value as typeof planDraft.plan;
+                setPlanDraft({ ...planDraft, plan });
+                const defaults = planModuleDefaults(plan);
+                setModuleDraft(
+                  Object.fromEntries(
+                    MODULES.map((module) => [module, defaults[module]]),
+                  ),
+                );
+              }}
             >
               {PLANS.map((plan) => (
                 <option key={plan} value={plan}>
@@ -398,6 +583,7 @@ export function PlatformOrganizationManager({
             <select
               style={inputStyle}
               value={planDraft.billingStatus}
+              disabled={!!saving}
               onChange={(e) =>
                 setPlanDraft({
                   ...planDraft,
@@ -413,24 +599,41 @@ export function PlatformOrganizationManager({
           </Field>
           <button
             style={primaryButton}
-            disabled={!reasonReady || !!saving}
+            disabled={!!saving}
             onClick={() =>
               void mutate(
                 "updatePlan",
                 planDraft,
-                "Plano e cobrança atualizados.",
+                "Plano e cobrança atualizados. As funções padrão do plano foram aplicadas.",
               )
             }
           >
-            <Save size={15} /> Aplicar plano
+            {saving === "updatePlan" ? (
+              <Loader2 size={15} className="spin" />
+            ) : (
+              <Save size={15} />
+            )}{" "}
+            {saving === "updatePlan" ? "Aplicando plano…" : "Aplicar plano"}
           </button>
+          <p style={muted}>
+            Ao aplicar, as funções abaixo serão ajustadas ao padrão do plano
+            selecionado, substituindo pausas manuais anteriores. Alterar esta
+            ficha não emite cobranças.
+          </p>
+          {resultFor("updatePlan")}
         </EditorCard>
       </div>
 
       <EditorCard
         title="Funções liberadas"
-        description="O plano continua sendo o teto comercial. Estes controles podem desligar módulos incluídos no plano; não liberam funções que o plano não possui."
+        description={`Padrão de ${PLAN_LABELS[planDraft.plan]}. Funções fora do plano ficam indisponíveis. Após aplicar o plano, você pode pausar funções incluídas.`}
       >
+        {planDraft.plan !== detail.subscription.plan && (
+          <Notice>
+            Prévia do plano selecionado. Clique em Aplicar plano para salvar
+            estas funções.
+          </Notice>
+        )}
         <div
           style={{
             display: "grid",
@@ -443,7 +646,14 @@ export function PlatformOrganizationManager({
               <label key={module} style={checkStyle}>
                 <input
                   type="checkbox"
-                  checked={moduleDraft[module]}
+                  checked={
+                    moduleDraft[module] && planHasModule(planDraft.plan, module)
+                  }
+                  disabled={
+                    !!saving ||
+                    planDraft.plan !== detail.subscription.plan ||
+                    !planHasModule(planDraft.plan, module)
+                  }
                   onChange={(e) =>
                     setModuleDraft({
                       ...moduleDraft,
@@ -452,12 +662,19 @@ export function PlatformOrganizationManager({
                   }
                 />{" "}
                 {MODULE_LABELS[module]}
+                {!planHasModule(planDraft.plan, module)
+                  ? " · fora do plano"
+                  : ""}
               </label>
             ))}
         </div>
         <button
           style={primaryButton}
-          disabled={!reasonReady || !!saving || !moduleDraft}
+          disabled={
+            !!saving ||
+            !moduleDraft ||
+            planDraft.plan !== detail.subscription.plan
+          }
           onClick={() =>
             moduleDraft &&
             void mutate(
@@ -467,13 +684,19 @@ export function PlatformOrganizationManager({
             )
           }
         >
-          <Save size={15} /> Salvar funções
+          {saving === "updateModules" ? (
+            <Loader2 size={15} className="spin" />
+          ) : (
+            <Save size={15} />
+          )}{" "}
+          {saving === "updateModules" ? "Salvando funções…" : "Salvar funções"}
         </button>
+        {resultFor("updateModules")}
       </EditorCard>
 
       <EditorCard
-        title={`Usuários (${detail.users.length})`}
-        description={`${activeAdmins} administrador(es) ativo(s). O último administrador ativo nunca pode ser bloqueado ou removido.`}
+        title={`Usuários internos (${detail.users.length}${detail.usersPage.nextCursor ? "+" : ""})`}
+        description={`${activeAdmins} administrador(es) ativo(s) nesta página. Dados de cadastro, autenticação e acesso à instituição. O último administrador ativo não pode ser bloqueado ou removido.`}
       >
         <div style={{ display: "grid", gap: 8 }}>
           {detail.users.map((account) => (
@@ -481,7 +704,6 @@ export function PlatformOrganizationManager({
               key={account.id}
               account={account}
               busy={!!saving}
-              reasonReady={reasonReady}
               onUpdate={(payload) =>
                 void mutate(
                   "updateUser",
@@ -507,6 +729,18 @@ export function PlatformOrganizationManager({
             <p style={muted}>Nenhum usuário cadastrado.</p>
           )}
         </div>
+        {detail.usersPage.nextCursor && (
+          <button
+            type="button"
+            style={secondaryButton}
+            disabled={loadingUsers || !!saving}
+            onClick={() => void loadMoreUsers()}
+          >
+            {loadingUsers ? "Carregando usuários…" : "Carregar mais usuários"}
+          </button>
+        )}
+        {resultFor("updateUser")}
+        {resultFor("removeUser")}
       </EditorCard>
 
       <EditorCard
@@ -551,65 +785,138 @@ export function PlatformOrganizationManager({
 function UserRow({
   account,
   busy,
-  reasonReady,
   onUpdate,
   onRemove,
 }: {
   account: Detail["users"][number];
   busy: boolean;
-  reasonReady: boolean;
   onUpdate: (payload: Record<string, unknown>) => void;
   onRemove: () => void;
 }) {
-  const primaryRole = account.roles[0] ?? "member";
+  const [roles, setRoles] = useState<AppRole[]>(account.roles);
+  useEffect(() => setRoles(account.roles), [account.roles]);
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(180px, 1fr) 190px auto",
-        gap: 10,
-        alignItems: "center",
-        padding: 12,
+        gap: 12,
+        padding: 14,
         border: "1px solid var(--color-border-tertiary)",
         borderRadius: 10,
       }}
     >
       <div>
-        <strong style={{ fontSize: 13 }}>
-          {account.email || "Sem e-mail"}
-        </strong>
-        <p style={muted}>
-          {account.id} · {account.linked ? "vinculado a membro" : "sem vínculo"}
-        </p>
+        <strong>{account.displayName || "Nome não informado"}</strong>
+        <p style={muted}>{account.email || "E-mail não informado"}</p>
       </div>
-      <select
-        aria-label={`Papel de ${account.email}`}
-        style={inputStyle}
-        value={primaryRole}
-        disabled={busy}
-        onChange={(e) => onUpdate({ roles: [e.target.value] })}
-      >
-        {ROLES.map((role) => (
-          <option key={role.value} value={role.value}>
-            {role.label}
-          </option>
-        ))}
-      </select>
-      <div style={{ display: "flex", gap: 6 }}>
+      <div style={gridStyle}>
+        <ReadValue label="UID" value={account.id} />
+        <ReadValue label="Telefone" value={account.phone} />
+        <ReadValue
+          label="Acesso à instituição"
+          value={account.isActive ? "Ativo" : "Bloqueado"}
+        />
+        <ReadValue
+          label="Conta de login"
+          value={
+            account.authStatus === "active"
+              ? "Ativa"
+              : account.authStatus === "disabled"
+                ? "Desativada"
+                : account.authStatus === "missing"
+                  ? "Não encontrada"
+                  : "Consulta indisponível"
+          }
+        />
+        <ReadValue
+          label="E-mail verificado"
+          value={
+            account.emailVerified === null
+              ? "Não disponível"
+              : account.emailVerified
+                ? "Sim"
+                : "Não"
+          }
+        />
+        <ReadValue
+          label="Cadastro na instituição"
+          value={formatDate(account.createdAt ?? "")}
+        />
+        <ReadValue
+          label="Criação da conta"
+          value={formatDate(account.authCreatedAt)}
+        />
+        <ReadValue
+          label="Último acesso"
+          value={formatDate(account.lastSignInAt)}
+        />
+        <ReadValue
+          label="Última alteração de acesso"
+          value={formatDate(account.updatedAt)}
+        />
+        <ReadValue label="Cadastrado por" value={account.createdBy} />
+        <ReadValue label="Membro vinculado (ID)" value={account.personId} />
+        <ReadValue
+          label="Campi vinculados"
+          value={account.campusIds.join(", ")}
+        />
+        <ReadValue
+          label="Papéis atuais"
+          value={account.roles
+            .map(
+              (role) =>
+                ROLES.find((option) => option.value === role)?.label ?? role,
+            )
+            .join(", ")}
+        />
+      </div>
+      <details>
+        <summary>Editar papéis deste usuário</summary>
+        <div style={{ ...gridStyle, marginTop: 10 }}>
+          {ROLES.map((role) => (
+            <label key={role.value} style={checkStyle}>
+              <input
+                type="checkbox"
+                disabled={busy}
+                checked={roles.includes(role.value)}
+                onChange={(event) =>
+                  setRoles((current) =>
+                    event.target.checked
+                      ? [...current, role.value]
+                      : current.filter((value) => value !== role.value),
+                  )
+                }
+              />{" "}
+              {role.label}
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          style={{ ...secondaryButton, marginTop: 10 }}
+          disabled={busy}
+          onClick={() => onUpdate({ roles })}
+        >
+          Salvar papéis
+        </button>
+      </details>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button
           style={account.isActive ? dangerButton : secondaryButton}
-          disabled={!reasonReady || busy}
+          disabled={busy}
           onClick={() => onUpdate({ isActive: !account.isActive })}
         >
           {account.isActive ? <ShieldOff size={14} /> : <UserCheck size={14} />}
-          {account.isActive ? "Bloquear" : "Ativar"}
+          {account.isActive
+            ? "Bloquear acesso à instituição"
+            : "Ativar acesso à instituição"}
         </button>
         {!account.linked && (
           <button
             title="Remover acesso sem vínculo"
             aria-label={`Remover ${account.email}`}
             style={iconDangerButton}
-            disabled={!reasonReady || busy}
+            disabled={busy}
             onClick={onRemove}
           >
             <Trash2 size={15} />
@@ -617,6 +924,17 @@ function UserRow({
         )}
       </div>
     </div>
+  );
+}
+
+function ReadValue({ label, value }: { label: string; value: string }) {
+  return (
+    <dl style={{ minWidth: 0, margin: 0 }}>
+      <dt style={muted}>{label}</dt>
+      <dd style={{ margin: "4px 0 0", fontSize: 13, overflowWrap: "anywhere" }}>
+        {value || "Não informado"}
+      </dd>
+    </dl>
   );
 }
 
@@ -708,6 +1026,7 @@ function auditLabel(action: string) {
   );
 }
 function formatDate(value: string) {
+  if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
 }

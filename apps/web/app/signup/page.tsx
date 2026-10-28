@@ -273,6 +273,7 @@ export default function SignupPage() {
         churchName: churchName.trim(),
         ownerUid: credential.user.uid,
         ownerEmail: email.trim(),
+        addressPostalCode: cep.replace(/\D/g, ""),
         taxId: taxId.replace(/\D/g, ""),
         addressCity: city.trim(),
         addressState: state,

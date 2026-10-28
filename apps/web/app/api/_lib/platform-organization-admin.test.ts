@@ -8,6 +8,18 @@ const state = vi.hoisted(() => ({
     path: string;
     data?: Record<string, any>;
   }>,
+  profiles: new Map<string, any>(),
+}));
+
+vi.mock("./platform-auth-profiles", () => ({
+  readPlatformAuthProfiles: vi.fn(
+    async (ids: string[]) =>
+      new Map(
+        ids
+          .filter((id) => state.profiles.has(id))
+          .map((id) => [id, state.profiles.get(id)]),
+      ),
+  ),
 }));
 
 vi.mock("./member-account-store", async () => {
@@ -25,8 +37,23 @@ vi.mock("./member-account-store", async () => {
       work({
         read: async (...paths: string[]) =>
           paths.map((path) => state.docs.get(path) ?? null),
-        query: async (parent: string, collection: string) =>
-          state.queries.get(`${parent}/${collection}`) ?? [],
+        query: async (
+          parent: string,
+          collection: string,
+          _field: string,
+          _value: unknown,
+          _op: string,
+          limit = 200,
+          _and: unknown,
+          order?: { field: string },
+          after?: string,
+        ) => {
+          let rows = [...(state.queries.get(`${parent}/${collection}`) ?? [])];
+          if (order?.field === "__name__")
+            rows.sort((a, b) => a.id.localeCompare(b.id));
+          if (after) rows = rows.filter((row) => row.id > after);
+          return rows.slice(0, limit);
+        },
         set: (path: string, data: Record<string, any>) =>
           state.writes.push({ kind: "set", path, data }),
         patch: (path: string, data: Record<string, any>) =>
@@ -37,11 +64,16 @@ vi.mock("./member-account-store", async () => {
 });
 
 import {
+  readPlatformOrganization,
+  readPlatformOrganizationUsers,
+  updatePlatformOrganization,
   removePlatformUser,
   updatePlatformModules,
   updatePlatformPlan,
   updatePlatformUser,
 } from "./platform-organization-admin";
+import { readPlatformAuthProfiles } from "./platform-auth-profiles";
+import { planHasModule } from "@alvo/firebase/src/plans";
 
 const orgId = "org_test";
 const root = `organizations/${orgId}`;
@@ -50,6 +82,8 @@ beforeEach(() => {
   state.docs.clear();
   state.queries.clear();
   state.writes.length = 0;
+  state.profiles.clear();
+  vi.mocked(readPlatformAuthProfiles).mockClear();
   state.docs.set("platformAdmins/platform_owner", {
     email: "owner@example.com",
   });
@@ -67,6 +101,186 @@ beforeEach(() => {
 });
 
 describe("administração de instituições da plataforma", () => {
+  it("só consulta perfis Auth depois de autorizar a administração da plataforma", async () => {
+    await expect(
+      readPlatformOrganization({ organizationId: orgId }, "intruder"),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      readPlatformOrganizationUsers({ organizationId: orgId }, "intruder"),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(readPlatformAuthProfiles).not.toHaveBeenCalled();
+  });
+
+  it("inclui o cadastro completo e os perfis das contas pertencentes à instituição", async () => {
+    state.docs.set(root, {
+      ownerUid: "owner",
+      legalName: "Instituição fictícia",
+      taxId: "12345678901",
+      addressLine: "Rua de QA",
+      addressReference: "Dado fictício",
+      registrationEmail: "original@example.test",
+      secret: "never-return",
+    });
+    state.queries.set(`${root}/users`, [
+      {
+        id: "owner",
+        email: "old@example.test",
+        roles: ["pastor", "church_admin"],
+        isActive: true,
+        secret: "never-return",
+        personId: "person",
+        campusIds: ["campus_1"],
+      },
+    ]);
+    state.profiles.set("owner", {
+      displayName: "Responsável fictício",
+      email: "current@example.test",
+      phone: "+5500000000000",
+      emailVerified: true,
+      disabled: false,
+      createdAt: "2026-01-01T00:00:00Z",
+      lastSignInAt: "2026-02-01T00:00:00Z",
+    });
+    const result = await readPlatformOrganization(
+      { organizationId: orgId, userId: "outside" },
+      "platform_owner",
+    );
+    expect(result.company).toMatchObject({
+      legalName: "Instituição fictícia",
+      addressReference: "Dado fictício",
+    });
+    expect(result.organization.registrationEmail).toBe("original@example.test");
+    expect(result.owner.email).toBe("current@example.test");
+    expect(result.users[0]).toMatchObject({
+      displayName: "Responsável fictício",
+      roles: ["pastor", "church_admin"],
+      campusIds: ["campus_1"],
+      authStatus: "active",
+      emailVerified: true,
+    });
+    expect(JSON.stringify(result)).not.toContain("never-return");
+    expect(readPlatformAuthProfiles).toHaveBeenCalledWith(["owner", "owner"]);
+  });
+
+  it("pagina usuários sem omitir os registros além do limite antigo", async () => {
+    state.queries.set(
+      `${root}/users`,
+      Array.from({ length: 271 }, (_, n) => ({
+        id: `user_${String(n).padStart(3, "0")}`,
+        roles: ["member"],
+      })),
+    );
+    const first = await readPlatformOrganization(
+      { organizationId: orgId },
+      "platform_owner",
+    );
+    const second = await readPlatformOrganizationUsers(
+      { organizationId: orgId, cursor: first.usersPage.nextCursor },
+      "platform_owner",
+    );
+    const third = await readPlatformOrganizationUsers(
+      { organizationId: orgId, cursor: second.usersPage.nextCursor },
+      "platform_owner",
+    );
+    expect(
+      new Set(
+        [...first.users, ...second.users, ...third.users].map((row) => row.id),
+      ).size,
+    ).toBe(271);
+    expect(third.usersPage.nextCursor).toBeNull();
+  });
+
+  it("salva dados cadastrais sem alterar a conta de login ou a assinatura", async () => {
+    await updatePlatformOrganization(
+      {
+        organizationId: orgId,
+        reason: "Correção solicitada",
+        displayName: "Fictícia",
+        publicName: "Fictícia",
+        status: "active",
+        legalName: "Instituição de QA",
+        contactEmail: "contact@example.test",
+        addressState: "pa",
+        registrationEmail: "cannot-change@example.test",
+        ownerUid: "intruder",
+      },
+      "platform_owner",
+    );
+    const saved = state.writes.find((row) => row.path === root)?.data;
+    expect(saved).toMatchObject({
+      legalName: "Instituição de QA",
+      contactEmail: "contact@example.test",
+      addressState: "PA",
+    });
+    expect(saved).not.toHaveProperty("registrationEmail");
+    expect(saved).not.toHaveProperty("ownerUid");
+    expect(
+      state.writes.some((row) => row.path.endsWith("settings/subscription")),
+    ).toBe(false);
+  });
+
+  it.each(["free", "comunidade", "pastoral", "rede", "enterprise"])(
+    "aplica assinatura e módulos padrão de %s atomicamente",
+    async (plan) => {
+      state.docs.set(`${root}/settings/features`, {
+        organizationId: orgId,
+        customMetadata: "preserved",
+        modules: {
+          core: { enabled: true },
+          finance: { enabled: false, source: "manual", beta: true },
+          groups: { enabled: false },
+        },
+      });
+      await updatePlatformPlan(
+        {
+          organizationId: orgId,
+          reason: "Plano solicitado",
+          plan,
+          billingStatus: "active",
+        },
+        "platform_owner",
+      );
+      const modules = state.writes.find((row) =>
+        row.path.endsWith("settings/features"),
+      )?.data?.modules;
+      for (const key of Object.keys(modules))
+        expect(modules[key].enabled).toBe(planHasModule(plan as any, key));
+      expect(modules.finance).toMatchObject({ source: "plan", beta: true });
+      expect(
+        state.writes.find((row) => row.path.endsWith("settings/subscription"))
+          ?.data?.plan,
+      ).toBe(plan);
+      expect(
+        state.writes.find((row) => row.path.endsWith("settings/features"))?.data
+          ?.customMetadata,
+      ).toBe("preserved");
+    },
+  );
+
+  it("não permite marcar uma função acima do plano e valida motivo antes de gravar", async () => {
+    await expect(
+      updatePlatformModules(
+        {
+          organizationId: orgId,
+          reason: "Teste de plano",
+          modules: { children: true },
+        },
+        "platform_owner",
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      updatePlatformPlan(
+        {
+          organizationId: orgId,
+          reason: "",
+          plan: "enterprise",
+          billingStatus: "active",
+        },
+        "platform_owner",
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(state.writes).toHaveLength(0);
+  });
   it("recusa qualquer mutação fora de platformAdmins", async () => {
     await expect(
       updatePlatformPlan(

@@ -20,7 +20,7 @@ function decode(value: Data): any {
   return value.doubleValue ?? value.timestampValue ?? value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
-  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "NOT_EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }, order?: { field: string; direction: "ASCENDING" | "DESCENDING" }) => Promise<Data[]>;
+  query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "NOT_EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }, order?: { field: string; direction: "ASCENDING" | "DESCENDING" }, startAfterId?: string) => Promise<Data[]>;
   usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
   set: (path: string, data: Data) => void;
@@ -57,10 +57,11 @@ export async function accountTransaction<T>(work: (tx: AccountTransaction) => Pr
       if (!transaction) throw new Error("Transação ausente.");
       const writes: Data[] = [];
       const result = await work({
-        query: async (parent, collection, field, value, op = "EQUAL", limit = 200, and, order) => {
+        query: async (parent, collection, field, value, op = "EQUAL", limit = 200, and, order, startAfterId) => {
+          if (startAfterId && (order?.field !== "__name__" || startAfterId.includes("/"))) throw new Error("Cursor inválido.");
           const filters = field ? [{ fieldFilter: { field: { fieldPath: field }, op, value: encode(value) } }] : [];
           if (and) filters.push({ fieldFilter: { field: { fieldPath: and.field }, op: and.op || "EQUAL", value: encode(and.value) } });
-          const rows: Data[] = await call(`/${parent}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: collection }], ...(filters.length ? { where: filters.length === 1 ? filters[0] : { compositeFilter: { op: "AND", filters } } } : {}), ...(order ? { orderBy: [{ field: { fieldPath: order.field }, direction: order.direction }] } : {}), limit } });
+          const rows: Data[] = await call(`/${parent}:runQuery`, { transaction, structuredQuery: { from: [{ collectionId: collection }], ...(filters.length ? { where: filters.length === 1 ? filters[0] : { compositeFilter: { op: "AND", filters } } } : {}), ...(order ? { orderBy: [{ field: { fieldPath: order.field }, direction: order.direction }] } : {}), ...(startAfterId ? { startAt: { values: [{ referenceValue: name(`${parent}/${collection}/${startAfterId}`) }], before: false } } : {}), limit } });
           return rows.filter(row => row.document).map(row => ({ ...decode({ mapValue: { fields: row.document.fields } }), id: row.document.name.split("/").at(-1) }));
         },
         usersByEmail: async (orgId, email) => {

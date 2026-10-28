@@ -205,7 +205,11 @@ function toOrganization(documentId: string, data: DocumentData): Organization {
     legalName: data.legalName ? String(data.legalName) : undefined,
     publicName: data.publicName ? String(data.publicName) : undefined,
     displayName: data.displayName ? String(data.displayName) : undefined,
-    organizationType: data.organizationType as Organization["organizationType"]
+    organizationType: data.organizationType as Organization["organizationType"],
+    ownerUid: data.ownerUid ? String(data.ownerUid) : undefined,
+    registrationEmail: data.registrationEmail ? String(data.registrationEmail) : undefined,
+    createdAt: data.createdAt ? String(data.createdAt) : undefined,
+    ...Object.fromEntries(["taxId", "contactEmail", "contactPhone", "website", "addressPostalCode", "addressCity", "addressState", "addressLine", "addressNumber", "addressComplement", "addressNeighborhood", "addressSector", "addressQuadra", "addressLote", "addressReference"].map(key => [key, data[key] ? String(data[key]) : undefined])),
   };
 }
 
@@ -1005,6 +1009,7 @@ export async function provisionSelfServeOrganization(
     churchName: string;
     ownerUid: string;
     ownerEmail: string;
+    addressPostalCode?: string;
     taxId?: string;
     addressCity?: string;
     addressState?: string;
@@ -1039,6 +1044,9 @@ export async function provisionSelfServeOrganization(
     organizationType: "church",
     organizationTier: "solo",
     ownerUid,
+    registrationEmail: ownerEmail,
+    createdAt: now,
+    addressPostalCode: params.addressPostalCode,
     taxId,
     addressCity,
     addressState,

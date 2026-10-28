@@ -3,6 +3,7 @@ import { boundedJson, privateHeaders } from "../../_lib/kids-media";
 import { AccountError } from "../../_lib/member-account-store";
 import {
   readPlatformOrganization,
+  readPlatformOrganizationUsers,
   removePlatformUser,
   updatePlatformModules,
   updatePlatformOrganization,
@@ -19,19 +20,21 @@ export async function POST(req: NextRequest) {
     const result =
       body.action === "detail"
         ? await readPlatformOrganization(body, uid)
-        : body.action === "updateOrganization"
-          ? await updatePlatformOrganization(body, uid)
-          : body.action === "updatePlan"
-            ? await updatePlatformPlan(body, uid)
-            : body.action === "updateModules"
-              ? await updatePlatformModules(body, uid)
-              : body.action === "updateUser"
-                ? await updatePlatformUser(body, uid)
-                : body.action === "removeUser"
-                  ? await removePlatformUser(body, uid)
-                  : (() => {
-                      throw new AccountError(400, "Operação inválida.");
-                    })();
+        : body.action === "users"
+          ? await readPlatformOrganizationUsers(body, uid)
+          : body.action === "updateOrganization"
+            ? await updatePlatformOrganization(body, uid)
+            : body.action === "updatePlan"
+              ? await updatePlatformPlan(body, uid)
+              : body.action === "updateModules"
+                ? await updatePlatformModules(body, uid)
+                : body.action === "updateUser"
+                  ? await updatePlatformUser(body, uid)
+                  : body.action === "removeUser"
+                    ? await removePlatformUser(body, uid)
+                    : (() => {
+                        throw new AccountError(400, "Operação inválida.");
+                      })();
     return NextResponse.json(result, { headers: privateHeaders });
   } catch (error) {
     if (!(error instanceof AccountError))

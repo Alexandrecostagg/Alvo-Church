@@ -42,7 +42,7 @@ function formatBRL(value: number) {
 }
 
 export function PlatformAdminView() {
-  const { user, firebaseConfig } = useAppAuth();
+  const { user, firebaseConfig, organizationId, refreshTenantRuntime } = useAppAuth();
 
   const [checking, setChecking] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -172,10 +172,14 @@ export function PlatformAdminView() {
 
       {selectedOrganizationId && user ? (
         <PlatformOrganizationManager
+          key={selectedOrganizationId}
           organizationId={selectedOrganizationId}
           user={user}
           onClose={() => setSelectedOrganizationId(null)}
-          onChanged={() => void loadOrganizations()}
+          onChanged={() => {
+            void loadOrganizations();
+            if (selectedOrganizationId === organizationId) refreshTenantRuntime();
+          }}
         />
       ) : loading ? (
         <div style={{ padding: "3rem", display: "flex", justifyContent: "center", color: "var(--color-text-secondary)" }}>

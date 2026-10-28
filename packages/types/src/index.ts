@@ -71,6 +71,12 @@ export interface Organization {
   // Firestore rules para permitir o bootstrap do primeiro admin (self-serve).
   // Ausente em organizações antigas/provisionadas manualmente.
   ownerUid?: string;
+  registrationEmail?: string;
+  createdAt?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  addressPostalCode?: string;
   // CNPJ (se tiver) ou CPF do responsável — coletado já no cadastro pra
   // não ficar "solto"; reaproveitado como sugestão no checkout de upgrade.
   taxId?: string;

@@ -38,7 +38,8 @@
     "qa:whatsapp": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-whatsapp.ts",
     "qa:security": "node scripts/with-qa-env.mjs node scripts/audit-security-local.mjs",
     "qa:cloudflare-runtime": "node scripts/verify-cloudflare-runtime.mjs",
-    "qa:mobile": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-mobile.ts"
+    "qa:mobile": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-mobile.ts",
+    "qa:platform-admin": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-platform-admin.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
