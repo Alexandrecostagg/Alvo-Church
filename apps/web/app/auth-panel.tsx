@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAppAuth } from "./providers";
 
 export function AuthPanel() {
-  const { configured, firebaseReady, user, firebaseConfig, signIn, signOut } = useAppAuth();
+  const { configured, firebaseReady, authError, retryAuth, user, firebaseConfig, signIn, signOut } = useAppAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,8 +89,14 @@ export function AuthPanel() {
     >
       <strong>Entrar no painel</strong>
       <p style={{ margin: "8px 0 16px", lineHeight: 1.6, color: "#6b7280", fontSize: 14 }}>
-        {firebaseReady ? "Entre com seu e-mail e senha." : "Carregando..."}
+        {authError ? "O acesso não terminou de carregar." : firebaseReady ? "Entre com seu e-mail e senha." : "Carregando..."}
       </p>
+      {authError ? (
+        <div role="alert" style={{ marginBottom: 16 }}>
+          <p style={errorStyle}>{authError}</p>
+          <button type="button" onClick={retryAuth} style={{ ...buttonStyle, marginTop: 12 }}>Tentar novamente</button>
+        </div>
+      ) : null}
       <form
         onSubmit={(event) => {
           event.preventDefault();

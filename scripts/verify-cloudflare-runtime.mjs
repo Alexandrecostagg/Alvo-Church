@@ -58,6 +58,23 @@ try {
   assert.equal(landing.status, 200);
   assert.equal(landing.headers.get("x-frame-options"), "DENY");
   await landing.body?.cancel();
+  // A 200 response alone missed the blank-login regression: require the
+  // server-rendered form and usable client assets in the built Worker.
+  const login = await request("/login");
+  assert.equal(login.status, 200);
+  const loginHtml = await login.text();
+  assert(loginHtml.includes("Entrar no painel"));
+  assert(loginHtml.includes('type="email"'));
+  assert(loginHtml.includes('type="password"'));
+  const loginScripts = [...loginHtml.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
+  assert(loginScripts.length > 0);
+  for (const src of loginScripts) {
+    assert(src.startsWith("/_next/"));
+    const asset = await request(src);
+    assert.equal(asset.status, 200, `Login asset missing: ${src}`);
+    assert(asset.headers.get("content-type")?.includes("javascript"));
+    await asset.body?.cancel();
+  }
   const admin = await request("/api/platform/lp-analytics");
   assert.equal(admin.status, 401);
   await admin.body?.cancel();
@@ -73,7 +90,7 @@ try {
     assert.equal(response.status, expected);
     await response.body?.cancel();
   }
-  console.log("Cloudflare runtime: landing, private QR, anonymous admin/mobile denial and production CORS passed.");
+  console.log("Cloudflare runtime: login form and JS assets, landing, private QR, anonymous admin/mobile denial and production CORS passed.");
 } finally {
   if (child.pid) {
     try { process.kill(-child.pid, "SIGTERM"); } catch {}

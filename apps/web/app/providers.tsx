@@ -11,9 +11,13 @@ import {
 } from "react";
 import type { FirebaseAuthUser, FirebaseWebRuntimeConfig } from "@alvo/firebase";
 import type { AppRole, TenantRuntimeSnapshot } from "@alvo/types";
+import { readBrowserStorage, writeBrowserStorage } from "../src/lib/browser-storage";
+import { startAuthSession } from "../src/lib/auth-bootstrap";
 
 interface AuthContextValue {
   firebaseReady: boolean;
+  authError: string | null;
+  retryAuth: () => void;
   configured: boolean;
   user: FirebaseAuthUser | null;
   roles: AppRole[];
@@ -56,6 +60,8 @@ function isFirebaseWebRuntimeConfigured(config: FirebaseWebRuntimeConfig) {
 export function AppProviders({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authAttempt, setAuthAttempt] = useState(0);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
   const [tenantReady, setTenantReady] = useState(false);
@@ -66,7 +72,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [orgResolved, setOrgResolved] = useState(false);
   const [organizationId, setOrganizationId] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem(LS_ORG_KEY) ?? DEFAULT_ORGANIZATION_ID;
+      return readBrowserStorage(LS_ORG_KEY) ?? DEFAULT_ORGANIZATION_ID;
     }
     return DEFAULT_ORGANIZATION_ID;
   });
@@ -93,25 +99,24 @@ export function AppProviders({ children }: { children: ReactNode }) {
       return;
     }
 
-    let unsubscribe: (() => void) | null = null;
-    let active = true;
-
-    async function init() {
-      const sdk = await import("@alvo/firebase");
-      if (!active) return;
-      unsubscribe = sdk.subscribeToFirebaseAuthState(firebaseConfig, (nextUser) => {
+    setAuthError(null);
+    return startAuthSession({
+      config: firebaseConfig,
+      loadSdk: () => import("@alvo/firebase"),
+      onUser: (nextUser) => {
         setUser(nextUser);
         setFirebaseReady(true);
-      });
-    }
+        setAuthError(null);
+      },
+      onUnavailable: () => setAuthError("Não foi possível carregar o acesso. Confira sua conexão e tente novamente."),
+    });
+  }, [configured, firebaseConfig, authAttempt]);
 
-    void init();
-
-    return () => {
-      active = false;
-      if (unsubscribe) unsubscribe();
-    };
-  }, [configured, firebaseConfig]);
+  const retryAuth = useCallback(() => {
+    setAuthError(null);
+    setFirebaseReady(false);
+    setAuthAttempt((attempt) => attempt + 1);
+  }, []);
 
   useEffect(() => {
     if (!firebaseReady || !user) {
@@ -170,7 +175,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         const orgExists = await sdk.fetchOrganizationById(firebaseConfig, organizationId);
         if (!orgExists) {
           if (organizationId !== DEFAULT_ORGANIZATION_ID) {
-            localStorage.removeItem(LS_ORG_KEY);
+            writeBrowserStorage(LS_ORG_KEY, null);
             if (!cancelled) setOrganizationId(DEFAULT_ORGANIZATION_ID);
             return;
           }
@@ -221,7 +226,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const hasAnyRole = useCallback((required: AppRole[]) => required.some((r) => roles.includes(r)), [roles]);
 
   const switchOrganization = useCallback((orgId: string) => {
-    localStorage.setItem(LS_ORG_KEY, orgId);
+    writeBrowserStorage(LS_ORG_KEY, orgId);
     setOrganizationId(orgId);
     setTenantReady(false);
     setTenantRuntime(null);
@@ -256,6 +261,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const contextValue = useMemo<AuthContextValue>(
     () => ({
       firebaseReady,
+      authError,
+      retryAuth,
       configured,
       user,
       roles,
@@ -272,6 +279,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
     }),
     [
       firebaseReady,
+      authError,
+      retryAuth,
       configured,
       user,
       roles,
