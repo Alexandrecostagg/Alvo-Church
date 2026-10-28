@@ -82,6 +82,14 @@ try {
   assert.equal(mobile.status, 401);
   assert(mobile.headers.get("cache-control")?.includes("no-store"));
   await mobile.body?.cancel();
+  for (const path of ["/api/serving", "/api/worship", "/api/media/banner-copy"]) {
+    const response = await request(path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({action:"snapshot", organizationId:"synthetic-runtime-probe"})});
+    assert.equal(response.status, 401, `Anonymous access must be denied: ${path}`);
+    await response.body?.cancel();
+  }
+  const background = await request("/api/media/bg-proxy");
+  assert.equal(background.status, 401);
+  await background.body?.cancel();
   for (const [origin, expected] of [
     ["http://localhost:3000", 403],
     ["https://plataformaesdras.com.br", 204],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Printer, Download, Users, Heart, Waypoints,
   TrendingUp, CalendarRange, UserPlus, RefreshCw,
@@ -14,6 +14,7 @@ import { getTribeDisplayLabel } from "@alvo/domain";
 import type { Person, Group, Event, FinancialTransaction, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { Sparkline, BarChart } from "../../components/charts/NetworkCharts";
+import { ManagementReportPrintPortal, type ManagementReportData } from "./management-report-document";
 
 /* ── Tipos ─────────────────────────────────────────────────────────────────── */
 interface KpiBlock { label: string; value: string | number; sub?: string; color: string; bg: string }
@@ -22,7 +23,7 @@ const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov
 const TRIBE_PALETTE = ["#f97316","#3b82f6","#06b6d4","#10b981","#84cc16","#a855f7","#ec4899","#eab308","#14b8a6","#ef4444","#6366f1","#0ea5e9"];
 
 function fmtBRL(n: number) {
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
 }
 
 // Chave YYYY-MM de uma data.
@@ -30,20 +31,27 @@ function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
 export function ReportsView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
+  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
   const [people, setPeople]   = useState<Person[]>([]);
   const [groups, setGroups]   = useState<Group[]>([]);
   const [events, setEvents]   = useState<Event[]>([]);
   const [txns, setTxns]       = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const printRef = useRef<HTMLDivElement>(null);
-  const generatedAt = new Date().toLocaleString("pt-BR");
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null);
+  const [loadedOrganizationId, setLoadedOrganizationId] = useState<string | null>(null);
+  const [printReady, setPrintReady] = useState(false);
+  const generatedAt = loadedAt?.toLocaleString("pt-BR") ?? "";
 
   const isReal = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
     async function load() {
-      if (!isReal || !organizationId) { setLoading(false); return; }
+      if (!isReal || !organizationId) { setLoading(false); setLoadError("Entre na sua conta para consultar os relatórios."); return; }
       try {
         const [p, g, e, t] = await Promise.all([
           cachedFetchPeople(firebaseConfig, { organizationId }, 2000),
@@ -51,15 +59,20 @@ export function ReportsView() {
           fetchEvents(firebaseConfig, { organizationId }),
           fetchFinancialTransactions(firebaseConfig, { organizationId }, 2000),
         ]);
+        if (!active) return;
         setPeople(p); setGroups(g); setEvents(e); setTxns(t);
-      } catch { /* mantém vazio — mostra estado honesto */ } finally { setLoading(false); }
+        setLoadedAt(new Date());
+        setLoadedOrganizationId(organizationId);
+      } catch {
+        if (active) setLoadError("Não foi possível carregar os dados do relatório. Tente novamente antes de imprimir ou exportar.");
+      } finally { if (active) setLoading(false); }
     }
     void load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReal, organizationId]);
+    return () => { active = false; };
+  }, [isReal, organizationId, firebaseConfig, loadAttempt]);
 
   /* ── Métricas reais ──────────────────────────────────────────────────── */
-  const now = new Date();
+  const now = loadedAt ?? new Date();
   const y = now.getFullYear(), m = now.getMonth();
   const monthStartISO = new Date(y, m, 1).toISOString();
 
@@ -69,7 +82,7 @@ export function ReportsView() {
   const totalEvents    = events.length;
   // Data de entrada real (createdAt); cadastros antigos caem no consentimento LGPD.
   const joinedAt = (p: Person) => p.createdAt ?? p.consentLgpdAt;
-  const newThisMonth   = people.filter(p => { const j = joinedAt(p); return j !== undefined && j >= monthStartISO; }).length;
+  const newThisMonth   = people.filter(p => { const j = joinedAt(p); return p.memberStatus !== "visitor" && j !== undefined && j >= monthStartISO; }).length;
 
   /* ── Arrecadação real (ledger financeiro) ────────────────────────────── */
   const incomeByMonth = new Map<string, number>();
@@ -123,14 +136,40 @@ export function ReportsView() {
     .sort((a, b) => b.value - a.value);
   if (semTribo) tribeData.push({ label: "Sem tribo", value: semTribo, color: "#94a3b8" });
 
-  function handlePrint() { window.print(); }
+  const organization = tenantRuntime?.organization.id === organizationId ? tenantRuntime.organization : null;
+  const organizationName = organization?.displayName || organization?.publicName || organization?.name || "Instituição";
+  const summaryRows = [
+    { ind: "Total de Membros", cur: String(totalMembers), prev: null, delta: null },
+    { ind: "Novos Membros (mês)", cur: String(newThisMonth), prev: null, delta: null },
+    { ind: "Visitantes", cur: String(totalVisitors), prev: null, delta: null },
+    { ind: "Grupos Ativos", cur: String(activeGroups), prev: null, delta: null },
+    { ind: "Eventos", cur: String(totalEvents), prev: null, delta: null },
+    ...(hasFinance ? [{ ind: "Arrecadação", cur: fmtBRL(givingThisMonth), prev: fmtBRL(givingPrevMonth), delta: givingPrevMonth > 0 ? givingDelta : null }] : []),
+  ];
+  const printData: ManagementReportData = {
+    organizationName,
+    organizationLocation: [organization?.addressCity, organization?.addressState].filter(Boolean).join(" / "),
+    generatedAt,
+    reference: now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+    summary: summaryRows.map(row => ({ indicator: row.ind, current: row.cur, previous: row.prev ?? "—", change: row.delta === null ? "—" : `${row.delta >= 0 ? "+" : ""}${row.delta.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` })),
+    hasFinance,
+    income: givingSeries.map((amount, index) => ({ month: new Date(y, m - 5 + index, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }), amount: fmtBRL(amount) })),
+    composition: statusCounts.map(row => ({ label: row.label, count: row.value, percentage: `${totalPeople ? Math.round(row.value / totalPeople * 100) : 0}%` })),
+    tribes: tribeData.map(row => ({ label: row.label, count: row.value })),
+  };
+  function handlePrint() {
+    if (!printReady || loadError) return;
+    const previousTitle = document.title;
+    document.title = `Relatório gerencial - ${organizationName} - ${monthKey(now)}`;
+    try { window.print(); } finally { document.title = previousTitle; }
+  }
 
   function exportCSV() {
     const rows: string[][] = [
       ["Indicador","Valor","Período"],
       ["Total de Membros", String(totalMembers), "Atual"],
       ["Visitantes", String(totalVisitors), "Atual"],
-      ["Novos Membros (LGPD)", String(newThisMonth), "Mês atual"],
+      ["Novos Membros (mês)", String(newThisMonth), "Mês atual"],
       ["Grupos Ativos", String(activeGroups), "Atual"],
       ["Eventos", String(totalEvents), "Atual"],
     ];
@@ -145,7 +184,7 @@ export function ReportsView() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) {
+  if (loading || (!loadError && loadedOrganizationId !== organizationId)) {
     return (
       <div className="page-root" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
         <RefreshCw size={24} style={{ color: "var(--alvo-ink-soft)", animation: "spin 1s linear infinite" }} />
@@ -154,10 +193,17 @@ export function ReportsView() {
     );
   }
 
+  if (loadError) return <div className="page-root">
+    <h1 className="page-title">Relatórios</h1>
+    <p role="alert">{loadError}</p>
+    <button className="btn-primary" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Tentar novamente</button>
+  </div>;
+
   return (
-    <div className="page-root" ref={printRef}>
+    <div className="page-root">
+      <ManagementReportPrintPortal data={printData} onReady={setPrintReady} />
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="page-header no-print">
+      <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Relatórios</h1>
           <p className="page-subtitle">Visão gerencial consolidada · gerado em {generatedAt}</p>
@@ -166,17 +212,11 @@ export function ReportsView() {
           <button onClick={exportCSV} className="btn-outline" style={{ display:"flex", alignItems:"center", gap:6 }}>
             <Download size={15} /> Exportar CSV
           </button>
-          <button onClick={handlePrint} className="btn-primary" style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <button onClick={handlePrint} disabled={!printReady} className="btn-primary" style={{ display:"flex", alignItems:"center", gap:6 }}>
             <Printer size={15} /> Imprimir / PDF
           </button>
         </div>
       </header>
-
-      {/* Print header (visible only when printing) */}
-      <div className="print-only" style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Relatório Gerencial</h1>
-        <p style={{ color: "#64748b", margin: "4px 0 0" }}>Gerado em {generatedAt}</p>
-      </div>
 
       {/* ── KPI Stats ──────────────────────────────────────────────────── */}
       <div className="stats-row" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}>
@@ -203,7 +243,7 @@ export function ReportsView() {
       <section className="content-section">
         <div className="section-header">
           <h2 className="section-title">Arrecadação — últimos 6 meses</h2>
-          {hasFinance && (
+          {hasFinance && givingPrevMonth > 0 && (
             <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: givingDelta >= 0 ? "#dcfce7" : "#fee2e2", color: givingDelta >= 0 ? "#16a34a" : "#dc2626" }}>
               {givingDelta >= 0 ? "+" : ""}{givingDelta.toFixed(1)}% vs. mês anterior
             </span>
@@ -278,19 +318,7 @@ export function ReportsView() {
             </tr>
           </thead>
           <tbody>
-            {[
-              { ind: "Total de Membros",   cur: String(totalMembers),  prev: null,  delta: null },
-              { ind: "Novos Membros (mês)",cur: String(newThisMonth),  prev: null,  delta: null },
-              { ind: "Visitantes",         cur: String(totalVisitors), prev: null,  delta: null },
-              { ind: "Grupos Ativos",      cur: String(activeGroups),  prev: null,  delta: null },
-              { ind: "Eventos",            cur: String(totalEvents),   prev: null,  delta: null },
-              ...(hasFinance ? [{
-                ind: "Arrecadação",
-                cur: fmtBRL(givingThisMonth),
-                prev: fmtBRL(givingPrevMonth),
-                delta: givingDelta,
-              }] : []),
-            ].map((row, i) => {
+            {summaryRows.map((row, i) => {
               const pos = (row.delta ?? 0) >= 0;
               return (
                 <tr key={row.ind} style={{ borderBottom: "1px solid var(--alvo-line)", background: i % 2 === 0 ? "transparent" : "var(--alvo-surface-muted)" }}>
@@ -318,13 +346,6 @@ export function ReportsView() {
 
       <style jsx global>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          .page-root { padding: 0 !important; }
-          .content-section { break-inside: avoid; }
-        }
-        .print-only { display: none; }
       `}</style>
     </div>
   );

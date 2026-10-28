@@ -9,24 +9,11 @@ import {
 import { aiGate, completeAi } from "../../_lib/ai-quota";
 import { textField } from "../../_lib/finance-operations";
 
-export interface BannerCopyInput {
-  tipo: string; // Culto Domingo, Evento, Célula, etc.
-  tema: string;
-  pregador?: string;
-  data?: string;
-  estilo?: string; // "impactante" | "acolhedor" | "reverente"
-}
-
-export interface BannerCopy {
-  titulo: string;
-  subtitulo: string;
-  versiculo: string;
-  versiculoRef: string;
-  hashtags: string;
-  // Prompt EM INGLÊS para o gerador de imagem (Pollinations/FLUX): uma cena
-  // vibrante e temática, sem texto. Deixa o fundo com "vida" em vez do genérico.
-  imagemPrompt?: string;
-}
+import {
+  bannerCopyMessages,
+  parseBannerCopy,
+  type BannerCopyInput,
+} from "../../../../src/features/media/banner-contract";
 
 export async function POST(req: NextRequest) {
   let ticket: { auditId: string } | undefined;
@@ -54,11 +41,16 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    textField(body.tipo, "Tipo", 100);
-    textField(body.tema, "Tema", 500);
-    textField(body.pregador, "Pregador", 120, true);
-    textField(body.data, "Data", 100, true);
-    textField(body.estilo, "Estilo", 100, true);
+    const input: BannerCopyInput = {
+      tipo: textField(body.tipo, "Tipo", 100),
+      tema: textField(body.tema, "Tema", 500),
+      pregador: textField(body.pregador, "Pregador", 120, true),
+      data: textField(body.data, "Data", 100, true),
+      estilo: textField(body.estilo, "Estilo", 100, true),
+      direcao: textField(body.direcao, "Direção visual", 400, true),
+      versiculo: textField(body.versiculo, "Versículo", 180, true),
+      versiculoRef: textField(body.versiculoRef, "Referência", 60, true),
+    };
     await aiGate(organizationId, uid, "banner_copy", false);
     // Cascata de provedores: Gemini (principal) → Groq (fallback). Basta uma
     // das chaves estar configurada — a troca de provedor acontece no @alvo/ai.
@@ -70,8 +62,7 @@ export async function POST(req: NextRequest) {
     if (!keys.geminiApiKey && !keys.groqApiKey) {
       return NextResponse.json(
         {
-          error:
-            "Serviço de Sabedoria Pastoral não configurado.",
+          error: "Serviço de Sabedoria Pastoral não configurado.",
         },
         { status: 500 },
       );
@@ -79,60 +70,34 @@ export async function POST(req: NextRequest) {
 
     ticket = await aiGate(organizationId, uid, "banner_copy");
     orgId = organizationId;
-    const input: BannerCopyInput = body;
 
-    const prompt = `Você é um diretor de arte criando um banner de divulgação para redes sociais de uma igreja evangélica.
-
-Tipo de evento: ${input.tipo}
-Tema: ${input.tema}
-${input.pregador ? `Pregador/Cantor: ${input.pregador}` : ""}
-${input.data ? `Data/Hora: ${input.data}` : ""}
-Estilo desejado: ${input.estilo ?? "impactante"}
-
-Retorne APENAS um JSON válido (sem markdown, sem explicações) com este formato exato:
-{
-  "titulo": "título curto e impactante do banner (máx 5 palavras, direto e memorável, estilo cartaz)",
-  "subtitulo": "frase complementar de apoio (máx 12 palavras)",
-  "versiculo": "texto do versículo bíblico mais adequado ao tema",
-  "versiculoRef": "Livro Capítulo:Versículo (ex: João 3:16)",
-  "hashtags": "#tres #ou #quatro hashtags relevantes",
-  "imagemPrompt": "descrição EM INGLÊS de uma imagem de FUNDO cinematográfica e VIBRANTE que represente o tema visualmente para um cartaz de igreja. Descreva a cena, elementos simbólicos, iluminação (ex: warm golden light, volumetric god rays, glowing embers) e paleta de cores ricas. Deve ser luminosa e cheia de vida, NUNCA escura/apagada. NÃO inclua texto, letras, palavras ou pessoas com rosto reconhecível. Exemplo: 'two human hands reaching toward each other over glowing golden fire, warm amber and orange tones, volumetric light rays from above, dramatic cinematic poster art, luminous, rich vivid colors, ultra detailed'"
-}`;
-
-    // Gemini (principal) → cascata Groq (fallback). response_format json
-    // elimina fences de markdown e retries por JSON malformado; o JSON de copy
-    // tem ~300 tokens, então o modelo rápido já basta.
     let raw: string;
     try {
       const result = await callChatWithFallback(
         keys,
-        [{ role: "user", content: prompt }],
+        bannerCopyMessages(input),
         {
-          maxTokens: 500,
-          temperature: 0.8,
+          maxTokens: 700,
+          temperature: 0.4,
           jsonMode: true,
         },
       );
       raw = result.content || "{}";
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Erro desconhecido";
       throw new AccountError(
         502,
         "Falha ao gerar o texto. A tentativa iniciada permanece na cota.",
       );
     }
 
-    // strip accidental markdown fences
-    const cleaned = raw
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    let copy: BannerCopy;
+    let copy;
     try {
-      copy = JSON.parse(cleaned) as BannerCopy;
+      copy = parseBannerCopy(raw, input);
     } catch {
-      throw new AccountError(502, "Resposta de Sabedoria Pastoral inválida.");
+      throw new AccountError(
+        502,
+        "A IA retornou um conteúdo incompleto ou longo demais. Seus textos foram preservados; você pode editá-los manualmente.",
+      );
     }
 
     await completeAi(orgId, ticket.auditId, "completed");

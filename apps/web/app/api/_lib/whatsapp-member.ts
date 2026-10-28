@@ -1,3 +1,4 @@
+import { respondServing } from "./serving-response";
 import { randomBytes } from "node:crypto";
 import {
   AccountError,
@@ -267,5 +268,72 @@ export async function confirmOwnCellAttendance(
       selfReported: true,
     });
     return { ok: true, replayed: false };
+  });
+}
+
+export async function memberServingAssignments(orgId: string, phone: string) {
+  return accountTransaction(async (tx) => {
+    const root = `organizations/${orgId}`;
+    await assertModuleEnabled(tx, root, "volunteers");
+    const { personId } = await boundMember(tx, root, orgId, phone);
+    const rows = await tx.query(
+      root,
+      "serviceAssignments",
+      "personId",
+      personId,
+      "EQUAL",
+      200,
+    );
+    const teams = await tx.query(
+      root,
+      "serviceTeams",
+      undefined,
+      undefined,
+      "EQUAL",
+      500,
+    );
+    return rows
+      .filter(
+        (a) =>
+          a.organizationId === orgId &&
+          a.status === "pending" &&
+          Date.parse(a.serviceDate) > Date.now() - 86400000,
+      )
+      .sort((a, b) => Date.parse(a.serviceDate) - Date.parse(b.serviceDate))
+      .slice(0, 10)
+      .map((a) => ({
+        id: a.id,
+        area:
+          teams.find(
+            (t) => t.id === a.serviceTeamId || t.code === a.ministryCode,
+          )?.name ||
+          a.areaName ||
+          a.ministryCode,
+        role: a.role,
+        serviceDate: a.serviceDate,
+        timezone: a.timezone || "America/Belem",
+      }));
+  });
+}
+export async function respondWhatsappServing(
+  orgId: string,
+  phone: string,
+  id: string,
+  status: string,
+) {
+  return accountTransaction(async (tx) => {
+    const root = `organizations/${orgId}`;
+    await assertModuleEnabled(tx, root, "volunteers");
+    const { personId } = await boundMember(tx, root, orgId, phone);
+    return respondServing(
+      tx,
+      root,
+      orgId,
+      personId,
+      documentId(id, "Escala"),
+      status,
+      "",
+      "whatsapp",
+    );
   });
 }

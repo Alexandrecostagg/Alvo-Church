@@ -832,9 +832,11 @@ export type ServiceAssignmentStatus =
   | "confirmed"
   | "declined"
   | "present"
-  | "absent";
+  | "absent"
+  | "cancelled";
 
 export interface ServiceTeam {
+  roles?: string[];
   id: string;
   organizationId: string;
   campusId?: string;
@@ -846,6 +848,12 @@ export interface ServiceTeam {
 }
 
 export interface ServiceAssignment {
+  areaName?: string;
+  serviceName?: string;
+  timezone?: string;
+  endsAt?: string;
+  pushStatus?: string;
+  responseSource?: string;
   id: string;
   organizationId: string;
   campusId?: string;
@@ -1309,10 +1317,13 @@ export interface WorshipSong {
   title: string;
   artist: string;
   originalKey: string;
+  preferredKey?: string;
+  version?: number;
+  updatedAt?: string;
   tempoBpm?: number;
   spotifyUrl?: string;
   youtubeUrl?: string;
-  chordsLyrics?: string; // Cifras dinâmicas em Markdown: [C] [G] [Am] [F]
+  chordsLyrics?: string; // ChordPro: acordes entre colchetes ancorados à sílaba.
   createdAt: string;
 }
 
@@ -1564,6 +1575,7 @@ export interface BannerHistoryEntry {
   // Preview + foto (data URLs JPEG compactos)
   thumbnailDataUrl: string;
   photoDataUrl?: string;
+  backgroundDataUrl?: string; // Compressed background: reopening never calls the image provider.
 }
 
 export interface KidsOperationSession {

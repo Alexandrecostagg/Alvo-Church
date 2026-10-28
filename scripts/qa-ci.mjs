@@ -58,6 +58,8 @@ try {
     "qa:delivery9",
     "qa:delivery10",
     "qa:mobile",
+    "qa:serving",
+    "qa:worship",
     "qa:platform-admin",
   ])
     await run([task]);

@@ -10,6 +10,7 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   startAfter,
   updateDoc,
@@ -329,6 +330,7 @@ function toPerson(documentId: string, data: DocumentData): Person {
 
 function toServiceTeam(documentId: string, data: DocumentData): ServiceTeam {
   return {
+    roles: Array.isArray(data.roles) ? data.roles.map(String) : [],
     id: documentId,
     organizationId: String(data.organizationId ?? ""),
     campusId: data.campusId ? String(data.campusId) : undefined,
@@ -2611,6 +2613,9 @@ function toWorshipSong(documentId: string, data: DocumentData): WorshipSong {
     title: String(data.title ?? ""),
     artist: String(data.artist ?? ""),
     originalKey: String(data.originalKey ?? "C"),
+    preferredKey: data.preferredKey ? String(data.preferredKey) : undefined,
+    version: Number(data.version ?? 0),
+    updatedAt: data.updatedAt ? String(data.updatedAt) : undefined,
     tempoBpm: data.tempoBpm ? Number(data.tempoBpm) : undefined,
     spotifyUrl: data.spotifyUrl ? String(data.spotifyUrl) : undefined,
     youtubeUrl: data.youtubeUrl ? String(data.youtubeUrl) : undefined,
@@ -3217,7 +3222,8 @@ function toBannerHistoryEntry(documentId: string, data: DocumentData): BannerHis
       hashtags: String(copy.hashtags ?? "")
     },
     thumbnailDataUrl: String(data.thumbnailDataUrl ?? ""),
-    photoDataUrl: data.photoDataUrl ? String(data.photoDataUrl) : undefined
+    photoDataUrl: data.photoDataUrl ? String(data.photoDataUrl) : undefined,
+    backgroundDataUrl: data.backgroundDataUrl ? String(data.backgroundDataUrl) : undefined
   };
 }
 
@@ -3854,4 +3860,10 @@ export async function updatePrayerRequestStatus(
     respondedAt: new Date().toISOString(),
     respondedByUserId: params.respondedByUserId ?? null
   });
+}
+
+/** Remove this device only if a newer registration has not replaced its token. */
+export async function clearMobilePushToken(config:FirebaseWebRuntimeConfig,context:TenantContext,userId:string,token:string){
+ const db=getFirebaseFirestore(config),ref=doc(db,getTenantUserDocumentPath(context,userId));
+ await runTransaction(db,async tx=>{const row=await tx.get(ref);if(row.exists()&&row.data().expoPushToken===token)tx.update(ref,{expoPushToken:null,expoPushTokenUpdatedAt:new Date().toISOString()});});
 }

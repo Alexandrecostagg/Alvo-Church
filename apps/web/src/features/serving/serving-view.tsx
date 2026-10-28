@@ -1,1196 +1,1194 @@
 "use client";
-
-import { manualWhatsappLink } from "@alvo/utils";
-
-import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
-import { registerPerson } from "../../lib/register-person";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  Handshake,
-  ShieldCheck,
-  ShieldAlert,
-  ChevronRight,
   Plus,
-  Search,
-  Users,
-  UsersRound,
+  Settings2,
+  RefreshCw,
   Calendar,
-  MessageSquare,
-  Sparkles,
-  ChevronLeft,
+  Users,
   X,
-  FileText,
-  Send,
-  UserCheck
+  MessageSquare,
 } from "lucide-react";
-import {
-  saveServiceAssignment,
-  fetchServiceAssignments,
-  fetchServiceTeams,
-  saveServiceTeam,
-  fetchPeople,
-  isFirebaseWebRuntimeConfigured,
-  fetchScheduleSwapRequests,
-  saveScheduleSwapRequest,
-  deleteServiceAssignment
-} from "@alvo/firebase";
-import { cachedFetchPeople } from "../../lib/org-data-cache";
-import { getTribeDisplayLabel, checkScheduleConflict, processScheduleSwap } from "@alvo/domain";
-import type { Person, ServiceAssignment, ServiceAssignmentStatus, ScheduleSwapRequest, ServiceTeam } from "@alvo/types";
+import type { ServiceAssignment, ServiceTeam } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-
-const ministryTeams = [
-  {
-    code: "reception",
-    name: "Recepção e Portaria",
-    summary: "Primeira impressão, visitantes, segurança e acolhimento.",
-    target: 6
-  },
-  {
-    code: "media",
-    name: "Mídia, Som e Transmissão",
-    summary: "Slides, áudio, vídeo, lives e apoio técnico da celebração.",
-    target: 5
-  },
-  {
-    code: "worship",
-    name: "Louvor e Banda",
-    summary: "Vocal, instrumentos, ensaio, repertório e passagem de som.",
-    target: 8
-  },
-  {
-    code: "kids",
-    name: "Crianças",
-    summary: "Sala infantil, check-in, cuidado e atividades por faixa etária.",
-    target: 7
-  },
-  {
-    code: "operations",
-    name: "Limpeza e Organização",
-    summary: "Montagem, limpeza, café, cadeiras e apoio em eventos.",
-    target: 10
-  }
-] as const;
-
-// Template padrão de ministérios — usado só para SEMEAR os ServiceTeams reais da
-// igreja na primeira vez. Depois disso, a fonte de verdade é o Firestore.
-type MinistryTeam = { code: string; name: string; summary: string; target: number };
-const DEFAULT_TEAMS: MinistryTeam[] = ministryTeams.map((t) => ({ code: t.code, name: t.name, summary: t.summary, target: t.target }));
-
-export function ServingView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
-  const registrationAttempt = useRef(crypto.randomUUID());
-  const registrationBusy = useRef(false);
-  const [registrationSaving, setRegistrationSaving] = useState(false);
-  const [people, setPeople] = useState<Person[]>([]);
-  // Ministérios REAIS (ServiceTeams do Firestore). Começa com o template e é
-  // substituído pelos times reais no carregamento (semeados na 1ª vez).
-  const [teams, setTeams] = useState<MinistryTeam[]>(DEFAULT_TEAMS);
-  
-  // Dynamic calculation of the next 4 Sundays
-  const nextSundays = useMemo(() => {
-    const list = [];
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (7 - day) % 7;
-    const nextSunday = new Date(today);
-    nextSunday.setDate(today.getDate() + diff);
-    
-    for (let i = 0; i < 4; i++) {
-      const d = new Date(nextSunday);
-      d.setDate(nextSunday.getDate() + i * 7);
-      
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const dateString = `${yyyy}-${mm}-${dd}`;
-      
-      const label = d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
-      list.push({ dateString, label, rawDate: d });
-    }
-    return list;
-  }, []);
-
-  const [assignments, setAssignments] = useState<ServiceAssignment[]>([]);
-  
-  const [swapRequests, setSwapRequests] = useState<ScheduleSwapRequest[]>([]);
-  
-  // Trilha de atividade — começa vazia e recebe as AÇÕES REAIS (confirmações,
-  // escalações, lembretes, trocas) conforme acontecem nesta sessão.
-  const [auditLogs, setAuditLogs] = useState<Array<{ time: string; text: string; type: "success" | "info" | "warning" }>>([]);
-
-  const [assignMode, setAssignMode] = useState<"members" | "new">("members");
-  const [selectedMinistryCode, setSelectedMinistryCode] = useState<string>("reception");
-  const [status, setStatus] = useState("Carregando escalas...");
-  
-  // Interactive Reminders
-  const [selectedAssignmentForReminder, setSelectedAssignmentForReminder] = useState<ServiceAssignment | null>(null);
-  const [whatsappTemplate, setWhatsappTemplate] = useState("Olá [Nome]! Confirmando a sua escala no ministério de [Ministerio] para o dia [Data] no papel de [Role]. Confirma sua presença?");
-
-  // Schedule matrix selected day (Sunday 24/05/2026 or 31/05/2026)
-  const [selectedDateFilter, setSelectedDateFilter] = useState(() => {
-    return nextSundays[0]?.dateString ?? "2026-06-14";
-  });
-  
-  // Search state and custom role selection
-  const [customRoleInput, setCustomRoleInput] = useState("");
-  
-  // Search state for members
-  const [memberSearch, setMemberSearch] = useState("");
-
-  const [servantDraft, setServantDraft] = useState({
-    email: "",
-    name: "",
-    phone: "",
-    role: "Apoio"
-  });
-
-  // Swap Form States
-  const [requestingSwapForAssignmentId, setRequestingSwapForAssignmentId] = useState<string | null>(null);
-  const [swapReplacementPersonId, setSwapReplacementPersonId] = useState<string>("");
-  const [swapNote, setSwapNote] = useState<string>("");
-
+import { SERVING_STATUSES, servingDate } from "./serving-contract";
+type PersonOption = {
+  id: string;
+  firstName: string;
+  lastName?: string;
+  memberStatus?: string;
+  hasPhone: boolean;
+};
+type Snapshot = {
+  teams: ServiceTeam[];
+  assignments: ServiceAssignment[];
+  people: PersonOption[];
+  timezone: string;
+  whatsappConnected: boolean;
+  swaps: Array<{
+    id: string;
+    assignmentId: string;
+    requestorPersonId: string;
+    proposedReplacementPersonId?: string;
+    targetPersonId?: string;
+    note?: string;
+  }>;
+};
+const EMPTY: Snapshot = {
+  teams: [],
+  assignments: [],
+  people: [],
+  timezone: "America/Belem",
+  whatsappConnected: false,
+  swaps: [],
+};
+const PUSH_LABEL: Record<string, string> = {
+  pending: "Aviso push pendente",
+  sending: "Envio push em andamento",
+  accepted: "Push aceito pelo provedor; entrega no aparelho não confirmada",
+  failed: "Push não aceito pelo provedor",
+  uncertain: "Resultado do push incerto; sem reenvio automático",
+  no_device: "App: sem aparelho habilitado para notificações",
+  unlinked: "App: conta do membro ainda não vinculada",
+  test_mode: "Push simulado: nenhum aparelho contatado",
+};
+const blankArea = () => ({
+  id: "",
+  name: "",
+  summary: "",
+  roles: "",
+  targetVolunteers: 1,
+  status: "active",
+});
+const blankScale = () => ({
+  teamId: "",
+  role: "",
+  serviceName: "",
+  date: "",
+  time: "",
+  durationMinutes: 120,
+  personIds: [] as string[],
+});
+function fullName(p: PersonOption) {
+  return `${p.firstName} ${p.lastName || ""}`.trim();
+}
+function Dialog({
+  title,
+  busy,
+  onClose,
+  children,
+}: {
+  title: string;
+  busy: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setPeople([]);
-      setStatus("Conecte-se para carregar as pessoas e montar as escalas.");
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadServingData() {
-      setStatus("Sincronizando pessoas para montar escalas...");
-
-      try {
-        const [nextPeople, nextAssignments, nextSwaps, nextTeams] = await Promise.all([
-          cachedFetchPeople(firebaseConfig, { organizationId }, 160),
-          fetchServiceAssignments(firebaseConfig, { organizationId }, 160),
-          fetchScheduleSwapRequests(firebaseConfig, { organizationId }).catch(() => [] as ScheduleSwapRequest[]),
-          fetchServiceTeams(firebaseConfig, { organizationId }).catch(() => [] as ServiceTeam[])
-        ]);
-
-        if (cancelled) return;
-
-        // Ministérios reais: usa os do Firestore; se vazio, semeia o template.
-        let finalTeams: MinistryTeam[];
-        if (nextTeams.length > 0) {
-          finalTeams = nextTeams.map((t) => ({ code: t.code, name: t.name, summary: t.summary ?? "", target: t.targetVolunteers ?? 0 }));
-        } else {
-          finalTeams = DEFAULT_TEAMS;
-          await Promise.allSettled(DEFAULT_TEAMS.map((t) => saveServiceTeam(firebaseConfig, { organizationId }, {
-            id: `team_${t.code}`, organizationId, code: t.code, name: t.name, summary: t.summary, targetVolunteers: t.target, status: "active"
-          })));
-        }
-        if (!cancelled) setTeams(finalTeams);
-
-        setPeople(nextPeople);
-        setAssignments(nextAssignments);
-        setSwapRequests(nextSwaps);
-
-        setStatus(
-          nextAssignments.length
-            ? `${nextAssignments.length} escala(s) sincronizada(s) com ${nextPeople.length} pessoa(s).`
-            : `${nextPeople.length} pessoa(s) disponíveis — monte a primeira escala.`
-        );
-      } catch (error) {
-        if (!cancelled) {
-          setStatus("Não foi possível carregar pessoas. Verifique sua conexão e tente novamente.");
-        }
-      }
-    }
-
-    void loadServingData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
-
-  const selectedMinistry = teams.find((team) => team.code === selectedMinistryCode) ?? teams[0];
-  
-  // Filter assignments by selected ministry AND selected date filter
-  const selectedAssignments = useMemo(() => {
-    return assignments.filter(
-      (assignment) => 
-        assignment.ministryCode === selectedMinistry.code &&
-        assignment.serviceDate.startsWith(selectedDateFilter)
-    );
-  }, [assignments, selectedMinistry.code, selectedDateFilter]);
-
-  const selectedPendingCount = selectedAssignments.filter(
-    (assignment) => assignment.status === "pending"
-  ).length;
-
-  const pendingCount = assignments.filter((assignment) => assignment.status === "pending").length;
-  const confirmedCount = assignments.filter((assignment) =>
-    ["confirmed", "present"].includes(assignment.status)
-  ).length;
-  const declinedCount = assignments.filter((assignment) =>
-    ["declined", "absent"].includes(assignment.status)
-  ).length;
-  
-  const coverage = Math.round((confirmedCount / Math.max(assignments.length, 1)) * 100);
-  
-  const availablePeople = people.filter((person) =>
-    ["member", "leader", "volunteer"].includes(person.memberStatus)
-  );
-
-  // Filtered available people for manual picker
-  const filteredCandidatePeople = useMemo(() => {
-    const list = availablePeople.length ? availablePeople : people;
-    if (!memberSearch) return list;
-    return list.filter(p => 
-      `${p.firstName} ${p.lastName}`.toLowerCase().includes(memberSearch.toLowerCase())
-    );
-  }, [people, availablePeople, memberSearch]);
-
-  const nextActionLabel =
-    selectedAssignments.length === 0
-      ? "Monte a primeira escala deste ministério"
-      : selectedPendingCount > 0
-        ? "Acompanhe quem ainda precisa responder"
-        : "Registre presença no dia da celebração";
-
-  async function handleAssignmentStatus(
-    assignmentId: string,
-    nextStatus: ServiceAssignmentStatus,
-    responseNote?: string
-  ) {
-    const currentAssignment = assignments.find((assignment) => assignment.id === assignmentId);
-
-    if (!currentAssignment) {
-      setStatus("Não encontramos essa escala para atualizar.");
-      return;
-    }
-
-    const updatedAssignment = applyAssignmentStatus(currentAssignment, nextStatus, responseNote);
-    const person = people.find(p => p.id === currentAssignment.personId);
-    const personName = person ? getFullName(person) : "Voluntário";
-
-    const statusLabel = getAssignmentStatusLabel(nextStatus);
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de atualizar a escala.");
-      return;
-    }
-    try {
-      await saveServiceAssignment(firebaseConfig, { organizationId }, updatedAssignment);
-      setAssignments((currentAssignments) =>
-        currentAssignments.map((assignment) =>
-          assignment.id === assignmentId ? updatedAssignment : assignment
-        )
-      );
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      setAuditLogs(prev => [
-        { time: timeString, text: `${personName} foi marcado como ${statusLabel}.`, type: nextStatus === "confirmed" ? "success" : "info" },
-        ...prev
-      ]);
-      setStatus(`Escala marcada como ${statusLabel} e salva.`);
-    } catch {
-      setStatus("Não foi possível salvar a atualização da escala. Verifique sua conexão.");
-    }
-  }
-
-  async function handleQuickAssign(person: Person, role = "Apoio") {
-    const serviceDateTime = `${selectedDateFilter}T08:30:00.000Z`;
-    const now = new Date().toISOString();
-    const newAssignment: ServiceAssignment = {
-      id: `service_assignment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      organizationId,
-      serviceTeamId: selectedMinistry.code,
-      ministryCode: selectedMinistry.code,
-      personId: person.id,
-      role,
-      serviceDate: serviceDateTime,
-      status: "pending",
-      createdAt: now,
-      updatedAt: now
-    };
-
-    const conflict = checkScheduleConflict(assignments, newAssignment);
-    if (conflict) {
-      const conflictingTeam = teams.find(t => t.code === conflict.ministryCode)?.name || conflict.ministryCode;
-      const confirmAssign = window.confirm(
-        `ALERTA DE CONFLITO: ${getFullName(person)} já está escalado(a) no ministério "${conflictingTeam}" nesta mesma data (${selectedDateFilter}). Deseja escalar mesmo assim?`
-      );
-      if (!confirmAssign) {
-        return;
-      }
-    }
-
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de criar a escala.");
-      return;
-    }
-    try {
-      await saveServiceAssignment(firebaseConfig, { organizationId }, newAssignment);
-      setAssignments((currentAssignments) => [newAssignment, ...currentAssignments]);
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      setAuditLogs(prev => [
-        { time: timeString, text: `${getFullName(person)} foi escalado(a) como ${role} em ${selectedMinistry.name}.`, type: "info" },
-        ...prev
-      ]);
-      setStatus(`${getFullName(person)} escalado em ${selectedMinistry.name}.`);
-    } catch {
-      setStatus("Não foi possível salvar a nova escala. Verifique sua conexão.");
-      return;
-    }
-
-    return newAssignment;
-  }
-
-  async function handleServantRegistration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const fullName = servantDraft.name.trim();
-    const role = servantDraft.role.trim() || "Apoio";
-
-    if (!fullName) {
-      setStatus("Informe o nome do servo antes de cadastrar.");
-      return;
-    }
-
-    const [firstName, ...lastNameParts] = fullName.split(/\s+/);
-    const servant: Person = {
-      id: `person_servant_${Date.now()}`,
-      organizationId,
-      firstName,
-      lastName: lastNameParts.join(" "),
-      preferredName: firstName,
-      email: servantDraft.email.trim() || undefined,
-      mobilePhone: servantDraft.phone.trim() || undefined,
-      whatsappPhone: servantDraft.phone.trim() || undefined,
-      partnerBenefitsEnabled: false,
-      personType: "adult",
-      memberStatus: "volunteer",
-      status: "active"
-    };
-
-    if (registrationBusy.current) return;
-    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para cadastrar e escalar."); return; }
-    registrationBusy.current = true; setRegistrationSaving(true);
-    try {
-      const serviceDate = `${selectedDateFilter}T08:30:00.000Z`;
-      const created = await registerPerson(user, { organizationId, requestId: registrationAttempt.current, workflow: "serving", person: servant, serving: { serviceTeamId: selectedMinistry.code, role, serviceDate } });
-      const saved = { ...servant, id: created.personId };
-      setPeople(current => [saved, ...current.filter(p => p.id !== saved.id)]);
-      setAssignments(current => [{ id: created.assignmentId!, organizationId, personId: saved.id, serviceTeamId: selectedMinistry.code, ministryCode: selectedMinistry.code, role, serviceDate, status: "pending", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, ...current.filter(a => a.id !== created.assignmentId)]);
-      registrationAttempt.current = crypto.randomUUID();
-      setServantDraft({ email: "", name: "", phone: "", role: "Apoio" });
-      setStatus(`${getFullName(saved)} cadastrado e escalado. Operação salva por completo.`);
-    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível cadastrar e escalar."); }
-    finally { registrationBusy.current = false; setRegistrationSaving(false); }
-  }
-
-  // Tribes mapping for smart suggestions
-  const tribeMinistryMap: Record<string, string[]> = {
-    LEVI: ["worship"],
-    JUDAH: ["worship", "reception"],
-    ISSACHAR: ["operations"],
-    JOSEPH: ["operations"],
-    ASHER: ["reception", "kids"],
-    NAPHTALI: ["media"],
-    ZEBULUN: ["operations"],
-    GAD: ["operations"],
-    MANASSEH: ["kids"],
-    EPHRAIM: ["reception"],
-    BENJAMIN: ["reception"],
-    REUBEN: ["operations"],
-  };
-
-  const suggestedPeople = useMemo(() => {
-    return people.filter(p => {
-      if (!p.tribePrimaryCode) return false;
-      const targetMinistries = tribeMinistryMap[p.tribePrimaryCode] || [];
-      return targetMinistries.includes(selectedMinistry.code);
-    }).slice(0, 5);
-  }, [people, selectedMinistry.code]);
-
-  // Open WhatsApp Reminders API
-  const handleSendReminder = (assignment: ServiceAssignment) => {
-    const person = people.find(p => p.id === assignment.personId);
-    if (!person) return;
-    
-    const formattedDate = new Date(assignment.serviceDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-    const text = whatsappTemplate
-      .replace("[Nome]", getFullName(person))
-      .replace("[Ministerio]", selectedMinistry.name)
-      .replace("[Data]", formattedDate)
-      .replace("[Role]", assignment.role);
-
-    const url = manualWhatsappLink(person, text);
-    if (!url) { window.alert("Contato indisponível: confira o telefone e a preferência de comunicação."); return; }
-    
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    setAuditLogs(prev => [
-      { time: timeString, text: `Mensagem preparada para envio manual a ${getFullName(person)}.`, type: "success" },
-      ...prev
-    ]);
-
-    setSelectedAssignmentForReminder(null);
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  async function handleRequestSwap(assignmentId: string, replacementPersonId: string, note?: string) {
-    if (!assignmentId || !replacementPersonId) return;
-
-    const assignment = assignments.find(a => a.id === assignmentId);
-    if (!assignment) return;
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de solicitar uma troca.");
-      return;
-    }
-
-    const newSwap: ScheduleSwapRequest = {
-      id: `swap_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      organizationId,
-      assignmentId,
-      requestorPersonId: assignment.personId,
-      proposedReplacementPersonId: replacementPersonId,
-      status: "pending",
-      note,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const requestor = people.find(p => p.id === assignment.personId);
-    const replacement = people.find(p => p.id === replacementPersonId);
-    const requestorName = requestor ? getFullName(requestor) : "Voluntário";
-    const replacementName = replacement ? getFullName(replacement) : "Substituto";
-
-    try {
-      await saveScheduleSwapRequest(firebaseConfig, { organizationId }, newSwap);
-      setSwapRequests(prev => [newSwap, ...prev]);
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      setAuditLogs(prev => [
-        { time: timeString, text: `Solicitada troca: ${requestorName} por ${replacementName}.`, type: "info" },
-        ...prev
-      ]);
-      setStatus("Solicitação de troca enviada para aprovação.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Não foi possível salvar a solicitação de troca.");
-      return;
-    }
-
-    setRequestingSwapForAssignmentId(null);
-    setSwapReplacementPersonId("");
-    setSwapNote("");
-  }
-
-  async function handleAcceptSwap(swapId: string) {
-    const swap = swapRequests.find(s => s.id === swapId);
-    if (!swap) return;
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de aprovar a troca.");
-      return;
-    }
-
-    try {
-      const { requestorAssignment } = processScheduleSwap(swap, assignments);
-
-      const updatedSwap: ScheduleSwapRequest = {
-        ...swap,
-        status: "accepted",
-        updatedAt: new Date().toISOString()
-      };
-      const requestor = people.find(p => p.id === swap.requestorPersonId);
-      const replacement = people.find(p => p.id === (swap.proposedReplacementPersonId || swap.targetPersonId));
-      const requestorName = requestor ? getFullName(requestor) : "Voluntário";
-      const replacementName = replacement ? getFullName(replacement) : "Substituto";
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-      await Promise.all([
-        saveServiceAssignment(firebaseConfig, { organizationId }, requestorAssignment),
-        saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap)
-      ]);
-      setAssignments(current => current.map(a => a.id === requestorAssignment.id ? requestorAssignment : a));
-      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
-      setAuditLogs(prev => [
-        { time: timeString, text: `Troca aprovada: ${replacementName} assume o lugar de ${requestorName}.`, type: "success" },
-        ...prev
-      ]);
-      setStatus("Troca aprovada e salva.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Não foi possível processar a troca. Tente novamente.");
-    }
-  }
-
-  async function handleDeclineSwap(swapId: string) {
-    const swap = swapRequests.find(s => s.id === swapId);
-    if (!swap) return;
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de recusar a troca.");
-      return;
-    }
-
-    const updatedSwap: ScheduleSwapRequest = {
-      ...swap,
-      status: "declined",
-      updatedAt: new Date().toISOString()
-    };
-    const requestor = people.find(p => p.id === swap.requestorPersonId);
-    const requestorName = requestor ? getFullName(requestor) : "Voluntário";
-    const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-    try {
-      await saveScheduleSwapRequest(firebaseConfig, { organizationId }, updatedSwap);
-      setSwapRequests(current => current.map(s => s.id === swapId ? updatedSwap : s));
-      setAuditLogs(prev => [
-        { time: timeString, text: `Troca recusada para a escala de ${requestorName}.`, type: "warning" },
-        ...prev
-      ]);
-      setStatus("Troca recusada e salva.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Não foi possível salvar a recusa da troca.");
-    }
-  }
-
-  async function handleRemoveAssignment(assignmentId: string) {
-    const confirmRemove = window.confirm("Deseja realmente remover este voluntário desta escala?");
-    if (!confirmRemove) return;
-
-    const currentAssignment = assignments.find((assignment) => assignment.id === assignmentId);
-    if (!currentAssignment) return;
-
-    const person = people.find(p => p.id === currentAssignment.personId);
-    const personName = person ? getFullName(person) : "Voluntário";
-
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de remover a escala.");
-      return;
-    }
-    try {
-      await deleteServiceAssignment(firebaseConfig, { organizationId }, assignmentId);
-      setAssignments(current => current.filter(a => a.id !== assignmentId));
-      const timeString = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      setAuditLogs(prev => [
-        { time: timeString, text: `${personName} foi removido(a) da escala.`, type: "warning" },
-        ...prev
-      ]);
-      setStatus(`${personName} removido da escala.`);
-    } catch {
-      setStatus("Não foi possível remover a escala. Verifique sua conexão.");
-    }
-  }
-
+    const d = ref.current;
+    d?.showModal();
+    return () => d?.close();
+  }, []);
   return (
-    <div className="page-root serving-page">
-      <header className="page-header">
-        <div className="page-header-left">
-          <h1 className="page-title">Escalas & Voluntários</h1>
-          <p className="page-subtitle">Gerencie equipes, confirme presenças e acompanhe cobertura em tempo real</p>
+    <dialog
+      ref={ref}
+      className="serving-dialog"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) onClose();
+      }}
+      aria-label={title}
+    >
+      <header>
+        <h2>{title}</h2>
+        <button
+          type="button"
+          className="serving-icon-button"
+          disabled={busy}
+          aria-label="Fechar formulário"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+      </header>
+      {children}
+    </dialog>
+  );
+}
+export function ServingView() {
+  const { user, organizationId, roles } = useAppAuth();
+  const canManage = roles.some((r) =>
+    ["super_admin", "church_admin", "pastor", "secretary"].includes(r),
+  );
+  const [data, setData] = useState<Snapshot>(EMPTY),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const [dialog, setDialog] = useState<"area" | "scale" | "replace" | null>(
+      null,
+    ),
+    [area, setArea] = useState(blankArea),
+    [draft, setDraft] = useState(blankScale);
+  const [replacement, setReplacement] = useState({
+    assignmentId: "",
+    personId: "",
+  });
+  const [busy, setBusy] = useState(false),
+    [formError, setFormError] = useState(""),
+    [search, setSearch] = useState(""),
+    [areaFilter, setAreaFilter] = useState(""),
+    [dateFilter, setDateFilter] = useState(""),
+    [statusFilter, setStatusFilter] = useState("");
+  const [preparedLink, setPreparedLink] = useState(""),
+    [whatsappAttempt, setWhatsappAttempt] = useState<{
+      id: string;
+      requestId: string;
+    } | null>(null);
+  const attemptRef = useRef(crypto.randomUUID()),
+    writeRef = useRef(false),
+    mutationVersion = useRef(0),
+    sequence = useRef(0),
+    scope = useRef(organizationId);
+  scope.current = organizationId;
+  const call = useCallback(
+    async (body: Record<string, unknown>) => {
+      if (!user) throw new Error("Entre na sua conta.");
+      const response = await fetch("/api/serving", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({ organizationId, ...body }),
+        signal: AbortSignal.timeout(45000),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Não foi possível concluir.");
+      return result;
+    },
+    [organizationId, user],
+  );
+  const load = useCallback(
+    async (silent = false) => {
+      const run = ++sequence.current;
+      if (!silent) setLoading(true);
+      setError("");
+      try {
+        const next = await call({ action: "snapshot" });
+        if (run === sequence.current) setData(next);
+      } catch (e) {
+        if (run === sequence.current)
+          setError(
+            e instanceof Error ? e.message : "Falha ao carregar escalas.",
+          );
+      } finally {
+        if (run === sequence.current) setLoading(false);
+      }
+    },
+    [call],
+  );
+  useEffect(() => {
+    mutationVersion.current++;
+    writeRef.current = false;
+    setBusy(false);
+    setData(EMPTY);
+    setDialog(null);
+    setNotice("");
+    setPreparedLink("");
+    if (canManage) void load();
+    else setLoading(false);
+    return () => {
+      sequence.current++;
+    };
+  }, [load, canManage]);
+  useEffect(() => {
+    if (!canManage) return;
+    const refresh = () => {
+      if (!document.hidden && !writeRef.current) void load(true);
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [load, canManage]);
+  const activeTeams = data.teams.filter((t) => t.status === "active");
+  const selectedTeam = data.teams.find((t) => t.id === draft.teamId);
+  const filtered = data.assignments
+    .filter(
+      (a) =>
+        (!areaFilter ||
+          a.serviceTeamId === areaFilter ||
+          a.ministryCode ===
+            data.teams.find((t) => t.id === areaFilter)?.code) &&
+        (!dateFilter ||
+          new Intl.DateTimeFormat("en-CA", {
+            timeZone: data.timezone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date(a.serviceDate)) === dateFilter) &&
+        (!statusFilter || a.status === statusFilter),
+    )
+    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+  const candidates = data.people.filter((p) =>
+    fullName(p)
+      .toLocaleLowerCase("pt-BR")
+      .includes(search.toLocaleLowerCase("pt-BR")),
+  );
+  const pending = filtered.filter((a) => a.status === "pending").length;
+  function openScale() {
+    attemptRef.current = crypto.randomUUID();
+    setDraft(blankScale());
+    setSearch("");
+    setFormError("");
+    setDialog(activeTeams.length ? "scale" : "area");
+    setArea(blankArea());
+  }
+  function openArea(team?: ServiceTeam) {
+    setArea(
+      team
+        ? {
+            id: team.id,
+            name: team.name,
+            summary: team.summary || "",
+            roles: (team.roles || []).join("\n"),
+            targetVolunteers: team.targetVolunteers || 1,
+            status: team.status,
+          }
+        : blankArea(),
+    );
+    setFormError("");
+    setDialog("area");
+  }
+  async function mutate(
+    body: Record<string, unknown>,
+    message: string,
+    close = false,
+  ) {
+    if (writeRef.current) return;
+    writeRef.current = true;
+    const job = ++mutationVersion.current;
+    setBusy(true);
+    setFormError("");
+    setError("");
+    setNotice(
+      body.action === "whatsapp"
+        ? "Solicitando envio ao WhatsApp…"
+        : body.action === "notify"
+          ? "Preparando aviso no app…"
+          : "Salvando alteração…",
+    );
+    const org = organizationId;
+    try {
+      const result = await call(body);
+      if (scope.current !== org) return;
+      setNotice(message);
+      if (close) setDialog(null);
+      await load(true);
+      return scope.current === org && job === mutationVersion.current
+        ? result
+        : undefined;
+    } catch (e) {
+      if (scope.current === org) {
+        setNotice("");
+        const message =
+          e instanceof Error ? e.message : "Não foi possível salvar.";
+        if (dialog) setFormError(message);
+        else setError(message);
+      }
+    } finally {
+      if (job === mutationVersion.current) {
+        writeRef.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function saveArea(e: FormEvent) {
+    e.preventDefault();
+    const result = await mutate(
+      {
+        action: "save-area",
+        ...area,
+        id: area.id || undefined,
+        roles: area.roles
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      },
+      "Área salva. Nome e funções já estão disponíveis.",
+      true,
+    );
+    if (result?.team && !area.id && result.team.status === "active") {
+      attemptRef.current = crypto.randomUUID();
+      setDraft({
+        ...blankScale(),
+        teamId: result.team.id,
+        role: result.team.roles[0],
+      });
+      setDialog("scale");
+    }
+  }
+  async function create(e: FormEvent) {
+    e.preventDefault();
+    await mutate(
+      { action: "create", requestId: attemptRef.current, ...draft },
+      "Escala salva. Confira abaixo o aviso do app e, se desejar, prepare o WhatsApp.",
+      true,
+    );
+  }
+  async function prepareWhatsapp(a: ServiceAssignment) {
+    if (writeRef.current) return;
+    writeRef.current = true;
+    const job = ++mutationVersion.current;
+    setBusy(true);
+    setError("");
+    setPreparedLink("");
+    setNotice("Preparando mensagem para envio manual…");
+    const org = organizationId;
+    try {
+      const result = await call({
+        action: "manual-whatsapp",
+        assignmentId: a.id,
+        requestId: crypto.randomUUID(),
+      });
+      if (scope.current !== org) return;
+      setPreparedLink(result.url);
+      setNotice(
+        "Mensagem preparada. Abra o WhatsApp e confira antes de enviar. Nada foi enviado automaticamente.",
+      );
+    } catch (e) {
+      if (scope.current === org) {
+        setNotice("");
+        setError(e instanceof Error ? e.message : "Contato indisponível.");
+      }
+    } finally {
+      if (job === mutationVersion.current) {
+        writeRef.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function automaticWhatsapp(a: ServiceAssignment) {
+    const requestId =
+      whatsappAttempt?.id === a.id
+        ? whatsappAttempt.requestId
+        : crypto.randomUUID();
+    setWhatsappAttempt({ id: a.id, requestId });
+    const result = await mutate(
+      { action: "whatsapp", assignmentId: a.id, requestId },
+      "Solicitação de WhatsApp registrada.",
+    );
+    if (result)
+      setNotice(
+        `WhatsApp: ${result.status === "sent" ? "aceito pelo provedor; entrega ainda não confirmada" : result.status || "registrado"}.`,
+      );
+  }
+  if (!canManage)
+    return (
+      <section className="serving-screen">
+        <h1>Escalas</h1>
+        <p>
+          A gestão das escalas é restrita à liderança. No app, abra Minha Escala
+          para consultar e responder.
+        </p>
+      </section>
+    );
+  return (
+    <section className="serving-screen">
+      <header className="serving-heading">
+        <div>
+          <h1>Escalas e equipes</h1>
+          <p>
+            Cadastre as áreas da sua igreja, monte a escala e acompanhe cada
+            resposta.
+          </p>
         </div>
-        <div className="page-header-actions">
-          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
-            {status}
-          </span>
+        <div className="serving-toolbar">
+          <button
+            type="button"
+            className="serving-button"
+            disabled={busy || loading}
+            onClick={() => openArea()}
+          >
+            <Settings2 size={18} />
+            Áreas e serviços
+          </button>
+          <button
+            type="button"
+            className="serving-button primary"
+            disabled={busy || loading}
+            onClick={openScale}
+          >
+            <Plus size={18} />
+            Nova escala
+          </button>
         </div>
       </header>
-
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(22,163,74,0.1)", color: "#16a34a" }}><CheckCircle2 size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Confirmados</span><span className="stat-value">{confirmedCount}</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><Clock3 size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Aguardando</span><span className="stat-value">{pendingCount}</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}><AlertTriangle size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Justificados</span><span className="stat-value">{declinedCount}</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><Users size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Banco de voluntários</span><span className="stat-value">{availablePeople.length || people.length}</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: "var(--alvo-accent-soft)", color: "var(--alvo-accent-dark)" }}><Handshake size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Cobertura</span><span className="stat-value">{coverage}%</span></div>
-        </div>
+      <div role="status" aria-live="polite" className="serving-feedback">
+        {loading ? "Carregando áreas, pessoas e escalas…" : notice}
       </div>
-
-      {/* SOLICITAÇÕES DE TROCA DE ESCALAS PENDENTES */}
-      {swapRequests.filter(s => s.status === "pending").length > 0 && (
-        <section style={{ background: "rgba(139, 92, 246, 0.1)", border: "1px solid rgba(139, 92, 246, 0.3)", borderRadius: "24px", padding: "1.5rem", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
-            <Sparkles size={20} style={{ color: "#8b5cf6" }} />
-            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Solicitações de Troca Pendentes</h3>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {swapRequests.filter(s => s.status === "pending").map((swap) => {
-              const requestor = people.find(p => p.id === swap.requestorPersonId);
-              const replacement = people.find(p => p.id === (swap.proposedReplacementPersonId || swap.targetPersonId));
-              const assignment = assignments.find(a => a.id === swap.assignmentId);
-              
-              const requestorName = requestor ? getFullName(requestor) : swap.requestorPersonId;
-              const replacementName = replacement ? getFullName(replacement) : "Substituto";
-              const teamName = assignment ? (teams.find(t => t.code === assignment.ministryCode)?.name || assignment.ministryCode) : "Ministério";
-
-              return (
-                <div key={swap.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", padding: "1rem", borderRadius: "16px", border: "1px solid var(--alvo-line)" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--alvo-ink)", fontWeight: 700 }}>
-                      {requestorName} solicita substituição por {replacementName}
-                    </p>
-                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                      Ministério: {teamName} {assignment ? `| Função: ${assignment.role}` : ""}
-                    </p>
-                    {swap.note && (
-                      <p style={{ margin: "4px 0 0", fontSize: "0.8rem", fontStyle: "italic", color: "var(--alvo-ink-soft)" }}>
-                        Motivo: "{swap.note}"
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button 
-                      onClick={() => void handleAcceptSwap(swap.id)}
-                      style={{ background: "#10b981", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                    >
-                      Aprovar Troca
-                    </button>
-                    <button 
-                      onClick={() => void handleDeclineSwap(swap.id)}
-                      style={{ background: "#ef4444", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                    >
-                      Recusar
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* MATRIX DE DATAS E CULTOS INTERATIVA */}
-      <section style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "24px", padding: "1.25rem", marginBottom: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Calendar size={20} style={{ color: "var(--alvo-accent)" }} />
-            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Matriz de Escalas por Culto</h3>
-          </div>
-          <span style={{ fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>Clique em um domingo para ver e gerenciar a escala respectiva</span>
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          {nextSundays.map((sunday, index) => {
-            const isSelected = selectedDateFilter === sunday.dateString;
-            return (
-              <button 
-                key={sunday.dateString}
-                onClick={() => setSelectedDateFilter(sunday.dateString)}
-                style={{ 
-                  flex: 1, 
-                  minWidth: "160px",
-                  padding: "1rem", 
-                  borderRadius: "16px", 
-                  border: isSelected ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
-                  background: isSelected ? "var(--alvo-accent-soft)" : "rgba(255, 255, 255, 0.35)",
-                  color: "var(--alvo-ink)",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                <span style={{ display: "block", fontSize: "0.75rem", color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink-soft)", fontWeight: 800 }}>
-                  {index === 0 ? "PRÓXIMO DOMINGO" : index === 1 ? "DOMINGO SEGUINTE" : `DOMINGO +${index}`}
-                </span>
-                <strong style={{ display: "block", fontSize: "1.1rem", marginTop: 4, color: "var(--alvo-ink)" }}>
-                  {sunday.label}
-                </strong>
-                <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)", display: "block", marginTop: 2 }}>
-                  Culto Geral às 18:30
-                </span>
-              </button>
-            );
-          })}
-
-          <div 
-            style={{ 
-              flex: 1, 
-              minWidth: "160px",
-              padding: "1rem", 
-              borderRadius: "16px", 
-              border: !nextSundays.some(s => s.dateString === selectedDateFilter) ? "2.5px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
-              background: !nextSundays.some(s => s.dateString === selectedDateFilter) ? "var(--alvo-accent-soft)" : "rgba(255, 255, 255, 0.35)",
-              color: "var(--alvo-ink)",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              gap: 4
-            }}
+      {error && (
+        <div role="alert" className="serving-error">
+          {error}
+          <button
+            type="button"
+            disabled={busy || loading}
+            onClick={() => void load()}
           >
-            <span style={{ display: "block", fontSize: "0.75rem", color: "var(--alvo-ink-soft)", fontWeight: 800 }}>OUTRA DATA</span>
-            <input 
-              type="date"
-              value={selectedDateFilter}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setSelectedDateFilter(e.target.value);
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "6px 10px",
-                border: "1px solid var(--alvo-line)",
-                borderRadius: "10px",
-                background: "white",
-                color: "var(--alvo-ink)",
-                outline: "none",
-                fontSize: "0.85rem",
-                fontWeight: 700
-              }}
-            />
-          </div>
+            Atualizar lista
+          </button>
         </div>
-      </section>
-
-      {/* PAINEL PRINCIPAL DE TRABALHO */}
-      <section className="serving-workbench" style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
-        
-        {/* COLUNA ESQUERDA: LISTA DE MINISTÉRIOS */}
-        <aside className="panel" style={{ padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "0.75rem" }}>Ministérios</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {teams.map((team) => {
-              const teamAssignments = assignments.filter((assignment) => assignment.ministryCode === team.code && assignment.serviceDate.startsWith(selectedDateFilter));
-              const teamConfirmed = teamAssignments.filter((assignment) =>
-                ["confirmed", "present"].includes(assignment.status)
-              ).length;
-              const isSelected = selectedMinistry.code === team.code;
-
-              return (
-                <button
-                  key={team.code}
-                  onClick={() => setSelectedMinistryCode(team.code)}
-                  style={{
-                    background: isSelected ? "var(--alvo-accent-soft)" : "transparent",
-                    border: isSelected ? "1px solid var(--alvo-accent)" : "1px solid var(--alvo-line)",
-                    borderRadius: "16px",
-                    padding: "1rem",
-                    textAlign: "left",
-                    color: "var(--alvo-ink)",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong style={{ fontSize: "0.95rem", color: isSelected ? "var(--alvo-accent)" : "var(--alvo-ink)" }}>{team.name}</strong>
-                    <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", padding: "2px 8px", borderRadius: "8px", color: "var(--alvo-ink-soft)" }}>
-                      {teamConfirmed}/{team.target}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: 4, lineHeight: "1.1rem" }}>{team.summary}</p>
-                </button>
-              );
-            })}
+      )}
+      {preparedLink && (
+        <div className="serving-feedback">
+          <a
+            className="serving-button"
+            href={preparedLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Abrir mensagem no WhatsApp
+          </a>
+          <span>Preparado para envio manual; não é comprovante de envio.</span>
+        </div>
+      )}
+      {!loading && (
+        <>
+          <div className="serving-summary">
+            <span>
+              <strong>{activeTeams.length}</strong> áreas ativas
+            </span>
+            <span>
+              <strong>{pending}</strong> aguardando resposta
+            </span>
+            <span>
+              <strong>
+                {
+                  data.assignments.filter((a) => a.status === "confirmed")
+                    .length
+                }
+              </strong>{" "}
+              confirmações
+            </span>
+            <span>
+              <strong>
+                {data.assignments.filter((a) => a.status === "declined").length}
+              </strong>{" "}
+              recusas
+            </span>
           </div>
-        </aside>
-
-        {/* COLUNA CENTRAL: DETALHE DA ESCALA SELECIONADA */}
-        <article className="panel" style={{ padding: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
-            <div>
-              <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Escala de Serviço</span>
-              <h2 style={{ fontSize: "1.5rem", color: "var(--alvo-ink)", fontWeight: 900, marginTop: 4 }}>{selectedMinistry.name}</h2>
-            </div>
-            {selectedMinistry.code === "worship" && (
-              <Link href="/serving/worship" style={{ background: "#8b5cf6", color: "white", padding: "6px 12px", borderRadius: "10px", textDecoration: "none", fontSize: "0.8rem", fontWeight: 700 }}>
-                🎵 Repertório & Cifras
-              </Link>
-            )}
-          </div>
-
-          <div style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "16px", padding: "1rem", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-            <span style={{ color: "var(--alvo-accent)", fontWeight: 800, display: "block" }}>Ação Recomendada:</span>
-            <p style={{ color: "var(--alvo-ink-soft)", margin: "4px 0 0" }}>{nextActionLabel}</p>
-          </div>
-
-          {/* LISTA DE ESCALADOS NA GRID PREMIUM */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {selectedAssignments.length ? (
-              selectedAssignments.map((assignment) => {
-                const person = people.find((item) => item.id === assignment.personId);
-                const isPending = assignment.status === "pending";
-                
-                return (
-                  <div 
-                    key={assignment.id} 
-                    style={{ 
-                      background: "rgba(255, 255, 255, 0.35)", 
-                      border: "1px solid var(--alvo-line)", 
-                      borderRadius: "16px", 
-                      padding: "1.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "stretch",
-                      gap: "0.75rem"
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <strong style={{ color: "var(--alvo-ink)", fontSize: "1.05rem" }}>
-                            {person ? getFullName(person) : assignment.personId}
-                          </strong>
-                          
-                          {/* Glow status dot instead of heavy badge */}
-                          <span style={{ 
-                            width: 8, 
-                            height: 8, 
-                            borderRadius: "50%", 
-                            backgroundColor: assignment.status === "confirmed" || assignment.status === "present" ? "#10b981" : assignment.status === "declined" ? "#ef4444" : "#f59e0b",
-                            display: "inline-block" 
-                          }} />
-
-                          <span style={{ fontSize: "0.7rem", color: "var(--alvo-ink-soft)" }}>
-                            ({getAssignmentStatusLabel(assignment.status)})
-                          </span>
-                        </div>
-                        
-                        <p style={{ color: "var(--alvo-accent)", fontSize: "0.8rem", margin: "4px 0 0" }}>
-                          Função: {assignment.role}
-                        </p>
-
-                        {person?.tribePrimaryCode && (
-                          <span style={{ display: "inline-block", background: "rgba(255,255,255,0.35)", border: "1px solid var(--alvo-line)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px", color: "var(--alvo-ink-soft)", marginTop: 6 }}>
-                            Tribo: {getTribeDisplayLabel(person.tribePrimaryCode)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
-                        {isPending && (
-                          <button 
-                            onClick={() => setSelectedAssignmentForReminder(assignment)}
-                            style={{ background: "var(--alvo-accent-soft)", border: "none", color: "var(--alvo-accent)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-                          >
-                            <MessageSquare size={13} /> Lembrar
-                          </button>
-                        )}
-                        
-                        <button 
-                          onClick={() => void handleAssignmentStatus(assignment.id, "confirmed")}
-                          style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          Confirmar
-                        </button>
-
-                        <button 
-                          onClick={() => void handleAssignmentStatus(assignment.id, "present")}
-                          style={{ background: "var(--alvo-green)", border: "none", color: "white", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          Presença
-                        </button>
-
-                        <button 
-                          onClick={() => setRequestingSwapForAssignmentId(assignment.id)}
-                          style={{ background: "rgba(139, 92, 246, 0.15)", border: "none", color: "#8b5cf6", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          Trocar
-                        </button>
-
-                        <button 
-                          onClick={() => void handleRemoveAssignment(assignment.id)}
-                          style={{ background: "rgba(239, 68, 68, 0.1)", border: "none", color: "#ef4444", padding: "8px 12px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                          title="Remover da escala"
-                        >
-                          <X size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {requestingSwapForAssignmentId === assignment.id && (
-                      <div style={{ padding: "1rem", backgroundColor: "rgba(255, 255, 255, 0.5)", borderRadius: "12px", border: "1px solid var(--alvo-line)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--alvo-ink)" }}>Solicitar Troca Assistida</span>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--alvo-ink-soft)" }}>Selecione o Voluntário de Substituição:</label>
-                          <select 
-                            value={swapReplacementPersonId}
-                            onChange={(e) => setSwapReplacementPersonId(e.target.value)}
-                            style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid var(--alvo-line)", outline: "none", fontSize: "0.85rem", background: "white", color: "var(--alvo-ink)" }}
-                          >
-                            <option value="">Escolha um voluntário...</option>
-                            {people.filter(p => p.id !== assignment.personId).map(p => (
-                              <option key={p.id} value={p.id}>{getFullName(p)}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--alvo-ink-soft)" }}>Observação / Motivo:</label>
-                          <input 
-                            placeholder="Ex: Viajará no final de semana."
-                            value={swapNote}
-                            onChange={(e) => setSwapNote(e.target.value)}
-                            style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid var(--alvo-line)", outline: "none", fontSize: "0.85rem", background: "white", color: "var(--alvo-ink)" }}
-                          />
-                        </div>
-                        <div style={{ display: "flex", gap: "0.5rem", marginTop: 4 }}>
-                          <button 
-                            onClick={() => void handleRequestSwap(assignment.id, swapReplacementPersonId, swapNote)}
-                            style={{ background: "#8b5cf6", border: "none", color: "white", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                          >
-                            Confirmar Solicitação
-                          </button>
-                          <button 
-                            onClick={() => setRequestingSwapForAssignmentId(null)}
-                            style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", borderRadius: "10px", padding: "8px 16px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ textAlign: "center", padding: "3rem", background: "rgba(255, 255, 255, 0.35)", border: "2px dashed var(--alvo-line)", borderRadius: "20px" }}>
-                <Handshake size={36} style={{ color: "var(--alvo-ink-soft)", opacity: 0.5, margin: "0 auto 12px" }} />
-                <strong style={{ display: "block", color: "var(--alvo-ink)" }}>Nenhum escalado para este dia</strong>
-                <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.8rem", marginTop: 4 }}>Selecione sugestões por Tribo de Dons abaixo para escalar voluntários.</p>
-              </div>
-            )}
-          </div>
-
-          {/* SUGESTÕES POR TRIBO DE DONS */}
-          {suggestedPeople.length > 0 && (
-            <div style={{ marginTop: "2rem", borderTop: "1px solid var(--alvo-line)", paddingTop: "1.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-                <Sparkles size={16} style={{ color: "var(--alvo-accent)" }} />
-                <h4 style={{ fontSize: "0.95rem", color: "var(--alvo-ink)", margin: 0, fontWeight: 800 }}>Sugestões Inteligentes por Tribos</h4>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
-                {suggestedPeople.map((p) => (
-                  <div key={p.id} style={{ background: "rgba(255, 255, 255, 0.35)", border: "1px solid var(--alvo-line)", borderRadius: "12px", padding: "10px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "var(--alvo-ink)" }}>{getFullName(p)}</strong>
-                      <span style={{ fontSize: "0.7rem", color: "var(--alvo-accent)", fontWeight: 700 }}>
-                        Tribo {getTribeDisplayLabel(p.tribePrimaryCode!)}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={() => handleQuickAssign(p, customRoleInput.trim() || undefined)}
-                      style={{ background: "var(--alvo-accent)", border: "none", color: "white", borderRadius: "8px", padding: "6px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", marginTop: 10 }}
-                    >
-                      Escalar
-                    </button>
-                  </div>
-                ))}
-              </div>
+          {!data.teams.length && (
+            <div className="serving-empty">
+              <Users size={30} />
+              <h2>Quais são as áreas da sua igreja?</h2>
+              <p>
+                Use os nomes da sua comunidade: ministério, departamento,
+                equipe, pastoral ou serviço. Nenhuma área é cadastrada
+                automaticamente.
+              </p>
+              <button
+                className="serving-button primary"
+                onClick={() => openArea()}
+              >
+                Cadastrar primeira área
+              </button>
             </div>
           )}
-
-          {/* BUSCA MANUAL NA BASE */}
-          <div style={{ marginTop: "2rem", borderTop: "1px solid var(--alvo-line)", paddingTop: "1.5rem" }}>
-            <h4 style={{ fontSize: "0.95rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Buscar e Escalar da Base</h4>
-            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-              <div style={{ position: "relative", flex: 2, minWidth: "200px" }}>
-                <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--alvo-ink-soft)" }} />
-                <input 
-                  placeholder="Buscar voluntário pelo nome..." 
-                  value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px 10px 36px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
-                />
+          <section className="serving-panel">
+            <div className="serving-section-heading">
+              <div>
+                <h2>Escalas cadastradas</h2>
+                <p>
+                  Horários no fuso da instituição: {data.timezone}. Respostas do
+                  app e do WhatsApp aparecem na mesma escala.
+                </p>
               </div>
-              <div style={{ flex: 1, minWidth: "120px" }}>
-                <input 
-                  placeholder="Função (Ex: Som)" 
-                  value={customRoleInput}
-                  onChange={e => setCustomRoleInput(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "12px", color: "var(--alvo-ink)", outline: "none", fontSize: "0.85rem" }}
-                />
-              </div>
+              <button
+                type="button"
+                aria-label="Atualizar escalas"
+                className="serving-button"
+                disabled={loading || busy}
+                onClick={() => void load()}
+              >
+                <RefreshCw size={16} />
+                Atualizar
+              </button>
             </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", maxHeight: "150px", overflowY: "auto", paddingRight: 4 }}>
-              {filteredCandidatePeople.slice(0, 15).map((p) => (
-                <button 
-                  key={p.id} 
-                  onClick={() => handleQuickAssign(p, customRoleInput.trim() || undefined)}
-                  style={{ background: "white", border: "1px solid var(--alvo-line)", padding: "6px 12px", borderRadius: "20px", color: "var(--alvo-ink)", fontSize: "0.75rem", cursor: "pointer", display: "flex", gap: 6, alignItems: "center" }}
+            <div className="serving-filters">
+              <label>
+                Área / serviço
+                <select
+                  value={areaFilter}
+                  onChange={(e) => setAreaFilter(e.target.value)}
                 >
-                  + {getFullName(p)}
+                  <option value="">Todas as áreas</option>
+                  {data.teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.status === "inactive" ? " (inativa)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </label>
+              <label>
+                Situação
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Todas as situações</option>
+                  {Object.entries(SERVING_STATUSES).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="serving-button"
+                onClick={() => {
+                  setDateFilter("");
+                  setStatusFilter("");
+                  setAreaFilter("");
+                }}
+              >
+                Limpar filtros
+              </button>
+            </div>
+            {!filtered.length ? (
+              <div className="serving-empty">
+                <Calendar size={28} />
+                <h3>Nenhuma escala neste filtro</h3>
+                <p>
+                  Crie uma escala escolhendo uma área já cadastrada, função,
+                  pessoas e horário.
+                </p>
+                <button
+                  className="serving-button primary"
+                  disabled={busy}
+                  onClick={openScale}
+                >
+                  Criar nova escala
+                </button>
+              </div>
+            ) : (
+              <div className="serving-assignment-list">
+                {filtered.map((a) => {
+                  const person = data.people.find((p) => p.id === a.personId);
+                  return (
+                    <article key={a.id} className="serving-assignment">
+                      <div className="serving-assignment-top">
+                        <div>
+                          <h3>
+                            {a.areaName || a.ministryCode} · {a.role}
+                          </h3>
+                          <p>
+                            {a.serviceName ||
+                              "Serviço cadastrado anteriormente"}{" "}
+                            —{" "}
+                            {servingDate(
+                              a.serviceDate,
+                              a.timezone || data.timezone,
+                            )}
+                          </p>
+                          <strong>
+                            {person
+                              ? fullName(person)
+                              : "Cadastro indisponível"}
+                          </strong>
+                        </div>
+                        <span className={`serving-status ${a.status}`}>
+                          {SERVING_STATUSES[a.status] || a.status}
+                        </span>
+                      </div>
+                      {a.responseSource && (
+                        <p className="serving-helper">
+                          Registro via{" "}
+                          {a.responseSource === "mobile"
+                            ? "app do membro"
+                            : a.responseSource === "whatsapp"
+                              ? "WhatsApp do membro"
+                              : "liderança"}
+                          .
+                        </p>
+                      )}
+                      {a.responseNote && (
+                        <p className="serving-note">
+                          Resposta: {a.responseNote}
+                        </p>
+                      )}
+                      <p className="serving-channel">
+                        {PUSH_LABEL[a.pushStatus || ""] ||
+                          "Escala antiga: sem registro de envio push."}{" "}
+                        · A escala fica disponível no app quando a conta está
+                        vinculada.
+                      </p>
+                      <div className="serving-row-actions">
+                        {a.status !== "cancelled" && (
+                          <>
+                            {a.status === "pending" &&
+                              [
+                                "pending",
+                                "no_device",
+                                "unlinked",
+                                "failed",
+                                "test_mode",
+                              ].includes(a.pushStatus || "") && (
+                                <button
+                                  className="serving-button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void mutate(
+                                      { action: "notify", assignmentId: a.id },
+                                      "Situação do aviso no app atualizada.",
+                                    )
+                                  }
+                                >
+                                  Tentar aviso no app
+                                </button>
+                              )}
+                            <label>
+                              Registro da liderança
+                              <select
+                                aria-label={`Situação de ${person ? fullName(person) : a.personId}`}
+                                disabled={busy}
+                                value={a.status}
+                                onChange={(e) =>
+                                  void mutate(
+                                    {
+                                      action: "status",
+                                      assignmentId: a.id,
+                                      status: e.target.value,
+                                    },
+                                    "Situação atualizada e registrada.",
+                                  )
+                                }
+                              >
+                                {Object.entries(SERVING_STATUSES).map(
+                                  ([value, label]) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="serving-button"
+                              disabled={busy}
+                              onClick={() => {
+                                setReplacement({
+                                  assignmentId: a.id,
+                                  personId: "",
+                                });
+                                setFormError("");
+                                setDialog("replace");
+                              }}
+                            >
+                              Substituir pessoa
+                            </button>
+                            <button
+                              className="serving-button"
+                              disabled={busy || !person?.hasPhone}
+                              onClick={() => void prepareWhatsapp(a)}
+                            >
+                              <MessageSquare size={16} />
+                              Preparar WhatsApp
+                            </button>
+                            {data.whatsappConnected && (
+                              <button
+                                className="serving-button"
+                                disabled={busy}
+                                onClick={() => void automaticWhatsapp(a)}
+                              >
+                                Enviar pelo WhatsApp conectado
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+          {data.swaps?.length > 0 && (
+            <section className="serving-panel">
+              <h2>Solicitações de troca pendentes</h2>
+              {data.swaps.map((swap) => (
+                <article className="serving-assignment" key={swap.id}>
+                  <p>
+                    {fullName(
+                      data.people.find(
+                        (p) => p.id === swap.requestorPersonId,
+                      ) || { id: "", firstName: "Pessoa", hasPhone: false },
+                    )}{" "}
+                    solicita substituição por{" "}
+                    {fullName(
+                      data.people.find(
+                        (p) =>
+                          p.id ===
+                          (swap.proposedReplacementPersonId ||
+                            swap.targetPersonId),
+                      ) || {
+                        id: "",
+                        firstName: "Substituto indisponível",
+                        hasPhone: false,
+                      },
+                    )}
+                  </p>
+                  {swap.note && <p>{swap.note}</p>}
+                  <div className="serving-toolbar">
+                    <button
+                      className="serving-button"
+                      disabled={busy}
+                      onClick={() =>
+                        void mutate(
+                          {
+                            action: "swap",
+                            swapId: swap.id,
+                            decision: "accepted",
+                          },
+                          "Troca aprovada. A escala anterior foi cancelada e o substituto recebeu um novo convite.",
+                        )
+                      }
+                    >
+                      Aprovar troca
+                    </button>
+                    <button
+                      className="serving-button"
+                      disabled={busy}
+                      onClick={() =>
+                        void mutate(
+                          {
+                            action: "swap",
+                            swapId: swap.id,
+                            decision: "declined",
+                          },
+                          "Troca recusada.",
+                        )
+                      }
+                    >
+                      Recusar troca
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+          <aside className="serving-channel-note">
+            <strong>Como chegam os avisos?</strong>
+            <p>
+              App: a pessoa precisa ter conta vinculada; push exige permissão e
+              aparelho registrado. O aceite do provedor não confirma entrega no
+              aparelho.
+            </p>
+            <p>
+              WhatsApp:{" "}
+              {data.whatsappConnected
+                ? "canal conectado; o envio depende do vínculo, preferência de contato e janela de atendimento."
+                : "envio automático ainda não conectado. Use Preparar WhatsApp para enviar manualmente."}{" "}
+              Fora da janela de atendimento, use um template aprovado em
+              Comunicação. Não há envio pago automático nesta tela.
+            </p>
+          </aside>
+        </>
+      )}
+      {dialog === "replace" && (
+        <Dialog
+          title="Substituir pessoa na escala"
+          busy={busy}
+          onClose={() => setDialog(null)}
+        >
+          <p>
+            A escala original será cancelada e um novo convite será criado para
+            o substituto. A resposta anterior permanece no histórico.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void mutate(
+                { action: "replace", ...replacement },
+                "Substituição salva. Confira o aviso do novo convite.",
+                true,
+              );
+            }}
+          >
+            <fieldset disabled={busy}>
+              <label>
+                Substituto
+                <select
+                  required
+                  value={replacement.personId}
+                  onChange={(e) =>
+                    setReplacement({ ...replacement, personId: e.target.value })
+                  }
+                >
+                  <option value="">Selecione uma pessoa</option>
+                  {data.people
+                    .filter(
+                      (p) =>
+                        p.id !==
+                        data.assignments.find(
+                          (a) => a.id === replacement.assignmentId,
+                        )?.personId,
+                    )
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {fullName(p)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <button className="serving-button primary" type="submit">
+                Substituir e avisar no app
+              </button>
+            </fieldset>
+          </form>
+          {formError && (
+            <p className="serving-error" role="alert">
+              {formError}
+            </p>
+          )}
+        </Dialog>
+      )}
+      {dialog === "area" && (
+        <Dialog
+          title="Áreas e serviços da igreja"
+          busy={busy}
+          onClose={() => setDialog(null)}
+        >
+          <p>
+            Cadastre os nomes e as funções usados pela sua igreja. Uma área
+            inativa permanece no histórico.
+          </p>
+          <div className="serving-area-editor">
+            <nav aria-label="Áreas cadastradas">
+              <button
+                type="button"
+                className="serving-button"
+                disabled={busy}
+                onClick={() => setArea(blankArea())}
+              >
+                + Nova área
+              </button>
+              {data.teams.map((t) => (
+                <button
+                  type="button"
+                  className={`serving-area-item ${area.id === t.id ? "selected" : ""}`}
+                  key={t.id}
+                  disabled={busy}
+                  onClick={() => openArea(t)}
+                >
+                  {t.name}
+                  <small>
+                    {t.status === "active" ? "Ativa" : "Inativa"} ·{" "}
+                    {(t.roles || []).length} funções
+                  </small>
                 </button>
               ))}
-            </div>
-          </div>
-        </article>
-
-        {/* COLUNA DIREITA: CADASTRO E AUDITORIA */}
-        <aside style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          
-          {/* PAINEL DE ADICIONAR PESSOA */}
-          <div className="panel" style={{ padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Novo Voluntário</h3>
-            <form onSubmit={handleServantRegistration} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                Nome Completo
-                <input
-                  required
-                  placeholder="Nome do voluntário"
-                  value={servantDraft.name}
-                  onChange={e => setServantDraft(prev => ({ ...prev, name: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
-                />
-              </label>
-
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                WhatsApp
-                <input
-                  required
-                  placeholder="(00) 00000-0000"
-                  value={servantDraft.phone}
-                  onChange={e => setServantDraft(prev => ({ ...prev, phone: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
-                />
-              </label>
-
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.8rem", color: "var(--alvo-ink-soft)" }}>
-                Função da Escala
-                <input
-                  placeholder="Ex: Recepção Lateral"
-                  value={servantDraft.role}
-                  onChange={e => setServantDraft(prev => ({ ...prev, role: e.target.value }))}
-                  style={{ padding: "8px 12px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none" }}
-                />
-              </label>
-
-              <button 
-                type="submit" disabled={registrationSaving}
-                style={{ background: "var(--alvo-accent)", color: "white", border: "none", borderRadius: "10px", padding: "10px", fontWeight: 800, cursor: "pointer", marginTop: 6 }}
-              >
-                Cadastrar e Escalar
-              </button>
+            </nav>
+            <form onSubmit={saveArea}>
+              <fieldset disabled={busy}>
+                <label>
+                  Nome da área / serviço
+                  <input
+                    required
+                    maxLength={100}
+                    value={area.name}
+                    onChange={(e) => setArea({ ...area, name: e.target.value })}
+                    placeholder="Ex.: Equipe de acolhimento"
+                  />
+                </label>
+                <label>
+                  Descrição (opcional)
+                  <textarea
+                    rows={3}
+                    maxLength={500}
+                    value={area.summary}
+                    onChange={(e) =>
+                      setArea({ ...area, summary: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Funções — uma por linha
+                  <textarea
+                    required
+                    rows={5}
+                    maxLength={2400}
+                    value={area.roles}
+                    onChange={(e) =>
+                      setArea({ ...area, roles: e.target.value })
+                    }
+                    placeholder={
+                      "Receber visitantes\nOrganizar a entrada\nApoio"
+                    }
+                  />
+                </label>
+                <div className="serving-form-grid">
+                  <label>
+                    Pessoas desejadas por serviço
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      required
+                      value={area.targetVolunteers}
+                      onChange={(e) =>
+                        setArea({
+                          ...area,
+                          targetVolunteers: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Situação
+                    <select
+                      value={area.status}
+                      onChange={(e) =>
+                        setArea({ ...area, status: e.target.value })
+                      }
+                    >
+                      <option value="active">Ativa</option>
+                      <option value="inactive">Inativa</option>
+                    </select>
+                  </label>
+                </div>
+                <button className="serving-button primary" type="submit">
+                  {busy
+                    ? "Salvando…"
+                    : area.id
+                      ? "Salvar área"
+                      : "Salvar área e montar escala"}
+                </button>
+              </fieldset>
             </form>
           </div>
-
-          {/* HISTÓRICO DE AUDITORIA DE ESCALAS (Scale Activity Audit Trail) */}
-          <div className="panel" style={{ padding: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-              <FileText size={16} style={{ color: "var(--alvo-accent)" }} />
-              <h3 style={{ fontSize: "1.1rem", color: "var(--alvo-ink)", fontWeight: 800, margin: 0 }}>Histórico da Escala</h3>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "250px", overflowY: "auto", paddingRight: 4 }}>
-              {auditLogs.map((log, idx) => (
-                <div key={idx} style={{ fontSize: "0.75rem", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "6px" }}>
-                  <span style={{ color: "var(--alvo-accent)", fontWeight: 800 }}>{log.time}</span> - <span style={{ color: "var(--alvo-ink-soft)" }}>{log.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </aside>
-      </section>
-
-      {/* WHATSAPP REMINDER DRAWER / MODAL SIMULATOR */}
-      {selectedAssignmentForReminder && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(15, 23, 42, 0.35)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "2rem" }}>
-          <div style={{ background: "rgba(255, 255, 255, 0.8)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.5)", borderRadius: "24px", padding: "2rem", maxWidth: "500px", width: "100%", margin: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h3 style={{ color: "var(--alvo-ink)", fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
-                Preparar lembrete no WhatsApp
-              </h3>
-              <button 
-                onClick={() => setSelectedAssignmentForReminder(null)}
-                style={{ background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", cursor: "pointer", borderRadius: "8px", padding: "4px" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <p style={{ color: "var(--alvo-ink-soft)", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
-              Revise a mensagem e abra a conversa para enviar manualmente ao voluntário.
+          {formError && (
+            <p role="alert" className="serving-error">
+              {formError}
             </p>
-
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, color: "var(--alvo-ink)", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
-              Template da Mensagem
-              <textarea 
-                value={whatsappTemplate}
-                onChange={e => setWhatsappTemplate(e.target.value)}
-                rows={4}
-                style={{ width: "100%", padding: "10px", background: "white", border: "1px solid var(--alvo-line)", borderRadius: "10px", color: "var(--alvo-ink)", outline: "none", resize: "none" }}
-              />
-            </label>
-
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button 
-                onClick={() => setSelectedAssignmentForReminder(null)}
-                style={{ flex: 1, background: "white", border: "1px solid var(--alvo-line)", color: "var(--alvo-ink)", padding: "10px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}
-              >
-                Cancelar
-              </button>
-
-              <button 
-                onClick={() => handleSendReminder(selectedAssignmentForReminder)}
-                style={{ flex: 1, background: "var(--alvo-green)", color: "white", border: "none", padding: "10px", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                <Send size={15} /> Abrir WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
+          )}
+          <Link href="/members">Gerenciar os cadastros das pessoas</Link>
+        </Dialog>
       )}
-
-    </div>
+      {dialog === "scale" && (
+        <Dialog title="Nova escala" busy={busy} onClose={() => setDialog(null)}>
+          <form onSubmit={create}>
+            <fieldset disabled={busy}>
+              <div className="serving-form-grid">
+                <label>
+                  Área / serviço
+                  <select
+                    required
+                    value={draft.teamId}
+                    onChange={(e) => {
+                      const team = data.teams.find(
+                        (t) => t.id === e.target.value,
+                      );
+                      setDraft({
+                        ...draft,
+                        teamId: e.target.value,
+                        role: team?.roles?.[0] || "",
+                      });
+                    }}
+                  >
+                    <option value="">Selecione uma área cadastrada</option>
+                    {activeTeams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Função
+                  <select
+                    required
+                    value={draft.role}
+                    onChange={(e) =>
+                      setDraft({ ...draft, role: e.target.value })
+                    }
+                  >
+                    <option value="">Selecione a função</option>
+                    {(selectedTeam?.roles || []).map((role) => (
+                      <option key={role}>{role}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {selectedTeam && !selectedTeam.roles?.length && (
+                <p className="serving-error">
+                  Esta área antiga ainda não tem funções cadastradas.{" "}
+                  <button type="button" onClick={() => openArea(selectedTeam)}>
+                    Configurar funções
+                  </button>
+                </p>
+              )}
+              <label>
+                Nome do culto ou evento
+                <input
+                  required
+                  maxLength={100}
+                  placeholder="Ex.: Celebração da família"
+                  value={draft.serviceName}
+                  onChange={(e) =>
+                    setDraft({ ...draft, serviceName: e.target.value })
+                  }
+                />
+              </label>
+              <div className="serving-form-grid three">
+                <label>
+                  Data
+                  <input
+                    type="date"
+                    required
+                    value={draft.date}
+                    onChange={(e) =>
+                      setDraft({ ...draft, date: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Horário
+                  <input
+                    type="time"
+                    required
+                    value={draft.time}
+                    onChange={(e) =>
+                      setDraft({ ...draft, time: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Duração (minutos)
+                  <input
+                    type="number"
+                    required
+                    min={15}
+                    max={720}
+                    value={draft.durationMinutes}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        durationMinutes: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <p className="serving-helper">
+                Fuso da instituição: {data.timezone}. Não é necessário que o
+                serviço aconteça no domingo.
+              </p>
+              <label>
+                Buscar pessoas
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Digite o nome da pessoa"
+                />
+              </label>
+              <p>
+                {draft.personIds.length} pessoa(s) selecionada(s). Uma escala
+                por pessoa na função escolhida.
+              </p>
+              <div className="serving-people-picker">
+                {candidates.map((p) => (
+                  <label className="serving-person-option" key={p.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.personIds.includes(p.id)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          personIds: e.target.checked
+                            ? [...draft.personIds, p.id]
+                            : draft.personIds.filter((id) => id !== p.id),
+                        })
+                      }
+                    />
+                    <span>
+                      {fullName(p)}
+                      <small>
+                        {(
+                          {
+                            member: "Membro",
+                            leader: "Líder",
+                            volunteer: "Voluntário",
+                            congregant: "Congregado",
+                            new_believer: "Novo convertido",
+                            visitor: "Visitante",
+                          } as Record<string, string>
+                        )[p.memberStatus || ""] || "Pessoa cadastrada"}
+                      </small>
+                    </span>
+                  </label>
+                ))}
+                {!candidates.length && (
+                  <p>
+                    Nenhuma pessoa encontrada. Cadastre-a em Pessoas antes de
+                    escalar.
+                  </p>
+                )}
+              </div>
+              <p className="serving-helper">
+                Ao salvar, a escala aparece para a conta vinculada do membro e o
+                sistema tenta avisar o aparelho habilitado. O WhatsApp é uma
+                ação separada, com situação visível na lista.
+              </p>
+              <div className="serving-toolbar">
+                <Link href="/members">Cadastrar uma pessoa</Link>
+                <button
+                  type="button"
+                  className="serving-button"
+                  onClick={() => openArea()}
+                >
+                  Cadastrar outra área
+                </button>
+                <button
+                  type="submit"
+                  disabled={!draft.personIds.length}
+                  className="serving-button primary"
+                >
+                  {busy
+                    ? "Salvando e preparando avisos…"
+                    : "Salvar escala e avisar no app"}
+                </button>
+              </div>
+            </fieldset>
+          </form>
+          {formError && (
+            <p role="alert" className="serving-error">
+              {formError}
+            </p>
+          )}
+        </Dialog>
+      )}
+    </section>
   );
-}
-
-function applyAssignmentStatus(
-  assignment: ServiceAssignment,
-  nextStatus: ServiceAssignmentStatus,
-  responseNote?: string
-): ServiceAssignment {
-  const now = new Date().toISOString();
-  const nextAssignment: ServiceAssignment = {
-    ...assignment,
-    responseNote: responseNote?.trim() || assignment.responseNote,
-    status: nextStatus,
-    updatedAt: now
-  };
-
-  if (nextStatus === "confirmed") {
-    nextAssignment.confirmedAt = now;
-  }
-
-  if (nextStatus === "declined") {
-    nextAssignment.declinedAt = now;
-  }
-
-  if (nextStatus === "present") {
-    nextAssignment.checkedInAt = now;
-  }
-
-  if (nextStatus === "absent") {
-    nextAssignment.absentAt = now;
-  }
-
-  return nextAssignment;
-}
-
-function getFullName(person: Person) {
-  return `${person.preferredName || person.firstName} ${person.lastName}`.trim();
-}
-
-function getAssignmentStatusLabel(status: ServiceAssignmentStatus) {
-  switch (status) {
-    case "pending":
-      return "Pendente";
-    case "confirmed":
-      return "Confirmado";
-    case "declined":
-      return "Justificado";
-    case "present":
-      return "Presente";
-    case "absent":
-      return "Falta";
-  }
 }

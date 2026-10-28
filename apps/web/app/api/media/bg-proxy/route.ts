@@ -51,13 +51,9 @@ export async function GET(req: NextRequest) {
     if (!prompt || prompt.length > 600) {
       return NextResponse.json({ error: "Prompt inválido." }, { status: 422 });
     }
-    const w = clampInt(searchParams.get("w"), 1080, 256, 1536);
-    const h = clampInt(searchParams.get("h"), 1080, 256, 1536);
-    // Sem seed explícito, deriva um seed estável do prompt em vez de sortear:
-    // a mesma URL passa a produzir sempre a mesma imagem, então o Cache-Control
-    // abaixo vira cache de verdade (antes cada request era uma URL "nova" no
-    // upstream e a geração — cara e lenta — se repetia). O app web sempre envia
-    // seed explícito, então o comportamento de "gerar outra variação" não muda.
+    const w = clampInt(searchParams.get("w"), 1080, 256, 1920);
+    const h = clampInt(searchParams.get("h"), 1080, 256, 1920);
+    // Seed estável apenas para o provedor. Respostas autenticadas não usam cache compartilhado.
     const seed = clampInt(
       searchParams.get("seed"),
       hashSeed(prompt),
@@ -65,17 +61,24 @@ export async function GET(req: NextRequest) {
       999999,
     );
 
+    // Preserve the requested aspect ratio when the provider caps a side at 1536.
+    const scale = Math.min(1, 1536 / Math.max(w, h));
+    const width = Math.round(w * scale),
+      height = Math.round(h * scale);
+    const apiKey = process.env.POLLINATIONS_API_KEY?.trim();
     const ticket = await aiGate(organizationId, uid, "banner_image");
     auditId = ticket.auditId;
     orgId = organizationId;
-    const pollinationsUrl =
-      `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
-      `?width=${w}&height=${h}&seed=${seed}&model=flux&nologo=true`;
+    const pollinationsUrl = apiKey
+      ? `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=flux&safe=true`
+      : `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&model=flux&nologo=true`;
 
     let imgRes: Response;
     try {
       imgRes = await fetch(pollinationsUrl, {
         signal: AbortSignal.timeout(55_000),
+        cache: "no-store",
+        ...(apiKey ? { headers: { Authorization: `Bearer ${apiKey}` } } : {}),
       });
     } catch (e) {
       throw new AccountError(
@@ -85,14 +88,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (!imgRes.ok) {
-      throw new AccountError(502, "Provedor de imagem indisponível.");
+      await imgRes.body?.cancel();
+      throw new AccountError(
+        502,
+        "O serviço de imagens não respondeu. O banner anterior foi preservado. Você pode usar um fundo próprio ou tentar novamente depois.",
+      );
     }
 
     const contentType = imgRes.headers.get("Content-Type") ?? "image/jpeg";
 
     if (
       !["image/jpeg", "image/png", "image/webp"].includes(
-        contentType.split(";")[0],
+        contentType.split(";")[0].trim().toLowerCase(),
       )
     )
       throw new AccountError(502, "O provedor não retornou uma imagem válida.");
@@ -117,6 +124,25 @@ export async function GET(req: NextRequest) {
       bytes.set(chunk, offset);
       offset += chunk.length;
     }
+    const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    const png = [137, 80, 78, 71, 13, 10, 26, 10].every(
+      (byte, i) => bytes[i] === byte,
+    );
+    const webp =
+      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP";
+    const mime = contentType.split(";")[0].trim().toLowerCase();
+    if (
+      !(
+        (mime === "image/jpeg" && jpeg) ||
+        (mime === "image/png" && png) ||
+        (mime === "image/webp" && webp)
+      )
+    )
+      throw new AccountError(
+        502,
+        "O serviço retornou um arquivo de imagem inválido.",
+      );
     await completeAi(orgId, auditId, "completed");
 
     // Bounded body completes before the generation audit is marked complete.

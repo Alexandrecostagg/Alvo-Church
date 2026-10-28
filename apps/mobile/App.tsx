@@ -1,3 +1,6 @@
+import { mobileWorshipSong, mobileWorshipProgram, type MobileWorshipSong } from "./src/features/worship/worship-model";
+import { MobileWorshipReader } from "./src/features/worship/worship-reader";
+import { mobileServingSlots, pendingServingCount, servingNotificationMatches, type MobileServingAssignment } from "./src/features/serving/serving-notifications";
 import { secureAuthStorage } from "./src/features/session/secure-auth-storage";
 import { mobileCapabilities, parseContributionAmount, imageDataUrl, type MobileCapabilities } from "./src/features/navigation/mobile-flow";
 import { useAndroidBack } from "./src/features/navigation/use-android-back";
@@ -17,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -56,6 +60,7 @@ import {
   fetchWorshipSongs,
   fetchWorshipSetlistByEventId,
   saveMobilePushToken,
+  clearMobilePushToken,
   type FirebaseAuthUser
 } from "@alvo/firebase";
 import type { OrganizationDirectoryEntry } from "@alvo/firebase";
@@ -124,15 +129,7 @@ type EscalaSlot = {
   status: EscalaStatus;
   responseNote?: string;
 };
-type Song = {
-  id: string;
-  title: string;
-  artist: string;
-  key: string;
-  bpm: number;
-  chords: string;
-  lyrics: string;
-};
+type Song = MobileWorshipSong;
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const firebaseConfig = {
@@ -333,7 +330,10 @@ function TenantApp({ user, configured, linkedOrg, onSignOut, onChooseInstitution
   </SafeAreaView>;
   return <MainApp user={user} tenantRuntime={tenantRuntime} events={events} groups={groups}
     roles={roles} modules={modules} loadError={loadError} refreshing={refreshing} onRefresh={load} onChooseInstitution={onChooseInstitution}
-    dataReady={dataReady} linkedOrg={linkedOrg} pushToken={pushToken} onSignOut={onSignOut} />;
+    dataReady={dataReady} linkedOrg={linkedOrg} pushToken={pushToken} onSignOut={async () => {
+      if(pushToken) {try {await clearMobilePushToken(firebaseConfig,{organizationId:linkedOrg.id},user.uid,pushToken);} catch {if(__DEV__)console.warn("O aparelho não pôde ser desvinculado dos avisos durante a saída.");}}
+      onSignOut();
+    }} />;
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
@@ -948,6 +948,26 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
     return () => { cancelled = true; };
   }, [orgId, access.marketplace, promotionsRevision]);
 
+  const [pendingServing,setPendingServing] = useState(0);
+  const [servingRevision,setServingRevision] = useState(0);
+  const [servingNoticeError,setServingNoticeError] = useState("");
+  useEffect(()=>{
+    let active=true,run=0;
+    if(!access.volunteers){setPendingServing(0);return;}
+    const refresh=async()=>{if(AppState.currentState!=="active")return;const current=++run;try{const result=await memberOperation<{assignments:MobileServingAssignment[]}>(user,orgId,{action:"assignments"});if(active&&current===run){setPendingServing(pendingServingCount(result.assignments));setServingNoticeError("");}}catch{if(active&&current===run)setServingNoticeError("Não foi possível atualizar os avisos de escala. Abra Minha Escala para conferir.");}};
+    void refresh(); const timer=setInterval(()=>void refresh(),30000);
+    const state=AppState.addEventListener("change",next=>{if(next==="active")void refresh();});
+    return()=>{active=false;run++;clearInterval(timer);state.remove();};
+  },[orgId,user,access.volunteers,servingRevision,refreshing]);
+  useEffect(()=>{
+    let active=true;
+    const received=Notifications.addNotificationReceivedListener(n=>{if(servingNotificationMatches(n.request.content.data,orgId))setServingRevision(v=>v+1);});
+    const open=(response:Notifications.NotificationResponse|null)=>{if(active&&access.volunteers&&response&&servingNotificationMatches(response.notification.request.content.data,orgId)){setServingRevision(v=>v+1);push("escala");}};
+    const tapped=Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync().then(open).catch(()=>{});
+    return()=>{active=false;received.remove();tapped.remove();};
+  },[orgId,access.volunteers]);
+
   const unseenPromoCount = promotions.filter((p) => !seenPromoIds.has(p.id)).length;
 
   function push(screen: ModalScreen) { setModalStack(p => p.at(-1) === screen ? p : [...p, screen]); }
@@ -995,6 +1015,8 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         </View>
 
         {!!loadError && <View style={{ padding: 12 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void onRefresh()} loading={refreshing} variant="outline" /></View>}
+        {access.volunteers && !modal && pendingServing>0 && <TouchableOpacity accessibilityLabel={`${pendingServing} escalas aguardando resposta. Abrir Minha Escala`} onPress={()=>push("escala")} style={{padding:14,backgroundColor:"#fef3c7"}}><Text style={{color:"#78350f",fontWeight:"700"}}>{pendingServing} escala(s) aguardando sua resposta →</Text><Text style={{color:"#78350f",marginTop:4}}>Toque para conferir a área, o horário e confirmar ou recusar.</Text></TouchableOpacity>}
+        {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
         {/* Content */}
         <View style={s.fill}>
           {tab === "inicio" && !modal && <HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
@@ -1005,10 +1027,10 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {/* Modals */}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
+          {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={()=>{setServingRevision(v=>v+1);pop();}} refreshRevision={servingRevision} />}
           {modal === "musica" && <MusicaScreen primary={primary} orgId={orgId} events={events} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
+          {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} storageKey={`${orgId}:${user.uid}`} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "promocoes" && <PromocoesScreen loading={promotionsLoading} error={promotionsError} onRetry={() => setPromotionsRevision(r => r + 1)} primary={primary} promotions={promotions} onBack={pop} />}
@@ -2202,7 +2224,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
 // ─── Escala Screen ────────────────────────────────────────────────────────────
 
-function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+function EscalaScreen({ primary, user, orgId, onBack, refreshRevision }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void; refreshRevision: number }) {
   const [slots, setSlots] = useState<EscalaSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -2210,22 +2232,22 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
   const [note, setNote] = useState("");
   const [responding, setResponding] = useState(false);
   const responseBusy = useRef(false);
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    const version=++loadVersion.current;setLoading(true); setError("");
     try {
-      const data = await memberOperation<{ status: string; assignments: ServiceAssignment[] }>(user, orgId, { action: "assignments" });
+      const data = await memberOperation<{ status: string; assignments: MobileServingAssignment[] }>(user, orgId, { action: "assignments" });
+      if(version!==loadVersion.current)return;
       if (data.status === "unlinked") setError("Peça à secretaria para vincular sua conta ao cadastro de membro e consultar suas escalas.");
-      setSlots(data.assignments.filter(a => ["pending", "confirmed", "declined"].includes(a.status)).map(a => ({
-        id: a.id, date: formatDate(a.serviceDate), time: formatHour(a.serviceDate), service: a.role, role: a.role,
-        status: a.status === "confirmed" ? "confirmado" : a.status === "declined" ? "recusado" : "pendente", responseNote: a.responseNote,
-      })));
-    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível carregar suas escalas."); }
-    finally { setLoading(false); }
+      setSlots(mobileServingSlots(data.assignments));
+    } catch (e) { if(version===loadVersion.current)setError(e instanceof Error ? e.message : "Não foi possível carregar suas escalas."); }
+    finally { if(version===loadVersion.current)setLoading(false); }
   }, [orgId, user]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return()=>{loadVersion.current++;}; }, [load,refreshRevision]);
+  useEffect(()=>{const state=AppState.addEventListener("change",value=>{if(value==="active"&&!responseBusy.current)void load();});const timer=setInterval(()=>{if(AppState.currentState==="active"&&!responseBusy.current)void load();},30000);return()=>{state.remove();clearInterval(timer);};},[load]);
   async function respond(id: string, status: EscalaStatus, note = "") {
     if (responseBusy.current) return;
-    responseBusy.current = true; setResponding(true);
+    loadVersion.current++; responseBusy.current = true; setResponding(true);
     try {
       await memberOperation(user, orgId, { action: "respond", assignmentId: id, status: status === "confirmado" ? "confirmed" : "declined", note });
       setSlots(p => p.map(s => s.id === id ? { ...s, status, responseNote: note } : s));
@@ -2240,7 +2262,7 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Minha Escala" onBack={onBack} />
-      <ScrollView contentContainerStyle={s.tabContent}>
+      <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void load()} tintColor={primary} />}>
         <View style={[s.infoBox, { marginBottom: 16 }]}>
           <Text style={s.infoText}>Confira suas escalas e responda com antecedência. Se precisar alterar uma resposta já enviada, procure a liderança.</Text>
         </View>
@@ -2252,7 +2274,7 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
           <View style={[s.fill, s.center, { padding: 32 }]}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>📋</Text>
             <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma escala atribuída</Text>
-            <Text style={[s.screenSub, { textAlign: "center" }]}>Quando a liderança publicar escalas, elas aparecem aqui.</Text>
+            <Text style={[s.screenSub, { textAlign: "center" }]}>Suas próximas escalas aparecerão aqui. Puxe para atualizar. É necessário que sua conta esteja vinculada ao cadastro correto.</Text>
           </View>
         ) : (
           slots.map(slot => (
@@ -2301,11 +2323,15 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
 function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary: string; orgId: string; events: Event[]; onBack: () => void; onOpenSong: (s: Song) => void }) {
   const [view, setView] = useState<"repertorio" | "programacao">("repertorio");
   const [songs, setSongs] = useState<Song[]>([]);
-  const [programming, setProgramming] = useState<Array<{ order: number; type: string; description: string }>>([]);
+  const [programming, setProgramming] = useState<Array<{ order: number; type: string; description: string; song: Song }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [revision, setRevision] = useState(0);
-  const nextEvent = events.find((event) => new Date(event.startsAt).getTime() >= Date.now()) ?? events[0];
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", state => { if (state === "active") setRevision(value => value + 1); });
+    return () => listener.remove();
+  }, []);
+  const nextEvent = events.filter(event => !["cancelled", "closed"].includes(event.status) && Date.parse(event.startsAt) >= Date.now()).sort((a,b) => a.startsAt.localeCompare(b.startsAt))[0];
 
   useEffect(() => {
     if (!orgId) return;
@@ -2315,15 +2341,7 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
       try {
         setLoading(true); setLoadError("");
         const worshipSongs = await fetchWorshipSongs(firebaseConfig, { organizationId: orgId });
-        const mobileSongs = worshipSongs.map((song) => ({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          key: song.originalKey,
-          bpm: song.tempoBpm ?? 0,
-          chords: song.chordsLyrics ?? "",
-          lyrics: song.chordsLyrics ?? ""
-        }));
+        const mobileSongs = worshipSongs.map(mobileWorshipSong);
 
         if (cancelled) return;
         setSongs(mobileSongs);
@@ -2336,15 +2354,7 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
         const setlist = await fetchWorshipSetlistByEventId(firebaseConfig, { organizationId: orgId }, nextEvent.id);
         if (cancelled) return;
 
-        const bySongId = new Map(mobileSongs.map((song) => [song.id, song]));
-        setProgramming(
-          (setlist?.songs ?? [])
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .flatMap((item, index) => {
-              const song = bySongId.get(item.songId);
-              return song ? [{ order: index + 1, type: "Louvor", description: `${song.title} — ${item.selectedKey || song.key}` }] : [];
-            })
-        );
+        setProgramming(mobileWorshipProgram(mobileSongs, setlist?.songs ?? []));
       } catch (error) {
         if (__DEV__) console.warn("Não foi possível carregar o repertório:", error);
         if (!cancelled) {
@@ -2375,7 +2385,7 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
       </View>
 
       {view === "repertorio" && (
-        <ScrollView contentContainerStyle={s.tabContent}>
+        <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => setRevision(r => r + 1)} tintColor={primary} />}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
             <Text style={s.infoText}>🎵  Repertório cadastrado pela sua igreja</Text>
           </View>
@@ -2388,7 +2398,7 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
               </View>
               <View style={s.fill}>
                 <Text style={s.cardTitle}>{song.title}</Text>
-                <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
+                <Text style={s.cardMeta}>{song.artist}{song.bpm ? ` · ${song.bpm} BPM` : ""}</Text>
               </View>
               <Text style={s.menuChev}>›</Text>
             </TouchableOpacity>
@@ -2397,14 +2407,14 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
       )}
 
       {view === "programacao" && (
-        <ScrollView contentContainerStyle={s.tabContent}>
+        <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => setRevision(r => r + 1)} tintColor={primary} />}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
             <Text style={s.infoText}>📋  {nextEvent ? `Repertório de ${nextEvent.name}` : "Selecione um próximo evento no painel"}</Text>
           </View>
           {loading ? <LoadingRow primary={primary} label="Carregando programação..." /> : loadError ? null : programming.length === 0 ? (
             <EmptyState icon="📋" title="Programação ainda não definida" sub="Vincule o repertório a um evento no painel da igreja." />
           ) : programming.map(item => (
-            <View key={item.order} style={s.progRow}>
+            <TouchableOpacity key={item.order} style={s.progRow} onPress={() => onOpenSong(item.song)} accessibilityRole="button" accessibilityLabel={`Abrir cifra ${item.description}`}>
               <View style={[s.progNum, { backgroundColor: primary }]}>
                 <Text style={s.progNumText}>{item.order}</Text>
               </View>
@@ -2412,7 +2422,7 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
                 <Text style={[s.eyebrow, { marginBottom: 2 }]}>{item.type.toUpperCase()}</Text>
                 <Text style={s.cardTitle}>{item.description}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -2422,44 +2432,8 @@ function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary:
 
 // ─── Song Detail Screen ───────────────────────────────────────────────────────
 
-function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: string; onBack: () => void }) {
-  const [view, setView] = useState<"cifra" | "letra">("cifra");
-  return (
-    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
-      <ModalHeader title={song.title} onBack={onBack} />
-      <View style={[s.card, { margin: 16, marginBottom: 0 }]}>
-        <View style={s.row}>
-          <View style={[s.songKey, { backgroundColor: primary, width: 44, height: 44, borderRadius: 10 }]}>
-            <Text style={[s.songKeyText, { fontSize: 18 }]}>{song.key}</Text>
-          </View>
-          <View style={{ marginLeft: 12 }}>
-            <Text style={s.cardTitle}>{song.title}</Text>
-            <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
-          </View>
-        </View>
-      </View>
-      <View style={[s.segControl, { margin: 16, marginTop: 12 }]}>
-        <Pressable style={[s.seg, view === "cifra" && { backgroundColor: primary }]} onPress={() => setView("cifra")}>
-          <Text style={[s.segText, view === "cifra" && { color: "#fff" }]}>Cifra</Text>
-        </Pressable>
-        <Pressable style={[s.seg, view === "letra" && { backgroundColor: primary }]} onPress={() => setView("letra")}>
-          <Text style={[s.segText, view === "letra" && { color: "#fff" }]}>Letra</Text>
-        </Pressable>
-      </View>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {view === "cifra" && (
-          <View style={[s.card, { backgroundColor: BRAND_DARK }]}>
-            <Text style={s.chordsText}>{song.chords}</Text>
-          </View>
-        )}
-        {view === "letra" && (
-          <View style={s.card}>
-            <Text style={s.lyricsText}>{song.lyrics}</Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
+function SongDetailScreen({ song, primary, onBack, storageKey }: { song: Song; primary: string; onBack: () => void; storageKey: string }) {
+  return <MobileWorshipReader song={song} primary={primary} storageKey={storageKey} header={<ModalHeader title={song.title} onBack={onBack} />} />;
 }
 
 // ─── Inscrição Screen ─────────────────────────────────────────────────────────

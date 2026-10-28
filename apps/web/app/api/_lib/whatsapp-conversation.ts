@@ -1,4 +1,7 @@
+import { servingDate } from "../../../src/features/serving/serving-contract";
 import {
+  memberServingAssignments,
+  respondWhatsappServing,
   consumeWhatsappLink,
   memberCellMeetings,
   confirmOwnCellAttendance,
@@ -44,7 +47,7 @@ function attemptId(id: string) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 const menu = (ctx: ConversationContext) =>
-  `${ctx.profile.greeting || `Olá! Bem-vindo a ${ctx.name}.`}\n\n1 — Agenda e inscrições\n2 — Sou visitante\n3 — Oração e cuidado privado\n4 — Contribuições\n5 — Falar com a equipe\n6 — Solicitar atualização cadastral\n7 — Encontrar uma célula\nMINHA CELULA — presença na minha célula (conta vinculada)\n\nDigite MENU para voltar ou SAIR para interromper mensagens. Os links abrem sem instalar aplicativo.${ctx.profile.aiEnabled ? "\nDUVIDA + pergunta: informações gerais com IA (Gemini/Groq). Não envie dados pessoais nessa opção." : ""}`;
+  `${ctx.profile.greeting || `Olá! Bem-vindo a ${ctx.name}.`}\n\n1 — Agenda e inscrições\n2 — Sou visitante\n3 — Oração e cuidado privado\n4 — Contribuições\n5 — Falar com a equipe\n6 — Solicitar atualização cadastral\n7 — Encontrar uma célula\nMINHAS ESCALAS — consultar e responder escalas (conta vinculada)\nMINHA CELULA — presença na minha célula (conta vinculada)\n\nDigite MENU para voltar ou SAIR para interromper mensagens. Os links abrem sem instalar aplicativo.${ctx.profile.aiEnabled ? "\nDUVIDA + pergunta: informações gerais com IA (Gemini/Groq). Não envie dados pessoais nessa opção." : ""}`;
 export async function conversationReply(
   ctx: ConversationContext,
   msg: IncomingWhatsapp,
@@ -89,6 +92,45 @@ export async function conversationReply(
     } catch (error) {
       return result(
         error instanceof AccountError ? error.message : "Vínculo indisponível.",
+      );
+    }
+  }
+  if (
+    command === "minhas escalas" ||
+    command.startsWith("aceitar escala ") ||
+    command.startsWith("recusar escala ")
+  ) {
+    try {
+      if (command === "minhas escalas") {
+        const rows = await memberServingAssignments(ctx.orgId, msg.from);
+        return result(
+          rows.length
+            ? rows
+                .map(
+                  (a) =>
+                    `${a.area} — ${a.role}, ${servingDate(a.serviceDate, a.timezone)}\nPara confirmar: ACEITAR ESCALA ${a.id}\nPara recusar: RECUSAR ESCALA ${a.id}`,
+                )
+                .join("\n\n")
+            : "Você não tem escalas aguardando resposta.",
+        );
+      }
+      const parts = msg.text.trim().split(/\s+/);
+      if (parts.length !== 3 || !/^[A-Za-z0-9_-]{1,128}$/.test(parts[2]))
+        return result("Use o comando informado em MINHAS ESCALAS.");
+      return result(
+        "Deseja enviar essa resposta à liderança? Envie CONFIRMAR ou CANCELAR.",
+        {
+          pending: {
+            kind: "serving",
+            assignmentId: parts[2],
+            status: command.startsWith("aceitar") ? "confirmed" : "declined",
+          },
+          expiresAt: Date.now() + 15 * 60000,
+        },
+      );
+    } catch (e) {
+      return result(
+        `${e instanceof AccountError ? e.message : "Consulta indisponível."}\nVincular conta: ${base}/connect`,
       );
     }
   }
@@ -140,6 +182,25 @@ export async function conversationReply(
     Number(ctx.state.expiresAt) > Date.now()
   ) {
     const pending = ctx.state.pending;
+    if (pending.kind === "serving") {
+      try {
+        await respondWhatsappServing(
+          ctx.orgId,
+          msg.from,
+          pending.assignmentId,
+          pending.status,
+        );
+        return result(
+          "Resposta registrada na sua escala e disponível para a liderança.",
+        );
+      } catch (e) {
+        return result(
+          e instanceof AccountError
+            ? e.message
+            : "Não foi possível registrar sua resposta.",
+        );
+      }
+    }
     if (pending.kind === "attendance" && ctx.profile.groupsEnabled) {
       try {
         await confirmOwnCellAttendance(
