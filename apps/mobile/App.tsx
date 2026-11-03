@@ -1,3 +1,4 @@
+import { CampaignMemberScreen } from "./src/features/campaigns/campaign-member-screen";
 import { mobileWorshipSong, mobileWorshipProgram, type MobileWorshipSong } from "./src/features/worship/worship-model";
 import { MobileWorshipReader } from "./src/features/worship/worship-reader";
 import { mobileServingSlots, pendingServingCount, servingNotificationMatches, type MobileServingAssignment } from "./src/features/serving/serving-notifications";
@@ -108,6 +109,7 @@ async function callAi(task: string, input: unknown, idToken: string, organizatio
 type AuthScreen = "splash" | "welcome" | "login" | "register" | "link-institution";
 type Tab = "inicio" | "agenda" | "celula" | "perfil";
 type ModalScreen =
+  | "convites"
   | "doacoes"
   | "kids-checkin"
   | "escala"
@@ -982,7 +984,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   useAndroidBack(modal !== "cursos" && modal !== "kids-checkin" && (Boolean(modal) || tab !== "inicio"), () => { if (modal) pop(); else setTab("inicio"); });
   useEffect(() => {
     if ((tab === "agenda" && !access.events) || (tab === "celula" && !access.groups)) setTab("inicio");
-    const allowed: Partial<Record<ModalScreen, boolean>> = { doacoes: access.giving, "kids-checkin": access.children, escala: access.volunteers, musica: access.volunteers, "song-detail": access.volunteers, inscricao: access.events, "lider-celula": access.leader, cursos: access.journeys, promocoes: access.marketplace };
+    const allowed: Partial<Record<ModalScreen, boolean>> = { convites: access.events, doacoes: access.giving, "kids-checkin": access.children, escala: access.volunteers, musica: access.volunteers, "song-detail": access.volunteers, inscricao: access.events, "lider-celula": access.leader, cursos: access.journeys, promocoes: access.marketplace };
     if (modal && allowed[modal] === false) setModalStack([]);
   }, [tab, modal, access.events, access.groups, access.giving, access.children, access.volunteers, access.leader, access.journeys, access.marketplace]);
 
@@ -1017,6 +1019,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         {!!loadError && <View style={{ padding: 12 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void onRefresh()} loading={refreshing} variant="outline" /></View>}
         {access.volunteers && !modal && pendingServing>0 && <TouchableOpacity accessibilityLabel={`${pendingServing} escalas aguardando resposta. Abrir Minha Escala`} onPress={()=>push("escala")} style={{padding:14,backgroundColor:"#fef3c7"}}><Text style={{color:"#78350f",fontWeight:"700"}}>{pendingServing} escala(s) aguardando sua resposta →</Text><Text style={{color:"#78350f",marginTop:4}}>Toque para conferir a área, o horário e confirmar ou recusar.</Text></TouchableOpacity>}
         {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
+        {access.events && !modal && tab === "inicio" && <TouchableOpacity accessibilityRole="button" onPress={()=>push("convites")} style={{padding:16,backgroundColor:"#eef6f1"}}><Text style={{color:primary,fontWeight:"800"}}>Meus convidados →</Text><Text style={{color:"#3c5c4d",marginTop:4}}>Veja as campanhas e crie seu convite pessoal.</Text></TouchableOpacity>}
         {/* Content */}
         <View style={s.fill}>
           {tab === "inicio" && !modal && <HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
@@ -1025,6 +1028,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {tab === "perfil" && !modal && <PerfilTab access={access} onChooseInstitution={onChooseInstitution} user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
+          {modal === "convites" && <CampaignMemberScreen primary={primary} user={user} orgId={orgId} apiOrigin={WEB_API_URL} onBack={pop} />}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={()=>{setServingRevision(v=>v+1);pop();}} refreshRevision={servingRevision} />}

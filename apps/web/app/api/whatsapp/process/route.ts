@@ -3,6 +3,7 @@ import { safeStringCompare } from "../../_lib/safe-compare";
 import { whatsappChannels } from "../../_lib/whatsapp-config";
 import { dispatchWhatsapp } from "../../_lib/whatsapp-outbox";
 import { accountTransaction } from "../../_lib/member-account-store";
+import { prepareCampaignDeliveries } from "../../_lib/invitation-campaigns";
 /** Intended for a platform-owned scheduler. Never accepts arbitrary recipient, tenant or provider URL. */
 export async function POST(req: NextRequest) {
   const secret = process.env.WHATSAPP_PROCESS_TOKEN;
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   let processed = 0;
   try {
     for (const channel of channels) {
+      await prepareCampaignDeliveries(channel.organizationId);
       const ids = await accountTransaction(async (tx) =>
         (
           await tx.query(
@@ -38,8 +40,12 @@ export async function POST(req: NextRequest) {
             "pending",
             "EQUAL",
             10,
-            {field:"scheduledAt",value:new Date().toISOString(),op:"LESS_THAN_OR_EQUAL"},
-            {field:"scheduledAt",direction:"ASCENDING"},
+            {
+              field: "scheduledAt",
+              value: new Date().toISOString(),
+              op: "LESS_THAN_OR_EQUAL",
+            },
+            { field: "scheduledAt", direction: "ASCENDING" },
           )
         ).map((m) => m.id),
       );

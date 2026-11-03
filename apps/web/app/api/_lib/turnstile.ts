@@ -14,7 +14,7 @@ interface TurnstileResponse {
 
 interface TurnstileInput {
   token: unknown;
-  expectedAction: "public_visit" | "public_giving" | "public_care" | "public_event";
+  expectedAction: "public_visit" | "public_giving" | "public_care" | "public_event" | "public_campaign";
   remoteIp?: string;
   idempotencyKey?: unknown;
 }

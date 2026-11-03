@@ -9,6 +9,8 @@ import { AccountError, accountTransaction } from "./member-account-store";
 import { digest } from "./participation";
 import { documentId } from "./member-account";
 import { whatsappPhone } from "@alvo/utils";
+import { campaignDeliveryGuard, campaignReceipt } from "./invitation-campaigns";
+import { isLocalQaFirebase } from "./firebase-server-env";
 
 export function publicAppOrigin() {
   const value = process.env.PUBLIC_APP_ORIGIN;
@@ -98,14 +100,14 @@ export async function dispatchWhatsapp(
   const root = `organizations/${documentId(orgId, "Igreja")}`,
     path = `${root}/whatsappOutbox/${documentId(outboxId, "Mensagem")}`;
   const claimed = await accountTransaction(async (tx) => {
-    const [row, org, profile] = await tx.read(
+    let [row, org, profile] = await tx.read(
       path,
       root,
       `${root}/settings/pastoralAssistant`,
     );
     if (org?.status !== "active") return null;
     await assertModuleEnabled(tx, root, "communication");
-    if (row && !row.createdBy && profile?.enabled !== true) {
+    if (row && !row.createdBy && !row.campaignReply && profile?.enabled !== true) {
       if (row.status === "pending") tx.patch(path, { status: "blocked" });
       return null;
     }
@@ -125,10 +127,36 @@ export async function dispatchWhatsapp(
       });
       return null;
     }
-    if(!row.optOutAcknowledgement){
-      try { await assertWhatsappContactAllowed(tx,root,row.to); }
-      catch(error){if(error instanceof AccountError && error.status===409){tx.patch(path,{status:"blocked",updatedAt:new Date(now).toISOString()});return null;}throw error;}
+    if (!row.optOutAcknowledgement) {
+      try {
+        await assertWhatsappContactAllowed(tx, root, row.to);
+      } catch (error) {
+        if (error instanceof AccountError && error.status === 409) {
+          tx.patch(path, {
+            status: "blocked",
+            updatedAt: new Date(now).toISOString(),
+          });
+          return null;
+        }
+        throw error;
+      }
     }
+    if ((row.campaignId || row.campaignReply) && isLocalQaFirebase()) {
+      tx.patch(path,{status:"test_mode"});
+      return null;
+    }
+    if (row.campaignId) {
+      try {
+        if (contact.handoff)
+          throw new AccountError(409, "Atendimento humano em andamento.");
+        row = await campaignDeliveryGuard(tx, root, row, now);
+      } catch (error) {
+        if (!(error instanceof AccountError)) throw error;
+        tx.patch(path, { status: "blocked", blockedReason: error.message });
+        return null;
+      }
+    }
+    if (!row) return null;
     if (
       row.kind === "text" &&
       (!Number.isFinite(Date.parse(contact.lastInboundAt)) ||
@@ -142,7 +170,8 @@ export async function dispatchWhatsapp(
     }
     if (
       row.kind === "template" &&
-      (!channel.paidMessagesEnabled || !(channel.templates ?? []).includes(row.templateName))
+      (!channel.paidMessagesEnabled ||
+        !(channel.templates ?? []).includes(row.templateName))
     ) {
       tx.patch(path, {
         status: "blocked",
@@ -151,6 +180,14 @@ export async function dispatchWhatsapp(
       return null;
     }
     tx.patch(path, {
+      ...(row.campaignId
+        ? {
+            templateName: row.templateName,
+            language: row.language,
+            parameters: row.parameters,
+            text: row.text,
+          }
+        : {}),
       status: "sending",
       sendingAt: new Date(now).toISOString(),
     });
@@ -166,8 +203,10 @@ export async function dispatchWhatsapp(
       : "uncertain";
     await accountTransaction(async (tx) => {
       const [row] = await tx.read(path);
-      if (row?.status === "sending")
+      if (row?.status === "sending") {
         tx.patch(path, { status, updatedAt: new Date().toISOString() });
+        await campaignReceipt(tx, root, row, status);
+      }
     });
     return { status };
   }
@@ -179,6 +218,14 @@ export async function dispatchWhatsapp(
       `${root}/whatsappContacts/${digest(claimed.to)}`,
     );
     if (row?.status === "sending") {
+      await campaignReceipt(
+        tx,
+        root,
+        row,
+        receipt && receipt.recipient === claimed.to
+          ? receipt.status
+          : "accepted",
+      );
       tx.patch(path, {
         status:
           receipt && receipt.recipient === claimed.to
@@ -189,6 +236,15 @@ export async function dispatchWhatsapp(
       });
       if (claimed.createdBy && contact)
         tx.patch(`${root}/whatsappContacts/${digest(claimed.to)}`, {
+          ...(claimed.campaignId && !contact.handoff && !contact.optOut
+            ? {
+                state: {
+                  type: "invitation_campaign",
+                  campaignId: claimed.campaignId,
+                  guestId: claimed.campaignGuestId,
+                },
+              }
+            : {}),
           thread: [
             ...(Array.isArray(contact.thread) ? contact.thread : []),
             {
@@ -221,7 +277,10 @@ export async function enqueueStaffWhatsapp(
   const channel = channelForOrg(orgId);
   if (!channel) throw new AccountError(503, "WhatsApp ainda não conectado.");
   if (kind === "template" && !channel.paidMessagesEnabled)
-    throw new AccountError(403, "Envios potencialmente pagos estão desativados até a definição do orçamento.");
+    throw new AccountError(
+      403,
+      "Envios potencialmente pagos estão desativados até a definição do orçamento.",
+    );
   if (
     kind === "template" &&
     (!(channel.templates ?? []).includes(raw.templateName) ||
@@ -264,7 +323,7 @@ export async function enqueueStaffWhatsapp(
         throw new AccountError(409, "Tentativa já usada.");
       return;
     }
-    await assertWhatsappContactAllowed(tx,root,to);
+    await assertWhatsappContactAllowed(tx, root, to);
     if (!contact || contact.optOut)
       throw new AccountError(
         409,
@@ -357,5 +416,6 @@ export async function applyWhatsappStatus(
       status: incoming,
       updatedAt: new Date().toISOString(),
     });
+    await campaignReceipt(tx, root, rows[0], incoming);
   });
 }

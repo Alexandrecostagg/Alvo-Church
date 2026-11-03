@@ -60,6 +60,7 @@ try {
     "qa:mobile",
     "qa:serving",
     "qa:worship",
+    "qa:campaigns",
     "qa:platform-admin",
   ])
     await run([task]);

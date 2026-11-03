@@ -101,7 +101,13 @@ async function processInbound(orgId: string, msg: IncomingWhatsapp) {
     if (inbox?.status === "completed") return { replayed: true };
     if (inbox?.leaseUntil > Date.now() || contact?.leaseUntil > Date.now())
       throw new AccountError(503, "A conversa está sendo processada.");
-    if (!org.slug || profile?.enabled !== true) return null;
+    const campaignConversation =
+      /^CAMPANHA [a-f0-9]{48}$/i.test(msg.text.trim()) ||
+      ["invitation_campaign", "invitation_campaign_pending"].includes(
+        contact?.state?.type,
+      );
+    if (!org.slug || (profile?.enabled !== true && !campaignConversation))
+      return null;
     if (msg.timestamp < Date.now() - 24 * 60 * 60 * 1000) {
       tx.set(inboxPath, {
         id,
@@ -150,7 +156,13 @@ async function processInbound(orgId: string, msg: IncomingWhatsapp) {
       rateWindow: minute,
       rateCount: count + 1,
     });
-    return { replayed: false, org, profile, contact };
+    return {
+      replayed: false,
+      org,
+      profile: profile ?? {},
+      contact,
+      campaignConversation,
+    };
   });
   if (!claimed) return;
   if (claimed.replayed) {
@@ -158,6 +170,9 @@ async function processInbound(orgId: string, msg: IncomingWhatsapp) {
     return;
   }
   try {
+    const storedText = /^CAMPANHA [a-f0-9]{48}$/i.test(msg.text.trim())
+      ? "CAMPANHA [confirmação de convite]"
+      : msg.text.slice(0, 2000);
     const reply = await conversationReply(
       {
         orgId,
@@ -186,12 +201,12 @@ async function processInbound(orgId: string, msg: IncomingWhatsapp) {
         handoff: reply.handoff ?? contact.handoff ?? false,
         optOut: reply.optOut ?? contact.optOut ?? false,
         lastMessageTimestamp: msg.timestamp,
-        lastText: msg.text.slice(0, 2000),
+        lastText: storedText,
         thread: [
           ...(Array.isArray(contact.thread) ? contact.thread : []),
           {
             direction: "in",
-            text: msg.text,
+            text: storedText,
             at: new Date(msg.timestamp).toISOString(),
           },
           { direction: "out", text: reply.text, at: new Date().toISOString() },
@@ -204,12 +219,21 @@ async function processInbound(orgId: string, msg: IncomingWhatsapp) {
         to: msg.from,
         text: reply.text,
         kind: "text",
+        ...(claimed.campaignConversation ? { campaignReply: true } : {}),
         status: "pending",
         scheduledAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         optOutAcknowledgement: reply.optOut === true,
       });
-      if(reply.handoff === false && contact.handoff)tx.set(`${root}/whatsappHandoffs/${digest(msg.from)}`,{id:digest(msg.from),organizationId:orgId,phone:msg.from,name:msg.name,status:"completed",updatedAt:new Date().toISOString()});
+      if (reply.handoff === false && contact.handoff)
+        tx.set(`${root}/whatsappHandoffs/${digest(msg.from)}`, {
+          id: digest(msg.from),
+          organizationId: orgId,
+          phone: msg.from,
+          name: msg.name,
+          status: "completed",
+          updatedAt: new Date().toISOString(),
+        });
       // Human handoff is durable and visible in the communication inbox.
       if (reply.handoff === true)
         tx.set(`${root}/whatsappHandoffs/${digest(msg.from)}`, {

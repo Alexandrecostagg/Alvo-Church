@@ -496,6 +496,7 @@ function toVisitorIntake(documentId: string, data: DocumentData): VisitorIntake 
     phone: data.phone ? String(data.phone) : undefined,
     source: String(data.source ?? ""),
     status: (data.status as VisitorIntake["status"]) ?? "captured",
+    consentMarketing: data.consentMarketing === true,
     greeting: data.greeting ? String(data.greeting) : undefined,
     capturedByUserId: data.capturedByUserId ? String(data.capturedByUserId) : undefined,
     createdAt: String(data.createdAt ?? "")
@@ -1381,6 +1382,7 @@ export async function fetchVisitorIntakes(
   const firestore = getFirebaseFirestore(config);
   const intakesQuery = query(
     collection(firestore, getVisitorIntakesCollectionPath(context)),
+    orderBy("createdAt", "desc"),
     limit(maxItems)
   );
   const snapshot = await getDocs(intakesQuery);

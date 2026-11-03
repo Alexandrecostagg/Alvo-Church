@@ -1,3 +1,7 @@
+import {
+  campaignWhatsappCommand,
+  respondCampaignWhatsapp,
+} from "./invitation-campaigns";
 import { servingDate } from "../../../src/features/serving/serving-contract";
 import {
   memberServingAssignments,
@@ -59,20 +63,101 @@ export async function conversationReply(
     state: Record<string, any> = {},
     extra: { optOut?: boolean; handoff?: boolean } = {},
   ) => ({ text, state, ...extra });
-  if (["sair", "parar", "cancelar mensagens"].includes(command))
+  if (["sair", "parar", "cancelar mensagens"].includes(command)) {
+    if (ctx.state?.type === "invitation_campaign")
+      await respondCampaignWhatsapp(
+        ctx.orgId,
+        msg.from,
+        ctx.state.campaignId,
+        ctx.state.guestId,
+        "stop",
+      ).catch(() => {});
     return result(
       "Mensagens interrompidas. Para retomar o atendimento, envie VOLTAR.",
       {},
       { optOut: true, handoff: false },
     );
+  }
+  if (command === "voltar" && ctx.state?.type === "invitation_campaign_pending" && ctx.profile.enabled !== true)
+    return result("Atendimento retomado. Abra novamente seu convite e use Confirmar pelo WhatsApp para validar o número. Isso não reativa campanhas em que você já pediu SAIR.", {}, {optOut:false,handoff:false});
   if (command === "voltar")
     return result(menu(ctx), {}, { optOut: false, handoff: false });
   if (ctx.optOut)
     return result(
       "Seu contato está pausado. Envie VOLTAR para retomar o atendimento.",
-      {},
+      command.startsWith("campanha ") || ctx.state?.type === "invitation_campaign_pending" ? {type:"invitation_campaign_pending"} : {},
       { optOut: true },
     );
+  if (command.startsWith("campanha ")) {
+    try {
+      const joined = await campaignWhatsappCommand(
+        ctx.orgId,
+        msg.from,
+        msg.text.trim().split(/\s+/)[1],
+      );
+      return result(
+        `WhatsApp confirmado para ${joined.name}. Envie CONFIRMAR CONVITE ou RECUSAR CONVITE. Para atendimento, envie FALAR COM A EQUIPE. SAIR interrompe mensagens.`,
+        {
+          type: "invitation_campaign",
+          campaignId: joined.campaignId,
+          guestId: joined.guestId,
+        },
+      );
+    } catch (error) {
+      return result(
+        error instanceof AccountError
+          ? error.message
+          : "Não foi possível confirmar o convite.",
+      );
+    }
+  }
+  if (
+    ctx.state?.type === "invitation_campaign" &&
+    [
+      "confirmar convite",
+      "recusar convite",
+      "falar com a equipe",
+      "humano",
+      "5",
+    ].includes(command)
+  ) {
+    try {
+      const operation =
+        command === "confirmar convite"
+          ? "confirmed"
+          : command === "recusar convite"
+            ? "declined"
+            : "handoff";
+      await respondCampaignWhatsapp(
+        ctx.orgId,
+        msg.from,
+        ctx.state.campaignId,
+        ctx.state.guestId,
+        operation,
+      );
+      return result(
+        operation === "confirmed"
+          ? "Presença confirmada! Seu convite continua disponível para consultar local e horário."
+          : operation === "declined"
+            ? "Resposta registrada. Os lembretes desta campanha serão interrompidos."
+            : "A equipe recebeu sua solicitação. Os lembretes desta campanha ficam pausados durante o atendimento.",
+        ctx.state,
+        operation === "handoff" ? { handoff: true } : {},
+      );
+    } catch (error) {
+      return result(
+        error instanceof AccountError
+          ? error.message
+          : "Não foi possível registrar sua resposta.",
+        ctx.state,
+      );
+    }
+  }
+  if(ctx.state?.type==="invitation_campaign"&&ctx.profile.enabled!==true&&["menu","oi","ola","inicio","cancelar"].includes(command))return result("Seu convite está disponível. Envie CONFIRMAR CONVITE, RECUSAR CONVITE ou FALAR COM A EQUIPE. Para interromper mensagens, envie SAIR.",ctx.state);
+  if(ctx.state?.type==="invitation_campaign"&&!["menu","oi","ola","inicio","cancelar"].includes(command)){
+    await respondCampaignWhatsapp(ctx.orgId,msg.from,ctx.state.campaignId,ctx.state.guestId,"handoff").catch(()=>{});
+    return result("Recebemos sua mensagem para a equipe da igreja. Os lembretes da campanha ficam pausados durante o atendimento. Para as opções automáticas, envie MENU.",ctx.state,{handoff:true});
+  }
   if (["5", "humano", "atendente", "falar com a equipe"].includes(command))
     return result(
       "Encaminhamos seu contato para a equipe da igreja. O atendimento humano depende da disponibilidade da equipe.",

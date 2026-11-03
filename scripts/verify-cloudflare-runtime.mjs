@@ -75,6 +75,18 @@ try {
     assert(asset.headers.get("content-type")?.includes("javascript"));
     await asset.body?.cancel();
   }
+  const invitation = await request("/convite/"+"0".repeat(48));
+  assert.equal(invitation.status,200);
+  const invitationHtml=await invitation.text();
+  assert(invitationHtml.includes("Um convite para você"));
+  assert(invitationHtml.includes('name="robots" content="noindex, nofollow"'));
+  assert(invitationHtml.includes('name="referrer" content="no-referrer"'));
+  const invitationScripts=[...invitationHtml.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match=>match[1]);
+  assert(invitationScripts.length>0);
+  for(const src of invitationScripts){
+    assert(src.startsWith("/_next/"));
+    const asset=await request(src);assert.equal(asset.status,200,`Invitation asset missing: ${src}`);await asset.body?.cancel();
+  }
   const admin = await request("/api/platform/lp-analytics");
   assert.equal(admin.status, 401);
   await admin.body?.cancel();
@@ -82,7 +94,7 @@ try {
   assert.equal(mobile.status, 401);
   assert(mobile.headers.get("cache-control")?.includes("no-store"));
   await mobile.body?.cancel();
-  for (const path of ["/api/serving", "/api/worship", "/api/media/banner-copy"]) {
+  for (const path of ["/api/serving", "/api/worship", "/api/campaigns", "/api/media/banner-copy"]) {
     const response = await request(path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({action:"snapshot", organizationId:"synthetic-runtime-probe"})});
     assert.equal(response.status, 401, `Anonymous access must be denied: ${path}`);
     await response.body?.cancel();

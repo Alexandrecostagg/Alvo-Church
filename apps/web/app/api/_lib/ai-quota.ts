@@ -16,6 +16,7 @@ export const AI_TASKS = [
   "communication_draft",
   "pastoral_suggestion",
   "tribe_classify",
+  "campaign_sequence",
   "banner_copy",
   "banner_image",
 ] as const;
@@ -39,7 +40,7 @@ export async function aiGate(
       tx,
       orgId,
       uid,
-      task.startsWith("banner_"),
+      task.startsWith("banner_") || task==="campaign_sequence",
       "ai",
     );
     if (

@@ -45,3 +45,9 @@ Cadastro de Provedor de Tecnologia independente iniciado. Verificação empresar
 Frase para retomar: **“Retome a integração WhatsApp da Meta pelo arquivo docs/whatsapp-meta-retomada.md; a empresa já está constituída.”**
 
 Este arquivo não contém senhas, tokens nem códigos de verificação. O registro local e o aplicativo já criado permitem recuperar o contexto mesmo que a sessão do navegador expire. A disponibilidade e os requisitos futuros dependem da Meta.
+
+## Campanhas de convidados — implementação local em 03/11/2026
+
+O fluxo de campanhas foi preparado para membros compartilharem convites e convidados participarem sem instalar aplicativo. O processo Meta acima permanece pausado. Funcionamento, provas de telefone, modelos, teto de mensagens e passos para ativação estão em [campanhas-convidados.md](campanhas-convidados.md). A implementação local e os testes simulados não significam que o canal Meta foi conectado ou que mensagens reais foram enviadas.
+
+Após revisão dos custos, novas campanhas passaram a oferecer envio manual assistido como padrão: fila por data, mensagem individual pronta e registro humano de envio/resposta, pelo WhatsApp comum da igreja. Esse modo funciona sem concluir a integração Meta, não usa a API e não ativa cobrança de mensagens. A automação oficial acima continua pendente e separada. Detalhes e limites no documento de campanhas.

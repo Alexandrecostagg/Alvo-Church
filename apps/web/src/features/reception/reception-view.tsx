@@ -704,7 +704,7 @@ export function ReceptionView() {
             </p>
           </div>
           
-          <div className="reception-header-right">
+          <div className="reception-header-right"><Link className="reception-action-btn-ghost" href="/campaigns#recepcao">Convidados de campanhas</Link>
              <button
                onClick={() => setKioskMode(true)}
                className="reception-action-btn-ghost"

@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     const task = aiTask(body.task),
       rawInput = body.input,
       organizationId = body.organizationId;
+    if(task==="campaign_sequence")throw new AccountError(400,"Use a tela de campanhas para gerar a sequência de convites.");
     if (task.startsWith("banner_"))
       throw new AccountError(400, "Use o gerador de banners para esta tarefa.");
     if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput))

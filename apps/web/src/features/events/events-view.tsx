@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import jsQR from "jsqr";
 import { 
@@ -1424,7 +1425,7 @@ export function EventsView() {
           <h1 className="page-title">Agenda Estratégica</h1>
           <p className="page-subtitle">Coordene retiros, conferências e cultos unificados com check-in automatizado.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header-actions"><Link href="/campaigns" className="secondary-button">Campanhas de convites</Link><Link href="/my-invites" className="secondary-button">Meus convidados</Link>
            <button
              onClick={() => { resetEventForm(); setShowAddDrawer(true); }}
              className="primary-button compact"

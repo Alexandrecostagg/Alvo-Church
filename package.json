@@ -41,7 +41,8 @@
     "qa:serving": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-serving.ts",
     "qa:worship": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-worship.ts",
     "qa:mobile": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-mobile.ts",
-    "qa:platform-admin": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-platform-admin.ts"
+    "qa:platform-admin": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-platform-admin.ts",
+    "qa:campaigns": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-campaigns.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

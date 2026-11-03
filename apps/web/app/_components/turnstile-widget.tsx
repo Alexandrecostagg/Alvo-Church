@@ -30,7 +30,7 @@ declare global {
 }
 
 interface Props {
-  action: "public_visit" | "public_giving" | "public_care" | "public_event";
+  action: "public_visit" | "public_giving" | "public_care" | "public_event" | "public_campaign";
   onTokenChange: (token: string) => void;
   resetKey?: number;
 }

@@ -85,6 +85,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Gerenciar Cursos", icon: BookOpenCheck, href: "/learning/manage", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning/manage") },
         { label: "Capacitação", icon: Award, href: "/capacitacao", match: (pathname) => pathname.startsWith("/capacitacao") },
         { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
+        { label: "Convites", icon: UsersRound, href: "/campaigns", moduleKey: "events", match: (pathname) => pathname.startsWith("/campaigns") || pathname.startsWith("/my-invites") },
         { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving") },
         { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
       ]
