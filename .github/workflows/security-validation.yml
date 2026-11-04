@@ -1,0 +1,41 @@
+name: Security validation
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: security-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @alvo/web exec next typegen
+      - run: corepack pnpm --filter @alvo/web typecheck
+      - run: corepack pnpm --filter @alvo/mobile typecheck
+      - run: corepack pnpm build:cloudflare:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          FIREBASE_PROJECT_ID: demo-alvo-security
+          GCLOUD_PROJECT: demo-alvo-security
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+          FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+          NEXT_PUBLIC_USE_FIREBASE_EMULATOR: "true"
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-alvo-security
+          NEXT_PUBLIC_FIREBASE_API_KEY: demo-alvo-security-key
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-alvo-security.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: demo-alvo-security.firebasestorage.app
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1234567890"
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:1234567890:web:securityqa
