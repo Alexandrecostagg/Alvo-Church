@@ -45,24 +45,20 @@ export default function WifiPortalPage() {
           whatsapp: formData.whatsapp,
           email: formData.email,
           birthDate: formData.birthDate,
-          consentedAt: new Date().toISOString()
+          consentedAt: new Date().toISOString(),
+          consentContact: formData.consentContact
         })
-      }).catch(() => ({ ok: true })); // Fallback local de sucesso para desenvolvimento local sem internet
+      });
 
       if (response.ok) {
-        // Simulando fluxo realista de Handshake de Hotspot de Roteador
-        setTimeout(() => {
-          setStatus("success");
-        }, 2200);
+        setStatus("success");
       } else {
         setErrorMessage("Erro ao autorizar tráfego com o gateway do Hotspot.");
         setStatus("error");
       }
     } catch {
-      // Fallback
-      setTimeout(() => {
-        setStatus("success");
-      }, 2200);
+      setErrorMessage("Não foi possível enviar seu cadastro. Procure a recepção ou tente novamente.");
+      setStatus("error");
     }
   };
 
@@ -105,9 +101,9 @@ export default function WifiPortalPage() {
             >
               <CheckCircle2 size={48} style={{ color: "#10b981" }} className="antigravity-float" />
             </div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.75rem" }}>Internet Liberada!</h1>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.75rem" }}>Cadastro recebido!</h1>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.95rem", lineHeight: "1.5rem" }}>
-              Seja muito bem-vindo à nossa comunidade! Você já está conectado com sucesso à rede Wi-Fi da igreja.
+              Procure a recepção para receber as orientações de acesso ao Wi-Fi. O envio deste cadastro não confirma conexão à rede.
             </p>
             <div
               style={{
@@ -131,9 +127,9 @@ export default function WifiPortalPage() {
           /* Animação Realista de Conexão */
           <div style={{ textAlign: "center", padding: "2rem 0" }} className="animate-entrance">
             <Loader2 size={48} style={{ color: "#d27836", margin: "0 auto 1.5rem" }} className="spin-animation" />
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>Autenticando Dispositivo...</h2>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>Enviando cadastro...</h2>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem" }}>
-              Negociando credenciais criptografadas de navegação com o gateway de roteadores locais da igreja.
+              Enviando seu cadastro à recepção.
             </p>
           </div>
         ) : (
@@ -154,7 +150,7 @@ export default function WifiPortalPage() {
               </div>
               <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>Esdras Wi-Fi</h1>
               <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem", marginTop: 4 }}>
-                Cadastre-se rapidamente para liberar seu acesso à internet de alta velocidade.
+                Cadastre-se para solicitar as orientações de acesso à rede da igreja.
               </p>
             </div>
 
@@ -291,7 +287,7 @@ export default function WifiPortalPage() {
               }}
             >
               <Smartphone size={18} />
-              Cadastrar e Conectar
+              Enviar cadastro
             </button>
           </form>
         )}

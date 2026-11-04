@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-10T14:14:58.977Z",
+  "deployment": "c72a207d-913f-43bb-a829-5e28398365a0",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected": 200,
+      "passed": true,
+      "cacheControl": "s-maxage=31536000"
+    },
+    {
+      "path": "/api/kids/qr",
+      "status": 401,
+      "expected": 401,
+      "passed": true,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/api/kids/photo",
+      "status": 401,
+      "expected": 401,
+      "passed": true,
+      "cacheControl": "private, no-store"
+    }
+  ],
+  "note": "Anonymous smoke only. Positive authenticated requests remain blocked by missing firebaseauth.users.get; not proof of working production media."
+}

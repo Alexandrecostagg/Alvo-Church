@@ -42,7 +42,7 @@ function UpgradeContent() {
         </p>
 
         <div style={actionsStyle}>
-          <Link href="/" style={backLinkStyle}>
+          <Link href="/app" style={backLinkStyle}>
             <ArrowLeft size={16} />
             Voltar ao início
           </Link>

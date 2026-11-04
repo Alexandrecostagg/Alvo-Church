@@ -1,6 +1,29 @@
 # Roadmap do MVP - Alvo Church
 
-Data: 17 de março de 2026
+Criado em 17/03/2026. Estado de execução atualizado em **05/09/2026**.
+
+## Execução atual
+
+As ondas abaixo continuam sendo a visão de produto; não são uma lista de
+entregas concluídas. Implementações de ondas avançadas surgiram antes do
+fechamento da fundação. A prioridade agora é estabilizar a base existente.
+
+| Onda | Situação em 05/09 | Próximo marco |
+| --- | --- | --- |
+| 1 — Fundação operacional | Cadastro completo e isolamento básico homologados; recepção, grupos, eventos e app parciais. | Fechar segurança, cadastros legados e QA por papel. |
+| 2 — Engajamento e serviço | Jornadas, repertório, escalas e trocas têm implementação parcial. | Validar vínculo do usuário e fluxo completo no web/mobile. |
+| 3 — Tribos | Scoring testado; telas, trilhas e histórico ainda precisam homologação integral. | Validar avaliação, revisão pastoral e reflexo na jornada. |
+| 4 — IA e backoffice | APIs e cota principal presentes; automações/inteligência e backoffice não estão fechados. | Cota uniforme, dados reais, auditoria e recorte executável. |
+| 5 — Rede/capacitação | Base de rede/EAD presente, com demos e expansão ainda planejada. | Não antecipar novos módulos antes de estabilizar o núcleo. |
+
+A estimativa do escopo operacional avaliado é **cerca de 63%**, calculada no
+[diagnóstico de implementação](status-implementacao-2026-09-05.md). Não mede toda
+a visão futura do PRD nem prontidão para produção.
+
+Próxima sequência: dependências → identidade/Passe → QR/fotos/fluxo Kids →
+cadastros/limites → dados reais e homologação mobile. Consolidar a LP como
+aplicação independente de publicação; manter o app no monorepo nesta fase.
+Histórias e critérios de aceite ficam no [backlog ativo](backlog-mvp-implementacao-v2.md).
 
 ## 1. Objetivo
 
@@ -387,13 +410,11 @@ Se quisermos manter o Alvo Church sólido e executável, eu seguiria exatamente 
 4. tribos
 5. IA
 
-## 17. Próximos passos ideais
+## 17. Próximos passos de execução
 
-Depois deste roadmap, eu recomendo fazer nesta ordem:
-
-1. arquitetura técnica do monorepo
-2. backlog do MVP com épicos e histórias
-3. wireframes do web admin e app mobile
+Arquitetura, backlog e interfaces já existem. Executar a fila P0/P1 do backlog
+ativo, registrar validação por entrega e atualizar a medição. Não reiniciar
+wireframes ou scaffolding como se o projeto ainda estivesse na fase de desenho.
 
 ## 18. Onda 5 (pós-MVP). Rede e capacitação
 

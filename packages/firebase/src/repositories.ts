@@ -10,7 +10,9 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   writeBatch,
@@ -154,7 +156,6 @@ import {
   getMemberBadgesCollectionPath,
   getWeeklyThemesCollectionPath,
   getMemberContributionsCollectionPath,
-  getContributionReceiptsCollectionPath,
   getMemberTribeHistoryCollectionPath,
   getChurchAttendanceCollectionPath,
   getPrayerRequestsCollectionPath
@@ -205,7 +206,11 @@ function toOrganization(documentId: string, data: DocumentData): Organization {
     legalName: data.legalName ? String(data.legalName) : undefined,
     publicName: data.publicName ? String(data.publicName) : undefined,
     displayName: data.displayName ? String(data.displayName) : undefined,
-    organizationType: data.organizationType as Organization["organizationType"]
+    organizationType: data.organizationType as Organization["organizationType"],
+    ownerUid: data.ownerUid ? String(data.ownerUid) : undefined,
+    registrationEmail: data.registrationEmail ? String(data.registrationEmail) : undefined,
+    createdAt: data.createdAt ? String(data.createdAt) : undefined,
+    ...Object.fromEntries(["taxId", "contactEmail", "contactPhone", "website", "addressPostalCode", "addressCity", "addressState", "addressLine", "addressNumber", "addressComplement", "addressNeighborhood", "addressSector", "addressQuadra", "addressLote", "addressReference"].map(key => [key, data[key] ? String(data[key]) : undefined])),
   };
 }
 
@@ -241,6 +246,7 @@ function toOrganizationSubscriptionSettings(
 ): OrganizationSubscriptionSettings {
   return {
     organizationId,
+    plan: data.plan as OrganizationSubscriptionSettings["plan"],
     planCode: String(data.planCode ?? "alvo-growth"),
     planTier: (data.planTier as OrganizationSubscriptionSettings["planTier"]) ?? "growth",
     billingCycle:
@@ -324,6 +330,7 @@ function toPerson(documentId: string, data: DocumentData): Person {
 
 function toServiceTeam(documentId: string, data: DocumentData): ServiceTeam {
   return {
+    roles: Array.isArray(data.roles) ? data.roles.map(String) : [],
     id: documentId,
     organizationId: String(data.organizationId ?? ""),
     campusId: data.campusId ? String(data.campusId) : undefined,
@@ -439,7 +446,8 @@ function toMemberBenefitValidation(
     partnerId: String(data.partnerId ?? ""),
     benefitId: String(data.benefitId ?? ""),
     personId: String(data.personId ?? ""),
-    memberCardCode: String(data.memberCardCode ?? ""),
+    memberCardCode: data.memberCardCode ? String(data.memberCardCode) : undefined,
+    memberCardCodeSuffix: data.memberCardCodeSuffix ? String(data.memberCardCodeSuffix) : undefined,
     validationStatus:
       (data.validationStatus as MemberBenefitValidation["validationStatus"]) ?? "denied",
     validatedAt: String(data.validatedAt ?? ""),
@@ -488,6 +496,7 @@ function toVisitorIntake(documentId: string, data: DocumentData): VisitorIntake 
     phone: data.phone ? String(data.phone) : undefined,
     source: String(data.source ?? ""),
     status: (data.status as VisitorIntake["status"]) ?? "captured",
+    consentMarketing: data.consentMarketing === true,
     greeting: data.greeting ? String(data.greeting) : undefined,
     capturedByUserId: data.capturedByUserId ? String(data.capturedByUserId) : undefined,
     createdAt: String(data.createdAt ?? "")
@@ -679,7 +688,9 @@ export async function isPlatformAdmin(
 export interface PlatformOrgSummary {
   id: string;
   displayName: string;
+  status: import("@alvo/types").OrganizationStatus;
   plan: PlanId;
+  billingStatus: "active" | "overdue" | "suspended";
   planTier?: string;
   memberCount: number;
   aiUsed: number;
@@ -715,7 +726,9 @@ export async function fetchPlatformOverview(
       return {
         id: org.id,
         displayName: org.displayName ?? org.name,
-        plan: aiQuota?.plan ?? "free",
+        status: org.status ?? "active",
+        plan: subscription?.plan ?? planTierToPlanId(subscription?.planTier),
+        billingStatus: subscription?.billingStatus ?? "active",
         planTier: subscription?.planTier,
         memberCount,
         aiUsed: aiQuota?.used ?? 0,
@@ -847,9 +860,9 @@ export async function fetchTenantUser(
   if (!snap.exists()) return null;
   const data = snap.data();
   return {
-    roles: (data.roles ?? ["church_admin"]) as AppRole[],
+    roles: (Array.isArray(data.roles) ? data.roles : []) as AppRole[],
     email: data.email ?? "",
-    isActive: data.isActive ?? true,
+    isActive: data.isActive === true,
     ministerialInterests: data.ministerialInterests,
     servingProfile: data.servingProfile,
     availability: data.availability,
@@ -999,12 +1012,26 @@ export async function provisionSelfServeOrganization(
     churchName: string;
     ownerUid: string;
     ownerEmail: string;
+    addressPostalCode?: string;
     taxId?: string;
     addressCity?: string;
     addressState?: string;
+    addressLine?: string;
+    addressNumber?: string;
+    addressComplement?: string;
+    addressNeighborhood?: string;
+    addressSector?: string;
+    addressQuadra?: string;
+    addressLote?: string;
+    addressReference?: string;
   }
 ): Promise<void> {
-  const { organizationId, churchName, ownerUid, ownerEmail, taxId, addressCity, addressState } = params;
+  const {
+    organizationId, churchName, ownerUid, ownerEmail, taxId,
+    addressCity, addressState,
+    addressLine, addressNumber, addressComplement,
+    addressNeighborhood, addressSector, addressQuadra, addressLote, addressReference,
+  } = params;
   const now = new Date().toISOString();
 
   const organization: Organization = {
@@ -1020,19 +1047,39 @@ export async function provisionSelfServeOrganization(
     organizationType: "church",
     organizationTier: "solo",
     ownerUid,
+    registrationEmail: ownerEmail,
+    createdAt: now,
+    addressPostalCode: params.addressPostalCode,
     taxId,
     addressCity,
-    addressState
+    addressState,
+    addressLine,
+    addressNumber,
+    addressComplement,
+    addressNeighborhood,
+    addressSector,
+    addressQuadra,
+    addressLote,
+    addressReference,
   };
 
-  await saveOrganizationProfile(config, organization);
-
-  await ensureTenantUserAccess(config, {
-    organizationId,
-    userId: ownerUid,
-    email: ownerEmail,
-    roles: ["church_admin"]
+  const firestore = getFirebaseFirestore(config);
+  const existingOrganization = await getDoc(doc(firestore, "organizations", organizationId)).catch(error => {
+    // A missing root is unreadable under tenant rules; create remains owner-checked.
+    if (error?.code === "permission-denied") return null;
+    throw error;
   });
+  if (existingOrganization?.exists() && existingOrganization.data().ownerUid !== ownerUid) {
+    throw new Error("Esta instituição pertence a outro responsável.");
+  }
+  if (!existingOrganization?.exists()) await saveOrganizationProfile(config, organization);
+
+  const existingUser = await getDoc(doc(firestore, getTenantUserDocumentPath({ organizationId }, ownerUid)));
+  if (existingUser.exists()) {
+    if (existingUser.data().organizationId !== organizationId || existingUser.data().isActive !== true) throw new Error("O acesso existente precisa ser revisado pela administração.");
+  } else {
+    await ensureTenantUserAccess(config, { organizationId, userId: ownerUid, email: ownerEmail, roles: ["church_admin"] });
+  }
 
   const branding: OrganizationBrandingSettings = {
     organizationId,
@@ -1046,13 +1093,14 @@ export async function provisionSelfServeOrganization(
 
   const subscription: OrganizationSubscriptionSettings = {
     organizationId,
+    plan: "free",
     planCode: "gratuito",
     planTier: "base",
     billingCycle: "monthly",
     memberRange: "up_to_100",
     seatLimit: 4,
     campusLimit: 1,
-    aiQuota: 50,
+    aiQuota: 0,
     whiteLabelEnabled: false,
     coBrandingEnabled: true,
     multiCampusEnabled: false,
@@ -1066,30 +1114,32 @@ export async function provisionSelfServeOrganization(
     modules: {
       core: mod(true, "plan"),
       visitors: mod(true, "plan"),
-      groups: mod(true, "plan"),
-      events: mod(true, "plan"),
-      children: mod(true, "manual"),
+      groups: mod(false, "plan"),
+      events: mod(false, "plan"),
+      children: mod(false, "manual"),
       youth: mod(false, "addon"),
-      volunteers: mod(true, "addon"),
-      tribes: mod(true, "plan"),
-      journeys: mod(true, "plan"),
+      volunteers: mod(false, "addon"),
+      tribes: mod(false, "plan"),
+      journeys: mod(false, "plan"),
       communication: mod(false, "addon"),
       marketplace: mod(false, "addon"),
-      giving: mod(true, "addon"),
+      giving: mod(false, "addon"),
       publicForms: mod(true, "plan"),
-      finance: mod(true, "addon"),
-      ai: mod(true, "trial")
+      finance: mod(false, "addon"),
+      ai: mod(false, "trial")
     }
   };
 
+  // Bootstrap can be resumed after interruption without rewriting an existing plan.
+  const [existingBranding, existingSubscription, existingFeatures] = await Promise.all([
+    getDoc(doc(firestore, getOrganizationBrandingDocumentPath({ organizationId }))),
+    getDoc(doc(firestore, getOrganizationSubscriptionDocumentPath({ organizationId }))),
+    getDoc(doc(firestore, getOrganizationFeaturesDocumentPath({ organizationId }))),
+  ]);
   await Promise.all([
-    saveOrganizationBrandingSettings(config, branding),
-    saveOrganizationSubscriptionSettings(config, subscription),
-    saveOrganizationFeaturesSettings(config, features),
-    // Grava o campo `plan` explicitamente — é o que fetchOrgPlan/PlanGuard
-    // realmente leem para liberar Tribos/Finanças/IA Pastoral. Sem isso a
-    // organização fica presa no tier "free" mesmo cadastrada no plano certo.
-    setOrgPlan(config, { organizationId }, "free")
+    existingBranding.exists() ? Promise.resolve() : saveOrganizationBrandingSettings(config, branding),
+    existingSubscription.exists() ? Promise.resolve() : saveOrganizationSubscriptionSettings(config, subscription),
+    existingFeatures.exists() ? Promise.resolve() : saveOrganizationFeaturesSettings(config, features),
   ]);
 }
 
@@ -1102,6 +1152,11 @@ export async function claimOrganizationSlug(
   params: { slug: string; organizationId: string; displayName: string }
 ): Promise<void> {
   const firestore = getFirebaseFirestore(config);
+  const existing = await getDoc(doc(firestore, "org_slugs", params.slug));
+  if (existing.exists()) {
+    if (existing.data().organizationId === params.organizationId) return;
+    throw new Error("Este endereço público já pertence a outra instituição.");
+  }
   await setDoc(doc(firestore, "org_slugs", params.slug), {
     organizationId: params.organizationId,
     displayName: params.displayName
@@ -1116,25 +1171,8 @@ export async function savePersonProfile(
   const firestore = getFirebaseFirestore(config);
   const ref = doc(firestore, getPeopleCollectionPath(context), person.id);
 
-  // Precisa saber se é criação (não update) ANTES de escrever, pra só
-  // incrementar o contador de membros — usado pela regra do Firestore que
-  // barra o cadastro acima do limite do plano — quando é um cadastro novo.
-  const existing = await getDoc(ref);
-  const isNew = !existing.exists();
-  // Carimba a data de entrada só na criação (não sobrescreve cadastros existentes).
-  const payload = isNew && !person.createdAt
-    ? { ...person, createdAt: new Date().toISOString() }
-    : person;
-  await setDoc(ref, cleanFirestoreData(payload), { merge: true });
-
-  if (isNew) {
-    await updateDoc(doc(firestore, "organizations", context.organizationId), {
-      memberCount: increment(1)
-    }).catch(() => {
-      // Contador é auxiliar (só alimenta o limite de plano); se falhar,
-      // não deve derrubar o cadastro que já foi salvo.
-    });
-  }
+  // Creation always goes through /api/members and its transactional limit.
+  await updateDoc(ref, cleanFirestoreData(person));
 }
 
 export async function deletePersonProfile(
@@ -1344,6 +1382,7 @@ export async function fetchVisitorIntakes(
   const firestore = getFirebaseFirestore(config);
   const intakesQuery = query(
     collection(firestore, getVisitorIntakesCollectionPath(context)),
+    orderBy("createdAt", "desc"),
     limit(maxItems)
   );
   const snapshot = await getDocs(intakesQuery);
@@ -1440,95 +1479,6 @@ export async function updateVisitorIntakeStatus(
   });
 }
 
-export async function createVisitorIntakeWorkflow(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  params: {
-    capturedByUserId?: string;
-    name: string;
-    note?: string;
-    phone?: string;
-    source: string;
-  }
-) {
-  const firestore = getFirebaseFirestore(config);
-  const createdAt = new Date().toISOString();
-  const baseId = `${Date.now()}`;
-  const personId = `person_${baseId}`;
-  const journeyId = `journey_${baseId}`;
-  const welcomeTaskId = `followup_${baseId}_welcome`;
-  const groupTaskId = `followup_${baseId}_group`;
-  const intakeId = `visitor_intake_${baseId}`;
-  const [firstName, ...lastNameParts] = params.name.trim().split(/\s+/);
-  const lastName = lastNameParts.join(" ");
-
-  await Promise.all([
-    setDoc(doc(firestore, `${getPeopleCollectionPath(context)}/${personId}`), {
-      id: personId,
-      organizationId: context.organizationId,
-      firstName: firstName || params.name.trim(),
-      lastName,
-      preferredName: firstName || params.name.trim(),
-      whatsappPhone: params.phone ?? null,
-      personType: "adult",
-      memberStatus: "visitor",
-      status: "active",
-      createdAt,
-      createdByUserId: params.capturedByUserId ?? null
-    }),
-    setDoc(doc(firestore, `${getVisitorJourneysCollectionPath(context)}/${journeyId}`), {
-      id: journeyId,
-      organizationId: context.organizationId,
-      personId,
-      originChannel: mapVisitorSourceToOriginChannel(params.source),
-      currentStage: "new_visitor",
-      status: "active",
-      assignedToUserId: params.capturedByUserId ?? null,
-      firstVisitDate: createdAt,
-      nextActionAt: createdAt,
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${welcomeTaskId}`), {
-      id: welcomeTaskId,
-      organizationId: context.organizationId,
-      personId,
-      visitorJourneyId: journeyId,
-      assignedToUserId: params.capturedByUserId ?? null,
-      title: "Enviar boas-vindas no WhatsApp",
-      type: "welcome_message",
-      status: "open",
-      dueAt: createdAt,
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getFollowUpTasksCollectionPath(context)}/${groupTaskId}`), {
-      id: groupTaskId,
-      organizationId: context.organizationId,
-      personId,
-      visitorJourneyId: journeyId,
-      assignedToUserId: params.capturedByUserId ?? null,
-      title: "Convidar para uma celula",
-      type: "invite_to_group",
-      status: "open",
-      createdAt
-    }),
-    setDoc(doc(firestore, `${getVisitorIntakesCollectionPath(context)}/${intakeId}`), {
-      id: intakeId,
-      organizationId: context.organizationId,
-      personId,
-      journeyId,
-      name: params.name,
-      phone: params.phone ?? null,
-      source: params.source,
-      status: "journey_created",
-      greeting: params.note || "Incluir nos cumprimentos da celebracao",
-      capturedByUserId: params.capturedByUserId ?? null,
-      createdAt
-    })
-  ]);
-
-  return { groupTaskId, intakeId, journeyId, personId, welcomeTaskId };
-}
-
 export async function updateFollowUpTaskStatus(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -1596,6 +1546,7 @@ export async function fetchFinancialTransparencyReports(
   const firestore = getFirebaseFirestore(config);
   const reportsQuery = query(
     collection(firestore, getFinanceReportsCollectionPath(context)),
+    where("status", "==", "published"),
     limit(maxItems)
   );
   const snapshot = await getDocs(reportsQuery);
@@ -1603,24 +1554,6 @@ export async function fetchFinancialTransparencyReports(
   return snapshot.docs.map((item) =>
     toFinancialTransparencyReport(item.id, item.data())
   );
-}
-
-function mapVisitorSourceToOriginChannel(source: string): VisitorJourney["originChannel"] {
-  const normalizedSource = source.toLowerCase();
-
-  if (normalizedSource.includes("whatsapp")) {
-    return "whatsapp";
-  }
-
-  if (normalizedSource.includes("instagram")) {
-    return "app";
-  }
-
-  if (normalizedSource.includes("rua")) {
-    return "secretary";
-  }
-
-  return "form";
 }
 
 export async function fetchGroups(
@@ -2010,39 +1943,29 @@ export async function fetchEvents(
   return snapshot.docs.map((item) => toEvent(item.id, item.data()));
 }
 
-export async function saveEvent(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  event: Event
-) {
+/** Paginate published events before filtering dates: keep ongoing events accessible. */
+export async function fetchUpcomingMemberEvents(config: FirebaseWebRuntimeConfig, context: TenantContext) {
   const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getEventsCollectionPath(context), event.id),
-    cleanFirestoreData(event),
-    { merge: true }
-  );
-}
-
-export async function deleteEvent(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  eventId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getEventsCollectionPath(context), eventId));
-}
-
-export async function saveEventRegistration(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  registration: EventRegistration
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getEventRegistrationsCollectionPath(context, registration.eventId), registration.id),
-    cleanFirestoreData(registration),
-    { merge: true }
-  );
+  const events: Event[] = [];
+  let cursor: Awaited<ReturnType<typeof getDocs>>["docs"][number] | undefined;
+  const now = Date.now();
+  while (events.length < 100) {
+    const snapshot = await getDocs(query(
+      collection(firestore, getEventsCollectionPath(context)),
+      where("status", "==", "published"), orderBy("startsAt", "asc"),
+      ...(cursor ? [startAfter(cursor)] : []), limit(100),
+    ));
+    for (const item of snapshot.docs) {
+      const event = toEvent(item.id, item.data());
+      const start = Date.parse(event.startsAt);
+      // Undated end defaults to one day so the ticket remains available at the entrance.
+      const end = event.endsAt ? Date.parse(event.endsAt) : start + 24 * 60 * 60 * 1000;
+      if (Number.isFinite(start) && (start >= now || end >= now)) events.push(event);
+    }
+    if (snapshot.size < 100) break;
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+  }
+  return events.slice(0, 100);
 }
 
 export async function fetchEventRegistrations(
@@ -2342,11 +2265,13 @@ export async function saveMemberBenefitValidation(
 export async function fetchCommunityStores(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  maxItems = 100
+  maxItems = 100,
+  scope?: { ownerId: string } | { approvedOnly: true }
 ) {
   const firestore = getFirebaseFirestore(config);
   const storesQuery = query(
     collection(firestore, getCommunityStoresCollectionPath(context)),
+    ...(scope ? ["ownerId" in scope ? where("ownerId", "==", scope.ownerId) : where("status", "==", "approved")] : []),
     limit(maxItems)
   );
   const snapshot = await getDocs(storesQuery);
@@ -2399,6 +2324,7 @@ export async function fetchCommunityOffers(
   const firestore = getFirebaseFirestore(config);
   const offersQuery = query(
     collection(firestore, getCommunityOffersCollectionPath(context, storeId)),
+    where("status", "==", "active"),
     limit(maxItems)
   );
   const snapshot = await getDocs(offersQuery);
@@ -2470,26 +2396,6 @@ export async function fetchMarketplacePromotions(
 }
 
 // ── Comunicação: histórico de envios + templates ────────────────────────────
-export async function addCommunicationLogEntry(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  entry: Omit<CommunicationLogEntry, "id" | "createdAt" | "organizationId"> & { createdAt?: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getCommunicationLogCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData({
-    organizationId: context.organizationId,
-    channel: entry.channel,
-    message: entry.message,
-    recipientCount: entry.recipientCount,
-    sentCount: entry.sentCount,
-    failedCount: entry.failedCount,
-    sentByUserId: entry.sentByUserId,
-    createdAt: entry.createdAt ?? new Date().toISOString(),
-  }));
-  return ref.id;
-}
-
 export async function fetchCommunicationLog(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -2568,25 +2474,6 @@ export async function fetchCommunityStoreModerationLogs(
   const snapshot = await getDocs(logsQuery);
 
   return snapshot.docs.map((item) => toCommunityStoreModerationLog(item.id, item.data()));
-}
-
-export async function saveCommunityStoreModerationLog(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  log: CommunityStoreModerationLog
-) {
-  const firestore = getFirebaseFirestore(config);
-
-  await setDoc(
-    doc(firestore, getCommunityStoreModerationLogsCollectionPath(context), log.id),
-    cleanFirestoreData({
-      ...log,
-      organizationId: context.organizationId
-    }),
-    { merge: true }
-  );
-
-  return log;
 }
 
 // Conversion functions
@@ -2728,6 +2615,9 @@ function toWorshipSong(documentId: string, data: DocumentData): WorshipSong {
     title: String(data.title ?? ""),
     artist: String(data.artist ?? ""),
     originalKey: String(data.originalKey ?? "C"),
+    preferredKey: data.preferredKey ? String(data.preferredKey) : undefined,
+    version: Number(data.version ?? 0),
+    updatedAt: data.updatedAt ? String(data.updatedAt) : undefined,
     tempoBpm: data.tempoBpm ? Number(data.tempoBpm) : undefined,
     spotifyUrl: data.spotifyUrl ? String(data.spotifyUrl) : undefined,
     youtubeUrl: data.youtubeUrl ? String(data.youtubeUrl) : undefined,
@@ -2856,6 +2746,25 @@ export async function fetchWorshipSetlistByEventId(
   return toWorshipSetlist(snap.id, snap.data());
 }
 
+export async function saveMobilePushToken(
+  config: FirebaseWebRuntimeConfig,
+  context: TenantContext,
+  userId: string,
+  token: string,
+  platform: "android" | "ios"
+) {
+  const firestore = getFirebaseFirestore(config);
+  await setDoc(
+    doc(firestore, getTenantUserDocumentPath(context, userId)),
+    {
+      expoPushToken: token,
+      expoPushTokenPlatform: platform,
+      expoPushTokenUpdatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
+}
+
 export async function saveWorshipSetlist(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
@@ -2901,10 +2810,12 @@ export async function saveGroupBannerConfig(
 
 export async function fetchCourses(
   config: FirebaseWebRuntimeConfig,
-  context: TenantContext
+  context: TenantContext,
+  includeDrafts = false
 ): Promise<Course[]> {
   const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(collection(firestore, getCoursesCollectionPath(context)));
+  const col = collection(firestore, getCoursesCollectionPath(context));
+  const snap = await getDocs(includeDrafts ? col : query(col, where("isActive", "==", true)));
   return snap.docs.map((d) => toCourse(d.id, d.data()));
 }
 
@@ -2940,87 +2851,6 @@ export async function fetchMemberCourseProgress(
   );
   if (!snap.exists()) return null;
   return toMemberCourseProgress(snap.id, snap.data());
-}
-
-export async function saveMemberCourseProgress(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  progress: MemberCourseProgress
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getMemberCourseProgressCollectionPath(context, progress.memberId), progress.courseId),
-    cleanFirestoreData(progress),
-    { merge: true }
-  );
-}
-
-export async function saveCourse(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  course: Course
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getCoursesCollectionPath(context), course.id),
-    cleanFirestoreData(course),
-    { merge: true }
-  );
-}
-
-export async function saveCourseModule(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  module: CourseModule
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getCourseModulesCollectionPath(context, module.courseId), module.id),
-    cleanFirestoreData(module),
-    { merge: true }
-  );
-}
-
-export async function saveLesson(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  lesson: Lesson
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getLessonsCollectionPath(context, lesson.courseId), lesson.id),
-    cleanFirestoreData(lesson),
-    { merge: true }
-  );
-}
-
-export async function deleteCourse(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getCoursesCollectionPath(context), courseId));
-}
-
-export async function deleteCourseModule(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string,
-  moduleId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getCourseModulesCollectionPath(context, courseId), moduleId));
-}
-
-export async function deleteLesson(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  courseId: string,
-  lessonId: string
-) {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getLessonsCollectionPath(context, courseId), lessonId));
 }
 
 // ─── Loja de Capacitação (catálogo global + entitlements por org) ──────────────
@@ -3110,8 +2940,15 @@ export async function fetchTrainingProgramModules(
 
 export async function fetchTrainingLessons(
   config: FirebaseWebRuntimeConfig,
-  programId: string
+  programId: string,
+  access?: { organizationId: string; idToken: string }
 ): Promise<TrainingLesson[]> {
+  if (access) {
+    const response = await fetch(`/api/learning/content?${new URLSearchParams({ organizationId: access.organizationId, programId })}`, { headers: { Authorization: `Bearer ${access.idToken}` }, cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Conteúdo indisponível.");
+    return body.lessons.map((row: any) => toTrainingLesson(row.id, row)).sort((a: TrainingLesson, b: TrainingLesson) => a.sortOrder - b.sortOrder);
+  }
   const firestore = getFirebaseFirestore(config);
   const snap = await getDocs(collection(firestore, getPlatformProgramLessonsCollectionPath(programId)));
   return snap.docs.map((d) => toTrainingLesson(d.id, d.data())).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -3178,6 +3015,8 @@ function toFinancialTransaction(documentId: string, data: DocumentData): Financi
   return {
     id: documentId,
     organizationId: String(data.organizationId ?? ""),
+    status: data.status,
+    contributionId: data.contributionId || undefined,
     kind: (data.kind as FinancialTransaction["kind"]) ?? "expense",
     label: String(data.label ?? ""),
     amount: Number(data.amount ?? 0),
@@ -3188,22 +3027,7 @@ function toFinancialTransaction(documentId: string, data: DocumentData): Financi
   };
 }
 
-export async function addFinancialTransaction(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  tx: Omit<FinancialTransaction, "id" | "organizationId" | "createdAt">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getFinancialTransactionsCollectionPath(context)));
-  const record: FinancialTransaction = {
-    ...tx,
-    id: ref.id,
-    organizationId: context.organizationId,
-    createdAt: new Date().toISOString()
-  };
-  await setDoc(ref, cleanFirestoreData(record));
-  return ref.id;
-}
+
 
 export async function fetchFinancialTransactions(
   config: FirebaseWebRuntimeConfig,
@@ -3217,14 +3041,7 @@ export async function fetchFinancialTransactions(
   return snap.docs.map((d) => toFinancialTransaction(d.id, d.data()));
 }
 
-export async function deleteFinancialTransaction(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  transactionId: string
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  await deleteDoc(doc(firestore, getFinancialTransactionsCollectionPath(context), transactionId));
-}
+
 
 // ─── Doação pública sem-app (leads/intenções) ─────────────────────────────────
 
@@ -3236,53 +3053,12 @@ function toGivingIntent(documentId: string, data: DocumentData): GivingIntent {
     whatsapp: String(data.whatsapp ?? ""),
     amount: Number(data.amount ?? 0),
     source: "public_give",
-    status: "captured",
+    status: data.status ?? "captured",
+    campaignId: data.campaignId || undefined,
     orgSlug: data.orgSlug ? String(data.orgSlug) : undefined,
     consentContact: Boolean(data.consentContact),
     createdAt: String(data.createdAt ?? "")
   };
-}
-
-// Create PÚBLICO (não autenticado) — a rule valida o shape estrito. Só os
-// campos permitidos vão no doc (nada de undefined, p/ casar com keys().hasOnly).
-export async function saveGivingIntent(
-  config: FirebaseWebRuntimeConfig,
-  intent: Omit<GivingIntent, "id">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getGivingIntentsCollectionPath({ organizationId: intent.organizationId })));
-  const data: Record<string, string | number | boolean> = {
-    organizationId: intent.organizationId,
-    name: intent.name,
-    whatsapp: intent.whatsapp,
-    amount: intent.amount,
-    source: "public_give",
-    status: "captured",
-    consentContact: intent.consentContact,
-    createdAt: intent.createdAt
-  };
-  if (intent.orgSlug) data.orgSlug = intent.orgSlug;
-  if (intent.campaignId) data.campaignId = intent.campaignId;
-  await setDoc(ref, data);
-  return ref.id;
-}
-
-// "Já paguei" no link público: cria o comprovante (create público, shape estrito
-// pela rule). Só os campos permitidos, sem undefined.
-export async function saveGivingReceipt(
-  config: FirebaseWebRuntimeConfig,
-  receipt: { organizationId: string; intentId: string; imageBase64?: string; createdAt?: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getGivingReceiptsCollectionPath({ organizationId: receipt.organizationId })));
-  const data: Record<string, string> = {
-    organizationId: receipt.organizationId,
-    intentId: receipt.intentId,
-    createdAt: receipt.createdAt ?? new Date().toISOString(),
-  };
-  if (receipt.imageBase64) data.imageBase64 = receipt.imageBase64;
-  await setDoc(ref, data);
-  return ref.id;
 }
 
 export async function fetchGivingReceipts(
@@ -3324,7 +3100,7 @@ export async function saveGivingCampaign(
     description: campaign.description,
     category: campaign.category,
     goalAmount: campaign.goalAmount,
-    raisedAmount: campaign.raisedAmount,
+    ...(campaign.id ? {} : { raisedAmount: 0 }),
     status: campaign.status,
     createdByUserId: campaign.createdByUserId,
     createdAt: campaign.createdAt ?? now,
@@ -3366,20 +3142,26 @@ function toKidsCheckIn(documentId: string, data: DocumentData): KidsCheckIn {
     authorizedPickUpIds: Array.isArray(data.authorizedPickUpIds) ? data.authorizedPickUpIds.map(String) : [],
     checkedInAt: String(data.checkedInAt ?? ""),
     checkedOutAt: data.checkedOutAt ? String(data.checkedOutAt) : undefined,
+    checkedOutByUserId: data.checkedOutByUserId ? String(data.checkedOutByUserId) : undefined,
+    guardianVersion: typeof data.guardianVersion === "number" ? data.guardianVersion : undefined,
+    pickupPeople: Array.isArray(data.pickupPeople) ? data.pickupPeople.map((p: any) => ({ id: String(p.id), name: String(p.name), userId: String(p.userId ?? "") })) : undefined,
     checkedOutByParentId: data.checkedOutByParentId ? String(data.checkedOutByParentId) : undefined,
     checkedInByUserId: data.checkedInByUserId ? String(data.checkedInByUserId) : undefined,
     status: (data.status as KidsCheckIn["status"]) ?? "checked_in",
+    sessionId: data.sessionId ? String(data.sessionId) : undefined,
+    eventId: data.eventId ? String(data.eventId) : undefined,
     roomCode: data.roomCode ? String(data.roomCode) : undefined,
     serviceTeamId: data.serviceTeamId ? String(data.serviceTeamId) : undefined,
     securityToken: String(data.securityToken ?? ""),
     childName: data.childName ? String(data.childName) : undefined,
+    guardianAccountEmail: data.guardianAccountEmail ? String(data.guardianAccountEmail) : undefined,
     guardianName: data.guardianName ? String(data.guardianName) : undefined,
     guardianPhone: data.guardianPhone ? String(data.guardianPhone) : undefined,
     authorizedPickupNames: Array.isArray(data.authorizedPickupNames) ? data.authorizedPickupNames.map(String) : undefined,
     pickupCode: data.pickupCode ? String(data.pickupCode) : undefined,
     allergies: data.allergies ? String(data.allergies) : undefined,
     securityRestrictions: data.securityRestrictions ? String(data.securityRestrictions) : undefined,
-    photoUrl: data.photoUrl ? String(data.photoUrl) : undefined,
+    // Legacy inline/public photos are never returned to Kids clients.
     photoConsentAt: data.photoConsentAt ? String(data.photoConsentAt) : undefined,
     releasedTo: data.releasedTo ? String(data.releasedTo) : undefined,
     releaseNote: data.releaseNote ? String(data.releaseNote) : undefined,
@@ -3395,84 +3177,25 @@ function toKidsSettings(data: DocumentData): OrganizationKidsSettings {
   };
 }
 
-export async function saveKidsCheckIn(
+// Check-ins ativos visíveis para um responsável. Não use a consulta geral e
+// filtre no cliente: as rules devem impedir que dados de outras crianças
+// atravessem a rede.
+export async function fetchMyActiveKidsCheckIns(
   config: FirebaseWebRuntimeConfig,
   context: TenantContext,
-  checkIn: KidsCheckIn
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getKidsCheckInsCollectionPath(context), checkIn.id),
-    cleanFirestoreData(checkIn),
-    { merge: true }
-  );
-}
-
-// Check-ins ativos (crianças presentes) da organização.
-export async function fetchActiveKidsCheckIns(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext
+  userId: string
 ): Promise<KidsCheckIn[]> {
   const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("status", "==", "checked_in"))
-  );
-  return snap.docs.map((d) => toKidsCheckIn(d.id, d.data()));
-}
-
-// Resolve um check-in pelo token do QR (usado na retirada).
-export async function fetchKidsCheckInByToken(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  token: string
-): Promise<KidsCheckIn | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(collection(firestore, getKidsCheckInsCollectionPath(context)), where("securityToken", "==", token), limit(1))
-  );
-  const d = snap.docs[0];
-  return d ? toKidsCheckIn(d.id, d.data()) : null;
-}
-
-// Resolve um check-in ATIVO pelo código curto de retirada (fallback ao QR).
-export async function fetchKidsCheckInByCode(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  pickupCode: string
-): Promise<KidsCheckIn | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(
-      collection(firestore, getKidsCheckInsCollectionPath(context)),
-      where("pickupCode", "==", pickupCode.toUpperCase()),
-      where("status", "==", "checked_in"),
-      limit(1)
-    )
-  );
-  const d = snap.docs[0];
-  return d ? toKidsCheckIn(d.id, d.data()) : null;
-}
-
-// Retirada: marca checked_out registrando quem retirou + auditoria (releasedTo/releaseNote).
-export async function checkoutKidsCheckIn(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  checkInId: string,
-  byParentId: string,
-  audit?: { releasedTo?: string; releaseNote?: string }
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getKidsCheckInsCollectionPath(context), checkInId),
-    cleanFirestoreData({
-      status: "checked_out",
-      checkedOutAt: new Date().toISOString(),
-      checkedOutByParentId: byParentId,
-      releasedTo: audit?.releasedTo,
-      releaseNote: audit?.releaseNote
-    }),
-    { merge: true }
-  );
+  const ref = collection(firestore, getKidsCheckInsCollectionPath(context));
+  const [asParent, asAuthorized] = await Promise.all([
+    getDocs(query(ref, where("status", "==", "checked_in"), where("parentId", "==", userId))),
+    getDocs(query(ref, where("status", "==", "checked_in"), where("authorizedPickUpIds", "array-contains", userId)))
+  ]);
+  const byId = new Map<string, KidsCheckIn>();
+  for (const snapshot of [asParent, asAuthorized]) {
+    for (const document of snapshot.docs) byId.set(document.id, toKidsCheckIn(document.id, document.data()));
+  }
+  return [...byId.values()];
 }
 
 /* ── Gerador de Banner: histórico ──────────────────────────────────────── */
@@ -3501,7 +3224,8 @@ function toBannerHistoryEntry(documentId: string, data: DocumentData): BannerHis
       hashtags: String(copy.hashtags ?? "")
     },
     thumbnailDataUrl: String(data.thumbnailDataUrl ?? ""),
-    photoDataUrl: data.photoDataUrl ? String(data.photoDataUrl) : undefined
+    photoDataUrl: data.photoDataUrl ? String(data.photoDataUrl) : undefined,
+    backgroundDataUrl: data.backgroundDataUrl ? String(data.backgroundDataUrl) : undefined
   };
 }
 
@@ -3736,27 +3460,10 @@ export async function fetchMemberBadges(
   return snap.docs.map((d) => toMemberBadge(d.id, d.data()));
 }
 
-export async function saveMemberBadge(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  memberBadge: MemberBadge
-) {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getMemberBadgesCollectionPath(context, memberBadge.personId), memberBadge.id),
-    cleanFirestoreData(memberBadge),
-    { merge: true }
-  );
-}
-
 /* ── Network / Rede de Igrejas ─────────────────────────────────────────── */
 
 function getNetworkAffiliatesPath(parentOrgId: string) {
   return `organizations/${parentOrgId}/affiliates`;
-}
-
-function getNetworkSnapshotPath(childOrgId: string, date: string) {
-  return `organizations/${childOrgId}/networkSnapshots/${date}`;
 }
 
 function getNetworkSnapshotsPath(childOrgId: string) {
@@ -3770,51 +3477,6 @@ export async function fetchNetworkAffiliates(
   const firestore = getFirebaseFirestore(config);
   const snap = await getDocs(collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as NetworkAffiliate));
-}
-
-export async function saveNetworkAffiliate(
-  config: FirebaseWebRuntimeConfig,
-  affiliate: NetworkAffiliate
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, getNetworkAffiliatesPath(affiliate.parentOrganizationId), affiliate.id);
-  const existing = await getDoc(ref);
-  await setDoc(ref, cleanFirestoreData(affiliate), { merge: true });
-
-  if (!existing.exists()) {
-    await updateDoc(doc(firestore, "organizations", affiliate.parentOrganizationId), {
-      affiliateCount: increment(1)
-    }).catch(() => {});
-  }
-}
-
-export async function fetchNetworkAffiliateByInviteCode(
-  config: FirebaseWebRuntimeConfig,
-  parentOrganizationId: string,
-  inviteCode: string
-): Promise<NetworkAffiliate | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDocs(
-    query(
-      collection(firestore, getNetworkAffiliatesPath(parentOrganizationId)),
-      where("inviteCode", "==", inviteCode)
-    )
-  );
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id: d.id, ...d.data() } as NetworkAffiliate;
-}
-
-export async function saveNetworkSnapshot(
-  config: FirebaseWebRuntimeConfig,
-  snapshot: NetworkSnapshot
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  await setDoc(
-    doc(firestore, getNetworkSnapshotPath(snapshot.organizationId, snapshot.date)),
-    cleanFirestoreData(snapshot),
-    { merge: true }
-  );
 }
 
 export async function fetchLatestNetworkSnapshot(
@@ -3930,19 +3592,6 @@ export async function setOrgPlan(
   await setDoc(ref, { plan }, { merge: true });
 }
 
-// Grava os IDs do Asaas assim que o checkout é criado — não depende do
-// webhook (que só confirma quando o pagador de fato paga) pra já sabermos
-// qual assinatura consultar no histórico de faturas.
-export async function linkAsaasSubscription(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  ids: { asaasCustomerId: string; asaasSubscriptionId: string }
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, `organizations/${context.organizationId}/settings/subscription`);
-  await setDoc(ref, ids, { merge: true });
-}
-
 export interface OrgBillingInfo {
   plan: PlanId;
   billingStatus: "active" | "overdue" | "suspended";
@@ -4050,51 +3699,7 @@ export async function fetchMemberContributionsByPersonId(
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function addMemberContribution(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  contribution: Omit<MemberContribution, "id">
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getMemberContributionsCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData(contribution));
-  return ref.id;
-}
 
-// Salva o comprovante como imagem base64 num doc separado (não usa Storage, que
-// não está provisionado no projeto). Retorna o id do doc pra referenciar na
-// contribuição. Doc separado evita bloatar a query de contributions.
-// Falha aqui não deve bloquear o registro do valor (chamador ignora o erro).
-export async function saveContributionReceipt(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  receipt: { organizationId: string; imageBase64: string; contentType?: string; createdByUserId: string }
-): Promise<string> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(collection(firestore, getContributionReceiptsCollectionPath(context)));
-  await setDoc(ref, cleanFirestoreData({
-    organizationId: receipt.organizationId,
-    imageBase64: receipt.imageBase64,
-    contentType: receipt.contentType ?? "image/jpeg",
-    createdByUserId: receipt.createdByUserId,
-    createdAt: new Date().toISOString(),
-  }));
-  return ref.id;
-}
-
-// Lê o comprovante (admin, ao conferir). Retorna data URI pronto p/ <img src>.
-export async function fetchContributionReceipt(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  receiptId: string
-): Promise<{ dataUri: string } | null> {
-  const firestore = getFirebaseFirestore(config);
-  const snap = await getDoc(doc(firestore, getContributionReceiptsCollectionPath(context), receiptId));
-  if (!snap.exists()) return null;
-  const data = snap.data() as { imageBase64?: string; contentType?: string };
-  if (!data.imageBase64) return null;
-  return { dataUri: `data:${data.contentType ?? "image/jpeg"};base64,${data.imageBase64}` };
-}
 
 // Visão de admin: todas as contribuições da organização (não só as de um
 // membro), usado pelo painel de Finanças. As Firestore rules já permitem
@@ -4113,23 +3718,6 @@ export async function fetchAllContributions(
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemberContribution));
-}
-
-// Confirma uma contribuição autodeclarada pelo membro (status "pending",
-// criada via PIX no app) depois da liderança conferir o comprovante/extrato.
-export async function confirmMemberContribution(
-  config: FirebaseWebRuntimeConfig,
-  context: TenantContext,
-  contributionId: string,
-  confirmedByUid: string
-): Promise<void> {
-  const firestore = getFirebaseFirestore(config);
-  const ref = doc(firestore, getMemberContributionsCollectionPath(context), contributionId);
-  await updateDoc(ref, {
-    status: "confirmed",
-    confirmedBy: confirmedByUid,
-    confirmedAt: new Date().toISOString()
-  });
 }
 
 // ─── Radar Pastoral: presença em culto ─────────────────────────────────────
@@ -4274,4 +3862,10 @@ export async function updatePrayerRequestStatus(
     respondedAt: new Date().toISOString(),
     respondedByUserId: params.respondedByUserId ?? null
   });
+}
+
+/** Remove this device only if a newer registration has not replaced its token. */
+export async function clearMobilePushToken(config:FirebaseWebRuntimeConfig,context:TenantContext,userId:string,token:string){
+ const db=getFirebaseFirestore(config),ref=doc(db,getTenantUserDocumentPath(context,userId));
+ await runTransaction(db,async tx=>{const row=await tx.get(ref);if(row.exists()&&row.data().expoPushToken===token)tx.update(ref,{expoPushToken:null,expoPushTokenUpdatedAt:new Date().toISOString()});});
 }

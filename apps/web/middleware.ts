@@ -14,7 +14,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-XSS-Protection": "1; mode=block",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
 };
 
@@ -22,13 +22,18 @@ const SECURITY_HEADERS: Record<string, string> = {
 // é viável sem um server-side nonce generator), imagens de qualquer origem
 // (necessário para avatares/fotos de visitantes), e estilos inline.
 // Em produção com CSP strict, considere gerar nonce por request.
+const isDevelopment = process.env.NODE_ENV === "development";
+const emulatorConnections = isDevelopment && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true"
+  ? " http://localhost:9099 http://localhost:8080"
+  : "";
 const CSP_VALUE = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.google.com https://www.googleapis.com",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://www.google.com https://www.googleapis.com https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com",
+  "frame-src https://challenges.cloudflare.com",
+  `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://viacep.com.br https://brasilapi.com.br https://servicodados.ibge.gov.br${emulatorConnections}${isDevelopment ? " ws://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -43,6 +48,15 @@ export function withSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export function middleware(request: NextRequest) {
+  // O runtime OpenNext no Cloudflare falha ao materializar a rota estática
+  // raiz neste projeto. Encaminhar antes da renderização evita o erro 500 e
+  // mantém a URL pública apontando para a landing oficial.
+  if (request.nextUrl.pathname === "/") {
+    return withSecurityHeaders(
+      NextResponse.redirect(new URL("/landing", request.url)),
+    );
+  }
+
   const response = NextResponse.next();
   return withSecurityHeaders(response);
 }

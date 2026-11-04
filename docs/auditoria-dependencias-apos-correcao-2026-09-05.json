@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-05",
+  "command": "corepack pnpm audit --prod --json",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 1,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 638,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 638
+  },
+  "advisories": [
+    {
+      "id": 1119441,
+      "module": "uuid",
+      "severity": "moderate",
+      "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+      "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+      "vulnerableVersions": "<11.1.1",
+      "patchedVersions": ">=11.1.1",
+      "installedVersions": [
+        "7.0.3"
+      ]
+    }
+  ],
+  "assessment": "Único residual: uuid 7 em xcode 3, ferramenta Expo. pbxProject.js usa uuid.v4() sem buffer externo; advisory afeta v3/v5/v6. Nenhum alcance identificado nesse chamador; aviso mantido no scanner, sem supressão."
+}

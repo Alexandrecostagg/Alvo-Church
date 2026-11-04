@@ -1,28 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Check, QrCode, ExternalLink } from "lucide-react";
 import { useAppAuth } from "../../../app/providers";
 
 function QRCodeDisplay({ value, size = 180 }: { value: string; size?: number }) {
-  return (
-    <div style={{ width: size, height: size, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "#f8fafc", borderRadius: 12, border: "1px dashed rgba(29,41,64,0.2)" }}>
-      <QrCode size={40} strokeWidth={1.4} style={{ color: "var(--alvo-accent-dark)" }} />
-      <span style={{ fontSize: 11, color: "#64748b", textAlign: "center", lineHeight: 1.5, padding: "0 12px" }}>
-        Copie o link abaixo e gere o QR Code em <strong>qr.io</strong> ou imprima diretamente
-      </span>
-    </div>
-  );
+  const [image, setImage] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    setImage("");
+    if (value) void import("qrcode").then(qr => qr.toDataURL(value, { width: size, margin: 2 })).then(data => { if (!cancelled) setImage(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [value, size]);
+  return image ? <img src={image} width={size} height={size} alt="QR Code do formulário público da igreja" /> : <p>Use o link abaixo enquanto o QR Code é preparado.</p>;
 }
 
 export function PublicLinksView() {
-  const { organizationId } = useAppAuth();
+  const { tenantRuntime } = useAppAuth();
   const [copied, setCopied] = useState<string | null>(null);
 
-  const orgSlug = organizationId;
+  const orgSlug = tenantRuntime?.organization?.slug || "";
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  const links = [
+  const links = orgSlug ? [
     {
       key: "visit",
       label: "Formulário de Visitante",
@@ -38,13 +38,27 @@ export function PublicLinksView() {
       highlight: false,
     },
     {
+      key: "care",
+      label: "Pedido de oração e cuidado",
+      desc: "Atendimento privado, sem instalar aplicativo",
+      path: `/p/${orgSlug}/care`,
+      highlight: false,
+    },
+    {
+      key: "events",
+      label: "Agenda e inscrições",
+      desc: "Inscrições sem aplicativo",
+      path: `/p/${orgSlug}/events`,
+      highlight: false,
+    },
+    {
       key: "portal",
       label: "Portal Público",
       desc: "Página pública da organização",
       path: `/p/${orgSlug}`,
       highlight: false,
     },
-  ];
+  ] : [];
 
   async function copyLink(url: string, key: string) {
     await navigator.clipboard.writeText(url);
@@ -61,6 +75,7 @@ export function PublicLinksView() {
         </div>
       </header>
 
+      {!orgSlug && <p role="status">A igreja ainda não possui um endereço público configurado.</p>}
       <div style={linksGridStyle}>
         {links.map((link) => {
           const fullUrl = `${baseUrl}${link.path}`;

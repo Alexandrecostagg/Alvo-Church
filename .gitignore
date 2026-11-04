@@ -1,4 +1,7 @@
 .DS_Store
+.local-backups/
+.pnpm-store/
+*.tsbuildinfo
 node_modules
 .turbo
 .next
@@ -12,7 +15,7 @@ apps/mobile/dist
 apps/web/.next
 apps/web/.cloudflare-bin
 apps/web/.open-next
-apps/web/.wrangler
+.wrangler/
 *.log
 .env
 .env.local
@@ -22,6 +25,8 @@ wrangler*.log
 apps/web/dist-cloudflare
 .claude/
 apps/web/.vercel/
+apps/lp/out/
+apps/lp/playwright-html*.html
 
 # Chave de service account do Firebase (NUNCA commitar — vaza credencial)
 service-account.json

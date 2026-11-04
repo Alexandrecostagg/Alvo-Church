@@ -1,5 +1,8 @@
+export { WifiRateLimit } from "./wifi-rate-limit";
+import { boundedForm, boundedBody, rasterImageType, UploadError } from "@alvo/utils";
 import { Hono } from "hono";
 import type { BrandAssetKind, TenantBrandAssetUploadResponse } from "@alvo/types";
+import { isDailySnapshotTime, processWhatsappQueue } from "./whatsapp-scheduler";
 import { writeDailyNetworkSnapshots } from "./network-snapshot";
 
 function safeStringCompare(a: string, b: string): boolean {
@@ -23,16 +26,13 @@ function safeStringCompare(a: string, b: string): boolean {
 }
 
 type WorkerEnv = {
+  WHATSAPP_PROCESS_ORIGIN?: string;
+  WHATSAPP_PROCESS_TOKEN?: string;
+  WHATSAPP_PROCESS_ORGANIZATIONS?: string;
+  WIFI_RATE_LIMIT?: DurableObjectNamespace;
   BRAND_ASSETS_BUCKET?: R2Bucket;
   PUBLIC_BRAND_BASE_URL?: string;
   UPLOAD_API_BEARER_TOKEN?: string;
-  TWILIO_ACCOUNT_SID?: string;
-  TWILIO_AUTH_TOKEN?: string;
-  TWILIO_WHATSAPP_FROM?: string;
-  // Segredo compartilhado só com o backend do web (apps/web/app/api/communication/*)
-  // — nunca deve ser embutido em código de cliente. É a única coisa que
-  // protege esse endpoint de virar um disparador de WhatsApp aberto ao público.
-  NOTIFY_API_BEARER_TOKEN?: string;
   // Segredo compartilhado com a infraestrutura Wi-Fi (MikroTik/UniFi). O SSID
   // configurado no roteador deve corresponder a uma chave deste mapa para que
   // a intake seja vinculada a uma organização.
@@ -46,6 +46,12 @@ type WorkerEnv = {
 };
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
+
+const BRAND_ASSET_CONTENT_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp"
+]);
+const BRAND_ASSET_KINDS = new Set<BrandAssetKind>(["logoLight", "logoDark", "icon", "favicon"]);
+const BRAND_ASSET_MAX_BYTES = 5 * 1024 * 1024;
 
 function jsonError(message: string, status = 400) {
   return new Response(JSON.stringify({ success: false, error: message }), {
@@ -75,7 +81,7 @@ app.post("/tenant-assets/upload", async (c) => {
   const authorization = c.req.header("authorization");
 
   if (!configuredToken) {
-    return jsonError("UPLOAD_API_BEARER_TOKEN nao configurado no Worker.", 503);
+    return jsonError("Serviço de upload indisponível.", 503);
   }
 
   const expected = `Bearer ${configuredToken}`;
@@ -84,29 +90,33 @@ app.post("/tenant-assets/upload", async (c) => {
   }
 
   if (!c.env.BRAND_ASSETS_BUCKET) {
-    return jsonError("BRAND_ASSETS_BUCKET nao configurado.", 503);
+    return jsonError("Serviço de upload indisponível.", 503);
   }
 
-  const formData = await c.req.formData();
+  const formData = await boundedForm(c.req.raw, BRAND_ASSET_MAX_BYTES + 64 * 1024);
   const organizationId = String(formData.get("organizationId") ?? "");
   const assetKind = String(formData.get("assetKind") ?? "") as BrandAssetKind;
-  const childId = String(formData.get("childId") ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
   const file = formData.get("file");
 
-  if (!organizationId || !assetKind || !(file instanceof File)) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(organizationId) || !assetKind || !(file instanceof File)) {
     return jsonError("organizationId, assetKind e file sao obrigatorios.", 422);
   }
+  if (!BRAND_ASSET_KINDS.has(assetKind) || !BRAND_ASSET_CONTENT_TYPES.has(file.type)) {
+    return jsonError("Tipo de asset ou arquivo não permitido.", 415);
+  }
+  if (file.size === 0 || file.size > BRAND_ASSET_MAX_BYTES) {
+    return jsonError("O asset deve ter no máximo 5 MB.", 413);
+  }
 
-  const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
-  // Fotos de criança (Segurança Kids) vivem sob um prefixo próprio, separado do
-  // branding; as demais mantêm o caminho de branding.
-  const objectKey = assetKind === "kidsPhoto"
-    ? `organizations/${organizationId}/kids/${childId || "unknown"}/${Date.now()}-${fileName}`
-    : `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const contentType = rasterImageType(bytes, file.type);
+  const fileName = `${crypto.randomUUID()}.${contentType === "image/png" ? "png" : contentType === "image/jpeg" ? "jpg" : "webp"}`;
+  // Este bucket contém exclusivamente marcas públicas; mídia privada usa outra API.
+  const objectKey = `organizations/${organizationId}/branding/${assetKind}/${Date.now()}-${fileName}`;
 
-  await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
+  await c.env.BRAND_ASSETS_BUCKET.put(objectKey, bytes, {
     httpMetadata: {
-      contentType: file.type || "application/octet-stream"
+      contentType
     }
   });
 
@@ -132,7 +142,7 @@ app.post("/wifi/intake", async (c) => {
     // 1. Autenticação via bearer token.
     const configuredToken = c.env.WIFI_INTAKE_BEARER_TOKEN;
     if (!configuredToken) {
-      return jsonError("WIFI_INTAKE_BEARER_TOKEN nao configurado no Worker.", 503);
+      return jsonError("Serviço Wi-Fi indisponível.", 503);
     }
     const authorization = c.req.header("authorization");
     const expected = `Bearer ${configuredToken}`;
@@ -141,28 +151,19 @@ app.post("/wifi/intake", async (c) => {
     }
 
     // 2. Rate limiting por IP (5 requisições por minuto).
-    const clientIp = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "127.0.0.1";
-    const ipKey = `wifi:${clientIp}`;
-    const now = Date.now();
-    const windowMs = 60_000;
-    const maxRequests = 5;
-
-    // Cleanup de entradas expiradas a cada chamada para evitar crescimento infinito.
-    const rateLimit = (c as any).env.__wifiRateLimit ?? ((c as any).env.__wifiRateLimit = new Map());
-    const existing = rateLimit.get(ipKey);
-    if (existing && existing.windowStart < now - windowMs) {
-      rateLimit.delete(ipKey);
-    } else if (existing && existing.count >= maxRequests) {
-      return c.json({ error: "Limite de requisições excedido. Tente novamente em instantes." }, { status: 429 });
-    }
-
-    const rateState = existing ?? { count: 0, windowStart: now };
-    rateState.count++;
-    rateLimit.set(ipKey, rateState);
+    const clientIp = c.req.header("cf-connecting-ip") || "unknown";
+    if (!c.env.WIFI_RATE_LIMIT) return jsonError("Controle de tentativas indisponível.", 503);
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientIp));
+    const key = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, "0")).join("");
+    const limiter = c.env.WIFI_RATE_LIMIT.get(c.env.WIFI_RATE_LIMIT.idFromName(key));
+    const limited = await limiter.fetch("https://internal/check", { method: "POST" });
+    if (limited.status === 429) return c.json({ error: "Limite de requisições excedido. Tente novamente em instantes." }, { status: 429, headers: { "Retry-After": "60" } });
+    if (!limited.ok) return jsonError("Controle de tentativas indisponível.", 503);
 
     // 3. Binding a organização via SSID.
     const ssid = String(c.req.header("cf-access-client-identity") ?? c.req.header("x-wifi-ssid") ?? "").trim();
     let orgId = "";
+    if (!ssid) return jsonError("SSID obrigatório.", 400);
     if (ssid) {
       let ssidMap: Record<string, string> = {};
       try {
@@ -173,11 +174,11 @@ app.post("/wifi/intake", async (c) => {
       }
       orgId = ssidMap[ssid] ?? "";
       if (!orgId) {
-        return jsonError(`SSID "${ssid}" não está mapeado para nenhuma organização.`, 403);
+        return jsonError("SSID não autorizado.", 403);
       }
     }
 
-    const body = await c.req.json().catch(() => ({}));
+    const body = JSON.parse(new TextDecoder().decode(await boundedBody(c.req.raw, 8192)));
     const fullName = String(body.fullName ?? "").trim();
     const whatsapp = String(body.whatsapp ?? "").trim();
     const email = String(body.email ?? "").trim();
@@ -203,135 +204,25 @@ app.post("/wifi/intake", async (c) => {
       registeredAt: new Date().toISOString()
     });
   } catch (err) {
-    return jsonError(err instanceof Error ? err.message : "Erro ao processar cadastro Wi-Fi.", 500);
+    return jsonError(err instanceof UploadError ? err.message : "Erro ao processar cadastro Wi-Fi.", err instanceof UploadError ? err.status : 500);
   }
 });
 
-// Endpoint: upload comprovante (proof) for an event
-app.post("/events/:eventId/upload-proof", async (c) => {
-  if (!c.env.BRAND_ASSETS_BUCKET) {
-    return jsonError("BRAND_ASSETS_BUCKET nao configurado.", 503);
-  }
+// Retired: financial proofs use the authenticated web API and private Firebase
+// Storage. Never store them in the public branding bucket.
+app.post("/events/:eventId/upload-proof", () => jsonError("Use o envio privado de comprovantes da plataforma.", 410));
 
-  const formData = await c.req.formData();
-  const file = formData.get("file");
-  const eventId = String(c.req.param("eventId") ?? "");
-  const userId = String(formData.get("userId") ?? "anonymous");
-
-  if (!eventId || !(file instanceof File)) {
-    return jsonError("eventId e file sao obrigatorios.", 422);
-  }
-
-  const fileName = file.name.replace(/\s+/g, "-").toLowerCase();
-  const objectKey = `events/${eventId}/proofs/${Date.now()}-${fileName}`;
-
-  await c.env.BRAND_ASSETS_BUCKET.put(objectKey, await file.arrayBuffer(), {
-    httpMetadata: { contentType: file.type || "application/octet-stream" }
-  });
-
-  const publicBaseUrl = c.env.PUBLIC_BRAND_BASE_URL?.replace(/\/$/, "") ?? "https://assets.alvochurch.app";
-  const publicUrl = `${publicBaseUrl}/${objectKey}`;
-
-  return c.json({ success: true, objectKey, publicUrl, eventId, userId });
-});
-
-// Endpoint: send WhatsApp message via Twilio
-app.post("/notify/whatsapp", async (c) => {
-  // Este endpoint dispara mensagem (e custo) pela conta Twilio da plataforma —
-  // só pode ser chamado pelo backend do web, nunca direto por um cliente.
-  const configuredToken = c.env.NOTIFY_API_BEARER_TOKEN;
-  const authorization = c.req.header("authorization");
-  if (!configuredToken) {
-    return jsonError("NOTIFY_API_BEARER_TOKEN nao configurado no Worker.", 503);
-  }
-  const expectedNotify = `Bearer ${configuredToken}`;
-  if (!authorization || !safeStringCompare(authorization, expectedNotify)) {
-    return jsonError("Nao autorizado para notificacao.", 401);
-  }
-
-  const body = await c.req.json().catch(() => ({}));
-  const to = String(body.to ?? "");
-  const message = String(body.message ?? "");
-  const mediaUrl = body.mediaUrl ? String(body.mediaUrl) : undefined;
-  const organizationId = String(body.organizationId ?? "");
-
-  const sid = c.env.TWILIO_ACCOUNT_SID;
-  const token = c.env.TWILIO_AUTH_TOKEN;
-  const from = c.env.TWILIO_WHATSAPP_FROM;
-
-  if (!sid || !token || !from) {
-    return jsonError("Twilio credentials (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM) nao configuradas.", 503);
-  }
-
-  if (!to || !message) {
-    return jsonError("to e message sao obrigatorios.", 422);
-  }
-
-  // Destinatário deve ser membro ativo da organização. Impede que o endpoint
-  // seja usado para disparar mensagens a números externos, mesmo com bearer
-  // token comprometido.
-  if (organizationId) {
-    const digits = String(to).replace(/\D/g, "");
-    const normalized = `whatsapp:+${digits}`;
-    const projectId = c.env.FIREBASE_PROJECT_ID ?? "";
-    const queryRes = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/organizations/${encodeURIComponent(organizationId)}/users?filter=fields.isActive.booleanValue==true`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (queryRes.ok) {
-      const queryData = (await queryRes.json()) as {
-        documents?: Array<{ fields?: { phone?: { stringValue?: string } } }>;
-      };
-      const memberPhones = new Set(
-        (queryData.documents ?? [])
-          .map((d) => {
-            const raw = d.fields?.phone?.stringValue ?? "";
-            if (!raw) return "";
-            return `whatsapp:+${String(raw).replace(/\D/g, "")}`;
-          })
-          .filter((p) => p.length > 0)
-      );
-      if (!memberPhones.has(normalized)) {
-        return jsonError(
-          `Destinatário ${to} não é membro ativo da organização ${organizationId}.`,
-          403
-        );
-      }
-    }
-  }
-
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
-  const params = new URLSearchParams();
-  params.set("To", `whatsapp:${to}`);
-  params.set("From", `whatsapp:${from}`);
-  params.set("Body", message);
-  if (mediaUrl) params.set("MediaUrl", mediaUrl);
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: params.toString(),
-    signal: AbortSignal.timeout(15000)
-  }).catch((err) => ({ ok: false, status: 500, text: async () => String(err) }));
-
-  if (!resp || !(resp as Response).ok) {
-    const text = resp && typeof (resp as Response).text === "function" ? await (resp as Response).text() : "unknown error";
-    return jsonError(`Falha ao enviar via Twilio: ${text}`, 502);
-  }
-
-  const data = await (resp as Response).json().catch(() => ({}));
-  return c.json({ success: true, provider: "twilio", result: data });
-});
+app.onError((error, c) => c.json({ error: error instanceof UploadError ? error.message : "Serviço indisponível." }, (error instanceof UploadError ? error.status : 503) as any));
 
 export default {
   fetch: app.fetch,
   // Cron diário (configurado em wrangler.jsonc → triggers.crons): grava o
   // NetworkSnapshot de cada organização via agregações no servidor, sem
   // baixar documentos — substitui o cálculo pesado que rodava no navegador.
-  scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
-    ctx.waitUntil(writeDailyNetworkSnapshots(env));
+  scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
+    ctx.waitUntil(processWhatsappQueue(env));
+    if (isDailySnapshotTime(event.scheduledTime)) {
+      ctx.waitUntil(writeDailyNetworkSnapshots(env));
+    }
   }
 };

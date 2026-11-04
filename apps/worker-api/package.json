@@ -12,7 +12,8 @@
     "@alvo/ai": "workspace:*",
     "@alvo/domain": "workspace:*",
     "@alvo/types": "workspace:*",
-    "hono": "^4.7.4"
+    "@alvo/utils": "workspace:*",
+    "hono": "^4.13.14"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250303.0",
@@ -21,4 +22,3 @@
     "wrangler": "^4.6.0"
   }
 }
-

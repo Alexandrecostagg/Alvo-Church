@@ -1,0 +1,16 @@
+[Dict]
+	[Key] application-identifier
+	[Value]
+		[String] LCN99JS59U.com.plataformaesdras.app
+	[Key] aps-environment
+	[Value]
+		[String] production
+	[Key] beta-reports-active
+	[Value]
+		[Bool] true
+	[Key] com.apple.developer.team-identifier
+	[Value]
+		[String] LCN99JS59U
+	[Key] get-task-allow
+	[Value]
+		[Bool] false

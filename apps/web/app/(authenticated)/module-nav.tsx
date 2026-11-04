@@ -59,7 +59,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
     {
       title: "Geral",
       items: [
-        { label: "Dashboard", icon: LayoutDashboard, href: "/", match: (pathname) => pathname === "/" },
+        { label: "Dashboard", icon: LayoutDashboard, href: "/app", match: (pathname) => pathname === "/app" },
         { label: "Recepção", icon: ClipboardList, href: "/reception", moduleKey: "visitors", match: (pathname) => pathname.startsWith("/reception") },
         { label: "Cuidado Pastoral", icon: Bot, href: "/pastoral-ai", moduleKey: "ai", match: (pathname) => pathname.startsWith("/pastoral-ai") || pathname.startsWith("/care-radar") },
         { label: "Finanças", icon: Landmark, href: "/finance", moduleKey: "finance", match: (pathname) => pathname.startsWith("/finance") },
@@ -68,7 +68,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
     {
       title: "Membros",
       items: [
-        { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname.startsWith("/me") },
+        { label: "Meu Perfil", icon: UserCircle, href: "/me", match: (pathname) => pathname === "/me" || pathname.startsWith("/me/") },
         { label: "Pessoas", icon: UsersRound, href: "/members", match: (pathname) => pathname.startsWith("/members") },
         { label: "Marketplace", icon: Store, href: "/marketplace-community", moduleKey: "marketplace", match: (pathname) => pathname.startsWith("/marketplace-community") || pathname.startsWith("/marketplace") },
         { label: "Comunicação", icon: MessageSquareText, href: "/communication", moduleKey: "communication", match: (pathname) => pathname.startsWith("/communication") },
@@ -85,6 +85,7 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
         { label: "Gerenciar Cursos", icon: BookOpenCheck, href: "/learning/manage", moduleKey: "journeys", match: (pathname) => pathname.startsWith("/learning/manage") },
         { label: "Capacitação", icon: Award, href: "/capacitacao", match: (pathname) => pathname.startsWith("/capacitacao") },
         { label: "Eventos", icon: CalendarRange, href: "/events", moduleKey: "events", match: (pathname) => pathname.startsWith("/events") },
+        { label: "Convites", icon: UsersRound, href: "/campaigns", moduleKey: "events", match: (pathname) => pathname.startsWith("/campaigns") || pathname.startsWith("/my-invites") },
         { label: "Escalas", icon: Handshake, href: "/serving", moduleKey: "volunteers", match: (pathname) => pathname.startsWith("/serving") },
         { label: "Segurança Kids", icon: ShieldCheck, href: "/kids/scan", moduleKey: "children", match: (pathname) => pathname.startsWith("/kids/scan") },
       ]

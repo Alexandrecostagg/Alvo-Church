@@ -36,35 +36,7 @@ const BRAZIL_STATES = [
   { uf: "TO", name: "Tocantins" },
 ];
 
-// Cidades por estado (base compacta — estados com mais igrejas primeiro)
-const CITIES_BY_STATE: Record<string, string[]> = {
-  SP: ["São Paulo", "Campinas", "Santos", "São Bernardo do Campo", "Osasco", "Ribeirão Preto", "Sorocaba", "São José dos Campos", "Curitiba", "Barueri", "Campina Grande"],
-  MG: ["Belo Horizonte", "Uberlândia", "Juiz de Fora", "Betim", "Montes Claros", "Ribeirão das Neves", "Uberaba", "Governador Valadares", "Contagem", "Lagoa Santa"],
-  RJ: ["Rio de Janeiro", "São João de Meriti", "Nova Iguaçu", "Niterói", "Duque de Caxias", "Belford Roxo", "São Gonçalo", "Magé", "Itaboraí", "Mesquita"],
-  RS: ["Porto Alegre", "Caxias do Sul", "Pelotas", "Canoas", "Santa Maria", "Gravataí", "Viamão", "Novo Hamburgo", "São Leopoldo", "Rio Grande"],
-  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Itabuna", "Jequié", "Teixeira de Freitas", "Lençóis", "Valença", "Salinas da Margarida"],
-  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel", "São José dos Pinhais", "Foz do Iguaçu", "Colombo", "Guarapuava", "Paranaguá"],
-  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral", "Crato", "Itapipoca", "Macapá", "Tabatinga", "Irakema"],
-  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina", "Paulista", "Camaragibe", "Garanhuns", "Vitória de Santo Antão", "Igarassu"],
-  SC: ["Florianópolis", "Joinville", "Blumenau", "São José", "Chapecó", "Criciúma", "Itajaí", "Jaraguá do Sul", "Tubarão", "Lages"],
-  GO: ["Goiânia", "Anápolis", "Senador Canedo", "Abadia de Goiás", "Aparecida de Goiânia", "Goianésia", "Goianira", "Nova Veneza", "Sírio", "Trindade"],
-  AM: ["Manaus", "Parintins", "Itacoatiara", "Manicoré", "Mauá", "Novo Airão", "Tefé", "Tabatinga", "Lábrea", "Autazes"],
-  PA: ["Belém", "Ananindeua", "Santarém", "Marabá", "Parauapebas", "Castanhal", "Altamira", "Cametá", "Bragança", "Baião"],
-  MA: ["São Luís", "Imperatriz", "São José de Ribamar", "Timon", "Caxias", "Codó", "Paço do Lumiar", "Açailândia", "Bacabal", "Balsas"],
-  PB: ["João Pessoa", "Campina Grande", "Santa Rita", "Bayeux", "Soluânia", "Cabedelo", "Guarabira", "Mamanguape", "Patos", "Itaporanga"],
-  RN: ["Natal", "Mossoró", "Parnamirim", "São Gonçalo do Amarante", "Ceará-Mirim", "Currais Novos", "Doutor Severiano", "Assu", "Caicó", "Pendências"],
-  PI: ["Teresina", "Parnaíba", "Picos", "Piripiri", "Floriano", "Baliza", "Altos", "Campo Maior", "Oeiras", "Luís Corrêa"],
-  MS: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã", "Naviraí", "Nova Andradina", "Paranaíba", "Sidrolândia", "Coxim"],
-  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop", "Tangará da Serra", "Cáceres", "Sorriso", "Luciara", "Nova Mutum", "Barra do Garças"],
-  DF: ["Brasília", "Ceilândia", "Samambaia", "Planaltina", "Taguatinga", "Recanto das Emas", "Lago Norte", "Lago Sul", "Núcleo Bandeirante", "Santa Maria"],
-  SE: ["Aracaju", "Lagarto", "Itabaiana", "Estância", "São Cristóvão", "Nossa Senhora do Socorro", "Tobias Barreto", "Simão Dias", "Boquim", "Canindé de São Francisco"],
-  AL: ["Maceió", "Arapiraca", "Rio Largo", "Penedo", "União dos Palmares", "Palmeira dos Índios", "São Miguel dos Campos", "Matriz de Camaragibe", "Murici", "Porto de Pedras"],
-  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Domingos Martins", "Linhares", "São Mateus", "Guarapari", "Aracruz", "Capanema"],
-  AP: ["Macapá", "Santana", "Laranjal do Jari", "Oiapoque", "Mazagão", "Porto Grande", "Pedra Branca do Amapari", "Itaubal", "Vitória do Jari", "Tartarugalzinho"],
-  RO: ["Porto Velho", "Ji-Paraná", "Ariquemes", "Vilhena", "Cacoal", "Rolim de Moura", "Jaru", "Machadinho d'Oeste", "Buritis", "Guajará-Mirim"],
-  RR: ["Boa Vista", "Rorainópolis", "Caracaraí", "Mucajaí", "Bonfim", "Cantá", "Alto Alegre", "Pacaraima", "Normandia", "São João da Baliza"],
-  TO: ["Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins", "Colinas do Tocantins", "Guaraí", "Dianópolis", "Miracema do Tocantins", "Aguiarnópolis"],
-};
+
 
 function slugify(value: string) {
   return value
@@ -165,35 +137,71 @@ export default function SignupPage() {
   const [adminName, setAdminName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [taxId, setTaxId] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [cep, setCep] = useState("");
   const [address, setAddress] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
+  const [addressNumber, setAddressNumber] = useState("");
+  const [addressComplement, setAddressComplement] = useState("");
+  const [addressSector, setAddressSector] = useState("");
+  const [addressQuadra, setAddressQuadra] = useState("");
+  const [addressLote, setAddressLote] = useState("");
+  const [addressReference, setAddressReference] = useState("");
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [taxIdType, setTaxIdType] = useState<"cpf" | "cnpj" | null>(null);
 
-  // Quando estado muda, carrega cidades disponíveis
+  // Carrega todas as cidades do estado via API do IBGE
   useEffect(() => {
-    if (state) {
-      setAvailableCities(CITIES_BY_STATE[state] || []);
-      if (!CITIES_BY_STATE[state]?.includes(city)) {
+    let cancelled = false;
+    async function loadCities() {
+      if (!state) {
+        setAvailableCities([]);
+        setCitiesLoading(false);
         setCity("");
+        return;
       }
-    } else {
-      setAvailableCities([]);
-      setCity("");
+      setCitiesLoading(true);
+      try {
+        const res = await fetch(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${state}/municipios?orderBy=nome`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (!res.ok) throw new Error("Falha ao buscar cidades");
+        const data = await res.json() as Array<{ nome: string }>;
+        if (!cancelled) {
+          setAvailableCities(data.map((m) => m.nome));
+          setCitiesLoading(false);
+          if (!data.some((m) => m.nome === city)) {
+            setCity("");
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailableCities([]);
+          setCitiesLoading(false);
+          setCity("");
+        }
+      }
     }
+    loadCities();
+    return () => { cancelled = true; };
   }, [state]);
 
   // CEP auto-complete
   useEffect(() => {
     const digits = cep.replace(/\D/g, "");
-    if (digits.length !== 8) return;
+    if (digits.length !== 8) {
+      setAddress("");
+      setNeighborhood("");
+      return;
+    }
 
     setCepLoading(true);
     fetchAddressByCep(cep).then((data) => {
@@ -205,9 +213,14 @@ export default function SignupPage() {
           setCity(data.city);
           setState(data.state);
         }
+      } else {
+        setAddress("");
+        setNeighborhood("");
       }
     }).catch(() => {
       setCepLoading(false);
+      setAddress("");
+      setNeighborhood("");
     });
   }, [cep]);
 
@@ -235,6 +248,10 @@ export default function SignupPage() {
       setError(pwIssue);
       return;
     }
+    if (password !== passwordConfirmation) {
+      setError("As senhas não conferem.");
+      return;
+    }
 
     setError(null);
     setIsSubmitting(true);
@@ -256,9 +273,18 @@ export default function SignupPage() {
         churchName: churchName.trim(),
         ownerUid: credential.user.uid,
         ownerEmail: email.trim(),
+        addressPostalCode: cep.replace(/\D/g, ""),
         taxId: taxId.replace(/\D/g, ""),
         addressCity: city.trim(),
         addressState: state,
+        addressLine: address.trim(),
+        addressNumber: addressNumber.trim(),
+        addressComplement: addressComplement.trim(),
+        addressNeighborhood: neighborhood.trim(),
+        addressSector: addressSector.trim(),
+        addressQuadra: addressQuadra.trim(),
+        addressLote: addressLote.trim(),
+        addressReference: addressReference.trim(),
       });
 
       sdk.claimOrganizationSlug(firebaseConfig, {
@@ -272,7 +298,7 @@ export default function SignupPage() {
       });
 
       switchOrganization(organizationId);
-      router.replace("/");
+      router.replace("/app");
     } catch (nextError) {
       setError(
         nextError instanceof Error
@@ -282,8 +308,6 @@ export default function SignupPage() {
       setIsSubmitting(false);
     }
   }
-
-  const isCnpj = taxId.replace(/\D/g, "").length === 14;
 
   return (
     <div
@@ -302,7 +326,7 @@ export default function SignupPage() {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Criar sua conta</h1>
           <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
-            Grátis até 100 membros. Sem cartão de crédito.
+            Grátis até 50 membros. Sem cartão de crédito.
           </p>
         </div>
 
@@ -336,7 +360,10 @@ export default function SignupPage() {
               <input
                 type="text"
                 value={cep}
-                onChange={(e) => setCep(maskCep(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 8);
+                  setCep(maskCep(val));
+                }}
                 style={{ ...inputStyle, flex: 1 }}
                 placeholder="00000-000"
                 autoComplete="postal-code"
@@ -354,7 +381,95 @@ export default function SignupPage() {
                 ✓ {address}{neighborhood ? `, ${neighborhood}` : ""}
               </span>
             )}
+            {cep.replace(/\D/g, "").length === 8 && !address && !cepLoading && (
+              <span style={{ fontSize: 11, color: "#b42318" }}>
+                CEP não encontrado. Preencha manualmente.
+              </span>
+            )}
           </label>
+
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 12 }}>
+            <label style={labelStyle}>
+              Endereço
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                style={inputStyle}
+                placeholder="Ex: Rua das Flores"
+                autoComplete="address-line1"
+                required
+              />
+            </label>
+            <label style={labelStyle}>
+              Número
+              <input
+                type="text"
+                value={addressNumber}
+                onChange={(e) => setAddressNumber(e.target.value)}
+                style={inputStyle}
+                placeholder="Nº"
+                autoComplete="address-level2"
+              />
+            </label>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label style={labelStyle}>
+              Complemento
+              <input
+                type="text"
+                value={addressComplement}
+                onChange={(e) => setAddressComplement(e.target.value)}
+                style={inputStyle}
+                placeholder="Bloco, sala, etc. (opcional)"
+                autoComplete="address-level3"
+              />
+            </label>
+            <label style={labelStyle}>
+              Bairro
+              <input
+                type="text"
+                value={neighborhood}
+                onChange={(e) => setNeighborhood(e.target.value)}
+                style={inputStyle}
+                placeholder="Ex: Centro"
+                autoComplete="address-level2"
+              />
+            </label>
+          </div>
+
+          <details style={{ color: "#4b5563", fontSize: 13 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              Adicionar detalhes do endereço (opcional)
+            </summary>
+            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <label style={labelStyle}>
+                  Setor
+                  <input type="text" value={addressSector} onChange={(e) => setAddressSector(e.target.value)} style={inputStyle} />
+                </label>
+                <label style={labelStyle}>
+                  Quadra
+                  <input type="text" value={addressQuadra} onChange={(e) => setAddressQuadra(e.target.value)} style={inputStyle} />
+                </label>
+                <label style={labelStyle}>
+                  Lote
+                  <input type="text" value={addressLote} onChange={(e) => setAddressLote(e.target.value)} style={inputStyle} />
+                </label>
+              </div>
+              <label style={labelStyle}>
+                Ponto de referência
+                <input
+                  type="text"
+                  value={addressReference}
+                  onChange={(e) => setAddressReference(e.target.value)}
+                  style={inputStyle}
+                  placeholder="Ex: Próximo à praça"
+                />
+              </label>
+            </div>
+          </details>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={labelStyle}>
@@ -364,9 +479,10 @@ export default function SignupPage() {
                 onChange={(e) => setCity(e.target.value)}
                 style={inputStyle}
                 required
-                disabled={availableCities.length === 0}
+                disabled={citiesLoading || (availableCities.length === 0 && !citiesLoading)}
               >
                 <option value="">UF primeiro</option>
+                {citiesLoading && <option value="">Carregando cidades...</option>}
                 {availableCities.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -395,15 +511,17 @@ export default function SignupPage() {
               value={taxId}
               onChange={(e) => {
                 const val = e.target.value;
-                setTaxId(isCnpj ? maskCnpj(val) : maskCpf(val));
-                setTaxIdType(val.replace(/\D/g, "").length >= 14 ? "cnpj" : "cpf");
+                const digits = val.replace(/\D/g, "");
+                const isCnpjNow = digits.length > 11;
+                setTaxId(isCnpjNow ? maskCnpj(val) : maskCpf(val));
+                setTaxIdType(isCnpjNow ? "cnpj" : "cpf");
               }}
               style={inputStyle}
-              placeholder={isCnpj ? "00.000.000/0000-00" : "000.000.000-00"}
+              placeholder={taxId.replace(/\D/g, "").length > 11 ? "00.000.000/0000-00" : "000.000.000-00"}
               required
             />
             <span style={{ fontSize: 11, color: "#9ca3af" }}>
-              {isCnpj ? "CNPJ" : "CPF"} do responsável pela igreja
+              {taxId.replace(/\D/g, "").length > 11 ? "CNPJ" : "CPF"} do responsável pela igreja
             </span>
           </label>
 
@@ -441,6 +559,20 @@ export default function SignupPage() {
               required
             />
             <span style={{ fontSize: 11, color: "#9ca3af" }}>Mínimo 8 caracteres, com letras e números.</span>
+          </label>
+          <label style={labelStyle}>
+            Confirmar senha
+            <input
+              type="password"
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+              style={inputStyle}
+              autoComplete="new-password"
+              required
+            />
+            {passwordConfirmation && password !== passwordConfirmation && (
+              <span style={{ fontSize: 11, color: "#b42318" }}>As senhas não conferem.</span>
+            )}
           </label>
 
           <button type="submit" style={buttonStyle} disabled={isSubmitting || !configured}>

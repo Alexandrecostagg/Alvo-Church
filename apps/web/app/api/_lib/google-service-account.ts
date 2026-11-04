@@ -2,9 +2,8 @@
 // access token OAuth2, usando Web Crypto (funciona no runtime do Cloudflare
 // Workers — o SDK oficial firebase-admin/googleapis não roda lá).
 //
-// Usado só por rotas server-to-server sem usuário logado (ex: webhook do
-// Asaas), onde a escrita no Firestore precisa ignorar as regras de tenant
-// normais (que exigem um Firebase Auth ID token de um membro da org).
+// Usado por operações privilegiadas no servidor e verificação de revogação
+// no Firebase Auth. Nunca retorna a credencial ao cliente.
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
@@ -28,9 +27,10 @@ interface ServiceAccountJson {
   private_key: string;
 }
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+const cachedTokens = new Map<string, { value: string; expiresAt: number }>();
 
 export async function getGoogleAccessToken(scope: string): Promise<string> {
+  const cachedToken = cachedTokens.get(scope);
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.value;
   }
@@ -79,14 +79,24 @@ export async function getGoogleAccessToken(scope: string): Promise<string> {
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion: jwt
-    })
+    }),
+    signal: AbortSignal.timeout(8000)
   });
 
   if (!res.ok) {
-    throw new Error(`Falha ao obter access token do Google: ${await res.text()}`);
+    throw new Error(`Falha ao autenticar serviço Google (HTTP ${res.status}).`);
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  cachedTokens.set(scope, { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 });
   return data.access_token;
+}
+
+/** Public service identity only; never returns the key or credential JSON. */
+export function googleServiceAccountIdentity(): string {
+  try {
+    const value = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "{}").client_email;
+    return typeof value === "string" && /^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(value)
+      ? value : "unavailable";
+  } catch { return "unavailable"; }
 }

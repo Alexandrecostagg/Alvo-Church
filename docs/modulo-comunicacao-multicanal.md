@@ -2,6 +2,20 @@
 
 Data: 19 de junho de 2026
 
+## Estado implementado em 07/09/2026
+
+A primeira etapa operacional é **WhatsApp manual**, sem API oficial. O servidor
+resolve pessoas ativas da organização, normaliza telefone, aplica opt-out, limita
+100 destinatários e cria uma preparação idempotente. O líder abre as conversas
+no próprio WhatsApp e depois confirma explicitamente quais envios realizou.
+Somente essa confirmação entra no histórico; abertura de link não é entrega.
+
+Campanhas e auditoria são gravadas pelo servidor. Escrita direta foi bloqueada e
+o endpoint Twilio antigo sem uso foi removido. Push, email, SMS, automações,
+agendamento, entrega/leitura por webhook e WhatsApp Business API permanecem no
+plano futuro. Os modelos e provedores abaixo descrevem essa visão, não o estado
+atual comprovado. Evidências: [entrega 8](entrega-ampliada-8-2026-09-07.md).
+
 ## 1. Objetivo
 
 Definir o módulo de comunicação do Alvo Church: motor nativo de envio de mensagens segmentadas por email, push notification e SMS, operado diretamente dentro da plataforma, sem depender de ferramentas externas para comunicação pastoral e operacional.

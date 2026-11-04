@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-10-10T14:07:47.445Z",
+  "project": "alvo-church",
+  "fixtureId": "security_probe_e6bc8b95-290b-4a73-9169-a86dc3712474",
+  "results": [
+    {
+      "label": "Active session reaches entitlement authorization",
+      "actual": 401,
+      "expected": 403,
+      "passed": false
+    },
+    {
+      "label": "Active session specifically denied missing synthetic entitlement",
+      "actual": false,
+      "expected": true,
+      "passed": false
+    }
+  ],
+  "cleanup": {
+    "institutionUserDocument": "confirmed absent",
+    "institutionDocument": "confirmed absent",
+    "authAccount": "confirmed absent"
+  },
+  "scope": "Only one synthetic Auth account, one organization, its user document, and one PNG. No customer data read.",
+  "storageBlocked": "Firebase Spark; configured bucket does not exist; upgrade or migration required.",
+  "error": {
+    "name": "AssertionError",
+    "code": "ERR_ASSERTION"
+  },
+  "finishedAt": "2026-10-10T14:07:52.486Z",
+  "passed": false
+}

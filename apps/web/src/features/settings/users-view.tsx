@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Shield, UserCircle, ChevronDown, Check } from "lucide-react";
+import { AccountPersonLink } from "./account-person-link";
 import { useAppAuth } from "../../../app/providers";
 import type { AppRole } from "@alvo/types";
 
@@ -28,7 +29,9 @@ function roleMeta(role: AppRole) {
 }
 
 export function UsersView() {
-  const { firebaseConfig, organizationId, tenantReady, user, refreshRoles } = useAppAuth();
+  const { firebaseConfig, organizationId, tenantReady, user, refreshRoles, hasAnyRole } = useAppAuth();
+  const [linkUser, setLinkUser] = useState<TenantUser | null>(null);
+  const [error, setError] = useState("");
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export function UsersView() {
       const list = await sdk.fetchTenantUsers(firebaseConfig, { organizationId });
       if (!cancelled) { setUsers(list); setLoading(false); }
     }
-    void load();
+    void load().catch(() => { if (!cancelled) { setError("Não foi possível carregar os usuários."); setLoading(false); } });
     return () => { cancelled = true; };
   }, [tenantReady, firebaseConfig, organizationId]);
 
@@ -55,6 +58,8 @@ export function UsersView() {
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, roles: [newRole] } : u));
       // Se mudou o próprio usuário, recarrega roles na sessão imediatamente
       if (userId === user?.uid) await refreshRoles();
+    } catch {
+      setError("Não foi possível alterar o acesso. Atualize e tente novamente.");
     } finally {
       setSavingId(null);
     }
@@ -82,7 +87,7 @@ export function UsersView() {
             const meta = roleMeta(primaryRole);
             const isSaving = savingId === u.id;
             return (
-              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderTop: idx > 0 ? "0.5px solid var(--color-border-tertiary)" : undefined }}>
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "14px 16px", borderTop: idx > 0 ? "0.5px solid var(--color-border-tertiary)" : undefined }}>
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <UserCircle size={22} color="#534AB7" />
                 </div>
@@ -91,6 +96,7 @@ export function UsersView() {
                   <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: 0, fontFamily: "var(--font-mono)" }}>{u.id.slice(0, 16)}…</p>
                 </div>
 
+                {hasAnyRole(["church_admin", "super_admin"]) && <button onClick={() => setLinkUser(u)} aria-label={`Vincular cadastro de ${u.email}`}>Vincular cadastro</button>}
                 {/* Role dropdown */}
                 <div style={{ position: "relative" }}>
                   <button
@@ -125,6 +131,9 @@ export function UsersView() {
           })}
         </div>
       )}
+
+      {error && <p role="alert">{error}</p>}
+      {linkUser && <AccountPersonLink key={`${organizationId}:${user?.uid}:${linkUser.id}`} userId={linkUser.id} email={linkUser.email} onClose={() => setLinkUser(null)} />}
 
       {/* close dropdown on outside click */}
       {openDropdown && (

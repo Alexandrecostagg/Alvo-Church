@@ -32,45 +32,6 @@ function buildMapsUrl(address: PostalAddress): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
 }
 
-const mockStore: CommunityStore = {
-  id: "store_1",
-  organizationId: "org_alvo_demo",
-  ownerId: "user_admin_demo",
-  name: "Doces & Travessuras",
-  description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
-  category: "food",
-  status: "approved",
-  images: [],
-  bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
-  contact: {
-    email: "doces@esdras.app",
-    phone: "(91) 99999-9991",
-    address: { street: "Av. Gentil Bittencourt", number: "123", city: "Belém", state: "PA" }
-  },
-  socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-};
-
-const mockOffers: CommunityOffer[] = [
-  {
-    id: "offer_1",
-    organizationId: "org_alvo_demo",
-    storeId: "store_1",
-    title: "15% de desconto em bolos inteiros",
-    description: "Encomende qualquer bolo redondo inteiro e ganhe 15% de desconto apresentando o Esdras Passe.",
-    type: "percentage",
-    discountPercentage: 15,
-    status: "active",
-    images: ["https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop"],
-    validFrom: new Date().toISOString(),
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    createdBy: "user_admin_demo"
-  }
-];
-
 interface StoreDetailViewProps {
   storeId: string;
 }
@@ -81,6 +42,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
   const [store, setStore] = useState<CommunityStore | null>(null);
   const [offers, setOffers] = useState<CommunityOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Publicar promoção (admin) — dispara a notificação in-app dos membros
   const [promoTitle, setPromoTitle] = useState("");
@@ -113,35 +75,21 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
   }
 
   useEffect(() => {
-    async function loadData() {
-      if (!firebaseReady || !tenantReady) {
-        setStore(mockStore);
-        setOffers(mockOffers);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    setStore(null); setOffers([]); setError(null);
+    setLoadError(null);
+    if (!firebaseReady || !tenantReady) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
       try {
-        setLoading(true);
         const context: TenantContext = { organizationId };
-        const storeData = await fetchCommunityStoreById(firebaseConfig, context, storeId);
-        setStore(storeData || mockStore);
-        
-        if (storeData && storeData.status === "approved") {
-          const offersData = await fetchCommunityOffers(firebaseConfig, context, storeId, 50);
-          setOffers(offersData.length > 0 ? offersData.filter(o => o.status === "active") : mockOffers);
-        } else {
-          setOffers(mockOffers);
-        }
-      } catch (err) {
-        setError(friendlyError(err, "Erro ao carregar loja"));
-        console.error("Error loading store:", err);
-        setStore(mockStore);
-        setOffers(mockOffers);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+        const row = await fetchCommunityStoreById(firebaseConfig, context, storeId);
+        const offers = row?.status === "approved" ? await fetchCommunityOffers(firebaseConfig, context, storeId, 50) : [];
+        if (!cancelled) { setStore(row); setOffers(offers.filter(o => o.status === "active" && (!o.validUntil || Date.parse(o.validUntil) >= Date.now()))); }
+      } catch { if (!cancelled) { setStore(null); setOffers([]); setError(null); setLoadError("Não foi possível carregar os dados. Atualize a página para tentar novamente."); } }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady, storeId]);
 
   const categories = {
@@ -160,7 +108,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
     );
   }
 
-  if (error || !store) {
+  if (error || loadError || !store) {
     return (
       <div className="store-detail-container">
         <Link href="/marketplace-community" className="back-link">
@@ -169,7 +117,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
         <div className="error-state">
           <AlertCircle size={48} opacity={0.3} />
           <h2>Loja não encontrada</h2>
-          <p>{error || "Não conseguimos localizar esta loja."}</p>
+          <p>{error || loadError || "Não conseguimos localizar esta loja."}</p>
         </div>
       </div>
     );
@@ -179,6 +127,7 @@ export function StoreDetailView({ storeId }: StoreDetailViewProps) {
 
   return (
     <main className="store-detail-container">
+      {loadError && <p role="alert">{loadError}</p>}
       <Link href="/marketplace-community" className="back-link">
         <ArrowLeft size={18} /> Voltar para Marketplace
       </Link>

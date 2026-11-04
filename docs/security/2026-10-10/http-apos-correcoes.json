@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-10T13:22:16.293Z",
+  "results": [
+    {
+      "url": "https://plataformaesdras.com.br/",
+      "status": 200,
+      "headers": {
+        "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://alvo-church-web.alexandrecostagg.workers.dev https://cloudflareinsights.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "strict-transport-security": "max-age=31536000; includeSubDomains"
+      }
+    },
+    {
+      "url": "https://plataformaesdras.com.br/_next/static/chunks/1od2scjfejsgk.js",
+      "status": 200,
+      "contentType": "text/javascript",
+      "redirect": null
+    },
+    {
+      "url": "https://plataformaesdras-lp.alexandrecostagg.workers.dev/",
+      "status": 200,
+      "headers": {
+        "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://alvo-church-web.alexandrecostagg.workers.dev https://cloudflareinsights.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "strict-transport-security": "max-age=31536000; includeSubDomains"
+      }
+    },
+    {
+      "url": "https://alvo-church-worker-api.alexandrecostagg.workers.dev/events/security-probe/upload-proof",
+      "status": 410,
+      "headers": {
+        "content-security-policy": null,
+        "x-content-type-options": null,
+        "x-frame-options": null,
+        "permissions-policy": null,
+        "strict-transport-security": null
+      }
+    },
+    {
+      "url": "https://alvo-church-web.alexandrecostagg.workers.dev/",
+      "status": 200,
+      "permissionsPolicy": "camera=(self), microphone=(), geolocation=()"
+    },
+    {
+      "url": "https://alvo-church-web.alexandrecostagg.workers.dev/api/learning/content?organizationId=synthetic&programId=synthetic",
+      "status": 401,
+      "permissionsPolicy": "camera=(self), microphone=(), geolocation=()",
+      "body": {
+        "error": "Entre na sua conta."
+      }
+    },
+    {
+      "url": "https://alvo-church-web.alexandrecostagg.workers.dev/api/billing/invoices?organizationId=synthetic",
+      "status": 401,
+      "permissionsPolicy": "camera=(self), microphone=(), geolocation=()",
+      "body": {
+        "error": "Entre na sua conta."
+      }
+    }
+  ]
+}

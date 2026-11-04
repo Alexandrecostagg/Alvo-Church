@@ -71,11 +71,25 @@ export interface Organization {
   // Firestore rules para permitir o bootstrap do primeiro admin (self-serve).
   // Ausente em organizações antigas/provisionadas manualmente.
   ownerUid?: string;
+  registrationEmail?: string;
+  createdAt?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  addressPostalCode?: string;
   // CNPJ (se tiver) ou CPF do responsável — coletado já no cadastro pra
   // não ficar "solto"; reaproveitado como sugestão no checkout de upgrade.
   taxId?: string;
   addressCity?: string;
   addressState?: string;
+  addressLine?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressNeighborhood?: string;
+  addressSector?: string;
+  addressQuadra?: string;
+  addressLote?: string;
+  addressReference?: string;
 }
 
 export interface OrganizationBrandingSettings {
@@ -113,7 +127,7 @@ export interface GivingIntent {
   whatsapp: string;
   amount: number;
   source: "public_give";
-  status: "captured";
+  status: "captured" | "declared" | "confirmed" | "rejected";
   orgSlug?: string;
   campaignId?: string; // vincula a doação a uma campanha de oferta
   consentContact: boolean;
@@ -121,12 +135,13 @@ export interface GivingIntent {
 }
 
 // Comprovante de doação pública: o doador clica "Já paguei" no link público e
-// (opcionalmente) anexa a foto. Doc separado (imagem base64) linkado à intenção.
+// (opcionalmente) anexa uma foto privada. Metadados vinculados à intenção.
 export interface GivingReceipt {
   id: string;
   organizationId: string;
   intentId: string;
-  imageBase64?: string;
+  imageBase64?: string; // legacy only
+  receiptId?: string;
   createdAt: string;
 }
 
@@ -149,6 +164,9 @@ export interface GivingCampaign {
 
 export interface OrganizationSubscriptionSettings {
   organizationId: string;
+  // Campo canônico de acesso. Só o provisionamento e o processo de cobrança
+  // da plataforma podem alterá-lo.
+  plan?: "free" | "comunidade" | "pastoral" | "rede" | "enterprise";
   planCode: string;
   planTier: SubscriptionPlanTier;
   billingCycle: BillingCycle;
@@ -222,7 +240,6 @@ export interface NetworkAffiliate {
   childCity?: string;
   childState?: string;
   status: "pending" | "active" | "inactive";
-  inviteCode?: string;
   joinedAt?: string;
   lastSnapshotAt?: string;
 }
@@ -243,11 +260,11 @@ export interface NetworkSnapshot {
   avgGroupAttendance: number;
   // Eventos
   eventsThisMonth: number;
-  totalEventAttendance: number;
+  totalEventAttendance: number;   // presenças no mês do snapshot
   // Financeiro
   givingThisMonth: number;
   givingLastMonth: number;
-  // Engajamento
+  // Proporção cadastral ativa (nome legado preservado por compatibilidade)
   serviceAttendanceRate: number;   // 0–100
   // Meta
   createdAt: string;
@@ -362,6 +379,8 @@ export interface Person {
   email?: string;
   mobilePhone?: string;
   whatsappPhone?: string;
+  communicationOptOut?: boolean;
+  whatsappOptOutAt?: string;
   birthDate?: string;
   cpf?: string;
   address?: PostalAddress;
@@ -455,7 +474,9 @@ export interface MemberBenefitValidation {
   partnerId: string;
   benefitId: string;
   personId: string;
-  memberCardCode: string;
+  /** Legado: novas validações não persistem o código completo. */
+  memberCardCode?: string;
+  memberCardCodeSuffix?: string;
   validationStatus: "approved" | "denied" | "expired";
   validatedAt: string;
   exposedFields: readonly string[];
@@ -539,6 +560,11 @@ export interface CommunicationLogEntry {
   failedCount: number;
   sentByUserId: string;
   createdAt: string; // ISO
+  mode?: "manual" | "provider";
+  status?: "prepared" | "partially_confirmed" | "confirmed";
+  openedCount?: number;
+  skippedCount?: number;
+  confirmedAt?: string;
 }
 
 export interface CommunicationTemplate {
@@ -665,6 +691,7 @@ export type VisitorIntakeStatus =
   | "archived";
 
 export interface VisitorIntake {
+  consentMarketing?: boolean;
   id: string;
   organizationId: string;
   personId?: string;
@@ -701,6 +728,8 @@ export interface FinancialTransaction {
   id: string;
   organizationId: string;
   kind: FinancialTransactionKind;
+  status?: "posted" | "voided";
+  contributionId?: string;
   label: string;
   amount: number;              // sempre positivo; o kind define o sinal
   note?: string;
@@ -803,9 +832,11 @@ export type ServiceAssignmentStatus =
   | "confirmed"
   | "declined"
   | "present"
-  | "absent";
+  | "absent"
+  | "cancelled";
 
 export interface ServiceTeam {
+  roles?: string[];
   id: string;
   organizationId: string;
   campusId?: string;
@@ -817,6 +848,12 @@ export interface ServiceTeam {
 }
 
 export interface ServiceAssignment {
+  areaName?: string;
+  serviceName?: string;
+  timezone?: string;
+  endsAt?: string;
+  pushStatus?: string;
+  responseSource?: string;
   id: string;
   organizationId: string;
   campusId?: string;
@@ -1173,25 +1210,34 @@ export interface KidsCheckIn {
   organizationId: string;
   campusId?: string;
   childId: string;                 // Person(personType child).id, ou "quick_" + token p/ cadastro rápido
-  parentId: string;                // responsável que fez o check-in
+  registeredChild?: boolean;
+  familyId?: string;
+  guardianPersonId?: string;
+  parentId: string;                // conta do responsável; vazio quando sem conta, nunca o operador por padrão
   authorizedPickUpIds: string[];   // responsáveis legais autorizados a retirar (FamilyMember.isLegalGuardian)
   checkedInAt: string;
   checkedOutAt?: string;
   checkedOutByParentId?: string;
+  checkedOutByUserId?: string;
+  guardianVersion?: number;
+  pickupPeople?: Array<{ id: string; name: string; userId: string }>;
   checkedInByUserId?: string;      // voluntário/uid que operou a entrada
   status: KidsCheckInStatus;
+  sessionId?: string;
+  eventId?: string;
   roomCode?: string;
   serviceTeamId?: string;          // sala kids (ServiceTeam) onde a criança está
   securityToken: string;           // payload do QR de retirada
   // Denormalizado p/ exibição (essencial quando a criança é cadastro rápido, sem Person):
   childName?: string;
+  guardianAccountEmail?: string;
   guardianName?: string;
   guardianPhone?: string;          // WhatsApp de quem deixou (só dígitos c/ DDI) — p/ autorizar retirada
   authorizedPickupNames?: string[];// nomes livres autorizados a retirar (além do responsável)
   pickupCode?: string;             // código curto de retirada (fallback ao QR: sem app/bateria/visitante)
   allergies?: string;
   securityRestrictions?: string;
-  photoUrl?: string;               // foto tirada na hora
+  photoUrl?: string;               // legado; não escrever/exibir. Mídia Kids usa API autenticada.
   photoConsentAt?: string;         // consentimento LGPD do responsável (timestamp)
   releasedTo?: string;             // quem retirou (nome) — auditoria
   releaseNote?: string;            // observação da liberação (ex.: "autorizado por [mãe] via WhatsApp")
@@ -1271,10 +1317,13 @@ export interface WorshipSong {
   title: string;
   artist: string;
   originalKey: string;
+  preferredKey?: string;
+  version?: number;
+  updatedAt?: string;
   tempoBpm?: number;
   spotifyUrl?: string;
   youtubeUrl?: string;
-  chordsLyrics?: string; // Cifras dinâmicas em Markdown: [C] [G] [Am] [F]
+  chordsLyrics?: string; // ChordPro: acordes entre colchetes ancorados à sílaba.
   createdAt: string;
 }
 
@@ -1420,7 +1469,7 @@ export interface WeeklyTheme {
 
 export type ContributionType = "dizimo" | "oferta" | "campanha" | "missao" | "outro";
 
-export type ContributionStatus = "pending" | "confirmed";
+export type ContributionStatus = "pending" | "confirmed" | "rejected";
 export type ContributionMethod = "pix" | "manual" | "cash" | "card";
 
 export interface MemberContribution {
@@ -1443,8 +1492,9 @@ export interface MemberContribution {
   // confirmados, mesmo comportamento de antes).
   status?: ContributionStatus;
   method?: ContributionMethod;
-  receiptId?: string;       // id do doc de comprovante (imagem base64 em contributionReceipts)
-  receiptUrl?: string;      // (futuro) URL do comprovante quando migrar p/ Storage
+  receiptId?: string;       // referência privada; leitura autenticada pela API
+  ledgerId?: string;
+  receiptUrl?: string;      // legado; novos comprovantes não têm URL pública
   confirmedBy?: string;     // userId do admin que confirmou o pending
   confirmedAt?: string;     // ISO datetime da confirmação
 }
@@ -1479,7 +1529,7 @@ export interface PrayerRequest {
   category?: string;
   priority?: "urgent" | "important" | "normal";
   careOwner?: string;
-  source: "public_form" | "app" | "reception";
+  source: "public_form" | "app" | "reception" | "whatsapp";
   createdAt: string;
   respondedAt?: string;
   respondedByUserId?: string;
@@ -1525,5 +1575,12 @@ export interface BannerHistoryEntry {
   // Preview + foto (data URLs JPEG compactos)
   thumbnailDataUrl: string;
   photoDataUrl?: string;
+  backgroundDataUrl?: string; // Compressed background: reopening never calls the image provider.
 }
 
+export interface KidsOperationSession {
+  id: string; organizationId: string; serviceTeamId: string; eventId: string;
+  roomName: string; eventName: string; operatorIds: string[];
+  startsAt: string; endsAt: string; capacity: number; occupancy: number;
+  status: "open" | "closed"; version: number;
+}

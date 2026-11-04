@@ -200,6 +200,39 @@ Gere apenas o texto da mensagem, sem explicações.`
   return callChatWithFallback(keys, messages, { maxTokens: 300, temperature: 0.8 });
 }
 
+// ─── 4c. Rascunho de comunicado ───────────────────────────────────────────
+
+export interface CommunicationDraftInput {
+  objective: string;
+  audience: string;
+  tone?: "acolhedor" | "objetivo" | "celebrativo" | "pastoral";
+  details?: string;
+}
+
+function boundedDraftText(value: unknown, label: string, max: number, optional = false) {
+  if (optional && (value === undefined || value === "")) return "";
+  if (typeof value !== "string" || !value.trim() || value.trim().length > max) {
+    throw new Error(`${label} inválido.`);
+  }
+  return value.trim();
+}
+
+export async function generateCommunicationDraft(
+  keys: AiKeys,
+  input: CommunicationDraftInput
+): Promise<AiResponse> {
+  const objective = boundedDraftText(input.objective, "Objetivo", 500);
+  const audience = boundedDraftText(input.audience, "Público", 200);
+  const details = boundedDraftText(input.details, "Detalhes", 1000, true);
+  const allowedTones = ["acolhedor", "objetivo", "celebrativo", "pastoral"];
+  const tone = allowedTones.includes(input.tone ?? "") ? input.tone : "acolhedor";
+  const messages = [
+    { role: "system" as const, content: `${SYSTEM_BASE}\nCrie somente rascunhos de comunicação. Nunca inclua dados pessoais, invente datas, horários, endereços, links, resultados ou promessas. O líder sempre revisará o texto antes do envio.` },
+    { role: "user" as const, content: `Escreva um comunicado curto para WhatsApp.\n\nObjetivo: ${objective}\nPúblico: ${audience}\nTom: ${tone}\n${details ? `Detalhes confirmados: ${details}` : "Não há outros detalhes confirmados."}\n\nUse linguagem natural, chamada para ação clara e no máximo 700 caracteres. Gere apenas o texto final, sem título, explicações ou markdown.` }
+  ];
+  return callChatWithFallback(keys, messages, { maxTokens: 350, temperature: 0.65 });
+}
+
 // ─── 5. Sugestão de Ação Pastoral (Score baixo) ───────────────────────────
 
 export interface PastoralSuggestionInput {

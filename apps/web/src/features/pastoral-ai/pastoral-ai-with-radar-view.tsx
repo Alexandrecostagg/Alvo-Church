@@ -13,7 +13,7 @@ export function PastoralAiWithRadarView() {
   return (
     <div>
       <div style={{ display: "flex", gap: 4, padding: "16px 20px 0" }}>
-        <TabButton active={tab === "ai"} onClick={() => setTab("ai")} icon={Bot} label="Assistente IA" />
+        <TabButton active={tab === "ai"} onClick={() => setTab("ai")} icon={Bot} label="Sabedoria Pastoral" />
         <TabButton active={tab === "radar"} onClick={() => setTab("radar")} icon={Radar} label="Radar Pastoral" />
       </div>
       {tab === "ai" ? <PastoralAiView /> : <CareRadarView />}

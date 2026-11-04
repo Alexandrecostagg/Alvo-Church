@@ -2,19 +2,10 @@
 
 import Link from "next/link";
 import { friendlyError } from "../../lib/friendly-error";
-import { useMemo, useState, type FormEvent } from "react";
-import {
-  isFirebaseWebRuntimeConfigured,
-  saveFamilyMemberProfile,
-  saveFamilyProfile,
-  savePersonProfile,
-  countOrgMembers,
-} from "@alvo/firebase";
-import type { Family, FamilyMember, Person } from "@alvo/types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAppAuth } from "../../../app/providers";
-import { usePlan } from "../../../contexts/PlanContext";
-import { PLAN_LIMITS } from "@alvo/firebase";
-import { saveLocalMemberProfile } from "../../lib/local-member-store";
+import { birthDateError, daysInMonth, isValidCpf, lookupCep } from "../../lib/member-form";
+import { invalidateOrgDataCache } from "../../lib/org-data-cache";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -37,9 +28,43 @@ interface SavedMemberSummary {
   personId: string;
 }
 
+const BRAZILIAN_STATES = [
+  ["AC", "Acre"], ["AL", "Alagoas"], ["AP", "Amapá"], ["AM", "Amazonas"], ["BA", "Bahia"],
+  ["CE", "Ceará"], ["DF", "Distrito Federal"], ["ES", "Espírito Santo"], ["GO", "Goiás"],
+  ["MA", "Maranhão"], ["MT", "Mato Grosso"], ["MS", "Mato Grosso do Sul"], ["MG", "Minas Gerais"],
+  ["PA", "Pará"], ["PB", "Paraíba"], ["PR", "Paraná"], ["PE", "Pernambuco"], ["PI", "Piauí"],
+  ["RJ", "Rio de Janeiro"], ["RN", "Rio Grande do Norte"], ["RS", "Rio Grande do Sul"],
+  ["RO", "Rondônia"], ["RR", "Roraima"], ["SC", "Santa Catarina"], ["SP", "São Paulo"],
+  ["SE", "Sergipe"], ["TO", "Tocantins"],
+] as const;
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function formatCep(value: string) {
+  const digits = digitsOnly(value).slice(0, 8);
+  return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+}
+
+function formatCpf(value: string) {
+  const digits = digitsOnly(value).slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+
+
 export function MemberNewView() {
-  const { configured, user, organizationId, firebaseConfig } = useAppAuth();
-  const { plan } = usePlan();
+  const { configured, user, organizationId } = useAppAuth();
+  const pendingRequest = useRef<{ snapshot: string; id: string } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [lastSavedMember, setLastSavedMember] = useState<SavedMemberSummary | null>(null);
 
@@ -50,6 +75,14 @@ export function MemberNewView() {
   const [partnerBenefitsEnabled, setPartnerBenefitsEnabled] = useState(false);
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const cepRequest = useRef<AbortController | null>(null);
+  const saving = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => () => cepRequest.current?.abort(), []);
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [cpf, setCpf] = useState("");
 
   const [address, setAddress] = useState({
     postalCode: "",
@@ -57,8 +90,8 @@ export function MemberNewView() {
     number: "",
     complement: "",
     district: "",
-    city: "Belém",
-    state: "PA"
+    city: "",
+    state: ""
   });
 
   function resetFormState(formElement: HTMLFormElement) {
@@ -68,50 +101,64 @@ export function MemberNewView() {
     setMemberStatus("member");
     setPartnerBenefitsEnabled(false);
     setLgpdConsent(false);
+    setBirthDay("");
+    setBirthMonth("");
+    setBirthYear("");
+    setCpf("");
     setAddress({
       postalCode: "",
       street: "",
       number: "",
       complement: "",
       district: "",
-      city: "Belém",
-      state: "PA"
+      city: "",
+      state: ""
     });
   }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawCep = e.target.value;
-    const cleanCep = rawCep.replace(/\D/g, "");
-    setAddress(prev => ({ ...prev, postalCode: rawCep }));
+    const cleanCep = digitsOnly(e.target.value).slice(0, 8);
+    setAddress(prev => ({ ...prev, postalCode: formatCep(cleanCep) }));
 
+    cepRequest.current?.abort();
+    const request = new AbortController();
+    cepRequest.current = request;
+    setLoadingCep(false);
+    setStatus(null);
     if (cleanCep.length === 8) {
       try {
         setLoadingCep(true);
         setStatus(null);
-        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        const data = await res.json();
-        if (!data.erro) {
-          setAddress(prev => ({
-            ...prev,
-            street: data.logradouro || "",
-            district: data.bairro || "",
-            city: data.localidade || "",
-            state: data.uf || ""
-          }));
-          setStatus("✓ Endereço preenchido com sucesso.");
-        } else {
-          setStatus("⚠️ CEP não encontrado. Preencha os campos manualmente.");
-        }
-      } catch (err) {
-        console.error("Error fetching CEP:", err);
-        setStatus("⚠️ Erro ao buscar CEP na rede.");
+        const foundAddress = await lookupCep(cleanCep, request.signal);
+        if (request.signal.aborted) return;
+        setAddress(prev => ({ ...prev, ...foundAddress }));
+        setStatus("✓ Endereço preenchido. Confira o número e o complemento.");
+      } catch (error) {
+        if (request.signal.aborted) return;
+        setStatus("Não encontramos esse CEP. Você pode preencher o endereço manualmente.");
       } finally {
-        setLoadingCep(false);
+        if (!request.signal.aborted) setLoadingCep(false);
       }
     }
   };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
+    setIsSaving(true);
+    try {
+      await saveMember(event);
+    } catch (error) {
+      setStatus(friendlyError(error, "Não foi possível salvar o membro. Tente novamente."));
+      setLastSavedMember(null);
+    } finally {
+      saving.current = false;
+      setIsSaving(false);
+    }
+  }
+
+  async function saveMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formElement = event.currentTarget;
@@ -124,117 +171,71 @@ export function MemberNewView() {
       return;
     }
 
-    // Verificação de limite de membros por plano
-    const maxMembers = PLAN_LIMITS[plan].maxMembers;
-    if (isFinite(maxMembers) && configured) {
-      const currentCount = await countOrgMembers(firebaseConfig, { organizationId });
-      if (currentCount >= maxMembers) {
-        setStatus(
-          `⚠️ Limite de ${maxMembers} membros do plano ${plan === "free" ? "Gratuito" : "Comunidade"} atingido. Faça upgrade em Configurações → Plano.`
-        );
-        setLastSavedMember(null);
-        return;
-      }
-    }
-
-    const familyName = getFormValue(form, "familyName");
-    const familyId = familyName ? createId("family") : undefined;
-    const personId = createId("person");
-
-    const person: Person = {
-      id: personId,
-      organizationId,
-      primaryFamilyId: familyId,
-      firstName,
-      lastName,
-      preferredName: getFormValue(form, "preferredName") || undefined,
-      email: getFormValue(form, "email") || undefined,
-      mobilePhone: getFormValue(form, "mobilePhone") || undefined,
-      whatsappPhone: getFormValue(form, "whatsappPhone") || undefined,
-      birthDate: getFormValue(form, "birthDate") || undefined,
-      cpf: getFormValue(form, "cpf") || undefined,
-      address,
-      consentLgpdAt: lgpdConsent ? new Date().toISOString() : undefined,
-      memberCardCode: partnerBenefitsEnabled
-        ? `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
-        : undefined,
-      partnerBenefitsEnabled,
-      personType: getFormValue(form, "personType") as Person["personType"],
-      memberStatus: memberStatus as Person["memberStatus"],
-      status: "active",
-    };
-    const family: Family | undefined =
-      familyId && familyName
-        ? {
-            id: familyId,
-            organizationId,
-            familyName,
-            displayName: familyName,
-            status: "active",
-            address,
-            notes: getFormValue(form, "familyNotes") || undefined
-          }
-        : undefined;
-    const familyMember: FamilyMember | undefined =
-      familyId && familyName
-        ? {
-            id: createId("family_member"),
-            organizationId,
-            familyId,
-            personId,
-            relationshipType: getFormValue(form, "relationshipType") as FamilyMember["relationshipType"],
-            isPrimaryContact: Boolean(form.get("isPrimaryContact")),
-            isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
-            isLegalGuardian: Boolean(form.get("isLegalGuardian"))
-          }
-        : undefined;
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      saveLocalMemberProfile({ family, familyMember, person });
-      setStatus(
-        `✓ ${fullName} salvo neste navegador. Configure o Firebase para sincronizar na nuvem.`
-      );
-      setLastSavedMember({
-        familyId,
-        fullName,
-        memberCardCode: person.memberCardCode,
-        personId
-      });
-      resetFormState(formElement);
+    const birthError = birthDateError(birthDay, birthMonth, birthYear);
+    if (birthError) {
+      setStatus(birthError);
+      setLastSavedMember(null);
       return;
     }
 
-    try {
-      if (family && familyMember) {
-        await saveFamilyProfile(firebaseConfig, { organizationId }, family);
-        await saveFamilyMemberProfile(firebaseConfig, { organizationId }, familyMember);
-      }
+    const birthDate = birthYear
+      ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
+      : undefined;
+    const normalizedCpf = digitsOnly(cpf);
+    if (normalizedCpf && !isValidCpf(normalizedCpf)) {
+      setStatus("O CPF informado parece inválido. Confira os números e tente novamente.");
+      setLastSavedMember(null);
+      return;
+    }
 
-      await savePersonProfile(firebaseConfig, { organizationId }, person);
-      setStatus(
-        familyId
-          ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.`
-          : `✓ ${fullName} salvo com sucesso.`
-      );
-      setLastSavedMember({
-        familyId,
-        fullName,
-        memberCardCode: person.memberCardCode,
-        personId
+    if (!configured || !user) {
+      setStatus("Entre na sua conta para salvar o cadastro.");
+      return;
+    }
+    const familyName = getFormValue(form, "familyName");
+    const payload = {
+      organizationId,
+      person: {
+        firstName, lastName, preferredName: getFormValue(form, "preferredName"),
+        email: getFormValue(form, "email"), mobilePhone: getFormValue(form, "mobilePhone"),
+        whatsappPhone: getFormValue(form, "whatsappPhone"), birthDate, cpf: normalizedCpf,
+        address, partnerBenefitsEnabled, personType: getFormValue(form, "personType"), memberStatus,
+      },
+      consent: lgpdConsent,
+      family: familyName ? { familyName, notes: getFormValue(form, "familyNotes") } : null,
+      familyMember: familyName ? {
+        relationshipType: getFormValue(form, "relationshipType"),
+        isPrimaryContact: Boolean(form.get("isPrimaryContact")),
+        isFinancialResponsible: Boolean(form.get("isFinancialResponsible")),
+        isLegalGuardian: Boolean(form.get("isLegalGuardian")),
+      } : null,
+    };
+    const snapshot = JSON.stringify(payload);
+    if (pendingRequest.current?.snapshot !== snapshot) pendingRequest.current = { snapshot, id: crypto.randomUUID() };
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/members", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...payload, requestId: pendingRequest.current.id }),
       });
-      
+      const result = await response.json();
+      if (!response.ok) {
+        setStatus(result.error || "Não foi possível salvar o cadastro.");
+        setLastSavedMember(null);
+        return;
+      }
+      invalidateOrgDataCache(organizationId);
+      setStatus(familyName ? `✓ ${fullName} salvo com sucesso e vinculado à família ${familyName}.` : `✓ ${fullName} salvo com sucesso.`);
+      setLastSavedMember({ fullName, personId: result.personId, familyId: result.familyId, memberCardCode: result.memberCardCode });
+      pendingRequest.current = null;
       resetFormState(formElement);
     } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível salvar o membro."));
+      setStatus(friendlyError(error, "Não foi possível confirmar o cadastro. Tente salvar novamente."));
       setLastSavedMember(null);
     }
   }
 
-  // Provisional card code for real-time card visual preview
-  const provisionalCardCode = useMemo(() => {
-    if (!firstName) return "ESDRAS-XXX-0000";
-    return `ESDRAS-${firstName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`;
-  }, [firstName]);
+  const provisionalCardCode = "GERADO AO SALVAR";
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -311,13 +312,38 @@ export function MemberNewView() {
               </label>
               <label>
                 Data de nascimento
-                <input name="birthDate" type="date" />
+                <div className="birth-date-selects">
+                  <select aria-label="Dia de nascimento" value={birthDay} onChange={(e) => setBirthDay(e.target.value)}>
+                    <option value="">Dia</option>
+                    {Array.from({ length: daysInMonth(birthYear, birthMonth) }, (_, index) => index + 1).map((day) => (
+                      <option key={day} value={String(day)}>{day}</option>
+                    ))}
+                  </select>
+                  <select aria-label="Mês de nascimento" value={birthMonth} onChange={(e) => { const month = e.target.value; setBirthMonth(month); if (Number(birthDay) > daysInMonth(birthYear, month)) setBirthDay(""); }}>
+                    <option value="">Mês</option>
+                    {MONTHS.map((month, index) => (
+                      <option key={month} value={String(index + 1)}>{month}</option>
+                    ))}
+                  </select>
+                  <select aria-label="Ano de nascimento" value={birthYear} onChange={(e) => { const year = e.target.value; setBirthYear(year); if (Number(birthDay) > daysInMonth(year, birthMonth)) setBirthDay(""); }}>
+                    <option value="">Ano</option>
+                    {Array.from({ length: new Date().getFullYear() - 1899 }, (_, index) => new Date().getFullYear() - index).map((year) => (
+                      <option key={year} value={String(year)}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </label>
             </div>
             <div className="input-group">
               <label>
                 CPF
-                <input name="cpf" placeholder="000.000.000-00" />
+                <input
+                  name="cpf"
+                  inputMode="numeric"
+                  value={cpf}
+                  onChange={(e) => setCpf(formatCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                />
               </label>
               <label>
                 Tipo de pessoa
@@ -350,7 +376,7 @@ export function MemberNewView() {
                 <input name="whatsappPhone" placeholder="(00) 00000-0000" />
               </label>
               <label className="cep-label-wrapper">
-                CEP (Autobusca)
+                CEP
                 <div className="cep-input-container">
                   <input 
                     name="postalCode" 
@@ -408,11 +434,16 @@ export function MemberNewView() {
             </div>
             <label className="half-width">
               Estado
-              <input 
-                name="state" 
+              <select
+                name="state"
                 value={address.state}
                 onChange={(e) => setAddress(prev => ({ ...prev, state: e.target.value }))}
-              />
+              >
+                <option value="">Selecione o estado</option>
+                {BRAZILIAN_STATES.map(([uf, name]) => (
+                  <option key={uf} value={uf}>{uf} — {name}</option>
+                ))}
+              </select>
             </label>
           </fieldset>
 
@@ -497,8 +528,8 @@ export function MemberNewView() {
           </fieldset>
 
           <div className="form-actions">
-            <button className="primary-button submit-btn" type="submit">
-              <Sparkles size={16} /> Salvar Membro na Base
+            <button className="primary-button submit-btn" type="submit" disabled={isSaving}>
+              <Sparkles size={16} /> {isSaving ? "Salvando membro..." : "Salvar Membro na Base"}
             </button>
             {status && <p className="form-status">{status}</p>}
           </div>
@@ -589,16 +620,12 @@ export function MemberNewView() {
                 </div>
               </div>
               <p className="confirmation-summary">
-                Cadastro inserido na base disponível. Com Firebase ativo, os dados ficam sincronizados no Firestore; sem Firebase, ficam salvos neste navegador para teste operacional.
+                Cadastro concluído. A ficha já está disponível para a equipe da igreja.
               </p>
               <dl className="info-dl">
                 <div>
-                  <dt>Pessoa ID</dt>
-                  <dd>{lastSavedMember.personId}</dd>
-                </div>
-                <div>
                   <dt>Família vinculada</dt>
-                  <dd>{lastSavedMember.familyId ?? "Nenhum vínculo familiar"}</dd>
+                  <dd>{lastSavedMember.familyId ? "Cadastro vinculado a uma família" : "Nenhum vínculo familiar"}</dd>
                 </div>
                 <div>
                   <dt>Esdras Passe</dt>
@@ -770,6 +797,16 @@ export function MemberNewView() {
         input:focus, select:focus, textarea:focus {
           border-color: #f97316;
           box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+        }
+
+        .birth-date-selects {
+          display: grid;
+          grid-template-columns: 0.8fr 1.5fr 1fr;
+          gap: 0.5rem;
+        }
+
+        .birth-date-selects select {
+          min-width: 0;
         }
 
         .cep-label-wrapper {
@@ -1558,8 +1595,4 @@ export function MemberNewView() {
 
 function getFormValue(form: FormData, key: string) {
   return String(form.get(key) ?? "").trim();
-}
-
-function createId(prefix: string) {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? Date.now().toString()}`;
 }

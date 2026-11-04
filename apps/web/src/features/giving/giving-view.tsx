@@ -12,6 +12,7 @@ import {
   deleteGivingCampaign,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
+import { financeRequest } from "../../lib/finance-client";
 import type { GivingIntent, GivingCampaign, GivingReceipt } from "@alvo/types";
 
 function formatBRL(v: number) {
@@ -34,7 +35,13 @@ export function GivingView() {
   const [intents, setIntents] = useState<GivingIntent[]>([]);
   const [campaigns, setCampaigns] = useState<GivingCampaign[]>([]);
   const [receipts, setReceipts] = useState<GivingReceipt[]>([]);
-  const [viewingReceipt, setViewingReceipt] = useState<GivingReceipt | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  async function openReceipt(r: GivingReceipt) {
+    if (!user) return;
+    try { const data = await financeRequest(user, { action: "receipt", organizationId, receiptId: r.receiptId || r.id, legacyGiving: !r.receiptId }); setViewingReceipt(data.dataUrl); }
+    catch (e) { setError(e instanceof Error ? e.message : "Comprovante indisponível."); }
+  }
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -53,7 +60,7 @@ export function GivingView() {
     return `${base}/p/${orgSlug}/give?campanha=${id}`;
   }
   function campaignAutoRaised(id: string) {
-    return intents.filter((i) => i.campaignId === id).reduce((s, i) => s + i.amount, 0);
+    return intents.filter((i) => i.campaignId === id && i.status === "confirmed").reduce((s, i) => s + i.amount, 0);
   }
   function shareMessage(c: GivingCampaign) {
     return `🙌 *${c.title}*\n${c.description ? c.description + "\n" : ""}Ajude nossa igreja a alcançar a meta de ${formatBRL(c.goalAmount)}. Contribua aqui (PIX): ${campaignLink(c.id)}`;
@@ -71,9 +78,9 @@ export function GivingView() {
 
   useEffect(() => {
     if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
-    fetchGivingIntents(firebaseConfig, { organizationId }).then(setIntents).catch(() => {});
-    fetchGivingCampaigns(firebaseConfig, { organizationId }).then(setCampaigns).catch(() => {});
-    fetchGivingReceipts(firebaseConfig, { organizationId }).then(setReceipts).catch(() => {});
+    let cancelled = false; setIntents([]); setCampaigns([]); setReceipts([]); setViewingReceipt(null); setError("");
+    Promise.all([fetchGivingIntents(firebaseConfig, { organizationId }), fetchGivingCampaigns(firebaseConfig, { organizationId }), fetchGivingReceipts(firebaseConfig, { organizationId })]).then(([i,c,r]) => { if (!cancelled) { setIntents(i); setCampaigns(c); setReceipts(r); } }).catch(() => { if (!cancelled) setError("Não foi possível carregar as doações."); });
+    return () => { cancelled = true; };
   }, [organizationId, firebaseConfig]);
 
   const totalCaptured = useMemo(() => intents.reduce((s, i) => s + i.amount, 0), [intents]);
@@ -88,7 +95,7 @@ export function GivingView() {
   }, [intents]);
   const activeCampaigns = useMemo(() => campaigns.filter((c) => c.status === "active"), [campaigns]);
   const totalRaised = useMemo(
-    () => campaigns.reduce((s, c) => s + (c.raisedAmount || 0) + intents.filter((i) => i.campaignId === c.id).reduce((a, i) => a + i.amount, 0), 0),
+    () => campaigns.reduce((s, c) => s + (c.raisedAmount || 0), 0),
     [campaigns, intents]
   );
 
@@ -113,7 +120,7 @@ export function GivingView() {
       }, ...prev]);
       setForm({ title: "", description: "", category: "", goal: "" });
       setShowForm(false);
-    } finally {
+    } catch { setError("Não foi possível criar a campanha."); } finally {
       setSaving(false);
     }
   }
@@ -121,35 +128,29 @@ export function GivingView() {
   async function updateCampaign(c: GivingCampaign, patch: Partial<GivingCampaign>) {
     if (!organizationId || !user) return;
     const updated = { ...c, ...patch };
-    setCampaigns((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
     try {
       await saveGivingCampaign(firebaseConfig, { organizationId }, {
         id: c.id, title: updated.title, description: updated.description, category: updated.category,
         goalAmount: updated.goalAmount, raisedAmount: updated.raisedAmount, status: updated.status,
         createdByUserId: c.createdByUserId, createdAt: c.createdAt,
       });
-    } catch { /* mantém otimista */ }
-  }
-
-  function handleRegisterRaise(c: GivingCampaign) {
-    const raw = window.prompt(`Quanto entrou nesta campanha? (some ao total atual de ${formatBRL(c.raisedAmount)})`, "");
-    if (!raw) return;
-    const add = parseAmount(raw);
-    if (add <= 0) return;
-    void updateCampaign(c, { raisedAmount: c.raisedAmount + add });
+      setCampaigns((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
+    } catch { setError("Não foi possível atualizar a campanha."); }
   }
 
   async function handleDeleteCampaign(c: GivingCampaign) {
     if (!organizationId) return;
     if (!window.confirm(`Excluir a campanha "${c.title}"?`)) return;
-    setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
     try {
       await deleteGivingCampaign(firebaseConfig, { organizationId }, c.id);
-    } catch { /* ignora */ }
+      setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
+    } catch { setError("Não foi possível excluir a campanha."); }
   }
 
   return (
     <div className="page-root">
+      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
+      <p>Declarações aguardam conferência em <a href="/finance">Finanças</a>. Intenção e comprovante não confirmam recebimento.</p>
       <header className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Doações</h1>
@@ -250,7 +251,7 @@ export function GivingView() {
           <div style={{ display: "grid", gap: 12 }}>
             {campaigns.map((c) => {
               const auto = campaignAutoRaised(c.id);
-              const raised = c.raisedAmount + auto;
+              const raised = c.raisedAmount;
               const pct = c.goalAmount > 0 ? Math.min(100, Math.round((raised / c.goalAmount) * 100)) : 0;
               return (
                 <div key={c.id} style={{ padding: 16, borderRadius: 14, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface, #fff)", opacity: c.status === "closed" ? 0.7 : 1 }}>
@@ -276,7 +277,7 @@ export function GivingView() {
                     <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: "#16a34a", borderRadius: 999 }} />
                     </div>
-                    {auto > 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>{formatBRL(auto)} pelo link público · {formatBRL(c.raisedAmount)} registrado manualmente</p>}
+                    {auto > 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>{formatBRL(auto)} pelo link público · {formatBRL(c.raisedAmount)} total conferido</p>}
                   </div>
 
                   {/* Disparo: compartilhar o link da campanha pros doadores */}
@@ -300,9 +301,7 @@ export function GivingView() {
                   <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {c.status === "active" && (
                       <>
-                        <button className="btn-secondary btn-sm" onClick={() => handleRegisterRaise(c)}>
-                          <Plus size={14} /> Registrar arrecadação
-                        </button>
+
                         <button className="btn-secondary btn-sm" onClick={() => updateCampaign(c, { status: "closed" })}>
                           Encerrar
                         </button>
@@ -343,19 +342,19 @@ export function GivingView() {
                     <strong style={{ color: "var(--alvo-ink, #0f172a)", overflowWrap: "anywhere" }}>{i.name}</strong>
                     {receipt && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#dcfce7", color: "#15803d" }}>
-                        <CheckCircle2 size={12} /> Pago
+                        <CheckCircle2 size={12} /> {i.status === "confirmed" ? "Conferido" : i.status === "rejected" ? "Rejeitado" : "Declarado — conferir"}
                       </span>
                     )}
                   </div>
                   <span style={{ fontSize: 12, color: "var(--alvo-ink-soft, #64748b)" }}>{formatDate(i.createdAt)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-                  {receipt?.imageBase64 && (
-                    <button onClick={() => setViewingReceipt(receipt)} className="btn-secondary btn-sm">
+                  {(receipt?.receiptId || receipt?.imageBase64) && (
+                    <button onClick={() => receipt && openReceipt(receipt)} className="btn-secondary btn-sm">
                       Ver comprovante
                     </button>
                   )}
-                  <a href={`https://wa.me/${i.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>
+                  <a aria-disabled={!i.consentContact} href={i.consentContact ? `https://wa.me/${i.whatsapp.replace(/\D/g, "")}` : undefined} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>
                     <MessageCircle size={15} /> {i.whatsapp}
                   </a>
                   <strong style={{ color: "#16a34a" }}>{formatBRL(i.amount)}</strong>
@@ -367,7 +366,7 @@ export function GivingView() {
         )}
       </section>
 
-      {viewingReceipt?.imageBase64 && (
+      {viewingReceipt && (
         <div
           onClick={() => setViewingReceipt(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
@@ -381,7 +380,7 @@ export function GivingView() {
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`data:image/jpeg;base64,${viewingReceipt.imageBase64}`}
+              src={viewingReceipt}
               alt="Comprovante de pagamento"
               style={{ width: "100%", borderRadius: 10, display: "block" }}
             />

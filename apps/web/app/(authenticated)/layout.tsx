@@ -6,13 +6,13 @@ import { AuthGate } from "./auth-gate";
 import { OrgFeaturesProvider } from "../../contexts/OrgFeaturesContext";
 import { PlanProvider } from "../../contexts/PlanContext";
 import { ToastProvider } from "../../contexts/ToastContext";
-import { NetworkSyncLoader } from "./network-sync-loader";
 import { BillingGate } from "./billing-gate";
+import { OrganizationAccessGate } from "./organization-access-gate";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
-    <OrgFeaturesProvider>
-      <PlanProvider>
+    <PlanProvider>
+      <OrgFeaturesProvider>
         <ToastProvider>
           <AuthGate>
             <div className="app-shell">
@@ -23,13 +23,14 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                 <Suspense fallback={null}>
                   <TopBar />
                 </Suspense>
-                <BillingGate>{children}</BillingGate>
+                <OrganizationAccessGate>
+                  <BillingGate>{children}</BillingGate>
+                </OrganizationAccessGate>
               </div>
             </div>
-            <NetworkSyncLoader />
           </AuthGate>
         </ToastProvider>
-      </PlanProvider>
-    </OrgFeaturesProvider>
+      </OrgFeaturesProvider>
+    </PlanProvider>
   );
 }

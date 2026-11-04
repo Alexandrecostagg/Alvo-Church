@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "content-type": "image/png",
-        "cache-control": "public, max-age=86400, immutable"
+        "cache-control": "private, no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff"
       }
     });
   } catch {

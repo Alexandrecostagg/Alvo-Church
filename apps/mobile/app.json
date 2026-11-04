@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Plataforma Esdras",
+    "name": "EsdrasApp",
     "slug": "plataforma-esdras",
     "scheme": "plataformaesdras",
     "version": "1.0.0",
@@ -10,50 +10,81 @@
       "android"
     ],
     "userInterfaceStyle": "light",
-    "backgroundColor": "#eef2f6",
-    "primaryColor": "#f97316",
-    "icon": "./assets/generated/icon.png",
+    "backgroundColor": "#123f34",
+    "primaryColor": "#dc7938",
+    "icon": "./assets/generated/esdras-app-icon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
       "requireFullScreen": true,
-      "icon": "./assets/generated/icon.png",
-      "bundleIdentifier": "com.plataformaesdras.app"
+      "icon": "./assets/generated/esdras-app-icon.png",
+      "bundleIdentifier": "com.plataformaesdras.app",
+      "appleTeamId": "LCN99JS59U",
+      "buildNumber": "2"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/generated/adaptive-icon-foreground.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/generated/esdras-adaptive-foreground.png",
+        "backgroundColor": "#123f34"
       },
       "package": "com.plataformaesdras.app",
       "versionCode": 6,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ]
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "allowBackup": false
     },
     "plugins": [
       "expo-status-bar",
       [
         "expo-camera",
         {
-          "cameraPermission": "O app usa a câmera para escanear o QR de retirada da Segurança Kids."
+          "cameraPermission": "O app usa a câmera para escanear o QR de retirada da Segurança Kids.",
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in."
+          "cameraPermission": "O app usa a câmera para registrar a foto de segurança da criança no check-in.",
+          "microphonePermission": false,
+          "photosPermission": "O EsdrasApp acessa a foto selecionada para o cadastro autorizado na instituição."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/generated/esdras-notification-icon.png",
+          "color": "#123f34",
+          "defaultChannel": "default"
         }
       ],
       [
         "expo-splash-screen",
         {
-          "image": "./assets/generated/splash.png",
+          "image": "./assets/generated/esdras-mark.png",
+          "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#eef2f6"
+          "backgroundColor": "#123f34"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enablePngCrunchInReleaseBuilds": true,
+            "usesCleartextTraffic": false
+          }
         }
       ]
     ],

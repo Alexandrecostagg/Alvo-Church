@@ -1,6 +1,33 @@
-# Getro Church / Alvo Church
+# Plataforma Esdras / Alvo Church
 
-Monorepo do produto Getro Church / Alvo Church.
+Monorepo da Plataforma Esdras (nome técnico dos pacotes: `@alvo/*`).
+
+## Desenvolvimento nesta máquina
+
+Base de trabalho consolidada em `codex/consolidacao-local-2026-09-05`.
+Veja [o registro da consolidação](docs/consolidacao-git-2026-09-05.md) para a
+origem das alterações, decisões de integração e pendências.
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev:web
+```
+
+Outros comandos:
+
+- `corepack pnpm dev:mobile`: Expo com variáveis locais do workspace.
+- `corepack pnpm test`: testes unitários de domínio, caminhos Firebase e utilitários.
+- `corepack pnpm typecheck`: tipos do painel, LP, mobile, API e pacotes.
+- `corepack pnpm --filter @alvo/web build`: build Next.js do painel.
+- `corepack pnpm build:cloudflare:web`: gera o Worker OpenNext, sem publicar.
+
+Os arquivos `.env.local`, credenciais e backups locais ficam fora do Git.
+Para homologar login e membros sem tocar nos dados reais, use o
+[roteiro com emuladores e duas igrejas de teste](docs/homologacao-membros-2026-09-05.md).
+O comando `corepack pnpm qa:registration` verifica a
+[API transacional de cadastro e as regras Kids/Passe](docs/cadastro-transacional-2026-09-05.md).
+Para retomar em outra máquina, envie primeiro os commits da branch de trabalho
+ao remoto; `main` ainda não contém esta consolidação.
 
 ## Stack
 
@@ -16,6 +43,8 @@ apps/
   web/
   mobile/
   worker-api/
+  lp/
+  lp-worker/
 packages/
   ai/
   analytics/
@@ -61,6 +90,18 @@ Observacao importante:
 - `@cloudflare/next-on-pages` nao e mais o caminho recomendado para este projeto
 - como o Alvo usa `Next 16`, o deploy correto e via `@opennextjs/cloudflare`
 - para Git deploy no Cloudflare, use um projeto baseado em `Worker`, apontando para `apps/web/wrangler.jsonc`
+- no Workers Builds deste monorepo, mantenha o diretorio raiz em `/` e deixe o
+  comando de build vazio; os comandos abaixo compilam o OpenNext antes de
+  publicar e evitam que `npx` procure um Wrangler fora do pacote web:
+
+```bash
+# Deploy command (branch de producao)
+corepack pnpm --filter @alvo/web build:cloudflare && corepack pnpm --filter @alvo/web exec wrangler deploy
+
+# Version command (demais branches)
+corepack pnpm --filter @alvo/web build:cloudflare && corepack pnpm --filter @alvo/web exec wrangler versions upload
+```
+
 - deploy canonico atual: `https://alvo-church-web.alexandrecostagg.workers.dev`
 - `https://alvo-church-web.pages.dev` e legado/teste e nao deve ser usado como fonte principal de validacao
 
@@ -128,8 +169,8 @@ corepack pnpm --filter @alvo/mobile dev
 
 No Firebase Console, registre tambem os apps nativos no mesmo projeto:
 
-- Android package: `com.getrochurch.app`
-- iOS bundle identifier: `com.getrochurch.app`
+- Android package: `com.plataformaesdras.app`
+- iOS bundle identifier: `com.plataformaesdras.app`
 
 ## Firestore Rules do tenant
 
@@ -206,9 +247,12 @@ Enquanto `NEXT_PUBLIC_UPLOAD_API_BASE_URL` nao estiver configurada, o painel con
 
 Documentos de trabalho:
 
-- [Mapa operacional de rotas e modulos](docs/mapa-operacional-rotas-modulos.md)
+- [Estado da implementação e percentuais — 05/09](docs/status-implementacao-2026-09-05.md)
+- [Backlog ativo de implementação](docs/backlog-mvp-implementacao-v2.md)
+- [Plano atualizado de segurança e estabilização](docs/plano-acao-seguranca-estabilizacao-2026-08-21.md)
+- [Mapa operacional de rotas e modulos](docs/mapa-operacional-rotas-modulos-v2.md)
 - [Manual operacional dos modulos atuais](docs/manual-operacional-modulos.md)
-- [Backlog MVP de implementacao](docs/backlog-mvp-implementacao.md)
+- [Backlog de junho — histórico](docs/backlog-mvp-implementacao.md)
 
 Documentos de produto e arquitetura:
 
@@ -221,4 +265,11 @@ Documentos de produto e arquitetura:
 
 ## Status
 
-Base inicial do monorepo criada a partir da arquitetura definida em [docs/arquitetura-tecnica-monorepo-alvo-church.md](docs/arquitetura-tecnica-monorepo-alvo-church.md).
+Base funcional em estabilização: estimativa gerencial atual de aproximadamente 93,5% do escopo
+operacional avaliado ([entregas e cálculo](docs/entregas-2026-09-05.md)), com critérios e limites no [diagnóstico atual](docs/status-implementacao-2026-09-05.md).
+Não equivale a prontidão para produção. Os planos ativos foram atualizados em
+08/09; documentos conceituais e registros datados preservam a história do projeto.
+
+## Participação sem aplicativo
+
+Portal público e atendimento pela API oficial do WhatsApp: veja [fluxos implementados, configuração e homologação](docs/whatsapp-sem-app-2026-10-16.md). O roteiro `corepack pnpm qa:whatsapp` usa somente emuladores e simula o provedor, sem enviar mensagens reais.

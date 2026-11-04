@@ -1,0 +1,13 @@
+{
+  "build": "2",
+  "bundleId": "com.plataformaesdras.app",
+  "getTaskAllow": false,
+  "apsEnvironment": "production",
+  "microphonePermission": false,
+  "transportSecurity": {
+    "NSAllowsArbitraryLoads": false
+  },
+  "signatureVerification": "codesign --verify --deep --strict: passed (normal Keychain access)",
+  "sha256": "70c9d4d986be93154b7849283d2d08f9cbb77bf4fe5032c12a9d4f29ea62392b",
+  "path": "apps/mobile/build/ios/security-2-distribution/EsdrasApp.ipa"
+}

@@ -39,14 +39,14 @@ class RootErrorReporter extends React.Component {
           contentContainerStyle={{ padding: 24, paddingTop: 64 }}
         >
           <Text style={{ color: "#f87171", fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
-            ⚠️ Crash capturado
+            Não foi possível abrir o aplicativo
           </Text>
-          <Text selectable style={{ color: "#ffffff", fontSize: 14, marginBottom: 10 }}>
-            {String(e?.name || "Error")}: {String(e?.message || e)}
+          <Text style={{ color: "#ffffff", fontSize: 16, lineHeight: 24 }}>
+            Feche e abra o EsdrasApp novamente. Se o problema continuar, entre em contato com contato@plataformaesdras.com.br.
           </Text>
-          <Text selectable style={{ color: "#93c5fd", fontSize: 11, lineHeight: 16 }}>
-            {String(e?.stack || "sem stack").slice(0, 4000)}
-          </Text>
+          {__DEV__ && <Text selectable style={{ color: "#93c5fd", fontSize: 11, lineHeight: 16 }}>
+            {String(e?.stack || e).slice(0, 4000)}
+          </Text>}
         </ScrollView>
       );
     }

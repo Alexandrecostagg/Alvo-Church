@@ -1,0 +1,101 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { POST } from "../apps/web/app/api/mobile/member/route";
+import { fetchUpcomingMemberEvents, fetchTenantUser, provisionSelfServeOrganization, claimOrganizationSlug, signInWithFirebaseMobileEmailPassword, signOutFromFirebaseMobile } from "../packages/firebase/src/index";
+
+async function main() {
+if (process.env.FIREBASE_PROJECT_ID !== "demo-alvo-qa" || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID !== "demo-alvo-qa" || process.env.FIRESTORE_EMULATOR_HOST !== "127.0.0.1:8080" || process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099" || process.env.NODE_ENV === "production") throw new Error("Somente emuladores locais demo-alvo-qa.");
+initializeApp({ projectId: "demo-alvo-qa" });
+const db = getFirestore(), auth = getAuth();
+const orgId = `qa_mobile_${randomUUID()}`, uid = `qa_mobile_${randomUUID()}`, outsider = `qa_outsider_${randomUUID()}`;
+const org = db.doc(`organizations/${orgId}`), personId = "person_fictional";
+const bootstrapId = `qa_mobile_bootstrap_${randomUUID()}`;
+const email = `${uid}@example.test`, password = "Fictitious-QA-2026!";
+let token = "", checks = 0;
+const equal = (actual: unknown, expected: unknown, label: string) => { assert.deepEqual(actual, expected, label); checks++; };
+const config = { apiKey: "demo-alvo-qa-key", authDomain: "demo-alvo-qa.firebaseapp.com", projectId: "demo-alvo-qa", storageBucket: "demo-alvo-qa.firebasestorage.app", messagingSenderId: "1234567890", appId: "1:1234567890:web:localqa", useEmulator: true };
+async function api(body: object, bearer: string | null = token) {
+  const request = new Request("http://127.0.0.1/api/mobile/member", { method: "POST", headers: { "content-type": "application/json", ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) }, body: JSON.stringify({ organizationId: orgId, ...body }) });
+  const response = await POST(request as Parameters<typeof POST>[0]);
+  equal(response.headers.get("cache-control")?.includes("no-store"), true, "private response");
+  return { status: response.status, data: await response.json() };
+}
+async function seed(path: string, data: object) { await org.collection(path.split("/")[0]).doc(path.split("/").slice(1).join("/")).set(data); }
+try {
+  await auth.createUser({ uid, email, password, displayName: "Membro Fictício" });
+  await auth.createUser({ uid: outsider, email: `${outsider}@example.test`, password });
+  await org.set({ id: orgId, name: "Instituição fictícia de auditoria", slug: orgId, status: "active" });
+  await seed(`users/${uid}`, { organizationId: orgId, isActive: true, personId, email, roles: ["member"] });
+  await seed(`memberAccountLinks/${uid}`, { organizationId: orgId, userId: uid, personId, verifiedBy: "qa_admin" });
+  await seed(`memberAccountClaims/${personId}`, { organizationId: orgId, userId: uid, personId });
+  await seed(`people/${personId}`, { organizationId: orgId, status: "active", firstName: "Fictício" });
+  await seed("groups/own", { organizationId: orgId, status: "active", name: "Célula Fictícia" });
+  await seed("groups/other", { organizationId: orgId, status: "active", name: "Outra Célula" });
+  await seed(`groups/own/members/own_${personId}`, { organizationId: orgId, groupId: "own", personId });
+  await seed("groups/own/meetings/current", { organizationId: orgId, groupId: "own", meetingStatus: "scheduled", scheduledStartAt: new Date().toISOString() });
+  const original = { id: "own", organizationId: orgId, personId, serviceTeamId: "team_original", ministryCode: "LEVI", role: "Voz", serviceDate: "2099-12-01T20:00:00Z", status: "pending", createdAt: "2026-01-01T00:00:00Z" };
+  await seed("serviceAssignments/own", original);
+  await seed("serviceAssignments/other", { ...original, id: "other", personId: "someone_else" });
+  await seed("events/published", { organizationId: orgId, status: "published", startsAt: "2099-02-01T20:00:00Z", name: "Evento Fictício" });
+  await seed("events/draft", { organizationId: orgId, status: "draft", startsAt: "2099-01-01T20:00:00Z" });
+  await seed("events/ongoing", { organizationId: orgId, status: "published", startsAt: new Date(Date.now() - 3600000).toISOString(), endsAt: new Date(Date.now() + 3600000).toISOString(), name: "Evento em andamento" });
+  await seed("events/past", { organizationId: orgId, status: "published", startsAt: "2020-01-01T20:00:00Z" });
+  await seed(`journeyProfiles/${personId}`, { organizationId: orgId, personId, currentStage: "serving", privateNote: "not for the app" });
+  const credential = await signInWithFirebaseMobileEmailPassword({ config, email, password });
+  token = await credential.user.getIdToken();
+  const bootstrap = { organizationId: bootstrapId, churchName: "Instituição fictícia nova", ownerUid: uid, ownerEmail: email };
+  await provisionSelfServeOrganization(config, bootstrap);
+  equal((await db.doc(`organizations/${bootstrapId}/settings/subscription`).get()).data()?.plan, "free", "new organization uses free bootstrap");
+  await db.doc(`organizations/${bootstrapId}/settings/subscription`).update({ plan: "pastoral" });
+  await provisionSelfServeOrganization(config, bootstrap);
+  equal((await db.doc(`organizations/${bootstrapId}/settings/subscription`).get()).data()?.plan, "pastoral", "bootstrap retry does not replace existing plan");
+  await claimOrganizationSlug(config, { slug: bootstrapId, organizationId: bootstrapId, displayName: bootstrap.churchName });
+  await claimOrganizationSlug(config, { slug: bootstrapId, organizationId: bootstrapId, displayName: bootstrap.churchName });
+  equal((await db.doc(`org_slugs/${bootstrapId}`).get()).data()?.organizationId, bootstrapId, "slug retry is idempotent");
+  equal((await api({ action: "groups" }, null)).status, 401, "unauthenticated request");
+  equal((await api({ action: "groups" }, "invalid")).status, 401, "invalid token");
+  equal((await fetchUpcomingMemberEvents(config, { organizationId: orgId })).map(e => e.id), ["ongoing", "published"], "member SDK query excludes draft and past events without permission errors");
+  const groups = await api({ action: "groups", personId: "someone_else" });
+  equal(groups.status, 200, "read cells"); equal(groups.data.groups.map((g: any) => g.id), ["own"], "own membership only");
+  const attendance = await Promise.all([api({ action: "attendance", groupId: "own", meetingId: "current" }), api({ action: "attendance", groupId: "own", meetingId: "current" })]);
+  equal(attendance.map(r => r.status), [200, 200], "concurrent repeated attendance");
+  equal((await org.collection("groups/own/meetings/current/attendance").get()).size, 1, "one attendance record");
+  equal((await api({ action: "groups" })).data.groups[0].meeting.attendanceStatus, "present", "attendance survives reload");
+  equal((await api({ action: "attendance", groupId: "other", meetingId: "current" })).status, 409, "foreign cell rejected");
+  equal((await api({ action: "assignments" })).data.assignments.map((a: any) => a.id), ["own"], "person ID differs from login UID");
+  equal((await api({ action: "respond", assignmentId: "other", status: "confirmed" })).status, 404, "foreign assignment rejected");
+  equal((await api({ action: "respond", assignmentId: "own", status: "declined", note: "Fictício" })).status, 200, "decline response");
+  const saved = (await org.collection("serviceAssignments").doc("own").get()).data()!;
+  for (const field of ["personId", "serviceTeamId", "ministryCode", "serviceDate", "createdAt"] as const) equal(saved[field], original[field], `preserve ${field}`);
+  equal(saved.responseNote, "Fictício", "decline note persisted");
+  equal((await api({ action: "respond", assignmentId: "own", status: "declined" })).data.replayed, true, "response idempotency");
+  equal((await api({ action: "respond", assignmentId: "own", status: "confirmed" })).status, 409, "cannot overwrite response");
+  const journey = (await api({ action: "journey" })).data.profile;
+  equal(journey.currentStage, "serving", "correct journey identity"); equal("privateNote" in journey, false, "journey projection");
+  await seed("settings/features", { modules: { groups: { enabled: false } } });
+  equal((await api({ action: "groups" })).status, 403, "paused module");
+  await org.collection("settings").doc("features").delete();
+  await org.collection("users").doc(uid).update({ roles: [] });
+  equal((await fetchTenantUser(config, { organizationId: orgId, userId: uid }))?.roles, [], "no invented admin role");
+  await org.collection("memberAccountLinks").doc(uid).delete();
+  equal((await api({ action: "assignments" })).data.status, "unlinked", "lost binding returns explicit unlinked state");
+  equal((await api({ action: "respond", assignmentId: "own", status: "confirmed" })).status, 409, "lost binding cannot respond");
+  await org.collection("users").doc(uid).update({ isActive: false });
+  equal((await api({ action: "groups" })).status, 403, "deactivated membership");
+  await auth.updateUser(uid, { disabled: true });
+  equal((await api({ action: "groups" })).status, 401, "disabled auth token rejected");
+  console.log(JSON.stringify({ ok: true, checks, scope: "demo-alvo-qa; fictional data; real Auth/Firestore emulators + route handler and mobile SDK" }));
+} finally {
+  await signOutFromFirebaseMobile(config).catch(() => {});
+  await db.recursiveDelete(org);
+  await db.recursiveDelete(db.doc(`organizations/${bootstrapId}`));
+  await db.doc(`org_slugs/${bootstrapId}`).delete();
+  await auth.deleteUsers([uid, outsider]);
+  equal((await org.get()).exists, false, "fixture deleted");
+  console.log("Fictional fixtures removed.");
+}
+}
+main().then(() => process.exit(0)).catch(error => { console.error(error); process.exit(1); });

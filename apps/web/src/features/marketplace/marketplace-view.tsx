@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   Store, 
   Search, 
@@ -12,9 +13,10 @@ import {
   ArrowRight,
   Navigation,
   ExternalLink,
-  Loader2
+  Loader2,
+  ShieldCheck
 } from "lucide-react";
-import { recentPeople, partnerOrganizations, partnerBenefits } from "../../lib/mock-data";
+
 import type { PartnerOrganization, PartnerBenefit, Person, TenantContext } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
 import { fetchPartnerOrganizations, fetchPartnerBenefits } from "@alvo/firebase";
@@ -26,33 +28,23 @@ export function MarketplaceView() {
   const [businesses, setBusinesses] = useState<PartnerOrganization[]>([]);
   const [benefits, setBenefits] = useState<PartnerBenefit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      if (!firebaseReady || !tenantReady) {
-        setBusinesses(partnerOrganizations as PartnerOrganization[]);
-        setBenefits(partnerBenefits as unknown as PartnerBenefit[]);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    setBusinesses([]); setBenefits([]);
+    setLoadError(null);
+    if (!firebaseReady || !tenantReady) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
       try {
-        setLoading(true);
         const context: TenantContext = { organizationId };
-        const [orgs, bens] = await Promise.all([
-          fetchPartnerOrganizations(firebaseConfig, context),
-          fetchPartnerBenefits(firebaseConfig, context)
-        ]);
-        setBusinesses(orgs.length > 0 ? orgs : (partnerOrganizations as PartnerOrganization[]));
-        setBenefits(bens.length > 0 ? bens : (partnerBenefits as unknown as PartnerBenefit[]));
-      } catch (error) {
-        console.error("Error loading marketplace data:", error);
-        setBusinesses(partnerOrganizations as PartnerOrganization[]);
-        setBenefits(partnerBenefits as unknown as PartnerBenefit[]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+        const [orgs, bens] = await Promise.all([fetchPartnerOrganizations(firebaseConfig, context), fetchPartnerBenefits(firebaseConfig, context)]);
+        if (!cancelled) { setBusinesses(orgs); setBenefits(bens); }
+      } catch { if (!cancelled) { setBusinesses([]); setBenefits([]); setLoadError("Não foi possível carregar os dados. Atualize a página para tentar novamente."); } }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady]);
 
   const categories = [
@@ -70,7 +62,7 @@ export function MarketplaceView() {
   });
 
   const getOwnerInfo = (ownerId?: string): Person | undefined => {
-    return recentPeople.find(p => p.id === ownerId);
+    return undefined;
   };
 
   const getBusinessBenefits = (businessId: string): PartnerBenefit[] => {
@@ -79,6 +71,7 @@ export function MarketplaceView() {
 
   return (
     <main className="marketplace-container animate-entrance">
+      {loadError && <p role="alert">{loadError}</p>}
       <header className="marketplace-header">
         <div className="header-content">
           <div className="eyebrow">
@@ -88,6 +81,10 @@ export function MarketplaceView() {
           <h1>Marketplace da Comunidade</h1>
           <p>Apoie os empreendimentos dos nossos membros e aproveite descontos exclusivos com seu Esdras Passe.</p>
         </div>
+
+        <Link href="/marketplace/validate" className="primary-view-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 18, width: "fit-content", textDecoration: "none" }}>
+          <ShieldCheck size={17} /> Área do parceiro: validar Passe
+        </Link>
 
         <div className="search-bar-container">
           <div className="search-input-wrapper">

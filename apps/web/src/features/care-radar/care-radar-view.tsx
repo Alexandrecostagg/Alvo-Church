@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { friendlyError } from "../../lib/friendly-error";
 import {
@@ -56,11 +58,7 @@ function getFirstName(name: string) {
 }
 
 function getWhatsappHref(person: Person | undefined, message: string) {
-  const rawPhone = person?.whatsappPhone || person?.mobilePhone;
-  if (!rawPhone) return null;
-  const digits = rawPhone.replace(/\D/g, "");
-  const phone = digits.startsWith("55") ? digits : `55${digits}`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  return manualWhatsappLink(person, message);
 }
 
 function daysSince(iso: string): number | null {
@@ -161,11 +159,10 @@ export function CareRadarView() {
     void load();
   }, [load]);
 
-  const personById = useMemo(() => {
-    const map = new Map<string, Person>();
-    people.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [people]);
+  const personById = useMemo(
+    () => new Map(people.map((person) => [person.id, person])),
+    [people],
+  );
 
   // ── Q1: sumiu da igreja (sem check-in de culto nos últimos 45 dias) ──────
   const missingFromChurch = useMemo<InsightItem[]>(() => {
@@ -199,12 +196,14 @@ export function CareRadarView() {
       meetingsByGroup.set(m.groupId, list);
     });
 
+    meetingsByGroup.forEach((list) => {
+      list.sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+    });
+
     const results: InsightItem[] = [];
 
     groupMembers.forEach((member) => {
-      const meetings = (meetingsByGroup.get(member.groupId) ?? [])
-        .slice()
-        .sort((a, b) => (a.scheduledStartAt < b.scheduledStartAt ? 1 : -1));
+      const meetings = meetingsByGroup.get(member.groupId) ?? [];
       if (!meetings.length) return;
 
       const presentMeeting = meetings.find((meeting) =>

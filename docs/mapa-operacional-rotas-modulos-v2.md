@@ -1,6 +1,9 @@
 # Mapa operacional de rotas e módulos - Alvo Church
 
-Atualizado em: 19 de junho de 2026
+Inventário de junho, com correção de entradas e referências em **05/09/2026**.
+Os status de cada módulo nas tabelas abaixo são históricos; a maturidade atual
+e as lacunas estão no [diagnóstico](status-implementacao-2026-09-05.md) e no
+[backlog ativo](backlog-mvp-implementacao-v2.md).
 
 ## Objetivo
 
@@ -8,7 +11,7 @@ Manter um mapa simples das telas reais do app web, o papel de cada módulo e o n
 
 ## URLs de referência
 
-- Local: `http://127.0.0.1:3000`
+- Homologação local isolada: `http://localhost:3001`
 - Deploy canônico: `https://alvo-church-web.alexandrecostagg.workers.dev`
 - Legado/teste: `https://alvo-church-web.pages.dev`
 
@@ -26,7 +29,7 @@ O menu lateral exibe apenas módulos ativos no plano da organização. O control
 
 | Módulo | Rota | Função principal | Status atual |
 |---|---|---|---|
-| Dashboard | `/` | Visão geral da operação | Em evolução |
+| Dashboard | `/app` | Visão geral da operação | Dados reais/vazio; homologação local |
 | Pessoas | `/members` | Base de pessoas e membros | Em evolução |
 | Novo membro | `/members/new` | Cadastro e jornada inicial do membro | UX revisada |
 | Perfil da pessoa | `/members/[personId]` | Detalhe individual, histórico e próximos passos | Em evolução |

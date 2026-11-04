@@ -1,15 +1,32 @@
+import { CampaignMemberScreen } from "./src/features/campaigns/campaign-member-screen";
+import { mobileWorshipSong, mobileWorshipProgram, type MobileWorshipSong } from "./src/features/worship/worship-model";
+import { MobileWorshipReader } from "./src/features/worship/worship-reader";
+import { mobileServingSlots, pendingServingCount, servingNotificationMatches, type MobileServingAssignment } from "./src/features/serving/serving-notifications";
+import { secureAuthStorage } from "./src/features/session/secure-auth-storage";
+import { mobileCapabilities, parseContributionAmount, imageDataUrl, type MobileCapabilities } from "./src/features/navigation/mobile-flow";
+import { useAndroidBack } from "./src/features/navigation/use-android-back";
+import { trustedExternalUrl } from "./src/security/external-url";
+import { KidsPrivateImage } from "./src/features/kids/kids-private-image";
+import { MemberPassCard } from "./src/features/profile/member-pass-card";
+import { MobileAccessBoundary } from "./src/features/session/mobile-access-boundary";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
+import * as Notifications from "expo-notifications";
+import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
+import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -25,12 +42,14 @@ import {
 } from "react-native";
 import {
   addPrayerRequest,
-  fetchOrganizationBySlug,
+  fetchOrganizationById,
+  fetchMobileTenantAccess,
+  fetchOrganizationDirectory,
   fetchPublicPrayerWall,
+  fetchTenantUser,
   fetchTenantRuntimeSnapshot,
-  fetchEvents,
-  saveEventRegistration,
-  fetchGroups,
+  fetchOrgFeatures,
+  fetchUpcomingMemberEvents,
   incrementPrayerCount,
   isFirebaseWebRuntimeConfigured,
   registerWithFirebaseMobileEmailPassword,
@@ -39,13 +58,15 @@ import {
   signOutFromFirebaseMobile,
   subscribeToFirebaseMobileAuthState,
   fetchMarketplacePromotions,
-  fetchServiceAssignments,
-  saveServiceAssignment,
-  fetchMemberJourneyProfile,
+  fetchWorshipSongs,
+  fetchWorshipSetlistByEventId,
+  saveMobilePushToken,
+  clearMobilePushToken,
   type FirebaseAuthUser
 } from "@alvo/firebase";
-import type { ServiceAssignment, ServiceAssignmentStatus, MemberJourneyProfile } from "@alvo/types";
-import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, OrganizationKidsSettings, ServiceTeam, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
+import type { OrganizationDirectoryEntry } from "@alvo/firebase";
+import type { ServiceAssignment, MemberJourneyProfile } from "@alvo/types";
+import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +75,25 @@ import type { Event, EventRegistration, Group, Organization, PrayerRequest, Tena
 // build, o pior cenário é o app tentar falar com produção, não com a máquina de
 // quem programou. Para builds de loja (EAS), defina EXPO_PUBLIC_WEB_API_URL
 // explicitamente (eas secret ou env do profile de build) apontando pra produção.
-const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL ?? "https://alvo-church-web.alexandrecostagg.workers.dev";
+const USE_EMULATOR = process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR === "true";
+const WEB_API_URL = (process.env.EXPO_PUBLIC_WEB_API_URL ?? (USE_EMULATOR ? "http://127.0.0.1:3001" : "https://alvo-church-web.alexandrecostagg.workers.dev")).replace(/\/$/, "");
+async function memberOperation<T>(user: FirebaseAuthUser, organizationId: string, body: object): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const token = await user.getIdToken();
+    const response = await fetch(`${WEB_API_URL}/api/mobile/member`, {
+      method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...body, organizationId }), signal: controller.signal,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Não foi possível carregar seus dados.");
+    return data as T;
+  } finally { clearTimeout(timeout); }
+}
+type MyGroup = Pick<Group, "id" | "name" | "meetingDayOfWeek" | "meetingTime"> & {
+  meeting: { id: string; startsAt: string; attendanceStatus: string | null; recordedByLeader: boolean } | null;
+};
 
 async function callAi(task: string, input: unknown, idToken: string, organizationId: string): Promise<string> {
   const res = await fetch(`${WEB_API_URL}/api/ai`, {
@@ -63,13 +102,14 @@ async function callAi(task: string, input: unknown, idToken: string, organizatio
     body: JSON.stringify({ task, input, organizationId })
   });
   const data = await res.json() as { ok: boolean; content: string; error?: string };
-  if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na IA");
+  if (!res.ok || !data.ok) throw new Error(data.error ?? "Erro na Sabedoria Pastoral");
   return data.content;
 }
 
 type AuthScreen = "splash" | "welcome" | "login" | "register" | "link-institution";
 type Tab = "inicio" | "agenda" | "celula" | "perfil";
 type ModalScreen =
+  | "convites"
   | "doacoes"
   | "kids-checkin"
   | "escala"
@@ -89,25 +129,9 @@ type EscalaSlot = {
   service: string;
   role: string;
   status: EscalaStatus;
+  responseNote?: string;
 };
-type Song = {
-  id: string;
-  title: string;
-  artist: string;
-  key: string;
-  bpm: number;
-  chords: string;
-  lyrics: string;
-};
-type KidCheckIn = {
-  id: string;
-  childName: string;
-  room: string;
-  code: string;
-  checkedInAt: string;
-  checkedOut: boolean;
-};
-
+type Song = MobileWorshipSong;
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const firebaseConfig = {
@@ -117,89 +141,22 @@ const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-  useEmulator: false,
+  useEmulator: USE_EMULATOR,
+  mobileAuthStorage: secureAuthStorage,
 };
 
 const BRAND = "#d27836";
 const BRAND_DARK = "#1c2433";
 const SURFACE = "#f7f3ea";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_ESCALA: EscalaSlot[] = [
-  { id: "e1", date: "Dom, 29 Jun", time: "18:00", service: "Culto de Celebração", role: "Recepção", status: "pendente" },
-  { id: "e2", date: "Qua, 02 Jul", time: "19:30", service: "Culto de Meio de Semana", role: "Recepção", status: "pendente" },
-  { id: "e3", date: "Dom, 06 Jul", time: "18:00", service: "Culto de Celebração", role: "Berçário", status: "pendente" }
-];
-
-const MOCK_SONGS: Song[] = [
-  {
-    id: "s1",
-    title: "Grande é o Senhor",
-    artist: "Ministério Zoe",
-    key: "G",
-    bpm: 72,
-    chords: "G - D - Em - C\nG - D - C",
-    lyrics: `Grande é o Senhor
-E mui digno de louvor
-Na cidade do nosso Deus
-No seu santo monte
-
-Belo na sua altitude
-A alegria de toda a terra
-O monte Sião, os lados do norte
-É a cidade do Grande Rei`
-  },
-  {
-    id: "s2",
-    title: "Nada além do Sangue",
-    artist: "Hillsong",
-    key: "A",
-    bpm: 68,
-    chords: "A - E - F#m - D\nA - E - D",
-    lyrics: `Que pode me dar perdão
-Somente o sangue de Jesus
-Que pode me restaurar
-Somente o sangue de Jesus
-
-Oh! Precioso é o fluxo
-Que me faz branco como a neve
-Nenhum outro fonte sei
-Somente o sangue de Jesus`
-  },
-  {
-    id: "s3",
-    title: "Oceans",
-    artist: "Hillsong United",
-    key: "D",
-    bpm: 62,
-    chords: "D - A - Bm - G\nD - A - G",
-    lyrics: `You call me out upon the waters
-The great unknown where feet may fail
-And there I find You in the mystery
-In oceans deep my faith will stand`
-  },
-  {
-    id: "s4",
-    title: "Tua Graça Me Basta",
-    artist: "Ministério Avivah",
-    key: "E",
-    bpm: 76,
-    chords: "E - B - C#m - A\nE - B - A",
-    lyrics: `Tua graça me basta
-Teu poder se aperfeiçoa
-Na fraqueza, na dor
-Tua glória eu vou ver`
-  }
-];
-
-const MOCK_PROGRAMMING = [
-  { order: 1, type: "Entrada", description: "Grande é o Senhor — Ministério Zoe" },
-  { order: 2, type: "Louvor", description: "Nada além do Sangue — Hillsong" },
-  { order: 3, type: "Adoração", description: "Oceans — Hillsong United" },
-  { order: 4, type: "Ofertório", description: "Tua Graça Me Basta — Ministério Avivah" },
-  { order: 5, type: "Encerramento", description: "Grande é o Senhor (reprise)" }
-];
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false
+  })
+});
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
@@ -207,15 +164,7 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState<AuthScreen>("splash");
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [linkedOrg, setLinkedOrg] = useState<Organization | null>(null);
-  const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [dataReady, setDataReady] = useState(false);
-  const [pushToken, setPushToken] = useState<string | null>(null);
-  const notifListener = useRef<null>(null);
   const configured = isFirebaseWebRuntimeConfigured(firebaseConfig);
-
   // auth listener
   useEffect(() => {
     if (!configured) {
@@ -231,61 +180,162 @@ export default function App() {
     return () => unsub();
   }, [configured]);
 
-  // push notifications — desabilitado no Expo Go (suporte removido no SDK 53)
-  // funciona em development build / produção
-  useEffect(() => { void 0; }, []);
-
-  // load tenant data
-  useEffect(() => {
-    if (!user || !configured) { setDataReady(false); return; }
-    let cancelled = false;
-    async function load() {
-      try {
-  const orgId = linkedOrg?.id ?? "";
-  if (!orgId) { setDataReady(true); return; }
-  const ctx = { organizationId: orgId };
-        const [snap, evts, grps] = await Promise.all([
-          fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
-          fetchEvents(firebaseConfig, ctx, 8),
-          fetchGroups(firebaseConfig, ctx, 8)
-        ]);
-        if (!cancelled) { setTenantRuntime(snap); setEvents(evts); setGroups(grps); setDataReady(true); }
-      } catch { if (!cancelled) setDataReady(true); }
-    }
-    void load();
-    return () => { cancelled = true; };
-  }, [user, linkedOrg, configured]);
 
   async function handleSignOut() {
-    try {
-      await signOutFromFirebaseMobile(firebaseConfig);
-      setLinkedOrg(null); setTenantRuntime(null); setEvents([]); setGroups([]); setDataReady(false);
-      setAuthScreen("welcome");
-    } catch {}
+    try { await signOutFromFirebaseMobile(firebaseConfig); setAuthScreen("welcome"); }
+    catch { Alert.alert("Não foi possível sair", "Confira sua conexão e tente novamente."); }
   }
-
-  // Auth screens
   if (!authReady || (!user && authScreen === "splash")) return <SplashScreen />;
   if (!user) {
     if (authScreen === "welcome") return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
     if (authScreen === "login") return <LoginScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("splash")} onRegister={() => setAuthScreen("register")} />;
     if (authScreen === "register") return <RegisterScreen configured={configured} onBack={() => setAuthScreen("welcome")} onSuccess={() => setAuthScreen("link-institution")} onLogin={() => setAuthScreen("login")} />;
-    if (authScreen === "link-institution") return <LinkInstitutionScreen configured={configured} onLink={(org) => { setLinkedOrg(org); setAuthScreen("splash"); }} onSkip={() => setAuthScreen("splash")} />;
     return <WelcomeScreen onLogin={() => setAuthScreen("login")} onRegister={() => setAuthScreen("register")} />;
   }
 
-  return (
-    <MainApp
-      user={user}
-      tenantRuntime={tenantRuntime}
-      events={events}
-      groups={groups}
-      dataReady={dataReady}
-      linkedOrg={linkedOrg}
-      pushToken={pushToken}
-      onSignOut={handleSignOut}
-    />
+  // Identity changes synchronously discard every institution, screen and token.
+  return <AuthenticatedApp key={user.uid} user={user} configured={configured} onSignOut={handleSignOut} />;
+}
+
+function AuthenticatedApp({ user, configured, onSignOut }: {
+  user: FirebaseAuthUser; configured: boolean; onSignOut: () => void;
+}) {
+  const [linkedOrg, setLinkedOrg] = useState<Organization | null>(null);
+  const [organizationReady, setOrganizationReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const raw = await SecureStore.getItemAsync(`esdras.organization.${user.uid}`);
+        const cached = raw ? JSON.parse(raw) as Organization : null;
+        // Cache chooses the institution only; the boundary checks live access.
+        if (!cancelled && typeof cached?.id === "string" && cached.id) setLinkedOrg(cached);
+      } catch { /* The member can select the institution again. */ }
+      finally { if (!cancelled) setOrganizationReady(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [user.uid]);
+  const checkAccess = useCallback(
+    () => fetchMobileTenantAccess(firebaseConfig, linkedOrg?.id ?? "", user.uid),
+    [linkedOrg?.id, user.uid],
   );
+  async function handleLinkOrganization(org: Organization) {
+    await SecureStore.setItemAsync(`esdras.organization.${user.uid}`, JSON.stringify(org));
+    setLinkedOrg(org);
+  }
+  async function chooseAnotherInstitution() {
+    try {
+      await SecureStore.deleteItemAsync(`esdras.organization.${user.uid}`);
+      setLinkedOrg(null);
+    } catch { Alert.alert("Não foi possível trocar a instituição", "Tente novamente."); }
+  }
+  if (!organizationReady) return <SplashScreen />;
+  if (!linkedOrg) return <LinkInstitutionScreen configured={configured} user={user} onLink={handleLinkOrganization} onSkip={onSignOut} />;
+  return <MobileAccessBoundary key={`${user.uid}:${linkedOrg.id}`} check={checkAccess} onSignOut={onSignOut} onChooseInstitution={chooseAnotherInstitution}>
+    <TenantApp user={user} configured={configured} linkedOrg={linkedOrg} onSignOut={onSignOut} onChooseInstitution={chooseAnotherInstitution} />
+  </MobileAccessBoundary>;
+}
+
+function TenantApp({ user, configured, linkedOrg, onSignOut, onChooseInstitution }: {
+  user: FirebaseAuthUser; configured: boolean; linkedOrg: Organization; onSignOut: () => void; onChooseInstitution: () => void;
+}) {
+  const [tenantRuntime, setTenantRuntime] = useState<TenantRuntimeSnapshot | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [groups, setGroups] = useState<MyGroup[]>([]);
+  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [modules, setModules] = useState<Parameters<typeof mobileCapabilities>[0]>();
+  const [loadError, setLoadError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const loadSequence = useRef(0);
+  const [dataReady, setDataReady] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  // Push funciona apenas em builds próprios (preview, TestFlight ou Play), não no Expo Go.
+  useEffect(() => {
+    if (!user || !linkedOrg?.id || !configured || USE_EMULATOR || Constants.appOwnership === "expo") return;
+    let cancelled = false;
+    const activeUser = user;
+    const organizationId = linkedOrg.id;
+
+    async function registerForPushNotifications() {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "Notificações",
+          importance: Notifications.AndroidImportance.DEFAULT
+        });
+      }
+
+      const currentPermission = await Notifications.getPermissionsAsync();
+      const permission = currentPermission.status === "granted"
+        ? currentPermission
+        : await Notifications.requestPermissionsAsync();
+
+      if (permission.status !== "granted") return;
+
+      const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
+      if (!projectId) return;
+
+      const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      if (cancelled) return;
+      await saveMobilePushToken(
+        firebaseConfig,
+        { organizationId },
+        activeUser.uid,
+        token,
+        Platform.OS === "ios" ? "ios" : "android"
+      );
+
+      if (!cancelled) setPushToken(token);
+    }
+
+    void registerForPushNotifications().catch((error) => {
+      if (__DEV__) console.warn("Não foi possível registrar notificações:", error);
+    });
+
+    return () => { cancelled = true; };
+  }, [configured, linkedOrg?.id, user?.uid]);
+
+  // Load settings first: a paused optional module must not blank the whole app.
+  const load = useCallback(async () => {
+    if (!configured) return;
+    const sequence = ++loadSequence.current;
+    setRefreshing(true); setLoadError("");
+    try {
+      const ctx = { organizationId: linkedOrg.id };
+      const [snap, member, features] = await Promise.all([
+        fetchTenantRuntimeSnapshot(firebaseConfig, ctx),
+        fetchTenantUser(firebaseConfig, { organizationId: linkedOrg.id, userId: user.uid }),
+        fetchOrgFeatures(firebaseConfig, linkedOrg.id),
+      ]);
+      if (sequence !== loadSequence.current) return;
+      if (!snap || !member?.isActive) throw new Error("Não foi possível carregar sua instituição.");
+      setTenantRuntime(snap); setRoles(member.roles); setModules(features?.modules);
+      const access = mobileCapabilities(features?.modules, member.roles);
+      const results = await Promise.allSettled([
+        access.events ? fetchUpcomingMemberEvents(firebaseConfig, ctx) : Promise.resolve([]),
+        access.groups ? memberOperation<{ groups: MyGroup[] }>(user, linkedOrg.id, { action: "groups" }).then(r => r.groups) : Promise.resolve([]),
+      ]);
+      if (sequence !== loadSequence.current) return;
+      setEvents(results[0].status === "fulfilled" ? results[0].value : []);
+      setGroups(results[1].status === "fulfilled" ? results[1].value : []);
+      if (results.some(r => r.status === "rejected")) setLoadError("Parte dos dados não pôde ser carregada. Toque em tentar novamente.");
+    } catch {
+      if (sequence === loadSequence.current) setLoadError("Não foi possível atualizar os dados. Confira a conexão e tente novamente.");
+    } finally {
+      if (sequence === loadSequence.current) { setDataReady(true); setRefreshing(false); }
+    }
+  }, [configured, linkedOrg.id, user]);
+  useEffect(() => { void load(); return () => { loadSequence.current++; }; }, [load]);
+
+  if (!tenantRuntime) return <SafeAreaView style={[s.fill, s.center, { padding: 24 }]}>
+    {!dataReady ? <LoadingRow primary={BRAND} label="Carregando sua instituição…" /> : <><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void load()} loading={refreshing} /></>}
+    <Btn label="Sair da conta" onPress={onSignOut} variant="outline" />
+  </SafeAreaView>;
+  return <MainApp user={user} tenantRuntime={tenantRuntime} events={events} groups={groups}
+    roles={roles} modules={modules} loadError={loadError} refreshing={refreshing} onRefresh={load} onChooseInstitution={onChooseInstitution}
+    dataReady={dataReady} linkedOrg={linkedOrg} pushToken={pushToken} onSignOut={async () => {
+      if(pushToken) {try {await clearMobilePushToken(firebaseConfig,{organizationId:linkedOrg.id},user.uid,pushToken);} catch {if(__DEV__)console.warn("O aparelho não pôde ser desvinculado dos avisos durante a saída.");}}
+      onSignOut();
+    }} />;
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
@@ -294,9 +344,9 @@ function SplashScreen() {
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
-      <View style={[s.fill, s.center, { backgroundColor: BRAND_DARK }]}>
-        <View style={s.logoMark}><Text style={s.logoText}>A</Text></View>
-        <ActivityIndicator color={BRAND} style={{ marginTop: 32 }} />
+      <View style={[s.fill, s.center, { backgroundColor: "#123f34" }]}>
+        <Image source={require("./assets/generated/esdras-mark.png")} style={s.logoMarkImage} />
+        <ActivityIndicator color="#dc7938" style={{ marginTop: 32 }} />
       </View>
     </SafeAreaView>
   );
@@ -310,7 +360,7 @@ function WelcomeScreen({ onLogin, onRegister }: { onLogin: () => void; onRegiste
       <StatusBar style="dark" />
       <View style={[s.fill, { backgroundColor: SURFACE }]}>
         <View style={s.welcomeHero}>
-          <View style={[s.logoMark, { backgroundColor: BRAND }]}><Text style={s.logoText}>A</Text></View>
+          <Image source={require("./assets/generated/esdras-app-icon.png")} style={s.logoMarkImage} />
           <Text style={s.welcomeTitle}>Bem-vindo{"\n"}à sua Igreja</Text>
           <Text style={s.welcomeSub}>Conecte-se, cresça e sirva com a sua comunidade de fé.</Text>
         </View>
@@ -326,12 +376,15 @@ function WelcomeScreen({ onLogin, onRegister }: { onLogin: () => void; onRegiste
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured: boolean; onBack: () => void; onSuccess: () => void; onRegister: () => void }) {
+  useAndroidBack(true, onBack);
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false); const [resetLoading, setResetLoading] = useState(false);
 
   async function submit() {
-    if (!email.trim() || !password || loading) return;
+    if (loading) return;
+    if (!configured) { setError("Aplicativo sem configuração de acesso. Procure o suporte."); return; }
+    if (!email.trim() || !password) { setError("Informe e-mail e senha."); return; }
     try { setLoading(true); setError(null);
       await signInWithFirebaseMobileEmailPassword({ config: firebaseConfig, email: email.trim(), password });
       onSuccess();
@@ -354,7 +407,6 @@ function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Entrar</Text>
           <Text style={s.screenSub}>Acesse sua conta para continuar.</Text>
-          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
           <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
           <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="••••••••" />
           {error && <Text style={s.errorText}>{error}</Text>}
@@ -373,11 +425,14 @@ function LoginScreen({ configured, onBack, onSuccess, onRegister }: { configured
 // ─── Register ─────────────────────────────────────────────────────────────────
 
 function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured: boolean; onBack: () => void; onSuccess: () => void; onLogin: () => void }) {
+  useAndroidBack(true, onBack);
   const [name, setName] = useState(""); const [email, setEmail] = useState("");
   const [password, setPassword] = useState(""); const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit() {
-    if (!name.trim() || !email.trim() || !password || loading) return;
+    if (loading) return;
+    if (!configured) { setError("Aplicativo sem configuração de acesso. Procure o suporte."); return; }
+    if (!name.trim() || !email.trim() || !password) { setError("Preencha nome, e-mail e senha."); return; }
     if (password !== confirm) { setError("As senhas não coincidem."); return; }
     if (password.length < 6) { setError("Mínimo 6 caracteres."); return; }
     try { setLoading(true); setError(null);
@@ -392,7 +447,6 @@ function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <Text style={s.screenTitle}>Criar conta</Text>
           <Text style={s.screenSub}>Preencha seus dados para começar.</Text>
-          {!configured && <View style={s.warnBox}><Text style={s.warnText}>Firebase não configurado (EXPO_PUBLIC_*).</Text></View>}
           <Field label="Nome completo" value={name} onChange={setName} autoCapitalize="words" placeholder="Seu nome" />
           <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="seu@email.com" />
           <Field label="Senha" value={password} onChange={setPassword} secureTextEntry placeholder="Mínimo 6 caracteres" />
@@ -408,30 +462,143 @@ function RegisterScreen({ configured, onBack, onSuccess, onLogin }: { configured
 
 // ─── Link Institution ─────────────────────────────────────────────────────────
 
-function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boolean; onLink: (org: Organization) => void; onSkip: () => void }) {
-  const [slug, setSlug] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
-  async function search() {
-    const value = slug.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!value || loading) return;
-    try { setLoading(true); setError(null);
-      const org = await fetchOrganizationBySlug(firebaseConfig, value);
-      if (!org) { setError("Igreja não encontrada. Verifique o código."); return; }
-      onLink(org);
-    } catch { setError("Erro ao buscar a igreja. Tente novamente."); } finally { setLoading(false); }
+function LinkInstitutionScreen({ configured, user, onLink, onSkip }: { configured: boolean; user: FirebaseAuthUser; onLink: (org: Organization) => void | Promise<void>; onSkip: () => void }) {
+  const [institutions, setInstitutions] = useState<OrganizationDirectoryEntry[]>([]);
+  const [filter, setFilter] = useState("");
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [loadingDirectory, setLoadingDirectory] = useState(true);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [membershipHelpName, setMembershipHelpName] = useState<string | null>(null);
+
+  async function loadDirectory() {
+    if (!configured) { setLoadingDirectory(false); setError("Aplicativo sem configuração de acesso. Procure o suporte."); return; }
+    try {
+      setLoadingDirectory(true);
+      setError(null);
+      setMembershipHelpName(null);
+      setInstitutions(await fetchOrganizationDirectory(firebaseConfig));
+    } catch {
+      setError("Não foi possível carregar as instituições. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLoadingDirectory(false);
+    }
   }
+
+  useEffect(() => { void loadDirectory(); }, [configured]);
+
+  async function chooseInstitution(entry: OrganizationDirectoryEntry) {
+    if (linkingId) return;
+    try {
+      setLinkingId(entry.organizationId);
+      setError(null);
+      setMembershipHelpName(null);
+      const membership = await fetchTenantUser(firebaseConfig, {
+        organizationId: entry.organizationId,
+        userId: user.uid,
+      });
+      if (!membership?.isActive) {
+        setSelectorOpen(false);
+        setError(`Sua conta não está cadastrada como membro ativo de ${entry.displayName}.`);
+        setMembershipHelpName(entry.displayName);
+        return;
+      }
+      const organization = await fetchOrganizationById(firebaseConfig, entry.organizationId);
+      if (!organization) throw new Error("Instituição indisponível");
+      await onLink(organization);
+    } catch {
+      setSelectorOpen(false);
+      setError("Não foi possível vincular esta instituição. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLinkingId(null);
+    }
+  }
+
+  const normalizedFilter = filter.trim().toLocaleLowerCase("pt-BR");
+  const visibleInstitutions = normalizedFilter
+    ? institutions.filter((entry) => entry.displayName.toLocaleLowerCase("pt-BR").includes(normalizedFilter))
+    : institutions;
+
   return (
     <SafeAreaView style={s.fill}><StatusBar style="dark" />
       <KeyboardAvoidingView style={s.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="handled">
           <View style={s.center}><Text style={{ fontSize: 52, marginBottom: 20 }}>⛪</Text></View>
           <Text style={s.screenTitle}>Vincular Igreja</Text>
-          <Text style={s.screenSub}>Insira o código da sua igreja para conectar sua conta à comunidade.</Text>
-          <View style={s.infoBox}><Text style={s.infoText}>Código fornecido pela secretaria.{"\n"}Exemplo: <Text style={{ fontWeight: "700", color: BRAND }}>esdras-church</Text></Text></View>
-          <Field label="Código da Igreja" value={slug} onChange={setSlug} autoCapitalize="none" placeholder="ex: minha-igreja" />
+          <Text style={s.screenSub}>Escolha a instituição em que sua conta está cadastrada como membro.</Text>
+          <View style={[s.infoBox, { marginBottom: 16 }]}><Text style={s.infoText}>Use a mesma conta de e-mail cadastrada na instituição. O vínculo é feito automaticamente após a escolha.</Text></View>
+          <Btn
+            label={loadingDirectory ? "Carregando instituições..." : "Escolher instituição"}
+            onPress={() => { setFilter(""); setSelectorOpen(true); }}
+            loading={loadingDirectory}
+            disabled={!configured || institutions.length === 0}
+          />
+          {!loadingDirectory && institutions.length === 0 && !error && <Text style={s.errorText}>Nenhuma instituição disponível.</Text>}
           {error && <Text style={s.errorText}>{error}</Text>}
-          <Btn label="Buscar e vincular" onPress={search} loading={loading} disabled={!configured} />
-          <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Fazer isso depois</Text></TouchableOpacity>
+          {membershipHelpName && (
+            <View style={s.membershipHelpBox}>
+              <Text style={s.membershipHelpTitle}>Como resolver</Text>
+              <Text style={s.membershipHelpText}>1. Confirme se entrou com o mesmo e-mail informado no cadastro de membro.</Text>
+              <Text style={s.membershipHelpText}>2. Procure a secretaria ou liderança de {membershipHelpName} para conferir se seu cadastro e acesso estão ativos.</Text>
+              <Text style={s.membershipHelpText}>3. Se os dados estiverem corretos e o acesso continuar bloqueado, fale com o suporte do EsdrasApp.</Text>
+              <Pressable
+                style={s.supportLink}
+                onPress={() => void Linking.openURL("mailto:contato@plataformaesdras.com.br?subject=Ajuda%20para%20vincular%20igreja%20no%20EsdrasApp").catch(() => Alert.alert("Suporte", "Escreva para contato@plataformaesdras.com.br."))}
+                accessibilityRole="link"
+                accessibilityLabel="Enviar e-mail ao suporte do EsdrasApp"
+              >
+                <Ionicons name="mail-outline" size={18} color={BRAND} />
+                <Text style={s.supportLinkText}>contato@plataformaesdras.com.br</Text>
+              </Pressable>
+            </View>
+          )}
+          {error?.startsWith("Não foi possível carregar") && <Btn label="Tentar novamente" onPress={loadDirectory} variant="outline" />}
+          <TouchableOpacity onPress={onSkip} style={s.linkRow}><Text style={s.linkText}>Sair da conta</Text></TouchableOpacity>
         </ScrollView>
+
+        <Modal visible={selectorOpen} transparent animationType="slide" onRequestClose={() => setSelectorOpen(false)}>
+          <View style={s.institutionModalRoot}>
+            <Pressable style={s.institutionBackdrop} onPress={() => setSelectorOpen(false)} accessibilityLabel="Fechar lista de instituições" />
+            <View style={s.institutionSheet}>
+              <View style={s.institutionHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.institutionTitle}>Escolha sua instituição</Text>
+                  <Text style={s.institutionSubtitle}>{institutions.length} {institutions.length === 1 ? "instituição cadastrada" : "instituições cadastradas"}</Text>
+                </View>
+                <Pressable onPress={() => setSelectorOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar">
+                  <Ionicons name="close" size={26} color={BRAND_DARK} />
+                </Pressable>
+              </View>
+              <TextInput
+                style={[s.input, { marginBottom: 12 }]}
+                value={filter}
+                onChangeText={setFilter}
+                placeholder="Buscar pelo nome"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="words"
+              />
+              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24 }}>
+                {visibleInstitutions.map((entry) => (
+                  <Pressable
+                    key={entry.organizationId}
+                    style={({ pressed }) => [s.institutionRow, pressed && { backgroundColor: "#f7f3ea" }]}
+                    onPress={() => void chooseInstitution(entry)}
+                    disabled={Boolean(linkingId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Selecionar ${entry.displayName}`}
+                  >
+                    <View style={s.institutionIcon}><Ionicons name="business" size={20} color={BRAND} /></View>
+                    <Text style={s.institutionName}>{entry.displayName}</Text>
+                    {linkingId === entry.organizationId
+                      ? <ActivityIndicator color={BRAND} />
+                      : <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
+                  </Pressable>
+                ))}
+                {visibleInstitutions.length === 0 && <Text style={s.institutionEmpty}>Nenhuma instituição encontrada.</Text>}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -439,13 +606,13 @@ function LinkInstitutionScreen({ configured, onLink, onSkip }: { configured: boo
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
-function PromocoesScreen({ primary, promotions, onBack }: {
-  primary: string; promotions: MarketplacePromotion[]; onBack: () => void;
+function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry }: {
+  primary: string; promotions: MarketplacePromotion[]; onBack: () => void; loading: boolean; error: string; onRetry: () => void;
 }) {
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Promoções da Comunidade" onBack={onBack} />
-      {promotions.length === 0 ? (
+      {loading ? <LoadingRow primary={primary} label="Carregando promoções…" /> : error ? <View style={{ padding: 16 }}><Text style={s.errorText}>{error}</Text><Btn label="Tentar novamente" onPress={onRetry} /></View> : promotions.length === 0 ? (
         <View style={[s.fill, s.center, { padding: 32 }]}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🏷️</Text>
           <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma promoção agora</Text>
@@ -478,7 +645,7 @@ function PromocoesScreen({ primary, promotions, onBack }: {
 // (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
 // que a Escola EAD do web usa.
 function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
-  primary: string; orgId?: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
+  primary: string; orgId: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
 }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -488,64 +655,96 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
   const [loading, setLoading] = useState(true);
   const [loadingCourse, setLoadingCourse] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [courseError, setCourseError] = useState("");
+  const [listError, setListError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const courseRequest = useRef(0);
+  const lessonBusy = useRef(false);
+  const lessonAttempts = useRef(new Map<string, string>());
+  const [savingLesson, setSavingLesson] = useState(false);
+  function back() {
+    if (savingLesson) return;
+    if (showCertificate) setShowCertificate(false);
+    else if (selectedCourse) { courseRequest.current++; setSelectedCourse(null); }
+    else onBack();
+  }
+  useAndroidBack(true, back);
+  useEffect(() => () => { courseRequest.current++; }, []);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true); setListError("");
     (async () => {
       try {
         const { fetchCourses } = await import("@alvo/firebase");
         const list = await fetchCourses(firebaseConfig, { organizationId: orgId });
         if (!cancelled) setCourses(list.filter((c) => c.isActive !== false));
-      } catch (e) { if (__DEV__) console.warn("fetchCourses falhou:", e); }
+      } catch { if (!cancelled) setListError("Não foi possível carregar os cursos. Tente novamente."); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, [orgId, revision]);
 
   async function openCourse(course: Course) {
-    setSelectedCourse(course);
+    const sequence = ++courseRequest.current;
+    setSelectedCourse(course); setModules([]); setLessons([]); setProgress(null); setShowCertificate(false); setCourseError("");
     setLoadingCourse(true);
     try {
       const sdk = await import("@alvo/firebase");
-      const [mods, less, prog] = await Promise.all([
+      const [mods, less, progressResponse] = await Promise.all([
         sdk.fetchCourseModules(firebaseConfig, { organizationId: orgId }, course.id),
         sdk.fetchCourseLessons(firebaseConfig, { organizationId: orgId }, course.id),
-        sdk.fetchMemberCourseProgress(firebaseConfig, { organizationId: orgId }, user.uid, course.id)
+        fetch(`${WEB_API_URL}/api/learning/progress`, {
+          method: "POST",
+          headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+          body: JSON.stringify({ action: "read", organizationId: orgId, courseId: course.id })
+        })
       ]);
+      const progressData = await progressResponse.json() as { status?: string; progress?: MemberCourseProgress; error?: string };
+      if (!progressResponse.ok) throw new Error(progressData.error || "Não foi possível carregar o progresso.");
+      if (sequence !== courseRequest.current) return;
       setModules(mods);
       setLessons(less);
-      setProgress(prog ?? {
-        id: `progress_${user.uid}_${course.id}`,
-        organizationId: orgId, memberId: user.uid, courseId: course.id,
+      setProgress(progressData.progress ?? {
+        id: course.id,
+        organizationId: orgId, memberId: "", courseId: course.id,
         completedLessons: [], isCompleted: false, updatedAt: new Date().toISOString()
       });
-    } catch (e) { if (__DEV__) console.warn("openCourse falhou:", e); }
-    finally { setLoadingCourse(false); }
+      if (progressData.status === "unlinked") Alert.alert("Conta sem vínculo", "Peça à administração para vincular sua conta ao cadastro de pessoa antes de salvar o progresso.");
+    } catch (e) { if (sequence === courseRequest.current) setCourseError(e instanceof Error ? e.message : "Não foi possível carregar as aulas."); }
+    finally { if (sequence === courseRequest.current) setLoadingCourse(false); }
   }
 
   async function toggleLesson(lesson: Lesson) {
-    if (!progress || !selectedCourse) return;
-    const done = progress.completedLessons.includes(lesson.id);
-    const nextCompleted = done
-      ? progress.completedLessons.filter((id) => id !== lesson.id)
-      : [...progress.completedLessons, lesson.id];
-    const courseLessons = lessons.filter((l) => l.courseId === selectedCourse.id);
-    const next: MemberCourseProgress = {
-      ...progress,
-      completedLessons: nextCompleted,
-      isCompleted: courseLessons.length > 0 && nextCompleted.length >= courseLessons.length,
-      updatedAt: new Date().toISOString()
-    };
-    setProgress(next);
+    if (lessonBusy.current) return;
+    if (!progress || !selectedCourse || !progress.memberId) {
+      Alert.alert("Conta sem vínculo", "Vincule sua conta a um cadastro de pessoa para registrar o progresso.");
+      return;
+    }
+    lessonBusy.current = true; setSavingLesson(true);
+    const sequence = courseRequest.current;
+    const key = `${selectedCourse.id}:${lesson.id}`;
+    const requestId = lessonAttempts.current.get(key) ?? Crypto.randomUUID();
+    lessonAttempts.current.set(key, requestId);
     try {
-      const { saveMemberCourseProgress } = await import("@alvo/firebase");
-      await saveMemberCourseProgress(firebaseConfig, { organizationId: orgId }, next);
-    } catch (e) { if (__DEV__) console.warn("saveMemberCourseProgress falhou:", e); }
+      const response = await fetch(`${WEB_API_URL}/api/learning/progress`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ action: "toggle", organizationId: orgId, courseId: selectedCourse.id, lessonId: lesson.id, requestId })
+      });
+      const data = await response.json() as { progress?: MemberCourseProgress; error?: string };
+      if (!response.ok || !data.progress) throw new Error(data.error || "Não foi possível salvar o progresso.");
+      lessonAttempts.current.delete(key);
+      if (sequence === courseRequest.current) setProgress(data.progress);
+    } catch (e) { Alert.alert("Progresso não salvo", e instanceof Error ? e.message : "Tente novamente."); }
+    finally { lessonBusy.current = false; setSavingLesson(false); }
   }
 
   async function watchLesson(lesson: Lesson) {
     try {
-      await Linking.openURL(lesson.videoUrl);
+      const url = trustedExternalUrl(lesson.videoUrl);
+      if (!url) throw new Error("Link da aula inválido. Procure o suporte da instituição.");
+      await Linking.openURL(url);
     } catch {
       Alert.alert("Não foi possível abrir", "O link do vídeo desta aula parece inválido.");
     }
@@ -575,7 +774,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
       };
       return (
         <View style={[s.fill, { backgroundColor: "#0f1b2d" }]}>
-          <ModalHeader title="Certificado" onBack={() => setShowCertificate(false)} />
+          <ModalHeader title="Certificado" onBack={back} />
           <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
             <View style={cert.frame}>
               <View style={cert.inner}>
@@ -614,8 +813,8 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
 
     return (
       <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
-        <ModalHeader title={selectedCourse.title} onBack={() => setSelectedCourse(null)} />
-        {loadingCourse ? (
+        <ModalHeader title={selectedCourse.title} onBack={back} />
+        {courseError ? <View style={{ padding: 16 }}><Text style={s.errorText}>{courseError}</Text><Btn label="Tentar novamente" onPress={() => void openCourse(selectedCourse)} /></View> : loadingCourse ? (
           <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando aulas..." /></View>
         ) : (
           <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
@@ -626,7 +825,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
                 <View style={{ width: `${pct}%`, height: "100%", backgroundColor: primary }} />
               </View>
               <Text style={[s.cardMeta, { marginTop: 6 }]}>{doneCount} de {courseLessons.length} aula(s)</Text>
-              {pct === 100 && courseLessons.length > 0 && (
+              {progress?.isCompleted === true && pct === 100 && courseLessons.length > 0 && (
                 <>
                   <Text style={{ marginTop: 8, color: "#16a34a", fontWeight: "700" }}>🎉 Curso concluído! Seu certificado está pronto.</Text>
                   <TouchableOpacity onPress={() => setShowCertificate(true)} style={[s.cta, { backgroundColor: primary, marginTop: 10 }]}>
@@ -657,12 +856,12 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
                           <TouchableOpacity onPress={() => watchLesson(les)} style={[s.cta, { backgroundColor: primary, flex: 1 }]}>
                             <Text style={s.ctaText}>Assistir</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity onPress={() => toggleLesson(les)} style={[s.cta, { flex: 1, backgroundColor: done ? "#16a34a" : "#e6eaf0" }]}>
+                          <TouchableOpacity disabled={savingLesson || !progress?.memberId} accessibilityState={{ disabled: savingLesson || !progress?.memberId }} onPress={() => toggleLesson(les)} style={[s.cta, { flex: 1, backgroundColor: done ? "#16a34a" : "#e6eaf0" }]}>
                             <Text style={[s.ctaText, { color: done ? "#fff" : BRAND_DARK }]}>{done ? "✓ Concluída" : "Marcar concluída"}</Text>
                           </TouchableOpacity>
                         </View>
                         {les.materialUrl ? (
-                          <TouchableOpacity onPress={() => { void Linking.openURL(les.materialUrl!); }} style={{ marginTop: 10 }}>
+                          <TouchableOpacity onPress={() => { const url = trustedExternalUrl(les.materialUrl!); if (url) void Linking.openURL(url).catch(() => Alert.alert("Não foi possível abrir o material.")); else Alert.alert("Link inválido", "Procure o suporte da instituição."); }} style={{ marginTop: 10 }}>
                             <Text style={{ color: primary, fontWeight: "600" }}>📎 Material de apoio</Text>
                           </TouchableOpacity>
                         ) : null}
@@ -682,7 +881,7 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Cursos" onBack={onBack} />
-      {loading ? (
+      {listError ? <View style={{ padding: 16 }}><Text style={s.errorText}>{listError}</Text><Btn label="Tentar novamente" onPress={() => setRevision(r => r + 1)} /></View> : loading ? (
         <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando cursos..." /></View>
       ) : courses.length === 0 ? (
         <View style={[s.fill, s.center, { padding: 32 }]}>
@@ -711,11 +910,13 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
   );
 }
 
-function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pushToken, onSignOut }: {
+function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pushToken, onSignOut, roles, modules, loadError, refreshing, onRefresh, onChooseInstitution }: {
   user: FirebaseAuthUser; tenantRuntime: TenantRuntimeSnapshot | null; events: Event[];
-  groups: Group[]; dataReady: boolean; linkedOrg: Organization | null;
+  groups: MyGroup[]; dataReady: boolean; linkedOrg: Organization | null;
+  modules: Parameters<typeof mobileCapabilities>[0]; roles: AppRole[]; loadError: string; refreshing: boolean; onRefresh: () => Promise<void>; onChooseInstitution: () => void;
   pushToken: string | null; onSignOut: () => void;
 }) {
+  const access = mobileCapabilities(modules, roles);
   const [tab, setTab] = useState<Tab>("inicio");
   const [modalStack, setModalStack] = useState<ModalScreen[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -723,6 +924,9 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   // Promoções do marketplace (notificação in-app): busca ao abrir; "vistas"
   // ficam em memória da sessão (badge some depois de abrir o sino).
   const [promotions, setPromotions] = useState<MarketplacePromotion[]>([]);
+  const [promotionsLoading, setPromotionsLoading] = useState(true);
+  const [promotionsError, setPromotionsError] = useState("");
+  const [promotionsRevision, setPromotionsRevision] = useState(0);
   const [seenPromoIds, setSeenPromoIds] = useState<Set<string>>(new Set());
 
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
@@ -732,21 +936,43 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const brandLogo = tenantRuntime?.settings?.branding?.logoLightUrl ?? tenantRuntime?.settings?.branding?.logoDarkUrl ?? tenantRuntime?.settings?.branding?.iconUrl ?? undefined;
 
   useEffect(() => {
+    if (!access.marketplace) { setPromotions([]); setPromotionsLoading(false); return; }
+    setPromotionsLoading(true); setPromotionsError("");
     let cancelled = false;
     (async () => {
       try {
         const promos = await fetchMarketplacePromotions(firebaseConfig, { organizationId: orgId }, 30);
-        if (!cancelled) setPromotions(promos);
+        if (!cancelled) setPromotions(promos.filter(p => !p.validUntil || Date.parse(p.validUntil) >= Date.now()));
       } catch (e) {
-        if (__DEV__) console.warn("fetchMarketplacePromotions falhou:", e);
-      }
+        if (!cancelled) setPromotionsError("Não foi possível carregar as promoções.");
+      } finally { if (!cancelled) setPromotionsLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, [orgId, access.marketplace, promotionsRevision]);
+
+  const [pendingServing,setPendingServing] = useState(0);
+  const [servingRevision,setServingRevision] = useState(0);
+  const [servingNoticeError,setServingNoticeError] = useState("");
+  useEffect(()=>{
+    let active=true,run=0;
+    if(!access.volunteers){setPendingServing(0);return;}
+    const refresh=async()=>{if(AppState.currentState!=="active")return;const current=++run;try{const result=await memberOperation<{assignments:MobileServingAssignment[]}>(user,orgId,{action:"assignments"});if(active&&current===run){setPendingServing(pendingServingCount(result.assignments));setServingNoticeError("");}}catch{if(active&&current===run)setServingNoticeError("Não foi possível atualizar os avisos de escala. Abra Minha Escala para conferir.");}};
+    void refresh(); const timer=setInterval(()=>void refresh(),30000);
+    const state=AppState.addEventListener("change",next=>{if(next==="active")void refresh();});
+    return()=>{active=false;run++;clearInterval(timer);state.remove();};
+  },[orgId,user,access.volunteers,servingRevision,refreshing]);
+  useEffect(()=>{
+    let active=true;
+    const received=Notifications.addNotificationReceivedListener(n=>{if(servingNotificationMatches(n.request.content.data,orgId))setServingRevision(v=>v+1);});
+    const open=(response:Notifications.NotificationResponse|null)=>{if(active&&access.volunteers&&response&&servingNotificationMatches(response.notification.request.content.data,orgId)){setServingRevision(v=>v+1);push("escala");}};
+    const tapped=Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync().then(open).catch(()=>{});
+    return()=>{active=false;received.remove();tapped.remove();};
+  },[orgId,access.volunteers]);
 
   const unseenPromoCount = promotions.filter((p) => !seenPromoIds.has(p.id)).length;
 
-  function push(screen: ModalScreen) { setModalStack(p => [...p, screen]); }
+  function push(screen: ModalScreen) { setModalStack(p => p.at(-1) === screen ? p : [...p, screen]); }
   function pop() { setModalStack(p => p.slice(0, -1)); }
 
   function openPromocoes() {
@@ -755,6 +981,12 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   }
 
   const modal = modalStack[modalStack.length - 1] ?? null;
+  useAndroidBack(modal !== "cursos" && modal !== "kids-checkin" && (Boolean(modal) || tab !== "inicio"), () => { if (modal) pop(); else setTab("inicio"); });
+  useEffect(() => {
+    if ((tab === "agenda" && !access.events) || (tab === "celula" && !access.groups)) setTab("inicio");
+    const allowed: Partial<Record<ModalScreen, boolean>> = { convites: access.events, doacoes: access.giving, "kids-checkin": access.children, escala: access.volunteers, musica: access.volunteers, "song-detail": access.volunteers, inscricao: access.events, "lider-celula": access.leader, cursos: access.journeys, promocoes: access.marketplace };
+    if (modal && allowed[modal] === false) setModalStack([]);
+  }, [tab, modal, access.events, access.groups, access.giving, access.children, access.volunteers, access.leader, access.journeys, access.marketplace]);
 
   function openInscricao(event: Event) { setSelectedEvent(event); push("inscricao"); }
   function openSongDetail(song: Song) { setSelectedSong(song); push("song-detail"); }
@@ -770,37 +1002,42 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
             <Text style={s.mainOrg}>{orgName}</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <TouchableOpacity onPress={openPromocoes} hitSlop={10} accessibilityLabel="Promoções do marketplace">
+            {access.marketplace && <TouchableOpacity onPress={openPromocoes} hitSlop={10} accessibilityLabel="Promoções do marketplace">
               <Ionicons name="notifications-outline" size={24} color="#fff" />
               {unseenPromoCount > 0 && (
                 <View style={s.notifBadge}>
                   <Text style={s.notifBadgeText}>{unseenPromoCount > 9 ? "9+" : unseenPromoCount}</Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </TouchableOpacity>}
             <View style={[s.avatarCircle, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
               <Text style={s.avatarText}>{(user.displayName ?? user.email ?? "M")[0].toUpperCase()}</Text>
             </View>
           </View>
         </View>
 
+        {!!loadError && <View style={{ padding: 12 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void onRefresh()} loading={refreshing} variant="outline" /></View>}
+        {access.volunteers && !modal && pendingServing>0 && <TouchableOpacity accessibilityLabel={`${pendingServing} escalas aguardando resposta. Abrir Minha Escala`} onPress={()=>push("escala")} style={{padding:14,backgroundColor:"#fef3c7"}}><Text style={{color:"#78350f",fontWeight:"700"}}>{pendingServing} escala(s) aguardando sua resposta →</Text><Text style={{color:"#78350f",marginTop:4}}>Toque para conferir a área, o horário e confirmar ou recusar.</Text></TouchableOpacity>}
+        {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
+        {access.events && !modal && tab === "inicio" && <TouchableOpacity accessibilityRole="button" onPress={()=>push("convites")} style={{padding:16,backgroundColor:"#eef6f1"}}><Text style={{color:primary,fontWeight:"800"}}>Meus convidados →</Text><Text style={{color:"#3c5c4d",marginTop:4}}>Veja as campanhas e crie seu convite pessoal.</Text></TouchableOpacity>}
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <HomeTab primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
+          {tab === "inicio" && !modal && <HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
-          {tab === "celula" && !modal && <CelulaTab groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
-          {tab === "perfil" && !modal && <PerfilTab user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
+          {tab === "celula" && !modal && <CelulaTab canLead={access.leader} onRefresh={onRefresh} groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
+          {tab === "perfil" && !modal && <PerfilTab access={access} onChooseInstitution={onChooseInstitution} user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
+          {modal === "convites" && <CampaignMemberScreen primary={primary} user={user} orgId={orgId} apiOrigin={WEB_API_URL} onBack={pop} />}
           {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "musica" && <MusicaScreen primary={primary} onBack={pop} onOpenSong={openSongDetail} />}
+          {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={()=>{setServingRevision(v=>v+1);pop();}} refreshRevision={servingRevision} />}
+          {modal === "musica" && <MusicaScreen primary={primary} orgId={orgId} events={events} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} />}
+          {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} storageKey={`${orgId}:${user.uid}`} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "promocoes" && <PromocoesScreen primary={primary} promotions={promotions} onBack={pop} />}
+          {modal === "promocoes" && <PromocoesScreen loading={promotionsLoading} error={promotionsError} onRetry={() => setPromotionsRevision(r => r + 1)} primary={primary} promotions={promotions} onBack={pop} />}
           {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} orgName={orgName} logoUrl={brandLogo} onBack={pop} />}
         </View>
 
@@ -812,8 +1049,8 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
               { id: "agenda", label: "Agenda", icon: "calendar-outline" as const, iconActive: "calendar" as const },
               { id: "celula", label: "Célula", icon: "people-outline" as const, iconActive: "people" as const },
               { id: "perfil", label: "Perfil", icon: "person-outline" as const, iconActive: "person" as const }
-            ] as const).map(item => (
-              <TouchableOpacity key={item.id} style={s.tabItem} onPress={() => setTab(item.id)}>
+            ] as const).filter(item => item.id !== "agenda" && item.id !== "celula" || (item.id === "agenda" ? access.events : access.groups)).map(item => (
+              <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} key={item.id} style={s.tabItem} onPress={() => setTab(item.id)}>
                 <Ionicons
                   name={tab === item.id ? item.iconActive : item.icon}
                   size={22}
@@ -831,26 +1068,14 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
 // ─── Home Tab ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos }: {
-  primary: string; events: Event[]; groups: Group[]; dataReady: boolean;
-  user: FirebaseAuthUser; orgId?: string;
+function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos, access, refreshing, onRefresh, onOpenEvent }: {
+  primary: string; events: Event[]; groups: MyGroup[]; dataReady: boolean;
+  access: MobileCapabilities; refreshing: boolean; onRefresh: () => Promise<void>; onOpenEvent: (event: Event) => void;
+  user: FirebaseAuthUser; orgId: string;
   onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void; onOpenCursos: () => void;
 }) {
-  const [refreshing, setRefreshing] = useState(false);
   const nextEvent = events[0];
   const myGroup = groups[0];
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      if (!orgId) return;
-      await Promise.all([
-        fetchEvents(firebaseConfig, { organizationId: orgId }, 8),
-        fetchGroups(firebaseConfig, { organizationId: orgId }, 8)
-      ]);
-    } catch {}
-    finally { setRefreshing(false); }
-  };
 
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}>
@@ -863,10 +1088,10 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
           <Text style={s.cardTitle}>{nextEvent.name}</Text>
           <Text style={s.cardMeta}>{formatDate(nextEvent.startsAt)} · {formatHour(nextEvent.startsAt)}</Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-            <View style={[s.cta, { backgroundColor: primary, flex: 1 }]}><Text style={s.ctaText}>Fazer check-in</Text></View>
+            <TouchableOpacity accessibilityRole="button" onPress={() => onOpenEvent(nextEvent)} style={[s.cta, { backgroundColor: primary, flex: 1 }]}><Text style={s.ctaText}>Ver inscrição / ingresso</Text></TouchableOpacity>
           </View>
         </View>
-      ) : dataReady ? (
+      ) : dataReady && access.events ? (
         <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
           <Text style={s.cardTitle}>Nenhum evento próximo</Text>
           <Text style={s.cardMeta}>Fique atento às novidades da sua igreja.</Text>
@@ -876,11 +1101,11 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
       {/* Quick actions */}
       <Text style={s.sectionTitle}>Acesso rápido</Text>
       <View style={s.quickGrid}>
-        <QuickAction icon="heart" tint="#c2410c" bg="#fff3e8" label="Dízimos e Doações" sub="PIX e cartão" onPress={onOpenDoacoes} />
-        <QuickAction icon="happy-outline" tint="#3b6d11" bg="#eaf3de" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />
-        <QuickAction icon="checkbox-outline" tint="#185fa5" bg="#e6f1fb" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />
-        <QuickAction icon="musical-notes" tint="#534ab7" bg="#eeedfe" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />
-        <QuickAction icon="school-outline" tint="#0f766e" bg="#e3f5f1" label="Cursos" sub="Escola de discipulado" onPress={onOpenCursos} />
+        {access.giving && <QuickAction icon="heart" tint="#c2410c" bg="#fff3e8" label="Dízimos e Doações" sub="Contribuição por PIX" onPress={onOpenDoacoes} />}
+        {access.children && <QuickAction icon="happy-outline" tint="#3b6d11" bg="#eaf3de" label="Kids Check-in" sub="Entrada/saída da escolinha" onPress={onOpenKids} />}
+        {access.volunteers && <QuickAction icon="checkbox-outline" tint="#185fa5" bg="#e6f1fb" label="Minha Escala" sub="Confirmar serviço" onPress={onOpenEscala} />}
+        {access.volunteers && <QuickAction icon="musical-notes" tint="#534ab7" bg="#eeedfe" label="Ministério Musical" sub="Repertório e cifras" onPress={onOpenMusica} />}
+        {access.journeys && <QuickAction icon="school-outline" tint="#0f766e" bg="#e3f5f1" label="Cursos" sub="Escola de discipulado" onPress={onOpenCursos} />}
       </View>
 
       {/* My cell */}
@@ -895,7 +1120,7 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
       )}
 
       {/* Journey */}
-      <JourneySection primary={primary} user={user} orgId={orgId} />
+      {access.journeys && <JourneySection primary={primary} user={user} orgId={orgId} />}
     </ScrollView>
   );
 }
@@ -912,10 +1137,10 @@ type JourneyStepDef = {
 // Vocabulário alinhado ao JourneyStage do backend (@alvo/types): exploring → connecting/grounding → serving.
 const JOURNEY_STEPS: JourneyStepDef[] = [
   { key: "exploring", label: "Chegou", icon: "footsteps-outline", nudge: "" },
-  { key: "connecting", label: "Conectado", icon: "people", nudge: "Confirme presença na sua célula para avançar" },
-  { key: "grounding", label: "Enraizado", icon: "leaf", nudge: "Complete o curso de novos membros" },
+  { key: "connecting", label: "Conectado", icon: "people", nudge: "Participe dos encontros da sua célula" },
+  { key: "grounding", label: "Enraizado", icon: "leaf", nudge: "Conheça os cursos publicados pela sua igreja" },
   { key: "serving", label: "Servindo", icon: "hand-left-outline", nudge: "" },
-  { key: "developing", label: "Crescendo", icon: "trending-up", nudge: "Inicie um projeto de missões" },
+  { key: "developing", label: "Crescendo", icon: "trending-up", nudge: "Converse com sua liderança sobre os próximos passos" },
   { key: "leading", label: "Liderando", icon: "star", nudge: "" }
 ];
 
@@ -928,7 +1153,7 @@ const JOURNEY_STAGE_INDEX: Record<string, number> = {
   leading: 5
 };
 
-function JourneySection({ primary, user, orgId }: { primary: string; user: FirebaseAuthUser; orgId?: string }) {
+function JourneySection({ primary, user, orgId }: { primary: string; user: FirebaseAuthUser; orgId: string }) {
   const [profile, setProfile] = useState<MemberJourneyProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -937,7 +1162,7 @@ function JourneySection({ primary, user, orgId }: { primary: string; user: Fireb
     let cancelled = false;
     async function load() {
       try {
-        const p = await fetchMemberJourneyProfile(firebaseConfig, { organizationId: orgId }, user.uid);
+        const { profile: p } = await memberOperation<{ profile: MemberJourneyProfile | null }>(user, orgId, { action: "journey" });
         if (!cancelled) setProfile(p);
       } catch {
         if (!cancelled) setProfile(null);
@@ -949,7 +1174,7 @@ function JourneySection({ primary, user, orgId }: { primary: string; user: Fireb
     return () => { cancelled = true; };
   }, [orgId, user?.uid]);
 
-  if (loading) return null;
+  if (loading || !profile) return null;
 
   const stage = profile?.currentStage ?? "exploring";
   const stepIndex = JOURNEY_STAGE_INDEX[stage] ?? 0;
@@ -1002,17 +1227,13 @@ function JourneySection({ primary, user, orgId }: { primary: string; user: Fireb
 function AgendaTab({ events, primary, dataReady, onInscricao }: {
   events: Event[]; primary: string; dataReady: boolean; onInscricao: (e: Event) => void;
 }) {
-  const staticEvents = [
-    { id: "s1", name: "Culto de Celebração", startsAt: nextDow(0, 18), type: "culto", paid: false },
-    { id: "s2", name: "Reunião de Célula", startsAt: nextDow(3, 19.5), type: "celula", paid: false },
-    { id: "s3", name: "Retiro de Jovens", startsAt: nextDow(5, 8), type: "retiro", paid: true }
-  ];
-  const list = events.length > 0 ? events : staticEvents;
+  const list = events;
 
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando agenda..." />}
       <Text style={s.sectionTitle}>Próximos Eventos</Text>
+      {dataReady && list.length === 0 && <EmptyState icon="📅" title="Nenhum evento publicado" sub="Os próximos eventos da instituição aparecerão aqui." />}
       {list.map(event => (
         <View key={event.id} style={s.agendaCard}>
           <View style={[s.agendaDate, { backgroundColor: primary }]}>
@@ -1026,14 +1247,14 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
               <View style={[s.badge, { backgroundColor: `${primary}20` }]}>
                 <Text style={[s.badgeText, { color: primary }]}>{eventLabel(event.type)}</Text>
               </View>
-              {"paid" in event && (event as typeof event & { paid?: boolean }).paid && (
+              {event.isPaid && (
                 <View style={[s.badge, { backgroundColor: "#fef3c7" }]}>
                   <Text style={[s.badgeText, { color: "#92400e" }]}>Pago</Text>
                 </View>
               )}
             </View>
-            <TouchableOpacity onPress={() => onInscricao(event as Event)} style={[s.cta, { backgroundColor: primary, marginTop: 10, alignSelf: "flex-start" }]}>
-              <Text style={s.ctaText}>Inscrever-se</Text>
+            <TouchableOpacity onPress={() => onInscricao(event)} style={[s.cta, { backgroundColor: primary, marginTop: 10, alignSelf: "flex-start" }]}>
+              <Text style={s.ctaText}>Ver inscrição / ingresso</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1044,21 +1265,35 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { groups: Group[]; primary: string; dataReady: boolean; orgId?: string; user: FirebaseAuthUser; onOpenLider: () => void }) {
-  const [sel, setSel] = useState<Group | null>(groups[0] ?? null);
-  const [confirmed, setConfirmed] = useState(false);
+function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLead, onRefresh }: { groups: MyGroup[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: () => void; canLead: boolean; onRefresh: () => Promise<void> }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const sel = groups.find(g => g.id === selectedId) ?? groups[0];
+  const [confirming, setConfirming] = useState(false);
+  const attendanceBusy = useRef(false);
+  async function confirmAttendance() {
+    if (!sel?.meeting || attendanceBusy.current) return;
+    attendanceBusy.current = true; setConfirming(true);
+    try {
+      await memberOperation(user, orgId, { action: "attendance", groupId: sel.id, meetingId: sel.meeting.id });
+      await onRefresh();
+      Alert.alert("Presença registrada", "Sua confirmação foi salva para este encontro.");
+    } catch (error) { Alert.alert("Presença não registrada", error instanceof Error ? error.message : "Tente novamente."); }
+    finally { attendanceBusy.current = false; setConfirming(false); }
+  }
   const [prayer, setPrayer] = useState(""); const [prayerSent, setPrayerSent] = useState(false); const [prayerSending, setPrayerSending] = useState(false);
   const [prayerPublic, setPrayerPublic] = useState(false);
   const [wall, setWall] = useState<PrayerRequest[]>([]);
   const [wallLoading, setWallLoading] = useState(true);
+  const [wallError, setWallError] = useState("");
   const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
 
   async function loadWall() {
+    setWallLoading(true); setWallError("");
     try {
       const items = await fetchPublicPrayerWall(firebaseConfig, { organizationId: orgId }, 50);
       setWall(items);
     } catch {
-      // silencioso — mural é conteúdo secundário, não deve travar a tela
+      setWallError("Não foi possível carregar o mural de oração.");
     } finally {
       setWallLoading(false);
     }
@@ -1100,27 +1335,21 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
     }
   }
 
-  const announcements = [
-    "Próxima reunião: confirme sua presença até amanhã.",
-    "Estudo desta semana: Filipenses 4:4-7 — Paz de Deus.",
-    "Lembre-se de trazer um amigo novo na semana que vem!"
-  ];
-
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando células..." />}
 
       {/* Banner exclusivo do líder — visível para group_leader e acima */}
-      <TouchableOpacity style={[s.liderBanner, { borderColor: primary }]} onPress={onOpenLider} activeOpacity={0.85}>
+      {canLead && <TouchableOpacity style={[s.liderBanner, { borderColor: primary }]} onPress={onOpenLider} activeOpacity={0.85}>
         <View style={[s.liderBannerIcon, { backgroundColor: primary }]}>
           <Text style={{ fontSize: 22 }}>🎯</Text>
         </View>
         <View style={s.fill}>
           <Text style={[s.liderBannerTitle, { color: primary }]}>Área do Líder</Text>
-          <Text style={s.liderBannerSub}>Roteiro, dinâmica e ferramentas de IA para o seu encontro</Text>
+          <Text style={s.liderBannerSub}>Roteiro, dinâmica e ferramentas de Sabedoria Pastoral para o seu encontro</Text>
         </View>
         <Text style={[s.menuChev, { color: primary }]}>›</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {groups.length === 0 && dataReady && (
         <EmptyState icon="🤝" title="Nenhuma célula encontrada" sub="Entre em contato com sua liderança para ser adicionado a uma célula." />
@@ -1128,7 +1357,7 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
       {groups.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
           {groups.map(g => (
-            <Pressable key={g.id} style={[s.chip, sel?.id === g.id && { backgroundColor: primary }]} onPress={() => { setSel(g); setConfirmed(false); }}>
+            <Pressable key={g.id} style={[s.chip, sel?.id === g.id && { backgroundColor: primary }]} onPress={() => { setSelectedId(g.id); }}>
               <Text style={[s.chipText, sel?.id === g.id && { color: "#fff" }]}>{g.name}</Text>
             </Pressable>
           ))}
@@ -1143,24 +1372,19 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
 
           <Text style={s.sectionTitle}>Presença</Text>
           <View style={s.card}>
-            {confirmed
-              ? <View style={s.row}><Text style={{ fontSize: 22, color: primary }}>✓</Text><Text style={[s.cardTitle, { marginLeft: 8 }]}>Presença confirmada!</Text></View>
-              : <Btn label="Confirmar presença" onPress={() => setConfirmed(true)} color={primary} />
-            }
+            {sel?.meeting?.attendanceStatus === "present"
+              ? <Text style={s.cardTitle}>✓ Presença registrada neste encontro</Text>
+              : sel?.meeting && !sel.meeting.recordedByLeader
+                ? <><Text style={s.cardMeta}>{formatDate(sel.meeting.startsAt)} · {formatHour(sel.meeting.startsAt)}</Text><Btn label="Confirmar minha presença" onPress={() => void confirmAttendance()} loading={confirming} color={primary} /></>
+                : <Text style={s.cardMeta}>{sel?.meeting?.recordedByLeader ? "A liderança já registrou a presença. Procure o líder para revisão." : "A confirmação abre três horas antes do encontro e encerra três horas depois do início. Aguarde um encontro agendado pela liderança."}</Text>}
           </View>
-
-          <Text style={s.sectionTitle}>Avisos</Text>
-          {announcements.map((a, i) => (
-            <View key={i} style={s.announcementRow}>
-              <Text style={{ color: primary, marginRight: 8, fontSize: 10, marginTop: 4 }}>●</Text>
-              <Text style={[s.cardMeta, { flex: 1, lineHeight: 20 }]}>{a}</Text>
-            </View>
-          ))}
-
+        </>
+      )}
+      <>
           <Text style={s.sectionTitle}>Pedido de Oração</Text>
           <View style={s.card}>
             {prayerSent
-              ? <View style={s.row}><Text style={{ fontSize: 22 }}>🙏</Text><Text style={[s.cardMeta, { flex: 1, marginLeft: 8 }]}>Pedido enviado! Sua liderança irá orar por você.</Text></View>
+              ? <View style={s.row}><Text style={{ fontSize: 22 }}>🙏</Text><Text style={[s.cardMeta, { flex: 1, marginLeft: 8 }]}>Pedido enviado! Sua liderança irá orar por você.</Text><Btn label="Novo pedido" onPress={() => { setPrayer(""); setPrayerSent(false); }} variant="outline" /></View>
               : <>
                 <TextInput style={s.prayerInput} value={prayer} onChangeText={setPrayer} placeholder="Escreva seu pedido de oração..." placeholderTextColor="#9ca3af" multiline numberOfLines={4} textAlignVertical="top" />
                 <View style={[s.row, { marginTop: 12, justifyContent: "space-between" }]}>
@@ -1174,7 +1398,8 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
 
           <Text style={s.sectionTitle}>Mural de Oração</Text>
           {wallLoading && <LoadingRow primary={primary} label="Carregando mural..." />}
-          {!wallLoading && wall.length === 0 && (
+          {!!wallError && <><Text style={s.errorText}>{wallError}</Text><Btn label="Atualizar mural" onPress={() => void loadWall()} loading={wallLoading} variant="outline" /></>}
+          {!wallLoading && !wallError && wall.length === 0 && (
             <EmptyState icon="🙏" title="Mural vazio" sub="Quando alguém compartilhar um pedido publicamente, ele aparece aqui para a comunidade orar junto." />
           )}
           {wall.map(r => (
@@ -1192,18 +1417,17 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider }: { g
               </TouchableOpacity>
             </View>
           ))}
-        </>
-      )}
+      </>
     </ScrollView>
   );
 }
 
 // ─── Perfil Tab ───────────────────────────────────────────────────────────────
 
-function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil }: {
-  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null; orgId?: string;
+function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSignOut, onOpenEscala, onOpenMusica, onOpenMeuPerfil, access, onChooseInstitution }: {
+  user: FirebaseAuthUser; orgName: string; linkedOrg: Organization | null; orgId: string;
   primary: string; pushToken: string | null; onSignOut: () => void;
-  onOpenEscala: () => void; onOpenMusica: () => void; onOpenMeuPerfil: () => void;
+  onOpenEscala: () => void; onOpenMusica: () => void; onOpenMeuPerfil: () => void; access: MobileCapabilities; onChooseInstitution: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
@@ -1226,6 +1450,8 @@ function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSign
         <Text style={s.cardMeta}>{linkedOrg?.slug ? `Código: ${linkedOrg.slug}` : "Igreja não vinculada"}</Text>
       </View>
 
+      {access.marketplace && <MemberPassCard key={`${orgId}:${user.uid}`} user={user} organizationId={orgId} apiBaseUrl={WEB_API_URL} primary={primary} />}
+
       <Text style={s.sectionTitle}>Meu Perfil</Text>
       <TouchableOpacity style={s.menuRow} onPress={onOpenMeuPerfil}>
         <Text style={s.menuIcon}>✨</Text>
@@ -1236,6 +1462,7 @@ function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSign
         <Text style={s.menuChev}>›</Text>
       </TouchableOpacity>
 
+      {access.volunteers && <>
       <Text style={s.sectionTitle}>Serviço</Text>
       <TouchableOpacity style={s.menuRow} onPress={onOpenEscala}>
         <Text style={s.menuIcon}>📋</Text>
@@ -1248,14 +1475,20 @@ function PerfilTab({ user, orgName, linkedOrg, orgId, primary, pushToken, onSign
         <Text style={s.menuChev}>›</Text>
       </TouchableOpacity>
 
+      </>}
       <Text style={s.sectionTitle}>Minha Conta</Text>
-      {[{ label: "Status", value: "Membro ativo" }, { label: "Jornada", value: "Conectando" }, { label: "Tribo", value: "A definir" }].map(item => (
+      {[{ label: "Acesso", value: "Ativo nesta instituição" }].map(item => (
         <View key={item.label} style={s.infoRow}>
           <Text style={s.infoLabel}>{item.label}</Text>
           <Text style={s.infoValue}>{item.value}</Text>
         </View>
       ))}
 
+      <Text style={s.sectionTitle}>Ajuda e privacidade</Text>
+      <Btn label="Falar com o suporte" variant="outline" onPress={() => void Linking.openURL("mailto:contato@plataformaesdras.com.br").catch(() => Alert.alert("Suporte", "contato@plataformaesdras.com.br"))} />
+      <Btn label="Política de privacidade" variant="outline" onPress={() => void Linking.openURL(`${WEB_API_URL}/privacy`).catch(() => Alert.alert("Não foi possível abrir", "Confira sua conexão."))} />
+      <Btn label="Solicitar exclusão da conta" variant="outline" onPress={() => void Linking.openURL(`${WEB_API_URL}/account-deletion`).catch(() => Alert.alert("Não foi possível abrir", "Escreva para contato@plataformaesdras.com.br."))} />
+      <Btn label="Trocar instituição" onPress={onChooseInstitution} variant="outline" style={{ marginTop: 8 }} />
       <Btn label="Sair da conta" onPress={onSignOut} variant="danger" style={{ marginTop: 8 }} />
     </ScrollView>
   );
@@ -1292,7 +1525,7 @@ const WEEKDAYS = [
   { value: "dom", label: "Dom" },
 ];
 
-function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [interests, setInterests] = useState<string[]>([]);
   const [serving, setServing] = useState<string>("");
   const [availability, setAvailability] = useState<string[]>([]);
@@ -1302,6 +1535,8 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [revision, setRevision] = useState(0);
 
   // Load existing profile from Firestore users doc
   useEffect(() => {
@@ -1312,7 +1547,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
         const sdk = await import("@alvo/firebase");
         const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
         if (!cancelled && existing) {
-          const d = existing as any;
+          const d = existing;
           if (d.ministerialInterests) setInterests(d.ministerialInterests);
           if (d.servingProfile) setServing(d.servingProfile);
           if (d.availability) setAvailability(d.availability);
@@ -1320,19 +1555,19 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
           if (d.educationLevel) setEducation(d.educationLevel);
           if (d.householdIncomeRange) setIncome(d.householdIncomeRange);
         }
-      } catch {}
+      } catch { if (!cancelled) setLoadError("Não foi possível carregar seu perfil. Tente novamente antes de editar."); }
       finally { if (!cancelled) setLoaded(true); }
     }
-    void load();
+    setLoaded(false); setLoadError(""); void load();
     return () => { cancelled = true; };
-  }, [user.uid, orgId]);
+  }, [user.uid, orgId, revision]);
 
   async function handleSave() {
+    if (saving || !loaded || loadError) return;
     if (!orgId) { Alert.alert("Erro", "Organização não vinculada."); return; }
     setSaving(true);
     try {
       const sdk = await import("@alvo/firebase");
-      // reuse ensureTenantUserAccess with merge to save ministerial profile fields
       await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
         ministerialInterests: interests,
         servingProfile: serving || undefined,
@@ -1344,7 +1579,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
-      console.error(e);
+      Alert.alert("Perfil não salvo", "Confira a conexão e tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -1360,9 +1595,10 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Perfil Ministerial" onBack={onBack} />
+      {!!loadError && <View style={{ padding: 16 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => setRevision(r => r + 1)} /></View>}
       {!loaded ? (
         <View style={[s.fill, s.center]}><ActivityIndicator color={primary} /></View>
-      ) : (
+      ) : loadError ? null : (
         <ScrollView contentContainerStyle={[s.tabContent, { paddingBottom: 40 }]} keyboardShouldPersistTaps="handled">
 
           {/* Informações pessoais */}
@@ -1452,7 +1688,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
           )}
 
           <Btn label={saving ? "Salvando..." : "Salvar Perfil"} onPress={handleSave}
-            loading={saving} disabled={saving} color={primary} style={{ marginTop: 8 }} />
+            loading={saving} disabled={saving || !loaded || Boolean(loadError)} color={primary} style={{ marginTop: 8 }} />
         </ScrollView>
       )}
     </View>
@@ -1479,11 +1715,14 @@ const mpStyles = StyleSheet.create({
 // ─── Doações Screen ───────────────────────────────────────────────────────────
 
 function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
-  primary: string; orgName: string; orgId?: string; user: FirebaseAuthUser; onBack: () => void;
+  primary: string; orgName: string; orgId: string; user: FirebaseAuthUser; onBack: () => void;
 }) {
+  const givingRequestId = useRef<string>("");
+  const givingBusy = useRef(false);
+  const givingFingerprint = useRef("");
   const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
-  const [method, setMethod] = useState<"pix" | "cartao">("pix");
+  const method = "pix";
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -1495,6 +1734,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   const presets = ["50", "100", "200", "500"];
 
   async function pickReceipt() {
+    try {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.4,
@@ -1505,13 +1745,15 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
       const b64 = result.assets[0].base64 ?? null;
       // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
       // Recorte a imagem se for grande demais.
-      if (b64 && b64.length > 1_300_000) {
+      if (b64 && b64.length > 680000) {
         Alert.alert("Imagem muito grande", "Recorte só o comprovante ou tire uma foto mais fechada e tente de novo.");
         return;
       }
+      if (!b64 || !imageDataUrl(b64)) { Alert.alert("Comprovante indisponível", "Selecione uma imagem JPEG ou PNG."); return; }
       setReceiptUri(result.assets[0].uri);
       setReceiptBase64(b64);
     }
+    } catch { Alert.alert("Não foi possível abrir as fotos", "Confira as permissões do aplicativo."); }
   }
 
   async function sharePixKey() {
@@ -1520,7 +1762,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   }
 
   const finalAmount = amount === "custom" ? customAmount : amount;
-  const finalAmountNumber = Number(finalAmount);
+  const finalAmountNumber = parseContributionAmount(finalAmount);
 
   // Gera o PIX real (BR Code + QR) assim que método=PIX e valor válido —
   // via /api/giving/pix, que lê a chave PIX que a igreja configurou de
@@ -1530,7 +1772,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     if (method !== "pix" || !finalAmountNumber || finalAmountNumber <= 0) { setPix(null); return; }
     let cancelled = false;
     async function loadPix() {
-      setPixLoading(true); setPixError(null);
+      setPix(null); setPixLoading(true); setPixError(null);
       try {
         const idToken = await user.getIdToken();
         const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
@@ -1552,45 +1794,22 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   }, [method, finalAmountNumber, orgId, type]);
 
   async function confirmContribution() {
+    if (givingBusy.current) return;
     if (!finalAmountNumber || finalAmountNumber <= 0) { Alert.alert("Selecione um valor"); return; }
-    if (method === "pix" && !pix) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
-    setSubmitting(true);
+    if (method === "pix" && (!pix || pixLoading || pixError)) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
+    givingBusy.current = true; setSubmitting(true);
     try {
-      const { addMemberContribution, saveContributionReceipt } = await import("@alvo/firebase");
-      // Salva o comprovante primeiro (doc separado); se falhar, registra a
-      // contribuição mesmo assim — não travar o registro do valor.
-      let receiptId: string | undefined;
-      if (receiptBase64) {
-        try {
-          receiptId = await saveContributionReceipt(firebaseConfig, { organizationId: orgId }, {
-            organizationId: orgId,
-            imageBase64: receiptBase64,
-            createdByUserId: user.uid,
-          });
-        } catch (e: any) {
-          if (__DEV__) console.warn("salvar comprovante falhou:", e?.code || e?.message || e);
-        }
-      }
-      await addMemberContribution(firebaseConfig, { organizationId: orgId }, {
-        organizationId: orgId,
-        userId: user.uid,
-        contributorName: user.displayName ?? user.email ?? "Membro",
-        amount: finalAmountNumber,
-        type,
-        date: new Date().toISOString().slice(0, 10),
-        description: `Contribuição via app${receiptId ? " (com comprovante)" : ""}`,
-        registeredBy: user.uid,
-        registeredAt: new Date().toISOString(),
-        status: "pending",
-        method: "pix",
-        receiptId
-      });
+      const fingerprint = JSON.stringify([finalAmountNumber, type, receiptBase64]);
+      if (givingFingerprint.current !== fingerprint) { givingRequestId.current = Crypto.randomUUID(); givingFingerprint.current = fingerprint; }
+      const response = await fetch(`${WEB_API_URL}/api/finance`, { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}`, "content-type": "application/json" }, body: JSON.stringify({ action: "declare", organizationId: orgId, requestId: givingRequestId.current, amount: finalAmountNumber, type, dataUrl: receiptBase64 ? imageDataUrl(receiptBase64) : undefined }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível registrar.");
       setSubmitted(true);
     } catch (e: any) {
       if (__DEV__) console.warn("addMemberContribution falhou:", e?.code || e?.message || e);
-      Alert.alert("Não foi possível registrar", "Sua contribuição via PIX foi feita normalmente, mas não conseguimos salvar o registro aqui. Avise a secretaria.");
+      Alert.alert("Não foi possível registrar", e instanceof Error ? e.message : "Não conseguimos salvar o registro. Confira o pagamento no banco e tente novamente.");
     } finally {
-      setSubmitting(false);
+      givingBusy.current = false; setSubmitting(false);
     }
   }
 
@@ -1644,17 +1863,6 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
           <TextInput style={[s.input, { marginTop: 10 }]} value={customAmount} onChangeText={setCustomAmount} placeholder="R$ 0,00" keyboardType="numeric" placeholderTextColor="#9ca3af" />
         )}
 
-        {/* Method */}
-        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Forma de pagamento</Text>
-        <View style={s.row}>
-          {([{ id: "pix", label: "PIX" }, { id: "cartao", label: "Cartão de crédito" }] as const).map(m => (
-            <Pressable key={m.id} style={[s.methodBtn, method === m.id && { borderColor: primary, backgroundColor: `${primary}12` }]} onPress={() => setMethod(m.id)}>
-              <Text style={{ fontSize: 20, marginBottom: 4 }}>{m.id === "pix" ? "⚡" : "💳"}</Text>
-              <Text style={[s.methodLabel, method === m.id && { color: primary, fontWeight: "700" }]}>{m.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
         {/* PIX details */}
         {method === "pix" && (
           <View style={[s.card, { marginTop: 12 }]}>
@@ -1680,26 +1888,12 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
                     <Text style={s.pixKey} selectable numberOfLines={1}>{pix.pixKey}</Text>
                   </View>
                   <TouchableOpacity style={[s.copyBtn, { borderColor: primary }]} onPress={sharePixKey}>
-                    <Text style={[s.copyBtnText, { color: primary }]}>Copiar código</Text>
+                    <Text style={[s.copyBtnText, { color: primary }]}>Compartilhar PIX</Text>
                   </TouchableOpacity>
                 </View>
                 <Text style={s.pixLabel}>Beneficiário: <Text style={{ fontWeight: "700" }}>{pix.receiverName}</Text></Text>
               </>
             ) : null}
-          </View>
-        )}
-
-        {/* Card — future gateway */}
-        {method === "cartao" && (
-          <View style={[s.card, { marginTop: 12, alignItems: "center", paddingVertical: 24 }]}>
-            <Text style={{ fontSize: 36, marginBottom: 12 }}>💳</Text>
-            <Text style={[s.cardTitle, { textAlign: "center" }]}>Pagamento por cartão</Text>
-            <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>
-              Em breve disponível via gateway de pagamento integrado.{"\n"}Por ora, use o PIX acima ou procure a secretaria.
-            </Text>
-            <View style={[s.badge, { backgroundColor: "#fef3c7", marginTop: 12 }]}>
-              <Text style={[s.badgeText, { color: "#92400e" }]}>Em breve</Text>
-            </View>
           </View>
         )}
 
@@ -1722,7 +1916,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         )}
 
         <Btn
-          label={finalAmount ? `Já paguei — R$ ${finalAmount}` : "Confirmar contribuição"}
+          label={finalAmountNumber ? `Já paguei — R$ ${finalAmountNumber.toFixed(2).replace(".", ",")}` : "Informe um valor válido"}
           onPress={confirmContribution}
           loading={submitting}
           disabled={method === "pix" && (pixLoading || !pix)}
@@ -1741,16 +1935,11 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
 
 // ─── Kids Check-in Screen ─────────────────────────────────────────────────────
 
-const DEFAULT_KIDS_ROOMS = ["Berçário (0–2 anos)", "Maternal (3–4 anos)", "Jardim (5–6 anos)", "Primário (7–9 anos)", "Juniores (10–12 anos)"];
 
-function newKidsToken() {
-  return `KID-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-}
 
-// Segurança Kids — fluxo real: o responsável faz o check-in do próprio filho
-// (gera o crachá digital com QR no celular dele, com foto e consentimento) e o
-// voluntário escalado escaneia o QR na retirada para validar e dar baixa.
-function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+// A equipe registra a entrada; responsáveis consultam crachás já vinculados.
+// O vínculo com o responsável e a retirada transacional seguem no próximo marco Kids.
+function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [canOperate, setCanOperate] = useState(false);
   const [mode, setMode] = useState<"guardian" | "volunteer">("guardian");
@@ -1759,6 +1948,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
   // form de check-in (responsável)
   const [childName, setChildName] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [authorizedNames, setAuthorizedNames] = useState("");
+  const [guardianConfirmed, setGuardianConfirmed] = useState(false);
+  const createAttempt = useRef(Crypto.randomUUID());
   const [room, setRoom] = useState<{ id: string; name: string } | null>(null);
   const [allergies, setAllergies] = useState("");
   const [restrictions, setRestrictions] = useState("");
@@ -1770,36 +1964,49 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState<KidsCheckIn | null>(null);
+  const [createdBadge, setCreatedBadge] = useState<KidsCheckIn | null>(null);
   const scanLock = useRef(false);
+  const checkoutAttempt = useRef(Crypto.randomUUID());
+  const [checkoutProof, setCheckoutProof] = useState("");
+  const [receiverId, setReceiverId] = useState("");
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const [releasing, setReleasing] = useState(false);
 
+  function back() {
+    if (saving || releasing) return;
+    if (scanning) setScanning(false);
+    else if (scanned) setScanned(null);
+    else if (createdBadge) setCreatedBadge(null);
+    else onBack();
+  }
+  useAndroidBack(true, back);
+  const kidsOperation = async (body: object) => {
+    const response = await fetch(`${WEB_API_URL}/api/kids/operations`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` }, body: JSON.stringify({ ...body, organizationId: orgId }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Operação Kids indisponível.");
+    return data;
+  };
+  const [loadError, setLoadError] = useState("");
   const load = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError("");
     try {
       const sdk = await import("@alvo/firebase");
       const ctx = { organizationId: orgId };
-      const [settings, tenantUser, checkIns] = await Promise.all([
-        sdk.fetchKidsSettings(firebaseConfig, ctx).catch(() => null) as Promise<OrganizationKidsSettings | null>,
-        sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid }).catch(() => null),
-        sdk.fetchActiveKidsCheckIns(firebaseConfig, ctx).catch(() => [] as KidsCheckIn[])
-      ]);
-      const roles = (((tenantUser as { roles?: AppRole[] } | null)?.roles) ?? []) as AppRole[];
-      const qrRoles = settings?.qrGeneratorRoles ?? [];
-      const isAdmin = roles.some((r) => r === "super_admin" || r === "church_admin");
-      const op = isAdmin || roles.some((r) => qrRoles.includes(r));
+      const [settings, tenantUser] = await Promise.all([sdk.fetchKidsSettings(firebaseConfig, ctx), sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid })]);
+      const roles = tenantUser?.roles ?? [];
+      const op = roles.some(r => ["super_admin", "church_admin", "pastor", "secretary", ...(settings?.qrGeneratorRoles ?? [])].includes(r));
       setCanOperate(op);
-      setActive(checkIns);
-      let rms: Array<{ id: string; name: string }> = [];
-      if (settings?.kidsTeamIds?.length) {
-        const teams = (await sdk.fetchServiceTeams(firebaseConfig, ctx, 50).catch(() => [])) as ServiceTeam[];
-        rms = teams.filter((t) => settings.kidsTeamIds.includes(t.id)).map((t) => ({ id: t.id, name: t.name }));
-      }
-      if (!rms.length) rms = DEFAULT_KIDS_ROOMS.map((n, i) => ({ id: `room_${i}`, name: n }));
-      setRooms(rms);
-    } finally {
-      setLoading(false);
-    }
+      if (op) {
+        const { sessions } = await kidsOperation({ action: "sessions" });
+        setRooms(sessions.map((s: any) => ({ id: s.id, name: `${s.roomName} · ${s.eventName} (${s.occupancy}/${s.capacity})` })));
+        const lists = await Promise.all(sessions.map((s: any) => kidsOperation({ action: "list", sessionId: s.id })));
+        const mine = await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid);
+        setActive([...new Map<string, KidsCheckIn>([...lists.flatMap((list: any) => list.checkIns), ...mine].map(c => [c.id, c])).values()]);
+      } else { setRooms([]); setActive(await sdk.fetchMyActiveKidsCheckIns(firebaseConfig, ctx, user.uid)); }
+    } catch (error) { setCanOperate(false); setActive([]); setRooms([]); setLoadError(error instanceof Error ? error.message : "Não foi possível carregar o Kids."); }
+    finally { setLoading(false); }
   };
-  useEffect(() => { void load(); }, [orgId, user.uid]);
+  useEffect(() => { setActive([]); setRoom(null); setScanned(null); setCreatedBadge(null); void load(); const timer = setInterval(() => void load(), 60000); return () => clearInterval(timer); }, [orgId, user.uid]);
 
   const myKids = active.filter((c) => c.parentId === user.uid || c.authorizedPickUpIds.includes(user.uid));
 
@@ -1807,40 +2014,38 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) { Alert.alert("Permita o acesso à câmera para tirar a foto."); return; }
     const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.4, base64: true, allowsEditing: true, aspect: [1, 1] });
-    if (!r.canceled && r.assets[0]?.base64) setPhoto(`data:image/jpeg;base64,${r.assets[0].base64}`);
+    if (!r.canceled && r.assets[0]?.base64) {
+      const dataUrl = imageDataUrl(r.assets[0].base64);
+      if (dataUrl) setPhoto(dataUrl);
+      else Alert.alert("Formato indisponível", "Use uma foto JPEG ou PNG.");
+    }
   }
 
   async function doCheckIn() {
+    if (!canOperate) { Alert.alert("A entrada deve ser registrada pela equipe Kids."); return; }
+    if (!guardianName.trim() || !guardianConfirmed) { Alert.alert("Confira o responsável e as autorizações antes de registrar."); return; }
     if (!childName.trim() || !room) { Alert.alert("Preencha o nome da criança e a sala."); return; }
     if (photo && !consent) { Alert.alert("Marque o consentimento para usar a foto."); return; }
     setSaving(true);
     try {
-      const sdk = await import("@alvo/firebase");
-      const token = newKidsToken();
-      const nowIso = new Date().toISOString();
-      const checkIn: KidsCheckIn = {
-        id: token,
-        organizationId: orgId,
-        childId: `quick_${token}`,
-        parentId: user.uid,
-        authorizedPickUpIds: [user.uid],
-        checkedInAt: nowIso,
-        checkedInByUserId: user.uid,
-        status: "checked_in",
-        serviceTeamId: room.id.startsWith("room_") ? undefined : room.id,
-        roomCode: room.name,
-        securityToken: token,
-        childName: childName.trim(),
-        guardianName: user.displayName ?? user.email ?? undefined,
-        allergies: allergies.trim() || undefined,
-        securityRestrictions: restrictions.trim() || undefined,
-        photoUrl: photo ?? undefined,
-        photoConsentAt: photo && consent ? nowIso : undefined
-      };
-      await sdk.saveKidsCheckIn(firebaseConfig, { organizationId: orgId }, checkIn);
+      const token = await user.getIdToken();
+      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_in", organizationId: orgId, requestId: createAttempt.current, childName, sessionId: room.id, guardianName, guardianEmail, authorizedNames: authorizedNames.split(",").map(n => n.trim()).filter(Boolean), allergies, securityRestrictions: restrictions, identityConfirmed: guardianConfirmed }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      const checkIn: KidsCheckIn = data.checkIn;
+      createAttempt.current = Crypto.randomUUID();
+      if (photo) {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch(`${WEB_API_URL}/api/kids/photo`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ organizationId: orgId, checkInId: checkIn.id, dataUrl: photo, consent }) });
+          if (!response.ok) throw new Error((await response.json()).error);
+        } catch { Alert.alert("Entrada registrada, foto não salva", "Peça à equipe para anexar a foto pelo painel. Não refaça o check-in."); }
+      }
+      setCreatedBadge(checkIn);
       setActive((p) => [checkIn, ...p]);
+      setGuardianName(""); setGuardianEmail(""); setAuthorizedNames(""); setGuardianConfirmed(false);
       setChildName(""); setRoom(null); setAllergies(""); setRestrictions(""); setPhoto(null); setConsent(false);
-      Alert.alert("Check-in feito!", "O crachá com o QR está disponível abaixo. Mostre-o na retirada.");
+      Alert.alert("Check-in feito!", "O responsável com conta vinculada verá o crachá no aplicativo. Para responsável sem conta, entregue o código: " + checkIn.pickupCode);
     } catch (e) {
       Alert.alert("Erro ao registrar", e instanceof Error ? e.message : "Tente novamente.");
     } finally {
@@ -1853,11 +2058,11 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
     scanLock.current = true;
     try {
       const sdk = await import("@alvo/firebase");
-      const ci = await sdk.fetchKidsCheckInByToken(firebaseConfig, { organizationId: orgId }, data.trim());
+      const ci = (await kidsOperation({ action: "lookup", proof: data.trim() })).checkIn;
       setScanning(false);
       if (!ci) { Alert.alert("QR inválido", "Nenhum check-in encontrado para este código."); }
       else if (ci.status !== "checked_in") { Alert.alert("Já retirada", "Esta criança não está com check-in ativo."); }
-      else setScanned(ci);
+      else { setScanned(ci); setCheckoutProof(data.trim()); setReceiverId(""); setIdentityConfirmed(false); checkoutAttempt.current = Crypto.randomUUID(); }
     } catch {
       Alert.alert("Erro", "Não foi possível ler o check-in.");
     } finally {
@@ -1866,30 +2071,38 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
   }
 
   async function confirmCheckout() {
-    if (!scanned) return;
+    if (!scanned || releasing || !identityConfirmed || !receiverId) return;
+    setReleasing(true);
     try {
-      const sdk = await import("@alvo/firebase");
-      await sdk.checkoutKidsCheckIn(firebaseConfig, { organizationId: orgId }, scanned.id, user.uid);
-      setActive((p) => p.filter((c) => c.id !== scanned.id));
-      setScanned(null);
-      Alert.alert("Retirada confirmada", "Criança liberada com sucesso.");
-    } catch (e) {
-      Alert.alert("Erro", e instanceof Error ? e.message : "Tente novamente.");
-    }
+      const token = await user.getIdToken();
+      const response = await fetch(`${WEB_API_URL}/api/kids/custody`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "check_out", organizationId: orgId, checkInId: scanned.id, requestId: checkoutAttempt.current, proof: checkoutProof, receiverId, identityConfirmed, expectedGuardianVersion: scanned.guardianVersion ?? 0 }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setCreatedBadge(null);
+      setActive(p => p.filter(c => c.id !== scanned.id)); setScanned(null);
+      Alert.alert("Retirada confirmada", "A entrega foi registrada com o operador e a pessoa autorizada.");
+    } catch (error) { Alert.alert("Retirada não confirmada", error instanceof Error ? error.message : "Confira a conexão e tente novamente."); }
+    finally { setReleasing(false); }
   }
 
   if (loading) {
-    return <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}><ModalHeader title="Segurança Kids" onBack={onBack} /><View style={{ padding: 40, alignItems: "center" }}><ActivityIndicator color={primary} /></View></View>;
+    return <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}><ModalHeader title="Segurança Kids" onBack={back} /><View style={{ padding: 40, alignItems: "center" }}><ActivityIndicator color={primary} /></View></View>;
   }
 
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
-      <ModalHeader title="Segurança Kids" onBack={onBack} />
+      <ModalHeader title="Segurança Kids" onBack={back} />
+      {createdBadge && <View style={s.card}>
+        <Text style={s.cardTitle}>Entrada registrada: {createdBadge.childName}</Text>
+        <KidsPrivateImage user={user} organizationId={orgId} checkInId={createdBadge.id} kind="qr" apiBaseUrl={WEB_API_URL} size={150} />
+        <Text selectable style={s.cardMeta}>Código para o responsável: {createdBadge.pickupCode}</Text>
+        <Btn label="Fechar crachá" onPress={() => setCreatedBadge(null)} variant="outline" color={primary} />
+      </View>}
 
       {canOperate && (
         <View style={s.segControl}>
           <Pressable style={[s.seg, mode === "guardian" && { backgroundColor: primary }]} onPress={() => setMode("guardian")}>
-            <Text style={[s.segText, mode === "guardian" && { color: "#fff" }]}>Responsável</Text>
+            <Text style={[s.segText, mode === "guardian" && { color: "#fff" }]}>Entrada / crachás</Text>
           </Pressable>
           <Pressable style={[s.seg, mode === "volunteer" && { backgroundColor: primary }]} onPress={() => setMode("volunteer")}>
             <Text style={[s.segText, mode === "volunteer" && { color: "#fff" }]}>Voluntário (sala)</Text>
@@ -1905,24 +2118,28 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
               <Text style={[s.label, { marginBottom: 8 }]}>Crachás ativos</Text>
               {myKids.map((c) => (
                 <View key={c.id} style={[s.card, { alignItems: "center", marginBottom: 12 }]}>
-                  {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 64, height: 64, borderRadius: 32, marginBottom: 8 }} /> : null}
+                  <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="photo" apiBaseUrl={WEB_API_URL} size={64} />
                   <Text style={s.cardTitle}>{c.childName}</Text>
                   <Text style={s.cardMeta}>{c.roomCode}</Text>
                   {c.allergies ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>Alergias: {c.allergies}</Text> : null}
-                  <Image source={{ uri: `${WEB_API_URL}/api/kids/qr?data=${encodeURIComponent(c.securityToken)}` }} style={{ width: 180, height: 180, marginTop: 10 }} />
-                  <View style={[s.codeBox, { borderColor: primary, marginTop: 8 }]}>
-                    <Text style={s.codeLabel}>Código</Text>
-                    <Text style={[s.codeValue, { color: primary }]}>{c.securityToken}</Text>
-                  </View>
+                  <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="qr" apiBaseUrl={WEB_API_URL} size={180} />
                   <Text style={[s.cardMeta, { textAlign: "center", marginTop: 6 }]}>Mostre este QR ao voluntário na retirada.</Text>
                 </View>
               ))}
             </>
           )}
 
+          {!canOperate ? <Text style={s.cardMeta}>Procure a equipe Kids para registrar a entrada. Seus crachás ativos aparecem acima.</Text> : <>
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Fazer check-in</Text>
+          <Field label="Nome do responsável" value={guardianName} onChange={setGuardianName} autoCapitalize="words" />
+          <Field label="E-mail da conta na igreja (opcional)" value={guardianEmail} onChange={setGuardianEmail} autoCapitalize="none" keyboardType="email-address" />
+          <Text style={s.cardMeta}>Deixe o e-mail vazio se o responsável não tiver conta. O operador não será vinculado como responsável automaticamente.</Text>
+          <Field label="Outros autorizados (nomes separados por vírgula)" value={authorizedNames} onChange={setAuthorizedNames} />
+          <View style={s.row}><Switch value={guardianConfirmed} onValueChange={setGuardianConfirmed} /><Text style={[s.cardMeta, s.fill]}>Conferi a identidade, o vínculo da conta informada e a autorização destas pessoas.</Text></View>
           <Field label="Nome da criança" value={childName} onChange={setChildName} autoCapitalize="words" placeholder="Nome completo" />
           <Text style={[s.label, { marginBottom: 8, marginTop: 4 }]}>Sala / Turma</Text>
+          {!!loadError && <Text accessibilityRole="alert">{loadError}</Text>}
+          {!rooms.length && <Text>Nenhuma sessão Kids disponível. A administração deve confirmar sala, evento e equipe no painel.</Text>}
           {rooms.map((r) => (
             <Pressable key={r.id} style={[s.roomRow, room?.id === r.id && { borderColor: primary, backgroundColor: `${primary}10` }]} onPress={() => setRoom(r)}>
               <View style={[s.radioOuter, room?.id === r.id && { borderColor: primary }]}>{room?.id === r.id && <View style={[s.radioInner, { backgroundColor: primary }]} />}</View>
@@ -1937,11 +2154,12 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
             <Btn label={photo ? "Refazer foto" : "Tirar foto da criança"} onPress={takePhoto} variant="outline" color={primary} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
               <Switch value={consent} onValueChange={setConsent} trackColor={{ true: primary }} />
-              <Text style={[s.cardMeta, { flex: 1 }]}>Autorizo a captura e o uso da foto do meu filho(a) para fins de segurança (LGPD).</Text>
+              <Text style={[s.cardMeta, { flex: 1 }]}>O responsável autorizou o uso da foto para identificação neste check-in.</Text>
             </View>
           </View>
 
           <Btn label="Registrar entrada" onPress={doCheckIn} loading={saving} color={primary} style={{ marginTop: 16 }} />
+          </>}
         </ScrollView>
       )}
 
@@ -1950,14 +2168,17 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
         <ScrollView contentContainerStyle={s.tabContent}>
           {scanned ? (
             <View style={[s.card, { alignItems: "center" }]}>
-              {scanned.photoUrl ? <Image source={{ uri: scanned.photoUrl }} style={{ width: 120, height: 120, borderRadius: 60, marginBottom: 10 }} /> : null}
+              <KidsPrivateImage user={user} organizationId={orgId} checkInId={scanned.id} kind="photo" apiBaseUrl={WEB_API_URL} size={120} />
               <Text style={s.cardTitle}>{scanned.childName}</Text>
               <Text style={s.cardMeta}>{scanned.roomCode}</Text>
               <Text style={s.cardMeta}>Responsável: {scanned.guardianName ?? "—"}</Text>
               {scanned.allergies ? <Text style={[s.cardMeta, { color: "#dc2626", marginTop: 4 }]}>⚠️ Alergias: {scanned.allergies}</Text> : null}
               {scanned.securityRestrictions ? <Text style={[s.cardMeta, { color: "#dc2626" }]}>⚠️ {scanned.securityRestrictions}</Text> : null}
-              <Text style={[s.cardMeta, { textAlign: "center", marginTop: 10 }]}>Confira a foto e o responsável antes de liberar.</Text>
-              <Btn label="Confirmar retirada" onPress={confirmCheckout} color="#16a34a" style={{ marginTop: 14, alignSelf: "stretch" }} />
+              {!scanned.guardianVersion && <Text style={s.cardMeta}>Check-in antigo: a equipe deve confirmar os responsáveis pelo painel antes da retirada.</Text>}
+              <Text style={s.label}>Quem está retirando?</Text>
+              {(scanned.pickupPeople ?? []).map(person => <Pressable key={person.id} style={s.roomRow} disabled={releasing} onPress={() => { setReceiverId(person.id); setIdentityConfirmed(false); }}><Text>{receiverId === person.id ? "◉ " : "○ "}{person.name}</Text></Pressable>)}
+              <View style={s.row}><Switch disabled={releasing} value={identityConfirmed} onValueChange={setIdentityConfirmed} /><Text style={[s.cardMeta, s.fill]}>Conferi a identidade de quem retira, a foto disponível e as restrições.</Text></View>
+              <Btn label="Confirmar retirada" disabled={!scanned.guardianVersion || !receiverId || !identityConfirmed} loading={releasing} onPress={confirmCheckout} color="#16a34a" style={{ marginTop: 14, alignSelf: "stretch" }} />
               <Btn label="Cancelar" onPress={() => setScanned(null)} variant="outline" color={primary} style={{ marginTop: 8, alignSelf: "stretch" }} />
             </View>
           ) : scanning ? (
@@ -1989,7 +2210,7 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
               {active.map((c) => (
                 <View key={c.id} style={[s.card, { marginBottom: 8 }]}>
                   <View style={s.row}>
-                    {c.photoUrl ? <Image source={{ uri: c.photoUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10 }} /> : null}
+                    <KidsPrivateImage user={user} organizationId={orgId} checkInId={c.id} kind="photo" apiBaseUrl={WEB_API_URL} size={64} />
                     <View style={s.fill}>
                       <Text style={s.cardTitle}>{c.childName}</Text>
                       <Text style={s.cardMeta}>{c.roomCode}{c.allergies ? ` · ⚠️ ${c.allergies}` : ""}</Text>
@@ -2007,72 +2228,36 @@ function KidsCheckinScreen({ primary, user, orgId, onBack }: { primary: string; 
 
 // ─── Escala Screen ────────────────────────────────────────────────────────────
 
-function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function EscalaScreen({ primary, user, orgId, onBack, refreshRevision }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void; refreshRevision: number }) {
   const [slots, setSlots] = useState<EscalaSlot[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!orgId || !user) return;
-    let cancelled = false;
-    async function load() {
-      try {
-        setLoading(true);
-        const assignments = await fetchServiceAssignments(firebaseConfig, { organizationId: orgId }, 120);
-        const myAssignments = assignments
-          .filter(a => a.personId === user.uid)
-          .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
-          .slice(0, 12);
-
-        const converted: EscalaSlot[] = myAssignments.map(a => ({
-          id: a.id,
-          date: new Date(a.serviceDate).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }),
-          time: new Date(a.serviceDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-          service: a.role,
-          role: a.role,
-          status: a.status === "confirmed" ? "confirmado" : a.status === "declined" ? "recusado" : "pendente"
-        }));
-
-        if (!cancelled) setSlots(converted);
-      } catch {
-        if (!cancelled) setSlots([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-  }, [orgId, user?.uid]);
-
-  async function respond(id: string, status: EscalaStatus, note?: string) {
-    if (!orgId || !user) return;
-    const assignment = slots.find(s => s.id === id);
-    if (!assignment) return;
-
-    const firestoreStatus: ServiceAssignmentStatus = status === "confirmado" ? "confirmed" : "declined";
-    const now = new Date().toISOString();
-
+  const [error, setError] = useState("");
+  const [decliningId, setDecliningId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [responding, setResponding] = useState(false);
+  const responseBusy = useRef(false);
+  const loadVersion = useRef(0);
+  const load = useCallback(async () => {
+    const version=++loadVersion.current;setLoading(true); setError("");
     try {
-      await saveServiceAssignment(firebaseConfig, { organizationId: orgId }, {
-        id,
-        organizationId: orgId,
-        serviceTeamId: "",
-        ministryCode: "",
-        personId: user.uid,
-        role: assignment.role,
-        serviceDate: assignment.date,
-        status: firestoreStatus,
-        responseNote: note,
-        confirmedAt: status === "confirmado" ? now : undefined,
-        declinedAt: status === "recusado" ? now : undefined,
-        createdAt: now,
-        updatedAt: now
-      });
-
-      setSlots(p => p.map(s => s.id === id ? { ...s, status } : s));
-    } catch (e) {
-      if (__DEV__) console.warn("saveServiceAssignment falhou:", e);
-      Alert.alert("Erro", "Não foi possível atualizar sua escala.");
-    }
+      const data = await memberOperation<{ status: string; assignments: MobileServingAssignment[] }>(user, orgId, { action: "assignments" });
+      if(version!==loadVersion.current)return;
+      if (data.status === "unlinked") setError("Peça à secretaria para vincular sua conta ao cadastro de membro e consultar suas escalas.");
+      setSlots(mobileServingSlots(data.assignments));
+    } catch (e) { if(version===loadVersion.current)setError(e instanceof Error ? e.message : "Não foi possível carregar suas escalas."); }
+    finally { if(version===loadVersion.current)setLoading(false); }
+  }, [orgId, user]);
+  useEffect(() => { void load(); return()=>{loadVersion.current++;}; }, [load,refreshRevision]);
+  useEffect(()=>{const state=AppState.addEventListener("change",value=>{if(value==="active"&&!responseBusy.current)void load();});const timer=setInterval(()=>{if(AppState.currentState==="active"&&!responseBusy.current)void load();},30000);return()=>{state.remove();clearInterval(timer);};},[load]);
+  async function respond(id: string, status: EscalaStatus, note = "") {
+    if (responseBusy.current) return;
+    loadVersion.current++; responseBusy.current = true; setResponding(true);
+    try {
+      await memberOperation(user, orgId, { action: "respond", assignmentId: id, status: status === "confirmado" ? "confirmed" : "declined", note });
+      setSlots(p => p.map(s => s.id === id ? { ...s, status, responseNote: note } : s));
+      setDecliningId(null); setNote("");
+    } catch (e) { Alert.alert("Resposta não salva", e instanceof Error ? e.message : "Tente novamente."); }
+    finally { responseBusy.current = false; setResponding(false); }
   }
 
   const statusColor: Record<EscalaStatus, string> = { pendente: "#f59e0b", confirmado: "#16a34a", recusado: "#dc2626" };
@@ -2081,18 +2266,19 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Minha Escala" onBack={onBack} />
-      <ScrollView contentContainerStyle={s.tabContent}>
+      <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void load()} tintColor={primary} />}>
         <View style={[s.infoBox, { marginBottom: 16 }]}>
-          <Text style={s.infoText}>Você receberá uma notificação quando uma nova escala for publicada. Confirme ou solicite substituição com antecedência.</Text>
+          <Text style={s.infoText}>Confira suas escalas e responda com antecedência. Se precisar alterar uma resposta já enviada, procure a liderança.</Text>
         </View>
 
+        {!!error && <><Text style={s.errorText}>{error}</Text><Btn label="Tentar novamente" onPress={() => void load()} loading={loading} variant="outline" /></>}
         {loading ? (
           <View style={{ padding: 16 }}><LoadingRow primary={primary} label="Carregando escalas..." /></View>
-        ) : slots.length === 0 ? (
+        ) : !error && slots.length === 0 ? (
           <View style={[s.fill, s.center, { padding: 32 }]}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>📋</Text>
             <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma escala atribuída</Text>
-            <Text style={[s.screenSub, { textAlign: "center" }]}>Quando a liderança publicar escalas, elas aparecem aqui.</Text>
+            <Text style={[s.screenSub, { textAlign: "center" }]}>Suas próximas escalas aparecerão aqui. Puxe para atualizar. É necessário que sua conta esteja vinculada ao cadastro correto.</Text>
           </View>
         ) : (
           slots.map(slot => (
@@ -2112,21 +2298,22 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
 
               {slot.status === "pendente" && (
                 <View style={[s.row, { marginTop: 14, gap: 10 }]}>
-                  <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#dcfce7", borderColor: "#16a34a", flex: 1 }]} onPress={() => respond(slot.id, "confirmado")}>
+                  <TouchableOpacity disabled={responding} style={[s.escalaBtn, { backgroundColor: "#dcfce7", borderColor: "#16a34a", flex: 1 }]} onPress={() => respond(slot.id, "confirmado")}>
                     <Text style={{ color: "#16a34a", fontWeight: "700", textAlign: "center" }}>✓  Confirmar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.escalaBtn, { backgroundColor: "#fee2e2", borderColor: "#dc2626", flex: 1 }]} onPress={() => {
-                    Alert.prompt("Recusar escala", "Motivo (opcional):", async (note) => {
-                      await respond(slot.id, "recusado", note);
-                    }, "plain-text", "");
+                  <TouchableOpacity disabled={responding} style={[s.escalaBtn, { backgroundColor: "#fee2e2", borderColor: "#dc2626", flex: 1 }]} onPress={() => {
+                    setDecliningId(slot.id); setNote("");
                   }}>
                     <Text style={{ color: "#dc2626", fontWeight: "700", textAlign: "center" }}>✗  Recusar</Text>
                   </TouchableOpacity>
                 </View>
               )}
-              {slot.status === "recusado" && (
-                <TextInput style={[s.input, { marginTop: 10 }]} value={slots.find(s => s.id === slot.id)?.role === slot.role ? "" : ""} placeholder="Motivo da recusa (opcional)" placeholderTextColor="#9ca3af" editable={false} />
-              )}
+              {decliningId === slot.id && <View style={{ marginTop: 12 }}>
+                <Field label="Motivo da recusa (opcional)" value={note} onChange={setNote} />
+                <Btn label="Enviar recusa" loading={responding} onPress={() => void respond(slot.id, "recusado", note)} variant="danger" />
+                <Btn label="Cancelar" disabled={responding} onPress={() => setDecliningId(null)} variant="outline" />
+              </View>}
+              {slot.status === "recusado" && !!slot.responseNote && <Text style={s.cardMeta}>Motivo: {slot.responseNote}</Text>}
             </View>
           ))
         )}
@@ -2137,12 +2324,61 @@ function EscalaScreen({ primary, user, orgId, onBack }: { primary: string; user:
 
 // ─── Música Screen ────────────────────────────────────────────────────────────
 
-function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack: () => void; onOpenSong: (s: Song) => void }) {
+function MusicaScreen({ primary, orgId, events, onBack, onOpenSong }: { primary: string; orgId: string; events: Event[]; onBack: () => void; onOpenSong: (s: Song) => void }) {
   const [view, setView] = useState<"repertorio" | "programacao">("repertorio");
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [programming, setProgramming] = useState<Array<{ order: number; type: string; description: string; song: Song }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", state => { if (state === "active") setRevision(value => value + 1); });
+    return () => listener.remove();
+  }, []);
+  const nextEvent = events.filter(event => !["cancelled", "closed"].includes(event.status) && Date.parse(event.startsAt) >= Date.now()).sort((a,b) => a.startsAt.localeCompare(b.startsAt))[0];
+
+  useEffect(() => {
+    if (!orgId) return;
+    let cancelled = false;
+
+    async function loadWorship() {
+      try {
+        setLoading(true); setLoadError("");
+        const worshipSongs = await fetchWorshipSongs(firebaseConfig, { organizationId: orgId });
+        const mobileSongs = worshipSongs.map(mobileWorshipSong);
+
+        if (cancelled) return;
+        setSongs(mobileSongs);
+
+        if (!nextEvent) {
+          setProgramming([]);
+          return;
+        }
+
+        const setlist = await fetchWorshipSetlistByEventId(firebaseConfig, { organizationId: orgId }, nextEvent.id);
+        if (cancelled) return;
+
+        setProgramming(mobileWorshipProgram(mobileSongs, setlist?.songs ?? []));
+      } catch (error) {
+        if (__DEV__) console.warn("Não foi possível carregar o repertório:", error);
+        if (!cancelled) {
+          setLoadError("Não foi possível carregar o repertório. Confira a conexão e tente novamente.");
+          setSongs([]);
+          setProgramming([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadWorship();
+    return () => { cancelled = true; };
+  }, [orgId, nextEvent?.id, revision]);
 
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Ministério Musical" onBack={onBack} />
+      {!!loadError && <View style={{ padding: 16 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" loading={loading} onPress={() => setRevision(r => r + 1)} /></View>}
       <View style={s.segControl}>
         <Pressable style={[s.seg, view === "repertorio" && { backgroundColor: primary }]} onPress={() => setView("repertorio")}>
           <Text style={[s.segText, view === "repertorio" && { color: "#fff" }]}>Repertório</Text>
@@ -2153,18 +2389,20 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
       </View>
 
       {view === "repertorio" && (
-        <ScrollView contentContainerStyle={s.tabContent}>
+        <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => setRevision(r => r + 1)} tintColor={primary} />}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
-            <Text style={s.infoText}>🎵  Repertório desta semana — {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+            <Text style={s.infoText}>🎵  Repertório cadastrado pela sua igreja</Text>
           </View>
-          {MOCK_SONGS.map(song => (
+          {loading ? <LoadingRow primary={primary} label="Carregando repertório..." /> : loadError ? null : songs.length === 0 ? (
+            <EmptyState icon="🎵" title="Nenhuma música cadastrada" sub="A liderança pode cadastrar o repertório no painel." />
+          ) : songs.map(song => (
             <TouchableOpacity key={song.id} style={s.songRow} onPress={() => onOpenSong(song)}>
               <View style={[s.songKey, { backgroundColor: primary }]}>
                 <Text style={s.songKeyText}>{song.key}</Text>
               </View>
               <View style={s.fill}>
                 <Text style={s.cardTitle}>{song.title}</Text>
-                <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
+                <Text style={s.cardMeta}>{song.artist}{song.bpm ? ` · ${song.bpm} BPM` : ""}</Text>
               </View>
               <Text style={s.menuChev}>›</Text>
             </TouchableOpacity>
@@ -2173,12 +2411,14 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
       )}
 
       {view === "programacao" && (
-        <ScrollView contentContainerStyle={s.tabContent}>
+        <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => setRevision(r => r + 1)} tintColor={primary} />}>
           <View style={[s.infoBox, { marginBottom: 16 }]}>
-            <Text style={s.infoText}>📋  Ordem do culto — Domingo {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}</Text>
+            <Text style={s.infoText}>📋  {nextEvent ? `Repertório de ${nextEvent.name}` : "Selecione um próximo evento no painel"}</Text>
           </View>
-          {MOCK_PROGRAMMING.map(item => (
-            <View key={item.order} style={s.progRow}>
+          {loading ? <LoadingRow primary={primary} label="Carregando programação..." /> : loadError ? null : programming.length === 0 ? (
+            <EmptyState icon="📋" title="Programação ainda não definida" sub="Vincule o repertório a um evento no painel da igreja." />
+          ) : programming.map(item => (
+            <TouchableOpacity key={item.order} style={s.progRow} onPress={() => onOpenSong(item.song)} accessibilityRole="button" accessibilityLabel={`Abrir cifra ${item.description}`}>
               <View style={[s.progNum, { backgroundColor: primary }]}>
                 <Text style={s.progNumText}>{item.order}</Text>
               </View>
@@ -2186,7 +2426,7 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
                 <Text style={[s.eyebrow, { marginBottom: 2 }]}>{item.type.toUpperCase()}</Text>
                 <Text style={s.cardTitle}>{item.description}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -2196,75 +2436,26 @@ function MusicaScreen({ primary, onBack, onOpenSong }: { primary: string; onBack
 
 // ─── Song Detail Screen ───────────────────────────────────────────────────────
 
-function SongDetailScreen({ song, primary, onBack }: { song: Song; primary: string; onBack: () => void }) {
-  const [view, setView] = useState<"cifra" | "letra">("cifra");
-  return (
-    <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
-      <ModalHeader title={song.title} onBack={onBack} />
-      <View style={[s.card, { margin: 16, marginBottom: 0 }]}>
-        <View style={s.row}>
-          <View style={[s.songKey, { backgroundColor: primary, width: 44, height: 44, borderRadius: 10 }]}>
-            <Text style={[s.songKeyText, { fontSize: 18 }]}>{song.key}</Text>
-          </View>
-          <View style={{ marginLeft: 12 }}>
-            <Text style={s.cardTitle}>{song.title}</Text>
-            <Text style={s.cardMeta}>{song.artist} · {song.bpm} BPM</Text>
-          </View>
-        </View>
-      </View>
-      <View style={[s.segControl, { margin: 16, marginTop: 12 }]}>
-        <Pressable style={[s.seg, view === "cifra" && { backgroundColor: primary }]} onPress={() => setView("cifra")}>
-          <Text style={[s.segText, view === "cifra" && { color: "#fff" }]}>Cifra</Text>
-        </Pressable>
-        <Pressable style={[s.seg, view === "letra" && { backgroundColor: primary }]} onPress={() => setView("letra")}>
-          <Text style={[s.segText, view === "letra" && { color: "#fff" }]}>Letra</Text>
-        </Pressable>
-      </View>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {view === "cifra" && (
-          <View style={[s.card, { backgroundColor: BRAND_DARK }]}>
-            <Text style={s.chordsText}>{song.chords}</Text>
-          </View>
-        )}
-        {view === "letra" && (
-          <View style={s.card}>
-            <Text style={s.lyricsText}>{song.lyrics}</Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
+function SongDetailScreen({ song, primary, onBack, storageKey }: { song: Song; primary: string; onBack: () => void; storageKey: string }) {
+  return <MobileWorshipReader song={song} primary={primary} storageKey={storageKey} header={<ModalHeader title={song.title} onBack={onBack} />} />;
 }
 
 // ─── Inscrição Screen ─────────────────────────────────────────────────────────
 
-function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
-  const [method, setMethod] = useState<"pix" | "cartao" | "free">(event.isPaid ? "pix" : "free");
-  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: string; event: Event; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+  const method = event.isPaid ? "pix" : "free";
+  const registrationBusy = useRef(false);
+  const registrationAttempt = useRef(Crypto.randomUUID());
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [reg, setReg] = useState<{ code: string; token: string } | null>(null);
+  const [reg, setReg] = useState<{ code: string; token: string; paymentStatus: EventRegistration["paymentStatus"] } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const [pix, setPix] = useState<{ payload: string; qrDataUrl: string; pixKey: string; receiverName: string } | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
   const isFree = !event.isPaid;
   const price = event.priceAmount ?? 0;
-
-  async function pickReceipt() {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6, base64: true });
-    if (r.canceled || !r.assets[0]) return;
-    const b64 = r.assets[0].base64 ?? null;
-    // Doc do Firestore tem limite de ~1MB; base64 ocupa ~1.37x os bytes.
-    if (b64 && b64.length > 900_000) {
-      Alert.alert("Imagem muito grande", "Tire uma foto mais fechada só do comprovante e tente de novo.");
-      return;
-    }
-    setReceiptUri(r.assets[0].uri);
-    setReceiptBase64(b64);
-  }
 
   // Gera o PIX REAL da igreja (mesma API da doação) para o valor do evento.
   useEffect(() => {
@@ -2293,33 +2484,25 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
   // Cria a inscrição REAL no Firestore e gera o ingresso (código + payload do QR).
   async function confirmInscricao() {
+    if (registrationBusy.current) return;
+    registrationBusy.current = true;
     setSaving(true);
     setError(null);
-    const regId = `reg_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
-    const code = "ESD-" + regId.slice(-5).toUpperCase();
-    const token = `${event.id}|${regId}`; // o scanner de check-in lê isto
-    const registration: EventRegistration = {
-      id: regId,
-      organizationId: orgId,
-      eventId: event.id,
-      responsiblePersonId: user.uid,
-      registrationCode: code,
-      status: "confirmed",
-      paymentStatus: event.isPaid ? "pending" : "not_required",
-      registeredAt: new Date().toISOString(),
-      personName: user.displayName ?? undefined,
-      personEmail: user.email ?? undefined,
-      ...(receiptBase64 ? { receiptImage: receiptBase64 } : {}),
-    };
     try {
-      await saveEventRegistration(firebaseConfig, { organizationId: orgId }, registration);
-      setReg({ code, token });
+      const response = await fetch(`${WEB_API_URL}/api/events/attendance`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({ action: "member", organizationId: orgId, eventId: event.id, requestId: registrationAttempt.current })
+      });
+      const data = await response.json() as { registration?: EventRegistration; error?: string };
+      if (!response.ok || !data.registration) throw new Error(data.error || "Não foi possível confirmar a inscrição.");
+      setReg({ code: data.registration.registrationCode, token: `${event.id}|${data.registration.id}`, paymentStatus: data.registration.paymentStatus });
       setConfirmed(true);
     } catch (e) {
-      if (__DEV__) console.warn("saveEventRegistration falhou:", e);
-      setError("Não foi possível confirmar a inscrição. Tente novamente.");
+      if (__DEV__) console.warn("inscrição de evento falhou:", e);
+      setError(e instanceof Error ? e.message : "Não foi possível confirmar a inscrição. Tente novamente.");
     } finally {
-      setSaving(false);
+      registrationBusy.current = false; setSaving(false);
     }
   }
 
@@ -2329,7 +2512,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
         <ModalHeader title="Inscrição" onBack={onBack} />
         <ScrollView contentContainerStyle={[s.center, { padding: 28 }]}>
           <Text style={{ fontSize: 52, marginBottom: 12 }}>🎫</Text>
-          <Text style={[s.screenTitle, { textAlign: "center" }]}>Inscrição confirmada!</Text>
+          <Text style={[s.screenTitle, { textAlign: "center" }]}>{reg.paymentStatus === "pending" ? "Inscrição registrada · pagamento pendente" : "Inscrição confirmada!"}</Text>
           <Text style={[s.screenSub, { textAlign: "center" }]}>{event.name}</Text>
           <View style={[s.card, { width: "100%", marginTop: 20, alignItems: "center" }]}>
             <Text style={s.eyebrow}>SEU INGRESSO DIGITAL</Text>
@@ -2340,7 +2523,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
             />
             <Text style={[s.codeValue, { color: primary, fontSize: 22, letterSpacing: 2, marginTop: 10 }]}>{reg.code}</Text>
             <Text style={[s.cardMeta, { marginTop: 6, textAlign: "center" }]}>{formatDate(event.startsAt)} · {formatHour(event.startsAt)}</Text>
-            <Text style={[s.cardMeta, { marginTop: 10, textAlign: "center", color: "#64748b" }]}>Apresente este QR na entrada para o check-in.</Text>
+            <Text style={[s.cardMeta, { marginTop: 10, textAlign: "center", color: "#64748b" }]}>{reg.paymentStatus === "pending" ? "O ingresso só libera a entrada depois que a liderança confirmar o pagamento. Se já pagou, não pague novamente." : "Apresente este QR na entrada para o check-in."}</Text>
           </View>
           <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 24, width: "100%" }} />
         </ScrollView>
@@ -2366,14 +2549,6 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
         {!isFree && (
           <>
             <Text style={s.sectionTitle}>Pagamento</Text>
-            <View style={s.row}>
-              {([{ id: "pix", label: "PIX", icon: "⚡" }, { id: "cartao", label: "Cartão", icon: "💳" }] as const).map(m => (
-                <Pressable key={m.id} style={[s.methodBtn, { flex: 1 }, method === m.id && { borderColor: primary, backgroundColor: `${primary}12` }]} onPress={() => setMethod(m.id)}>
-                  <Text style={{ fontSize: 20 }}>{m.icon}</Text>
-                  <Text style={[s.methodLabel, method === m.id && { color: primary, fontWeight: "700" }]}>{m.label}</Text>
-                </Pressable>
-              ))}
-            </View>
             {method === "pix" && (
               <View style={[s.card, { marginTop: 12 }]}>
                 <Text style={[s.cardMeta, { fontWeight: "700", marginBottom: 8 }]}>Valor: R$ {price.toFixed(2).replace(".", ",")}</Text>
@@ -2386,18 +2561,11 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
                     <Image source={{ uri: pix.qrDataUrl }} style={{ width: 180, height: 180, alignSelf: "center", borderRadius: 4 }} resizeMode="contain" />
                     <Text style={[s.pixLabel, { marginTop: 8 }]}>PIX copia e cola</Text>
                     <Text style={s.pixKey} selectable numberOfLines={3}>{pix.payload}</Text>
-                    <Btn label="Copiar código PIX" onPress={() => { void Share.share({ message: pix.payload }); }} variant="outline" style={{ marginTop: 8 }} />
+                    <Btn label="Compartilhar PIX" onPress={() => { void Share.share({ message: pix.payload }).catch(() => Alert.alert("Não foi possível compartilhar", "Selecione e copie o código PIX exibido.")); }} variant="outline" style={{ marginTop: 8 }} />
                     <Text style={[s.cardMeta, { marginTop: 8 }]}>Beneficiário: {pix.receiverName}</Text>
-                    <Btn label="📎  Anexar comprovante" onPress={pickReceipt} variant="outline" style={{ marginTop: 12 }} />
-                    {receiptUri && <Image source={{ uri: receiptUri }} style={[s.receiptPreview, { marginTop: 10 }]} resizeMode="cover" />}
-                    <Text style={[s.cardMeta, { marginTop: 10, color: "#64748b" }]}>Após pagar, confirme abaixo. A inscrição fica pendente até a liderança conferir o pagamento.</Text>
+                    <Text style={[s.cardMeta, { marginTop: 10, color: "#64748b" }]}>Você pode registrar a inscrição abaixo. O pagamento será conferido pela liderança antes da entrada.</Text>
                   </>
                 ) : null}
-              </View>
-            )}
-            {method === "cartao" && (
-              <View style={[s.card, { marginTop: 12, alignItems: "center" }]}>
-                <Text style={[s.cardMeta, { textAlign: "center" }]}>Integração com gateway em breve. Use PIX por enquanto.</Text>
               </View>
             )}
           </>
@@ -2405,8 +2573,9 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
         {error && <Text style={{ color: "#dc2626", marginTop: 12, textAlign: "center" }}>{error}</Text>}
         <Btn
-          label={saving ? "Confirmando..." : isFree ? "Confirmar inscrição gratuita" : "Confirmar inscrição"}
+          label={saving ? "Confirmando..." : isFree ? "Confirmar inscrição gratuita" : "Registrar inscrição · pagamento pendente"}
           onPress={() => { if (!saving) void confirmInscricao(); }}
+          loading={saving}
           color={primary}
           style={{ marginTop: 20, opacity: saving ? 0.6 : 1 }}
         />
@@ -2419,7 +2588,7 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
 type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
 
-function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId?: string; onBack: () => void }) {
+function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
   const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -2552,7 +2721,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {activeTool === "roteiro" && (
           <>
             <View style={[s.infoBox, { marginBottom: 16 }]}>
-              <Text style={s.infoText}>A IA monta um roteiro completo com abertura, quebra-gelo, estudo bíblico, aplicação e encerramento.</Text>
+              <Text style={s.infoText}>A Sabedoria Pastoral monta um roteiro completo com abertura, quebra-gelo, estudo bíblico, aplicação e encerramento.</Text>
             </View>
             <Field label="Tema do encontro *" value={theme} onChange={setTheme} placeholder="Ex: Fé em tempos difíceis" />
             <Field label="Passagem bíblica" value={verse} onChange={setVerse} placeholder="Ex: Hebreus 11:1" />
@@ -2587,7 +2756,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {activeTool === "relatorio" && (
           <>
             <View style={[s.infoBox, { marginBottom: 16 }]}>
-              <Text style={s.infoText}>Preencha os dados do encontro. A IA gera um relatório formatado para enviar ao pastor.</Text>
+              <Text style={s.infoText}>Preencha os dados do encontro. A Sabedoria Pastoral gera um relatório formatado para enviar ao pastor.</Text>
             </View>
             <Field label="Nome do grupo *" value={repGroupName} onChange={setRepGroupName} placeholder="Ex: CG Centro-Norte" />
             <Field label="Tema do encontro *" value={repTheme} onChange={setRepTheme} placeholder="Ex: Servindo com alegria" />
@@ -2611,7 +2780,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
         {error && <Text style={s.errorText}>{error}</Text>}
 
         <Btn
-          label={loading ? "Gerando com IA..." : "Gerar com IA"}
+          label={loading ? "Gerando com Sabedoria Pastoral..." : "Gerar com Sabedoria Pastoral"}
           onPress={run}
           loading={loading}
           color={primary}
@@ -2621,7 +2790,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
           <View style={[s.card, { marginTop: 20, backgroundColor: "#fff" }]}>
             <View style={[s.row, { marginBottom: 12 }]}>
               <Text style={{ fontSize: 16, marginRight: 6 }}>✨</Text>
-              <Text style={[s.eyebrow, { color: primary }]}>GERADO PELA IA</Text>
+              <Text style={[s.eyebrow, { color: primary }]}>GERADO PELA SABEDORIA PASTORAL</Text>
             </View>
             <Text style={[s.cardMeta, { lineHeight: 22, color: BRAND_DARK }]}>{result}</Text>
           </View>
@@ -2636,7 +2805,7 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
 function ModalHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <View style={s.modalHeader}>
-      <TouchableOpacity onPress={onBack} hitSlop={12} style={s.modalBack}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack} hitSlop={12} style={s.modalBack}>
         <Text style={[s.backBtn, { fontSize: 20 }]}>←</Text>
       </TouchableOpacity>
       <Text style={s.modalTitle} numberOfLines={1}>{title}</Text>
@@ -2649,7 +2818,7 @@ function QuickAction({ icon, tint, bg, label, sub, onPress }: {
   icon: keyof typeof Ionicons.glyphMap; tint: string; bg: string; label: string; sub: string; onPress: () => void;
 }) {
   return (
-    <Pressable style={s.quickAction} onPress={onPress}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} style={s.quickAction} onPress={onPress}>
       <View style={[s.quickIconWrap, { backgroundColor: bg }]}>
         <Ionicons name={icon} size={20} color={tint} />
       </View>
@@ -2696,6 +2865,8 @@ function Btn({ label, onPress, loading, disabled, variant, color, style }: {
   const bc = variant === "outline" ? (color ?? BRAND) : "transparent";
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
       style={({ pressed }) => [s.btn, { backgroundColor: bg, borderColor: bc, borderWidth: variant === "outline" ? 1.5 : 0 }, pressed && { opacity: 0.75 }, (disabled || loading) && { opacity: 0.5 }, style as object]}
       onPress={onPress}
       disabled={disabled || loading}
@@ -2744,11 +2915,7 @@ function eventLabel(type: string): string {
   };
   return m[type?.toLowerCase()] ?? type;
 }
-function nextDow(dow: number, hour: number): string {
-  const d = new Date(); const diff = (dow - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff); d.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
-  return d.toISOString();
-}
+
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -2777,6 +2944,7 @@ const s = StyleSheet.create({
   // Splash / Logo
   logoMark: { width: 72, height: 72, borderRadius: 20, backgroundColor: BRAND, alignItems: "center", justifyContent: "center" },
   logoText: { color: "#fff", fontSize: 36, fontWeight: "800" },
+  logoMarkImage: { width: 72, height: 72, borderRadius: 20 },
 
   // Welcome
   welcomeHero: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 48 },
@@ -2812,6 +2980,21 @@ const s = StyleSheet.create({
   warnText: { fontSize: 13, color: "#92400e" },
   infoBox: { backgroundColor: `${BRAND}14`, borderRadius: 8, padding: 14 },
   infoText: { fontSize: 14, color: BRAND_DARK, lineHeight: 20 },
+  institutionModalRoot: { flex: 1, justifyContent: "flex-end" },
+  institutionBackdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(15, 27, 45, 0.45)" },
+  institutionSheet: { backgroundColor: "#fff", borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 18, maxHeight: "78%" },
+  institutionHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  institutionTitle: { fontSize: 20, fontWeight: "800", color: BRAND_DARK },
+  institutionSubtitle: { fontSize: 13, color: "#6b7280", marginTop: 3 },
+  institutionRow: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: "#f0f1f3", paddingVertical: 10 },
+  institutionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: `${BRAND}14`, alignItems: "center", justifyContent: "center" },
+  institutionName: { flex: 1, fontSize: 15, fontWeight: "700", color: BRAND_DARK },
+  institutionEmpty: { color: "#6b7280", textAlign: "center", paddingVertical: 32 },
+  membershipHelpBox: { borderWidth: 1, borderColor: "#f3c8ad", backgroundColor: "#fff8f3", borderRadius: 12, padding: 14, marginBottom: 4 },
+  membershipHelpTitle: { color: BRAND_DARK, fontSize: 15, fontWeight: "800", marginBottom: 8 },
+  membershipHelpText: { color: "#4b5563", fontSize: 13, lineHeight: 19, marginBottom: 6 },
+  supportLink: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, paddingVertical: 6 },
+  supportLinkText: { color: BRAND, fontSize: 13, fontWeight: "700" },
 
   // Main app
   mainHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },

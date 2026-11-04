@@ -1,5 +1,7 @@
 "use client";
 
+import { manualWhatsappLink } from "@alvo/utils";
+
 import { useEffect, useState } from "react";
 import {
   savePersonProfile,
@@ -9,7 +11,7 @@ import {
 import { cachedFetchPeople } from "../../lib/org-data-cache";
 import type { Person, TribeCode } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { tribeDefinitions } from "../../lib/mock-data";
+import { tribeDefinitions } from "./tribe-definitions";
 import {
   UsersRound,
   Tent,
@@ -88,7 +90,7 @@ export function TribesView() {
       // A IA responde JSON puro: {"primary":"...","secondary":"...","reason":"..."}
       const raw = data.content ?? "";
       const jsonMatch = String(raw).match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("Resposta da IA fora do formato esperado");
+      if (!jsonMatch) throw new Error("Resposta da Sabedoria Pastoral fora do formato esperado");
       const parsed = JSON.parse(jsonMatch[0]) as { primary?: string; secondary?: string | null; reason?: string };
       const primary = parsed.primary && VALID_TRIBES.has(parsed.primary) ? parsed.primary as TribeCode : undefined;
       if (!primary) throw new Error("Tribo sugerida inválida");
@@ -175,15 +177,15 @@ export function TribesView() {
   }
 
   async function classifyAll(pending: Person[]) {
-    setClassifyStatus("Classificando com IA...");
+    setClassifyStatus("Classificando com Sabedoria Pastoral...");
     let done = 0;
     // Uma por vez pra respeitar a cota de IA e não estourar rate limit.
     for (const person of pending.slice(0, 10)) {
       if (await classifyPerson(person)) done += 1;
     }
     setClassifyStatus(done > 0
-      ? `${done} membro(s) classificados pela IA.`
-      : "Nenhum membro pôde ser classificado. Verifique as fichas e sua cota de IA.");
+      ? `${done} membro(s) classificados pela Sabedoria Pastoral.`
+      : "Nenhum membro pôde ser classificado. Verifique as fichas e sua cota de Sabedoria Pastoral.");
   }
 
   const classified   = peopleSource.filter(p => p.tribePrimaryCode);
@@ -222,7 +224,7 @@ export function TribesView() {
         <div className="page-header-left">
           <h1 className="page-title">Tribos Ministeriais</h1>
           <p className="page-subtitle">
-            Identidade vocacional dos membros — classificada automaticamente pela IA a partir da ficha cadastral
+            Identidade vocacional dos membros — classificada automaticamente pela Sabedoria Pastoral a partir da ficha cadastral
           </p>
         </div>
         <div className="page-header-actions">
@@ -269,7 +271,7 @@ export function TribesView() {
             <AlertCircle size={18} />
           </div>
           <div className="stat-body">
-            <span className="stat-label">Aguardando IA</span>
+            <span className="stat-label">Aguardando Sabedoria Pastoral</span>
             <span className="stat-value">{totalUnclassified}</span>
           </div>
         </div>
@@ -288,7 +290,7 @@ export function TribesView() {
       <div className="tribes-ai-banner">
         <Bot size={16} style={{ color: "var(--alvo-accent)", flexShrink: 0 }} />
         <div>
-          <strong>Classificação automática por IA</strong>
+          <strong>Classificação automática por Sabedoria Pastoral</strong>
           <span>
             {" "}A tribo de cada membro é sugerida automaticamente com base no Perfil Ministerial preenchido na ficha de cadastro.
             O administrador pode revisar e reclassificar manualmente a qualquer momento.
@@ -302,7 +304,7 @@ export function TribesView() {
           <UsersRound size={36} strokeWidth={1.4} style={{ color: "var(--alvo-line)", margin: "0 auto 10px" }} />
           <p style={{ textAlign: "center", margin: 0, color: "var(--alvo-ink)" }}>Nenhuma pessoa cadastrada ainda.</p>
           <p className="empty-hint" style={{ textAlign: "center" }}>
-            As tribos são atribuídas automaticamente pela IA a partir do perfil ministerial da ficha.
+            As tribos são atribuídas automaticamente pela Sabedoria Pastoral a partir do perfil ministerial da ficha.
           </p>
           <Link href="/people" className="btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4 }}>
             <User size={14} /> Cadastrar pessoas
@@ -432,7 +434,7 @@ export function TribesView() {
                       </strong>
                       {person.tribeClassificationSource && (
                         <span className={`tribe-source-badge ${person.tribeClassificationSource}`}>
-                          {person.tribeClassificationSource === "ai" ? <><Bot size={10} /> IA</> : <><Pencil size={10} /> Manual</>}
+                          {person.tribeClassificationSource === "ai" ? <><Bot size={10} /> Sabedoria Pastoral</> : <><Pencil size={10} /> Manual</>}
                         </span>
                       )}
                       {person.tribeSecondaryCode && (
@@ -505,7 +507,7 @@ export function TribesView() {
               onClick={() => void classifyAll(unclassified)}
             >
               <Bot size={14} />
-              {classifyingIds.length > 0 ? "Classificando..." : "Classificar todos com IA"}
+              {classifyingIds.length > 0 ? "Classificando..." : "Classificar todos com Sabedoria Pastoral"}
             </button>
           </div>
 
@@ -538,7 +540,7 @@ export function TribesView() {
                     onClick={() => void classifyOne(person)}
                   >
                     <Sparkles size={12} />
-                    {classifyingIds.includes(person.id) ? "..." : "Classificar (IA)"}
+                    {classifyingIds.includes(person.id) ? "..." : "Classificar (Sabedoria Pastoral)"}
                   </button>
                   <button
                     className="btn-secondary btn-sm"
@@ -902,7 +904,7 @@ function buildTribeNotifyHref(
     `O que significa: ${tribeDescription}\n` +
     `Onde você mais floresce servindo: ${tribeMinistry}\n\n` +
     `Que alegria caminhar com você!`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  return manualWhatsappLink(person, msg) ?? "";
 }
 
 function getInitials(person: Person) {

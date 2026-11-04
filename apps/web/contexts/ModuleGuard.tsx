@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ModuleKey } from "@alvo/domain";
 import { useOrgFeatures } from "./OrgFeaturesContext";
+import { ModuleLoading } from "../src/components/module-loading";
 
 interface ModuleGuardProps {
   moduleKey: ModuleKey;
@@ -20,8 +21,8 @@ export function ModuleGuard({ moduleKey, children }: ModuleGuardProps) {
     }
   }, [ready, isEnabled, moduleKey, router]);
 
-  // Enquanto carrega ou módulo bloqueado, não renderiza nada
-  if (!ready || !isEnabled(moduleKey)) return null;
+  if (!ready) return <ModuleLoading />;
+  if (!isEnabled(moduleKey)) return null;
 
   return <>{children}</>;
 }

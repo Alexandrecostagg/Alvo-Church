@@ -1,0 +1,23 @@
+{
+  "name": "@alvo/lp",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "deploy": "next build && wrangler deploy",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "~16.4.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.13",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.153.0"
+  }
+}

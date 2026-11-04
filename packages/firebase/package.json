@@ -11,6 +11,6 @@
     "format": "prettier --check ."
   },
   "dependencies": {
-    "firebase": "^12.10.0"
+    "firebase": "^12.18.0"
   }
 }

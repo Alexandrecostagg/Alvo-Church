@@ -10,7 +10,7 @@ const PLANS = [
     priceMonthly: 0,
     desc: "Para igrejas começando",
     features: [
-      "Até 100 membros",
+      "Até 50 membros",
       "Recepção & visitantes",
       "Cadastro completo",
       "Dashboard básico",
@@ -29,25 +29,25 @@ const PLANS = [
       "Tribos & Células",
       "Finanças & Doações (PIX)",
       "Eventos & Comunicação",
-      "50 consultas de IA/mês",
+      "50 consultas de Sabedoria Pastoral/mês",
     ],
-    cta: "Começar 14 dias grátis",
+    cta: "Criar conta e escolher",
     highlight: false,
   },
   {
     id: "pastoral",
     name: "Pastoral",
     priceMonthly: 159,
-    desc: "IA e crescimento sem limites",
+    desc: "Sabedoria Pastoral e recursos para crescer",
     features: [
       "Membros ilimitados",
-      "IA Pastoral completa",
-      "500 consultas de IA/mês",
+      "Sabedoria Pastoral completa",
+      "500 consultas de Sabedoria Pastoral/mês",
       "Escalas & Voluntários",
       "Escola EAD",
       "Marketplace da comunidade",
     ],
-    cta: "Começar 14 dias grátis",
+    cta: "Criar conta e escolher",
     highlight: true,
   },
   {
@@ -103,7 +103,7 @@ export function PricingClient() {
               className={`lp-plan-card${plan.highlight ? " highlight" : ""}`}
             >
               {plan.highlight && (
-                <div className="lp-plan-badge">Mais popular</div>
+                <div className="lp-plan-badge">Mais recursos</div>
               )}
               <div className="lp-plan-name">{plan.name}</div>
               <div className="lp-plan-price">

@@ -8,14 +8,23 @@ import {
   fetchTrainingPrograms,
   fetchProgramEntitlements,
   fetchTrainingLessons,
-  fetchMemberCourseProgress,
-  saveMemberCourseProgress,
   isFirebaseWebRuntimeConfigured
 } from "@alvo/firebase";
 import type { TrainingProgram, TrainingLesson, MemberCourseProgress } from "@alvo/types";
 import { MarkdownLite } from "../../components/markdown-lite";
 
 const ADMIN_ROLES = ["super_admin", "church_admin", "pastor", "secretary"] as const;
+
+async function progressRequest(user: NonNullable<ReturnType<typeof useAppAuth>["user"]>, body: Record<string, unknown>) {
+  const response = await fetch("/api/learning/progress", {
+    method: "POST",
+    headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({})) as Record<string, any>;
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Não foi possível atualizar o progresso.");
+  return data;
+}
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -32,6 +41,7 @@ export function CapacitacaoStoreView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const ready = configured && firebaseReady && !!user && isFirebaseWebRuntimeConfigured(firebaseConfig);
+
   const isAdmin = hasAnyRole([...ADMIN_ROLES]);
 
   const load = useCallback(async () => {
@@ -159,6 +169,7 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
   const [progress, setProgress] = useState<MemberCourseProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [contentError, setContentError] = useState("");
 
   const ready = configured && firebaseReady && !!user && isFirebaseWebRuntimeConfigured(firebaseConfig);
 
@@ -166,22 +177,27 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
     let cancelled = false;
     async function run() {
       setLoading(true);
+      setContentError("");
+      setLessons([]);
       try {
-        const ls = await fetchTrainingLessons(firebaseConfig, program.id);
+        if (!user) return;
+        const ls = await fetchTrainingLessons(firebaseConfig, program.id, { organizationId, idToken: await user.getIdToken() });
         if (cancelled) return;
         setLessons(ls);
         setActiveLessonId(ls[0]?.id ?? null);
-        const existing = ready && user ? await fetchMemberCourseProgress(firebaseConfig, { organizationId }, user.uid, program.id) : null;
+        const result = ready && user ? await progressRequest(user, { action: "read", organizationId, courseId: program.id, catalog: "platform" }) : null;
         if (cancelled) return;
-        setProgress(existing ?? {
-          id: `progress_${user?.uid ?? "anon"}_${program.id}`,
+        setProgress(result?.progress ?? {
+          id: program.id,
           organizationId,
-          memberId: user?.uid ?? "anon",
+          memberId: "",
           courseId: program.id,
           completedLessons: [],
           isCompleted: false,
           updatedAt: new Date().toISOString()
         });
+      } catch {
+        if (!cancelled) { setLessons([]); setContentError("Não foi possível liberar esta trilha. Verifique seu acesso com a instituição."); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -196,15 +212,11 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
   const done = lessons.length > 0 && completedCount === lessons.length;
 
   async function toggleLesson(lessonId: string) {
-    if (!progress) return;
-    const has = progress.completedLessons.includes(lessonId);
-    const next = has ? progress.completedLessons.filter((id) => id !== lessonId) : [...progress.completedLessons, lessonId];
-    const allDone = lessons.length > 0 && next.length === lessons.length;
-    const updated: MemberCourseProgress = { ...progress, completedLessons: next, isCompleted: allDone, updatedAt: new Date().toISOString() };
-    setProgress(updated);
-    if (ready) {
-      try { await saveMemberCourseProgress(firebaseConfig, { organizationId }, updated); } catch (e) { console.error(e); }
-    }
+    if (!progress?.memberId || !ready) return;
+    try {
+      const result = await progressRequest(user!, { action: "toggle", organizationId, courseId: program.id, lessonId, catalog: "platform", requestId: crypto.randomUUID() });
+      setProgress(result.progress);
+    } catch { setContentError("Não foi possível salvar o progresso. Tente novamente."); }
   }
 
   if (loading) {
@@ -214,6 +226,7 @@ function ProgramPlayer({ program, onBack }: { program: TrainingProgram; onBack: 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 1100, margin: "0 auto" }}>
       <button onClick={onBack} style={{ ...secondaryBtn, marginBottom: 16 }}><ArrowLeft size={15} /> Voltar à loja</button>
+      {contentError && <p role="alert">{contentError}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 20, alignItems: "start" }}>
         <div>

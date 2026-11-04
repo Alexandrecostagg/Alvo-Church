@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-10T14:43:51.680Z",
+  "project": "alvo-church",
+  "principal": "esdras-billing-webhook@alvo-church.iam.gserviceaccount.com",
+  "role": "projects/alvo-church/roles/esdrasAuthSessionVerifier",
+  "title": "Esdras Auth Session Verifier",
+  "permissions": [
+    "firebaseauth.users.get"
+  ],
+  "preservedRoles": [
+    "roles/datastore.user"
+  ],
+  "authorization": "User explicitly confirmed sim permito after exact permission and principal explanation.",
+  "method": "Google Cloud Console UI",
+  "verification": "Role created; principal row displays Esdras Auth Session Verifier and Cloud Datastore User; notification Política atualizada.",
+  "billingChanged": false,
+  "credentialsReplaced": false
+}

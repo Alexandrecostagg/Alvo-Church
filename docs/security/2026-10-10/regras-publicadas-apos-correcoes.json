@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-10T13:20:18.093Z",
+  "results": [
+    {
+      "file": "firestore.rules",
+      "release": "cloud.firestore",
+      "ruleset": "projects/alvo-church/rulesets/e6fcb78d-47ac-4a0e-9cbd-c5750efcb020",
+      "sha256": "177399eb8ae5ee4db622ec970cf6fa09a7323385977396fc136bc45e136ff3e2",
+      "verified": true
+    },
+    {
+      "file": "storage.rules",
+      "release": "firebase.storage/alvo-church.firebasestorage.app",
+      "ruleset": "projects/alvo-church/rulesets/02ae9672-8a53-4489-a127-f00777bec660",
+      "sha256": "77c93283d5c7de415ba83e309a3c2c359a9e989b39249d51f42f239251567965",
+      "verified": true
+    }
+  ]
+}

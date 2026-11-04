@@ -33,76 +33,32 @@ function buildMapsUrl(address: PostalAddress): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
 }
 
-const mockStores: CommunityStore[] = [
-  {
-    id: "store_1",
-    organizationId: "org_alvo_demo",
-    ownerId: "user_admin_demo",
-    name: "Doces & Travessuras",
-    description: "Os melhores bolos e doces artesanais da comunidade para a sua festa ou café da tarde. Bolos sob encomenda, fatias gourmet e salgados assados.",
-    category: "food",
-    status: "approved",
-    images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop",
-    contact: { address: { city: "Belém", state: "PA" } },
-    socialLinks: { whatsapp: "91999999991", instagram: "doces_travessuras" },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "store_2",
-    organizationId: "org_alvo_demo",
-    ownerId: "user_admin_demo",
-    name: "Conecta Informática",
-    description: "Manutenção de computadores, notebooks e consultoria de TI com preço justo e qualidade para abençoar a comunidade.",
-    category: "services",
-    status: "approved",
-    images: [],
-    bannerImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&auto=format&fit=crop",
-    contact: { address: { city: "Belém", state: "PA" } },
-    socialLinks: { whatsapp: "91999999992", website: "https://conecta.esdras.app" },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
 export function MarketplaceCommunityView() {
-  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user } = useAppAuth();
+  const { firebaseConfig, organizationId, firebaseReady, tenantReady, user, hasAnyRole } = useAppAuth();
+  const admin = hasAnyRole(["super_admin", "church_admin", "pastor", "secretary"]);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [stores, setStores] = useState<CommunityStore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "approved">("approved");
 
   useEffect(() => {
-    async function loadStores() {
-      if (!firebaseReady || !tenantReady) {
-        setStores(mockStores);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    setStores([]);
+    setLoadError(null);
+    if (!firebaseReady || !tenantReady) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
       try {
-        setLoading(true);
         const context: TenantContext = { organizationId };
-        const allStores = await fetchCommunityStores(firebaseConfig, context, 200);
-        const activeStores = allStores.length > 0 ? allStores : mockStores;
-        // Filter by status - show only approved stores to regular users, all to admins/moderators
-        const filtered = activeStores.filter(store => {
-          if (filterStatus === "approved") {
-            return store.status === "approved";
-          }
-          return true;
-        });
-        setStores(filtered);
-      } catch (error) {
-        console.error("Error loading community stores:", error);
-        setStores(mockStores.filter(s => filterStatus === "approved" ? s.status === "approved" : true));
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadStores();
-  }, [firebaseConfig, organizationId, firebaseReady, tenantReady, filterStatus]);
+        const rows = await fetchCommunityStores(firebaseConfig, context, 200, admin && filterStatus === "all" ? undefined : { approvedOnly: true });
+        if (!cancelled) setStores(rows.filter(s => filterStatus !== "approved" || s.status === "approved"));
+      } catch { if (!cancelled) { setStores([]); setLoadError("Não foi possível carregar os dados. Atualize a página para tentar novamente."); } }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [firebaseConfig, organizationId, firebaseReady, tenantReady, filterStatus, admin]);
 
   const categories = [
     { id: "health", label: "Saúde & Bem-estar", color: "#ef4444", icon: HeartPulse },
@@ -127,6 +83,7 @@ export function MarketplaceCommunityView() {
 
   return (
     <main className="marketplace-community-container animate-entrance">
+      {loadError && <p role="alert">{loadError}</p>}
       <header className="marketplace-community-header">
         <div className="header-content">
           <div className="eyebrow">

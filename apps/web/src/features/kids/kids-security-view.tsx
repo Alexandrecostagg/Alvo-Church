@@ -1,5 +1,6 @@
 "use client";
 
+import { KidsPrivateImage } from "./kids-private-image";
 import { useState, useEffect, useCallback } from "react";
 import {
   QrCode,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAppAuth } from "../../../app/providers";
-import { fetchActiveKidsCheckIns, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
+import { fetchMyActiveKidsCheckIns, isFirebaseWebRuntimeConfigured } from "@alvo/firebase";
 import type { KidsCheckIn } from "@alvo/types";
 
 export function KidsSecurityView() {
@@ -27,9 +28,7 @@ export function KidsSecurityView() {
       return;
     }
     try {
-      const active = await fetchActiveKidsCheckIns(firebaseConfig, { organizationId });
-      // Só os check-ins do próprio responsável (segurança: pai não vê filhos de outros).
-      const mine = active.filter((c) => c.parentId === user.uid || c.authorizedPickUpIds?.includes(user.uid));
+      const mine = await fetchMyActiveKidsCheckIns(firebaseConfig, { organizationId }, user.uid);
       setMyCheckIns(mine);
     } catch {
       setMyCheckIns([]);
@@ -76,14 +75,9 @@ export function KidsSecurityView() {
                   <span className="live-pulse" style={{ marginLeft: "auto" }}></span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                  <img
-                    src={`/api/kids/qr?data=${encodeURIComponent(c.securityToken)}`}
-                    alt={`QR de retirada de ${c.childName ?? "criança"}`}
-                    style={{ width: 190, height: 190, borderRadius: 8 }}
-                  />
+                  <KidsPrivateImage checkInId={c.id} />
                 </div>
                 <div style={{ textAlign: "center", marginTop: 10 }}>
-                  <strong style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>{c.securityToken}</strong>
                   <p style={{ fontSize: "0.78rem", color: "var(--alvo-ink-soft)", margin: "6px 0 0" }}>
                     Apresente este QR ao líder da sala Kids na retirada.
                   </p>

@@ -2,6 +2,10 @@
 
 Atualizado em: 17 de junho de 2026
 
+> Histórico. Os status abaixo foram substituídos pelo
+> [backlog ativo atualizado em 05/09/2026](backlog-mvp-implementacao-v2.md).
+> Não usar esta versão para decidir o próximo trabalho.
+
 ## Objetivo
 
 Transformar o roadmap conceitual em uma lista pratica de trabalho para as proximas rodadas de desenvolvimento.

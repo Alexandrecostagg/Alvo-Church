@@ -372,7 +372,7 @@ export function LiveOperations({ organizationId }: LiveOperationsProps) {
             ))}
             {benefitValidations.map((validation) => (
               <div key={validation.id} style={itemStyle}>
-                <strong>{validation.memberCardCode}</strong>
+                <strong>Passe ••••{validation.memberCardCodeSuffix ?? validation.memberCardCode?.slice(-4) ?? "legado"}</strong>
                 <p style={itemTextStyle}>
                   {validation.validationStatus} - campos expostos:{" "}
                   {validation.exposedFields.join(", ") || "nenhum"}

@@ -28,22 +28,6 @@ import {
   triggerEmergencySOS
 } from "@alvo/firebase";
 
-const mockPulses: LeaderEmotionalPulse[] = [
-  { id: "pulse_1", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "happy", energyLevel: 8, stressLevel: 3, notedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_2", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "neutral", energyLevel: 6, stressLevel: 4, notedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_3", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "tired", energyLevel: 4, stressLevel: 6, notedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "pulse_4", leaderId: "user_admin_demo", organizationId: "org_alvo_demo", mood: "energetic", energyLevel: 9, stressLevel: 2, notedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-];
-
-const mockResources: WellBeingResource[] = [
-  { id: "res_1", organizationId: "org_alvo_demo", title: "Lidando com o Burnout Ministerial", description: "Conselhos práticos de saúde mental para líderes de pequenos grupos.", category: "mental", durationMinutes: 15, contentUrl: "", tags: ["mental", "burnout"] },
-  { id: "res_2", organizationId: "org_alvo_demo", title: "Ritmos Saudáveis de Trabalho", description: "Como manter o ritmo espiritual de excelência e evitar a exaustão física.", category: "spiritual", durationMinutes: 20, contentUrl: "", tags: ["trabalho", "escala"] },
-];
-
-const mockSessions: MentoringSession[] = [
-  { id: "sess_1", organizationId: "org_alvo_demo", leaderId: "user_admin_demo", mentorName: "Pr. Roberto Oliveira", scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), meetingLink: "https://zoom.us/j/123", status: "scheduled", durationMinutes: 60 }
-];
-
 export function WellnessView() {
   const { user, firebaseConfig, organizationId, firebaseReady, tenantReady } = useAppAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -51,37 +35,23 @@ export function WellnessView() {
   const [resources, setResources] = useState<WellBeingResource[]>([]);
   const [sessions, setSessions] = useState<MentoringSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      if (!firebaseReady || !tenantReady || !user?.uid) {
-        setPulses(mockPulses);
-        setResources(mockResources);
-        setSessions(mockSessions);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
+    setPulses([]); setResources([]); setSessions([]);
+    setLoadError(null);
+    if (!firebaseReady || !tenantReady || !user?.uid) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
       try {
-        setLoading(true);
         const context: TenantContext = { organizationId };
-        const [p, r, s] = await Promise.all([
-          fetchLeaderEmotionalPulses(firebaseConfig, context, user.uid),
-          fetchWellBeingResources(firebaseConfig, context),
-          fetchMentoringSessions(firebaseConfig, context, user.uid)
-        ]);
-        setPulses(p.length > 0 ? p : mockPulses);
-        setResources(r.length > 0 ? r : mockResources);
-        setSessions(s.length > 0 ? s : mockSessions);
-      } catch (error) {
-        console.error("Error loading wellness data:", error);
-        setPulses(mockPulses);
-        setResources(mockResources);
-        setSessions(mockSessions);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+        const [p, r, s] = await Promise.all([fetchLeaderEmotionalPulses(firebaseConfig, context, user.uid), fetchWellBeingResources(firebaseConfig, context), fetchMentoringSessions(firebaseConfig, context, user.uid)]);
+        if (!cancelled) { setPulses(p); setResources(r); setSessions(s); }
+      } catch { if (!cancelled) { setPulses([]); setResources([]); setSessions([]); setLoadError("Não foi possível carregar os dados. Atualize a página para tentar novamente."); } }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
   }, [firebaseConfig, organizationId, firebaseReady, tenantReady, user?.uid]);
 
   const handleMoodSelect = async (moodId: string) => {
@@ -105,7 +75,7 @@ export function WellnessView() {
         leaderId: user.uid,
         organizationId: organizationId,
         mood: moodId as any,
-        energyLevel: energyMap[moodId] || 5,
+        energyLevel: energyMap[moodId] ?? 5,
         stressLevel: 5, // Default for now
         notedAt: new Date().toISOString(),
       });
@@ -119,7 +89,7 @@ export function WellnessView() {
         alert("Seu alerta foi registrado.");
       }
     } catch (error) {
-      console.error("Error saving mood:", error);
+      setSelectedMood(null); setLoadError("Não foi possível confirmar seu registro. Tente novamente.");
     }
   };
 
@@ -134,6 +104,7 @@ export function WellnessView() {
 
   return (
     <main className="wellness-container animate-entrance">
+      {loadError && <p role="alert">{loadError}</p>}
       <header className="wellness-header">
         <div className="header-info">
           <div className="eyebrow">
@@ -200,10 +171,11 @@ export function WellnessView() {
               <LineChart size={20} />
               <h3>Pulso Emocional</h3>
             </div>
-            <button className="text-link">Ver histórico</button>
+            <span className="text-link">Registros recentes</span>
           </div>
           <div className="chart-placeholder">
-            <div className="mock-chart">
+            <div className="pulse-chart">
+              {!pulses.length && <p>Nenhum pulso registrado.</p>}
               {pulses.map((pulse, i) => (
                 <div key={pulse.id} className="chart-bar-wrapper">
                   <div 
@@ -229,7 +201,7 @@ export function WellnessView() {
               <UserCheck size={20} />
               <h3>Minhas Mentorias</h3>
             </div>
-            <button className="primary-link">Agendar Nova</button>
+            <span className="primary-link">Agendamento com a equipe pastoral</span>
           </div>
           <div className="sessions-list">
             {sessions.map(session => (
@@ -445,7 +417,7 @@ export function WellnessView() {
           align-items: flex-end;
         }
 
-        .mock-chart {
+        .pulse-chart {
           display: flex;
           align-items: flex-end;
           gap: 1.5rem;
