@@ -27,9 +27,12 @@ jobs:
           package-manager-cache: false
       - run: corepack enable
       - run: corepack pnpm install --frozen-lockfile
-      - name: Install committed native dependencies
+      - name: Resolve native lock on the pinned runner
         working-directory: apps/mobile/ios
-        run: pod install --deployment --no-repo-update
+        run: |
+          pod --version
+          xcodebuild -version
+          pod install --no-repo-update
       - name: Preserve native lock evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -37,9 +40,9 @@ jobs:
           name: alvo-native-lock
           path: apps/mobile/ios/Podfile.lock
           retention-days: 3
-      - name: Require the native lock to be committed
-        run: git diff --exit-code -- apps/mobile/ios/Podfile.lock
       - name: Compile iOS simulator without signing
         working-directory: apps/mobile/ios
         run: |
           xcodebuild -workspace EsdrasApp.xcworkspace -scheme EsdrasApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/alvo-native-build CODE_SIGNING_ALLOWED=NO build > /tmp/alvo-native-build.log 2>&1 || { tail -100 /tmp/alvo-native-build.log; exit 1; }
+      - name: Require the native lock to be committed
+        run: git diff --exit-code -- apps/mobile/ios/Podfile.lock
