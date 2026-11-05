@@ -13,10 +13,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   ios:
-    # Keep the simulator check on a stable Intel image; arm64 capacity can
-    # cancel a queued validation before a runner starts.
-    runs-on: macos-15-intel
+    # SDK 57's recommended Apple compiler; do not inherit an older default.
+    runs-on: macos-26
     timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -43,6 +44,13 @@ jobs:
       - name: Compile iOS simulator without signing
         working-directory: apps/mobile/ios
         run: |
-          xcodebuild -workspace EsdrasApp.xcworkspace -scheme EsdrasApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/alvo-native-build CODE_SIGNING_ALLOWED=NO build > /tmp/alvo-native-build.log 2>&1 || { tail -100 /tmp/alvo-native-build.log; exit 1; }
+          xcodebuild -workspace EsdrasApp.xcworkspace -scheme EsdrasApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/alvo-native-build CODE_SIGNING_ALLOWED=NO build > /tmp/alvo-native-build.log 2>&1 || { grep -nE 'error:|fatal error:|failed:' /tmp/alvo-native-build.log | head -60; tail -35 /tmp/alvo-native-build.log; exit 1; }
+      - name: Preserve compiler evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alvo-native-build-log
+          path: /tmp/alvo-native-build.log
+          retention-days: 3
       - name: Require the native lock to be committed
         run: git diff --exit-code -- apps/mobile/ios/Podfile.lock
