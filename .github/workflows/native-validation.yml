@@ -1,0 +1,43 @@
+name: Validate native dependencies
+on:
+  pull_request:
+    paths:
+      - apps/mobile/package.json
+      - apps/mobile/ios/**
+      - pnpm-lock.yaml
+      - .github/workflows/native-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: native-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Refresh native lock for the SDK 57 security patch
+        working-directory: apps/mobile/ios
+        run: pod update Expo EXConstants ExpoFont ExpoModulesCore --no-repo-update
+      - name: Preserve native lock evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alvo-native-lock
+          path: apps/mobile/ios/Podfile.lock
+          retention-days: 3
+      - name: Require the native lock to be committed
+        run: git diff --exit-code -- apps/mobile/ios/Podfile.lock
+      - name: Compile iOS simulator without signing
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -workspace EsdrasApp.xcworkspace -scheme EsdrasApp -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/alvo-native-build CODE_SIGNING_ALLOWED=NO build > /tmp/alvo-native-build.log 2>&1 || { tail -100 /tmp/alvo-native-build.log; exit 1; }

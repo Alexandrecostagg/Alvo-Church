@@ -24,6 +24,7 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @alvo/web exec next typegen
       - run: corepack pnpm test
+      - run: corepack pnpm audit --audit-level=high
       - run: corepack pnpm typecheck
   builds:
     runs-on: ubuntu-latest
@@ -97,3 +98,7 @@ jobs:
       - run: corepack enable
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm exec firebase emulators:exec --only auth,firestore,storage --project demo-alvo-qa 'node scripts/qa-ci.mjs'
+      - name: Verify updated Pub/Sub tooling with a local emulator
+        run: |
+          node -e "require('fs').writeFileSync('/tmp/alvo-pubsub-qa.json', JSON.stringify({emulators:{pubsub:{host:'127.0.0.1',port:8085},ui:{enabled:false},singleProjectMode:true}}))"
+          corepack pnpm exec firebase emulators:exec --only pubsub --project demo-alvo-qa --config /tmp/alvo-pubsub-qa.json 'node scripts/verify-pubsub-toolchain.mjs'
