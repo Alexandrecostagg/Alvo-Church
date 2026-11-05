@@ -4,6 +4,10 @@ Monorepo da Plataforma Esdras (nome técnico dos pacotes: `@alvo/*`).
 
 ## Desenvolvimento nesta máquina
 
+Use Node.js 22 ou superior e o pnpm 10.6.3 indicado em `packageManager`.
+A validação iOS do SDK 57 usa Xcode 26.6 e CocoaPods 1.17.0, com o
+`Podfile.lock` commitado; não atualize os pods durante um build de release.
+
 Base de trabalho consolidada em `codex/consolidacao-local-2026-09-05`.
 Veja [o registro da consolidação](docs/consolidacao-git-2026-09-05.md) para a
 origem das alterações, decisões de integração e pendências.

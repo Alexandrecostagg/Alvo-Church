@@ -28,12 +28,12 @@ jobs:
           package-manager-cache: false
       - run: corepack enable
       - run: corepack pnpm install --frozen-lockfile
-      - name: Resolve native lock on the pinned runner
+      - name: Install committed native dependencies
         working-directory: apps/mobile/ios
         run: |
           pod --version
           xcodebuild -version
-          pod install --no-repo-update
+          pod install --deployment --no-repo-update
       - name: Preserve native lock evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

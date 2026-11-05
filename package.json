@@ -100,5 +100,8 @@
       "@modelcontextprotocol/sdk@>=1 <1.32.2": "^1.32.2",
       "firebase-tools>@google-cloud/pubsub": "^6.3.2"
     }
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
