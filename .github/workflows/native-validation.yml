@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   ios:
-    runs-on: macos-latest
+    # Keep the simulator check on a stable Intel image; arm64 capacity can
+    # cancel a queued validation before a runner starts.
+    runs-on: macos-15-intel
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
