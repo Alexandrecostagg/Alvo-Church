@@ -16,6 +16,9 @@ const firebaseEnvKeys = [
 const workspaceEnv = readDotEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: "/:path*", headers: [{ key: "Content-Security-Policy-Report-Only", value: "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; frame-src 'self'; worker-src 'self' blob:; form-action 'self'" }] }];
+  },
   experimental: {
     cpus: 1
   },

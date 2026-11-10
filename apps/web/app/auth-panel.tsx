@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { createPasskeys, getFirebaseWebAuth } from "@alvo/firebase";
+import { PasskeyPanel } from "./security/PasskeyPanel";
 import { useAppAuth } from "./providers";
 
 export function AuthPanel() {
   const { configured, firebaseReady, authError, retryAuth, user, firebaseConfig, signIn, signOut } = useAppAuth();
+  const passkeys = useMemo(() => createPasskeys(
+    () => getFirebaseWebAuth(firebaseConfig),
+    (process.env.NEXT_PUBLIC_PASSKEY_API_URL || "").replace(/\/$/, "") + "/auth/passkeys",
+  ), [firebaseConfig]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +37,7 @@ export function AuthPanel() {
         }}
       >
         <strong>Sessão ativa</strong>
+        <PasskeyPanel client={passkeys} userId={user.uid} />
         <p style={{ margin: "8px 0 16px", lineHeight: 1.6 }}>
           Conectado como {user.email ?? user.uid}.
         </p>
@@ -141,6 +148,7 @@ export function AuthPanel() {
           {isPending ? "Entrando..." : "Entrar"}
         </button>
       </form>
+      <PasskeyPanel client={passkeys} />
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, fontSize: 13 }}>
         <button
