@@ -1,3 +1,6 @@
+import { firebasePasskeyRoute } from './security/firebase.mjs';
+import { withBrowserPolicy } from './security/browser-policy.mjs';
+export { PasskeyState } from './security/durable-store.mjs';
 export { WifiRateLimit } from "./wifi-rate-limit";
 import { boundedForm, boundedBody, rasterImageType, UploadError } from "@alvo/utils";
 import { Hono } from "hono";
@@ -26,6 +29,10 @@ function safeStringCompare(a: string, b: string): boolean {
 }
 
 type WorkerEnv = {
+  PASSKEY_ENABLED?: string;
+  PASSKEY_STATE?: DurableObjectNamespace;
+  PASSKEY_RP_ID?: string;
+  PASSKEY_ORIGINS?: string;
   WHATSAPP_PROCESS_ORIGIN?: string;
   WHATSAPP_PROCESS_TOKEN?: string;
   WHATSAPP_PROCESS_ORGANIZATIONS?: string;
@@ -46,6 +53,15 @@ type WorkerEnv = {
 };
 
 const app = new Hono<{ Bindings: WorkerEnv }>();
+app.use('*', async (c, next) => {
+  await next();
+  c.res = withBrowserPolicy(c.res);
+});
+app.all('/auth/passkeys/*', c => firebasePasskeyRoute(c.req.raw, c.env, {
+  projectId: c.env.FIREBASE_PROJECT_ID,
+  credential: c.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+}));
+
 
 const BRAND_ASSET_CONTENT_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp"

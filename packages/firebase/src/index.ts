@@ -59,3 +59,6 @@ export function createFirebaseEnvironment(projectId = "alvo-church"): FirebaseEn
     storageBucket: `${projectId}.firebasestorage.app`
   };
 }
+
+export { createPasskeys } from "./security/passkeys";
+export { mountPasskeys, type FirebasePasskeyClient } from "./security/firebase-client.mjs";
