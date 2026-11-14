@@ -207,6 +207,7 @@ function toOrganization(documentId: string, data: DocumentData): Organization {
     publicName: data.publicName ? String(data.publicName) : undefined,
     displayName: data.displayName ? String(data.displayName) : undefined,
     organizationType: data.organizationType as Organization["organizationType"],
+    organizationTier: ["solo", "campus", "network", "denomination"].includes(data.organizationTier) ? data.organizationTier : undefined,
     ownerUid: data.ownerUid ? String(data.ownerUid) : undefined,
     registrationEmail: data.registrationEmail ? String(data.registrationEmail) : undefined,
     createdAt: data.createdAt ? String(data.createdAt) : undefined,

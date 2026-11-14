@@ -741,7 +741,7 @@ service cloud.firestore {
     function canReadOperational(orgId, collection) {
       return isTenantAdmin(orgId)
         || (collection == "financeReports" && resource.data.status == "published")
-        || !["families", "financeReports", "followUpTasks", "memberTribeProfiles",
+        || !["groups", "families", "financeReports", "followUpTasks", "memberTribeProfiles",
           "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests",
           "journeyProfiles", "visitorJourneys"].hasAny([collection]);
     }
@@ -767,7 +767,7 @@ service cloud.firestore {
       allow read: if isTenantMember(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses"
-        && (isTenantAdmin(orgId) || (!["families", "financeReports", "followUpTasks", "memberTribeProfiles", "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests", "journeyProfiles", "visitorJourneys"].hasAny([collection])));
+        && (isTenantAdmin(orgId) || (!["groups", "families", "financeReports", "followUpTasks", "memberTribeProfiles", "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests", "journeyProfiles", "visitorJourneys"].hasAny([collection])));
       allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";

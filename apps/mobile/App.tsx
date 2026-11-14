@@ -1,3 +1,4 @@
+import { MobileRoleHome, MobileScopedGroups } from "./src/features/home/role-home";
 import { CampaignMemberScreen } from "./src/features/campaigns/campaign-member-screen";
 import { mobileWorshipSong, mobileWorshipProgram, type MobileWorshipSong } from "./src/features/worship/worship-model";
 import { MobileWorshipReader } from "./src/features/worship/worship-reader";
@@ -918,6 +919,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 }) {
   const access = mobileCapabilities(modules, roles);
   const [tab, setTab] = useState<Tab>("inicio");
+  const [cellView, setCellView] = useState<"personal" | "leadership">(roles.includes("group_leader") ? "leadership" : "personal");
   const [modalStack, setModalStack] = useState<ModalScreen[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -1019,12 +1021,20 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         {!!loadError && <View style={{ padding: 12 }}><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void onRefresh()} loading={refreshing} variant="outline" /></View>}
         {access.volunteers && !modal && pendingServing>0 && <TouchableOpacity accessibilityLabel={`${pendingServing} escalas aguardando resposta. Abrir Minha Escala`} onPress={()=>push("escala")} style={{padding:14,backgroundColor:"#fef3c7"}}><Text style={{color:"#78350f",fontWeight:"700"}}>{pendingServing} escala(s) aguardando sua resposta →</Text><Text style={{color:"#78350f",marginTop:4}}>Toque para conferir a área, o horário e confirmar ou recusar.</Text></TouchableOpacity>}
         {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
-        {access.events && !modal && tab === "inicio" && <TouchableOpacity accessibilityRole="button" onPress={()=>push("convites")} style={{padding:16,backgroundColor:"#eef6f1"}}><Text style={{color:primary,fontWeight:"800"}}>Meus convidados →</Text><Text style={{color:"#3c5c4d",marginTop:4}}>Veja as campanhas e crie seu convite pessoal.</Text></TouchableOpacity>}
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} />}
+          {tab === "inicio" && !modal && <MobileRoleHome key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} onAction={(key, profile) => {
+            if (["groups", "weekly"].includes(key) && access.groups) { setCellView(profile === "cell_leader" ? "leadership" : "personal"); setTab("celula"); return true; }
+            if (key === "events" && access.events) { setTab("agenda"); return true; }
+            if (key === "invites" && access.events) { push("convites"); return true; }
+            if (key === "serving" && access.volunteers) { push("escala"); return true; }
+            if (key === "learning" && access.journeys) { push("cursos"); return true; }
+            if (key === "profile") { setTab("perfil"); return true; }
+            return false;
+          }}><HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} embedded /></MobileRoleHome>}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
-          {tab === "celula" && !modal && <CelulaTab canLead={access.leader} onRefresh={onRefresh} groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
+          {tab === "celula" && !modal && cellView === "leadership" && roles.includes("group_leader") && access.groups && <MobileScopedGroups key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} profile="cell_leader" onPrepare={access.leader ? () => push("lider-celula") : undefined} />}
+          {tab === "celula" && !modal && (cellView === "personal" || !roles.includes("group_leader")) && <CelulaTab canLead={access.leader} onRefresh={onRefresh} groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
           {tab === "perfil" && !modal && <PerfilTab access={access} onChooseInstitution={onChooseInstitution} user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
@@ -1068,17 +1078,18 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
 
 // ─── Home Tab ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos, access, refreshing, onRefresh, onOpenEvent }: {
-  primary: string; events: Event[]; groups: MyGroup[]; dataReady: boolean;
+function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoes, onOpenKids, onOpenEscala, onOpenMusica, onOpenCursos, access, refreshing, onRefresh, onOpenEvent, embedded = false }: {
+  primary: string; events: Event[]; groups: MyGroup[]; dataReady: boolean; embedded?: boolean;
   access: MobileCapabilities; refreshing: boolean; onRefresh: () => Promise<void>; onOpenEvent: (event: Event) => void;
   user: FirebaseAuthUser; orgId: string;
   onOpenDoacoes: () => void; onOpenKids: () => void; onOpenEscala: () => void; onOpenMusica: () => void; onOpenCursos: () => void;
 }) {
   const nextEvent = events[0];
   const myGroup = groups[0];
+  const Container = embedded ? View : ScrollView;
 
   return (
-    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}>
+    <Container {...(embedded ? { style: { gap: 16 } } : { contentContainerStyle: s.tabContent, showsVerticalScrollIndicator: false, refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} /> })}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando dados da sua igreja..." />}
 
       {/* Next event */}
@@ -1121,7 +1132,7 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
 
       {/* Journey */}
       {access.journeys && <JourneySection primary={primary} user={user} orgId={orgId} />}
-    </ScrollView>
+    </Container>
   );
 }
 
