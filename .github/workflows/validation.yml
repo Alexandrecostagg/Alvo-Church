@@ -46,6 +46,35 @@ jobs:
         run: node scripts/with-qa-env.mjs corepack pnpm build:cloudflare:web
       - if: matrix.target == 'web'
         run: corepack pnpm qa:cloudflare-runtime
+      - if: matrix.target == 'web'
+        name: Load public production configuration
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const ts = require('typescript');
+          const source = fs.readFileSync('apps/web/wrangler.jsonc', 'utf8');
+          const parsed = ts.parseConfigFileTextToJson('wrangler.jsonc', source);
+          if (parsed.error) throw new Error('Invalid Wrangler configuration');
+          const entries = Object.entries(parsed.config.vars).filter(([key]) => key.startsWith('NEXT_PUBLIC_'));
+          for (const [key, value] of entries) {
+            if (typeof value !== 'string' || /[\r\n]/.test(value)) throw new Error('Invalid public build value');
+            fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          }
+          JS
+      - if: matrix.target == 'web'
+        name: Build and verify production-configured Worker
+        run: |
+          corepack pnpm build:cloudflare:web
+          corepack pnpm qa:cloudflare-runtime
+          mkdir -p release/worker release/assets
+          corepack pnpm --filter @alvo/web exec wrangler deploy --dry-run --outdir "$GITHUB_WORKSPACE/release/worker"
+          cp -R apps/web/.open-next/assets/. release/assets/
+      - if: matrix.target == 'web'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alvo-security-release
+          path: release/
+          retention-days: 1
       - if: matrix.target == 'lp'
         run: corepack pnpm --filter @alvo/lp build
       - if: matrix.target == 'mobile'
