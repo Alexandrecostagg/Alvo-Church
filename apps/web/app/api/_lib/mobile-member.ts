@@ -1,3 +1,4 @@
+import { personalIntegration, journeyEnabled } from "./journey-operations";
 import {
   AccountError,
   accountTransaction,
@@ -81,9 +82,11 @@ export async function mobileMemberOperation(
       return { status: "unlinked", groups: [], assignments: [], profile: null };
     }
     if (action === "journey") {
+      await journeyEnabled(tx, root);
       const [profile] = await tx.read(`${root}/journeyProfiles/${personId}`);
       return {
         status: "active",
+        integration: await personalIntegration(tx, root, orgId, personId),
         profile:
           profile?.organizationId === orgId && profile.personId === personId
             ? {

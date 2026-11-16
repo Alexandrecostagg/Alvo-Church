@@ -43,7 +43,8 @@
     "qa:mobile": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-mobile.ts",
     "qa:platform-admin": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-platform-admin.ts",
     "qa:campaigns": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-campaigns.ts",
-    "qa:home": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-role-home.ts"
+    "qa:home": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-role-home.ts",
+    "qa:journeys": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-journeys.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

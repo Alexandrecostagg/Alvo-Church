@@ -1,3 +1,4 @@
+import { MobileIntegration } from "./integration";
 import { MobileContact, MobileLeaderInsights } from "./leader-insights";
 import {
   useCallback,
@@ -8,6 +9,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -36,13 +38,13 @@ type Props = {
   apiOrigin: string;
   primary: string;
 };
-function useApi({ user, orgId, apiOrigin }: Props) {
+function useApi({ user, orgId, apiOrigin }: Props, endpoint = "/api/home") {
   return useCallback(
     async <T,>(
       body: Record<string, unknown>,
       signal?: AbortSignal,
     ): Promise<T> => {
-      const r = await fetch(`${apiOrigin}/api/home`, {
+      const r = await fetch(`${apiOrigin}${endpoint}`, {
         method: "POST",
         signal,
         headers: {
@@ -58,7 +60,7 @@ function useApi({ user, orgId, apiOrigin }: Props) {
         );
       return result;
     },
-    [user, orgId, apiOrigin],
+    [user, orgId, apiOrigin, endpoint],
   );
 }
 function Button({
@@ -87,10 +89,12 @@ function Button({
 export function MobileRoleHome(
   props: Props & {
     children: ReactNode;
+    externalRevision?: number;
     onAction: (key: string, profile: HomeProfile) => boolean;
   },
 ) {
   const call = useApi(props);
+  const journeyCall = useApi(props, "/api/journeys");
   const [profile, setProfile] = useState<HomeProfile>();
   const [period, setPeriod] = useState("week"),
     [revision, setRevision] = useState(0);
@@ -119,7 +123,13 @@ export function MobileRoleHome(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [call, profile, period, revision]);
+  }, [call, profile, period, revision, props.externalRevision]);
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state === "active") setRevision((n) => n + 1);
+    });
+    return () => listener.remove();
+  }, []);
   async function action(key: string, href: string) {
     if (key === "absence") {
       setRecording(true);
@@ -149,6 +159,28 @@ export function MobileRoleHome(
       await Linking.openURL(`${props.apiOrigin}${href}`);
     } catch {
       setError("Não foi possível abrir a gestão web.");
+    }
+  }
+  async function completeTask(t: RoleHomeSnapshot["tasks"][number]) {
+    if (busy || !t.personId) return;
+    setBusy(true);
+    setError("");
+    try {
+      await journeyCall({
+        action: "task-status",
+        profile: data!.profile,
+        personId: t.personId,
+        taskId: t.id,
+        expectedTaskRevision: t.revision || 0,
+        status: "completed",
+        requestId: Crypto.randomUUID(),
+      });
+      setRevision((n) => n + 1);
+      setMessage("Acompanhamento concluído.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
   async function contacted(id: string) {
@@ -242,6 +274,13 @@ export function MobileRoleHome(
                   revision={revision}
                 />
               )}
+            {data.integrationEnabled && data.profile !== "network" && (
+              <MobileIntegration
+                {...props}
+                profile={data.profile}
+                revision={revision + (props.externalRevision || 0)}
+              />
+            )}
             <Text style={s.heading}>Acessos rápidos</Text>
             <View style={s.wrap}>
               {data.actions.map((a) => (
@@ -386,9 +425,22 @@ export function MobileRoleHome(
               <View style={s.card}>
                 <Text style={s.heading}>Acompanhamentos</Text>
                 {data.tasks.map((t) => (
-                  <Text style={s.meta} key={t.id}>
-                    {t.title}
-                  </Text>
+                  <View key={t.id} style={s.card}>
+                    <Text style={s.strong}>
+                      {t.personName} · {t.title}
+                    </Text>
+                    <Text style={s.meta}>
+                      {t.status === "in_progress" ? "Em andamento" : "Aberto"}
+                      {t.dueAt
+                        ? ` · ${new Date(t.dueAt).toLocaleString("pt-BR")}`
+                        : ""}
+                    </Text>
+                    <Button
+                      label="Registrar conclusão"
+                      disabled={busy}
+                      onPress={() => void completeTask(t)}
+                    />
+                  </View>
                 ))}
               </View>
             )}

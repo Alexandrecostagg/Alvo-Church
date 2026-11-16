@@ -1,4 +1,6 @@
 "use client";
+import { JourneyDashboard } from "../journeys/journeys-view";
+import { useJourneyApi } from "../journeys/journey-api";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -47,10 +49,33 @@ function RoleHomeContent() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const { call } = useHomeApi();
+  const { call: journeyCall } = useJourneyApi();
   const { data, error } = useHomeResource<RoleHomeSnapshot>(
     { action: "overview", profile, birthdayPeriod: period },
     revision,
   );
+  async function completeTask(t: RoleHomeSnapshot["tasks"][number]) {
+    if (busy || !t.personId) return;
+    setBusy(t.id);
+    setMessage("");
+    try {
+      await journeyCall({
+        action: "task-status",
+        profile: data!.profile,
+        personId: t.personId,
+        taskId: t.id,
+        expectedTaskRevision: t.revision || 0,
+        status: "completed",
+        requestId: crypto.randomUUID(),
+      });
+      setMessage("Acompanhamento concluído.");
+      setRevision((n) => n + 1);
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
   async function closeAbsence(id: string) {
     setBusy(id);
     setMessage("");
@@ -162,6 +187,12 @@ function RoleHomeContent() {
           ) &&
             data.actions.some((a) => a.key === "groups") && (
               <LeaderInsights data={data} revision={revision} />
+            )}
+          {data.integrationEnabled &&
+            ["pastoral", "administration", "cell_leader"].includes(
+              data.profile,
+            ) && (
+              <JourneyDashboard profile={data.profile} revision={revision} />
             )}
           <section>
             <h2>O que você precisa fazer?</h2>
@@ -307,17 +338,23 @@ function RoleHomeContent() {
                 <h2>Próximos acompanhamentos</h2>
                 {data.tasks.map((t) => (
                   <article className={styles.row} key={t.id}>
-                    <strong>{t.title}</strong>
+                    <strong>
+                      {t.personName} · {t.title}
+                    </strong>
+                    <span>
+                      {t.status === "in_progress" ? "Em andamento" : "Aberto"}
+                    </span>
+                    <button
+                      className={styles.button}
+                      disabled={!!busy}
+                      onClick={() => void completeTask(t)}
+                    >
+                      Registrar conclusão
+                    </button>
                     {t.dueAt && <span>{date(t.dueAt)}</span>}
                   </article>
                 ))}
-                <Link
-                  href={
-                    data.profile === "cell_leader" ? "/my-groups" : "/reception"
-                  }
-                >
-                  Abrir minha área de trabalho →
-                </Link>
+                <Link href={"/journeys"}>Abrir minha área de trabalho →</Link>
               </section>
             )}
             {!!data.groups.length && (

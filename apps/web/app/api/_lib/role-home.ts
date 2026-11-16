@@ -1,3 +1,4 @@
+import { isCarePending } from "@alvo/domain";
 import { whatsappHref } from "@alvo/utils";
 import { homeEvolution } from "./home-evolution";
 import { createHash } from "node:crypto";
@@ -827,6 +828,7 @@ export async function roleHomeOperation(
       groups: [],
       birthdays: [],
       tasks: [],
+      integrationEnabled: c.enabled("journeys"),
       absences: [],
       churches: [],
     };
@@ -1040,33 +1042,84 @@ export async function roleHomeOperation(
         href: "/reception",
       });
     if (staff || led) {
-      if (c.enabled("visitors")) {
+      if (c.enabled("journeys")) {
         const tasks = staff
-          ? await tx.query(
-              c.root,
-              "followUpTasks",
-              "status",
-              "open",
-              "EQUAL",
-              51,
-            )
+          ? (
+              await Promise.all(
+                ["open", "in_progress"].map((status) =>
+                  tx.query(
+                    c.root,
+                    "followUpTasks",
+                    "status",
+                    status,
+                    "EQUAL",
+                    101,
+                  ),
+                ),
+              )
+            ).flat()
           : await tx.query(
               c.root,
               "followUpTasks",
               "assignedToUserId",
               uid,
               "EQUAL",
-              51,
+              501,
             );
-        out.tasks = tasks
+        const pending = tasks
           .filter(
             (t) =>
               t.organizationId === c.organizationId &&
-              t.status === "open" &&
-              (staff || t.assignedToUserId === uid),
+              isCarePending(t) &&
+              validId(t.personId) &&
+              (staff ||
+                (t.assignedToUserId === uid &&
+                  leaderRoster.some((p) => p.id === t.personId))),
           )
-          .slice(0, 10)
-          .map((t) => ({ id: t.id, title: t.title, dueAt: t.dueAt }));
+          .sort(
+            (a, b) =>
+              (Date.parse(a.dueAt) || Infinity) -
+                (Date.parse(b.dueAt) || Infinity) || a.id.localeCompare(b.id),
+          );
+        if (
+          staff &&
+          tasks.some(
+            (t) =>
+              t.organizationId === c.organizationId &&
+              isCarePending(t) &&
+              !validId(t.personId),
+          )
+        )
+          out.warnings.push(
+            "Há acompanhamentos antigos sem pessoa vinculada. Revise esses registros antes de considerar o cuidado concluído.",
+          );
+        const targets = await tx.read(
+          ...pending.slice(0, 10).map((t) => `${c.root}/people/${t.personId}`),
+        );
+        out.tasks = pending.slice(0, 10).flatMap((t, i) =>
+          targets[i]?.organizationId === c.organizationId &&
+          targets[i]?.status === "active"
+            ? [
+                {
+                  id: t.id,
+                  title: t.title,
+                  dueAt: t.dueAt,
+                  personId: t.personId,
+                  personName: name(targets[i]!),
+                  status: t.status,
+                  revision: t.revision || 0,
+                },
+              ]
+            : [],
+        );
+        if (staff && out.tasks.length < Math.min(pending.length, 10))
+          out.warnings.push(
+            "Alguns acompanhamentos estão vinculados a cadastros indisponíveis ou inativos e não aparecem nesta lista.",
+          );
+        if (pending.length > 10 || tasks.length >= (staff ? 101 : 501))
+          out.warnings.push(
+            "Acompanhamentos: lista resumida. Abra Jornadas para consultar as demais tarefas.",
+          );
       }
       if (c.enabled(staff ? "core" : "groups")) {
         const records = staff

@@ -63,7 +63,16 @@ export interface RoleHomeSnapshot {
     date: string;
     groupId?: string;
   }>;
-  tasks: Array<{ id: string; title: string; dueAt?: string }>;
+  integrationEnabled?: boolean;
+  tasks: Array<{
+    id: string;
+    title: string;
+    dueAt?: string;
+    personId?: string;
+    personName?: string;
+    status?: string;
+    revision?: number;
+  }>;
   absences: Array<{
     id: string;
     personId: string;
@@ -117,6 +126,8 @@ export function homeRouteAllowed(
   if (!roles.length) return false;
   if (path.startsWith("/network"))
     return homeProfiles(roles, tier, networkPlan).includes("network");
+  if (path === "/journeys" || path.startsWith("/journeys/"))
+    return isChurchStaff(roles) || roles.includes("group_leader");
   if (
     [
       "/members",
@@ -129,7 +140,6 @@ export function homeRouteAllowed(
       "/saas",
       "/operations",
       "/tribes",
-      "/journeys",
       "/media",
       "/learning/manage",
       "/kids/scan",

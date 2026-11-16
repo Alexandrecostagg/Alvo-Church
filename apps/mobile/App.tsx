@@ -66,7 +66,7 @@ import {
   type FirebaseAuthUser
 } from "@alvo/firebase";
 import type { OrganizationDirectoryEntry } from "@alvo/firebase";
-import type { ServiceAssignment, MemberJourneyProfile } from "@alvo/types";
+import type { ServiceAssignment } from "@alvo/types";
 import type { Event, EventRegistration, Group, Organization, PrayerRequest, TenantRuntimeSnapshot, KidsCheckIn, AppRole, MarketplacePromotion, Course, CourseModule, Lesson, MemberCourseProgress } from "@alvo/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -982,6 +982,17 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
     return()=>{active=false;received.remove();tapped.remove();};
   },[orgId,access.volunteers]);
 
+  const [journeyRevision,setJourneyRevision]=useState(0);
+  useEffect(()=>{
+    let active=true;
+    const matches=(data:Record<string,unknown>|undefined)=>data?.type==="journey_update"&&data.organizationId===orgId;
+    const received=Notifications.addNotificationReceivedListener(n=>{if(matches(n.request.content.data))setJourneyRevision(n=>n+1)});
+    const open=(response:Notifications.NotificationResponse|null)=>{if(active&&access.journeys&&response&&matches(response.notification.request.content.data)){setModalStack([]);setTab("inicio");setJourneyRevision(n=>n+1)}};
+    const tapped=Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync().then(open).catch(()=>{});
+    return()=>{active=false;received.remove();tapped.remove()};
+  },[orgId,access.journeys]);
+
   const unseenPromoCount = promotions.filter((p) => !seenPromoIds.has(p.id)).length;
 
   function push(screen: ModalScreen) { setModalStack(p => p.at(-1) === screen ? p : [...p, screen]); }
@@ -1033,7 +1044,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <MobileRoleHome key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} onAction={(key, profile) => {
+          {tab === "inicio" && !modal && <MobileRoleHome externalRevision={journeyRevision} key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} onAction={(key, profile) => {
             if (["groups", "weekly"].includes(key) && access.groups) { setCellView(profile === "cell_leader" ? "leadership" : "personal"); setTab("celula"); return true; }
             if (key === "events" && access.events) { setTab("agenda"); return true; }
             if (key === "invites" && access.events) { push("convites"); return true; }
@@ -1140,106 +1151,8 @@ function HomeTab({ primary, events, groups, dataReady, user, orgId, onOpenDoacoe
         </>
       )}
 
-      {/* Journey */}
-      {access.journeys && <JourneySection primary={primary} user={user} orgId={orgId} />}
+
     </Container>
-  );
-}
-
-// ─── Journey (jornada gamificada) ─────────────────────────────────────────────
-
-type JourneyStepDef = {
-  key: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  nudge: string;
-};
-
-// Vocabulário alinhado ao JourneyStage do backend (@alvo/types): exploring → connecting/grounding → serving.
-const JOURNEY_STEPS: JourneyStepDef[] = [
-  { key: "exploring", label: "Chegou", icon: "footsteps-outline", nudge: "" },
-  { key: "connecting", label: "Conectado", icon: "people", nudge: "Participe dos encontros da sua célula" },
-  { key: "grounding", label: "Enraizado", icon: "leaf", nudge: "Conheça os cursos publicados pela sua igreja" },
-  { key: "serving", label: "Servindo", icon: "hand-left-outline", nudge: "" },
-  { key: "developing", label: "Crescendo", icon: "trending-up", nudge: "Converse com sua liderança sobre os próximos passos" },
-  { key: "leading", label: "Liderando", icon: "star", nudge: "" }
-];
-
-const JOURNEY_STAGE_INDEX: Record<string, number> = {
-  exploring: 0,
-  connecting: 1,
-  grounding: 2,
-  serving: 3,
-  developing: 4,
-  leading: 5
-};
-
-function JourneySection({ primary, user, orgId }: { primary: string; user: FirebaseAuthUser; orgId: string }) {
-  const [profile, setProfile] = useState<MemberJourneyProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!orgId || !user) return;
-    let cancelled = false;
-    async function load() {
-      try {
-        const { profile: p } = await memberOperation<{ profile: MemberJourneyProfile | null }>(user, orgId, { action: "journey" });
-        if (!cancelled) setProfile(p);
-      } catch {
-        if (!cancelled) setProfile(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-  }, [orgId, user?.uid]);
-
-  if (loading || !profile) return null;
-
-  const stage = profile?.currentStage ?? "exploring";
-  const stepIndex = JOURNEY_STAGE_INDEX[stage] ?? 0;
-  const currentStep = JOURNEY_STEPS[stepIndex];
-
-  return (
-    <>
-      <Text style={s.sectionTitle}>Minha jornada · etapa {stepIndex + 1} de {JOURNEY_STEPS.length}</Text>
-      <View style={s.card}>
-        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-          {JOURNEY_STEPS.map((step, i, arr) => {
-            const done = i < stepIndex;
-            const current = i === stepIndex;
-            const locked = i > stepIndex;
-            return (
-              <View key={step.key} style={{ flexDirection: "row", alignItems: "flex-start", flex: i < arr.length - 1 ? 1 : undefined }}>
-                <View style={s.journeyStep}>
-                  <View style={[
-                    s.journeyIconWrap,
-                    done && { backgroundColor: primary },
-                    current && { backgroundColor: `${primary}20`, borderWidth: 2, borderColor: primary },
-                    locked && { backgroundColor: "transparent", borderWidth: 2, borderColor: "#e5e7eb", borderStyle: "dashed" }
-                  ]}>
-                    <Ionicons
-                      name={done ? "checkmark" : step.icon}
-                      size={16}
-                      color={done ? "#fff" : current ? primary : "#9ca3af"}
-                    />
-                  </View>
-                  <Text style={[s.journeyLabel, current && { color: primary, fontWeight: "700" }]}>{step.label}</Text>
-                </View>
-                {i < arr.length - 1 && <View style={[s.journeyLine, { backgroundColor: done ? primary : "#e5e7eb", flex: 1, marginTop: 15 }]} />}
-              </View>
-            );
-          })}
-        </View>
-        {currentStep.nudge ? (
-          <View style={s.journeyNudge}>
-            <Ionicons name="sparkles-outline" size={14} color={primary} />
-            <Text style={[s.journeyNudgeText, { flex: 1 }]}>{currentStep.nudge}</Text>
-          </View>
-        ) : null}
-      </View>
-    </>
   );
 }
 

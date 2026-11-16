@@ -63,6 +63,7 @@ try {
     "qa:campaigns",
     "qa:platform-admin",
     "qa:home",
+    "qa:journeys",
   ])
     await run([task]);
   await run(["qa:security"], { SECURITY_AUDIT_API: "1" });

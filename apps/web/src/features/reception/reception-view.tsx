@@ -24,8 +24,7 @@ import {
   fetchVisitorIntakes,
   fetchVisitorJourneys,
   isFirebaseWebRuntimeConfigured,
-  updateVisitorIntakeStatus,
-  updateVisitorJourneyStage
+  updateVisitorIntakeStatus
 } from "@alvo/firebase";
 import type { VisitorIntake, VisitorJourney } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
@@ -111,6 +110,7 @@ export function ReceptionView() {
   const [visitorJourneys, setVisitorJourneys] = useState<VisitorJourney[]>([]);
   const [visitorIntakes, setVisitorIntakes] = useState<VisitorIntake[]>([]);
   const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<string[]>([]);
+  const greetingBusy = useRef(false);
   const [greetedVisitorIds, setGreetedVisitorIds] = useState<string[]>([]);
   const [status, setStatus] = useState("Pronto para receber visitantes.");
   const [lastCreated, setLastCreated] = useState<CapturedVisitor | null>(null);
@@ -281,43 +281,31 @@ export function ReceptionView() {
   };
 
   const handleMarkGreetingComplete = async (visitorId: string) => {
+    if (greetingBusy.current) return;
     const visitor = capturedVisitors.find((item) => item.id === visitorId);
-    setGreetedVisitorIds((currentIds) =>
-      currentIds.includes(visitorId) ? currentIds : [...currentIds, visitorId]
-    );
-    setCapturedVisitors((current) =>
-      current.map((item) =>
-        item.id === visitorId ? { ...item, status: "Saudado no altar" } : item
-      )
-    );
-
-    if (visitor && firebaseConnected) {
-      try {
-        await Promise.all([
-          updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
-            intakeId: visitor.id,
-            status: "archived",
-            updatedByUserId: user.uid
-          }),
-          visitor.journeyId
-            ? updateVisitorJourneyStage(firebaseConfig, { organizationId }, {
-                journeyId: visitor.journeyId,
-                stage: "welcomed",
-                updatedByUserId: user.uid
-              })
-            : Promise.resolve()
-        ]);
-      } catch (error) {
-        setStatus(
-          visitor
-            ? `${visitor.name} foi marcado, mas não foi possível concluir a atualização agora.`
-            : "Visitante marcado, mas não foi possível concluir a atualização agora."
-        );
-        return;
-      }
+    if (!visitor || !firebaseConnected) {
+      setStatus("Conecte-se para registrar a saudação.");
+      return;
     }
-
-    setStatus(visitor ? `${visitor.name} marcado como saudado no altar.` : "Visitante marcado como saudado.");
+    greetingBusy.current = true;
+    setStatus("Salvando saudação…");
+    try {
+      await updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
+        intakeId: visitor.id,
+        status: "archived",
+        updatedByUserId: user.uid
+      });
+      // Saudação no altar não comprova contato pessoal nem altera a etapa pastoral.
+      setGreetedVisitorIds((ids) => ids.includes(visitorId) ? ids : [...ids, visitorId]);
+      setCapturedVisitors((items) => items.map((item) =>
+        item.id === visitorId ? { ...item, status: "Saudado no altar" } : item
+      ));
+      setStatus(`${visitor.name}: saudação salva. O acompanhamento continua em Jornadas.`);
+    } catch {
+      setStatus("Não foi possível salvar a saudação. Tente novamente; a jornada foi preservada.");
+    } finally {
+      greetingBusy.current = false;
+    }
   };
 
   // Filtros

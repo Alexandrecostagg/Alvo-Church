@@ -1117,3 +1117,5 @@ export * from './invitation-campaign';
 export * from './invitation-calendar';
 export * from './invitation-manual';
 export * from './home-profiles';
+
+export * from "./integration";
