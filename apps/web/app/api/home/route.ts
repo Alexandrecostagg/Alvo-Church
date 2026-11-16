@@ -1,3 +1,4 @@
+import { dispatchGroupNotice } from "../_lib/group-operations";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseIdToken } from "../_lib/verify-auth";
 import { boundedJson, privateHeaders, AccountError } from "../_lib/kids-media";
@@ -6,10 +7,13 @@ export async function POST(req: NextRequest) {
   try {
     const uid = await verifyFirebaseIdToken(req);
     if (!uid) throw new AccountError(401, "Entre na sua conta.");
-    return NextResponse.json(
-      await roleHomeOperation(await boundedJson(req, 6000), uid),
-      { headers: privateHeaders },
-    );
+    const body = await boundedJson(req, 20000);
+    const result = await roleHomeOperation(body, uid);
+    if (result.noticeId)
+      await dispatchGroupNotice(body.organizationId, result.noticeId).catch(
+        () => {},
+      );
+    return NextResponse.json(result, { headers: privateHeaders });
   } catch (e) {
     return NextResponse.json(
       {

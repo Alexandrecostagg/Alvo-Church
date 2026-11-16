@@ -140,7 +140,7 @@ async function run() {
   await org
     .collection("settings")
     .doc("subscription")
-    .set({ plan: "free", billingStatus: "active" });
+    .set({ plan: "comunidade", billingStatus: "active" });
   await db.doc(`org_slugs/${slug}`).set({ organizationId: orgId });
   await org.collection("givingCampaigns").doc("campaign").set({
     organizationId: orgId,
@@ -622,6 +622,8 @@ async function run() {
     "Webhook exige token próprio",
   );
   // Provider adapter has no network. Real HTTP/Firestore exercise above remains separate.
+  // Billing starts from Free; the giving fixtures above require Comunidade.
+  await org.collection("settings").doc("subscription").set({ plan: "free", billingStatus: "active" });
   const resources = new Map<string, any>();
   let posts = 0,
     loseSubscription = true;

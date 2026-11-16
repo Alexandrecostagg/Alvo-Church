@@ -29,7 +29,28 @@ export interface HomeGroupDetail {
   group: { id: string; name: string };
   timezone: string;
   meetingId: string | null;
-  meetings: Array<{ id: string; startsAt: string }>;
+  meetings: Array<{
+    id: string;
+    startsAt: string;
+    status?: string;
+    revision?: number;
+  }>;
+  hasMore?: boolean;
+  partial?: boolean;
+  meeting?: {
+    id: string;
+    startsAt: string;
+    status: string;
+    revision: number;
+  } | null;
+  report?: { text: string; revision: number; updatedAt: string } | null;
+  summary?: {
+    present: number;
+    absent: number;
+    justified: number;
+    pending: number;
+    expected: number;
+  };
   people: Array<{
     id: string;
     name: string;
@@ -126,7 +147,7 @@ export function homeRouteAllowed(
   if (!roles.length) return false;
   if (path.startsWith("/network"))
     return homeProfiles(roles, tier, networkPlan).includes("network");
-  if (path === "/journeys" || path.startsWith("/journeys/"))
+  if (path === "/tribes" || path.startsWith("/tribes/") || path === "/journeys" || path.startsWith("/journeys/"))
     return isChurchStaff(roles) || roles.includes("group_leader");
   if (
     [
@@ -139,7 +160,6 @@ export function homeRouteAllowed(
       "/settings",
       "/saas",
       "/operations",
-      "/tribes",
       "/media",
       "/learning/manage",
       "/kids/scan",

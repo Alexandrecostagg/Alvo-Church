@@ -1,3 +1,4 @@
+import { givingEnabled, activeGivingCampaign } from "./giving-access";
 import { createHash } from "node:crypto";
 import { buildPixPayload } from "@alvo/domain";
 import {
@@ -45,7 +46,8 @@ export async function financeActor(
   documentId(orgId, "Igreja");
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
-  if (moduleKey) await assertModuleEnabled(tx, root, moduleKey);
+  if (moduleKey === "giving") await givingEnabled(tx, root);
+  else if (moduleKey) await assertModuleEnabled(tx, root, moduleKey);
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   if (
     org?.status !== "active" ||
@@ -99,7 +101,7 @@ async function publicContext(tx: AccountTransaction, orgSlug: string) {
   if (!slug) throw new AccountError(404, "Igreja não encontrada.");
   const orgId = documentId(slug.organizationId, "Igreja");
   const root = `organizations/${orgId}`;
-  await assertModuleEnabled(tx, root, "giving");
+  await givingEnabled(tx, root);
   const [org, branding] = await tx.read(root, `${root}/settings/branding`);
   if (org?.status !== "active")
     throw new AccountError(404, "Igreja indisponível.");
@@ -140,7 +142,6 @@ export async function createPublicGiving(raw: any, clientKey: string) {
         "Este pedido já foi registrado com outros dados. Inicie uma nova contribuição.",
       );
     if (
-      !old &&
       campaignId &&
       (campaign?.organizationId !== orgId || campaign.status !== "active")
     )
@@ -187,7 +188,7 @@ async function publicReceiptAuth(tx: AccountTransaction, raw: any) {
   const orgId = documentId(raw.organizationId, "Igreja"),
     id = documentId(raw.intentId, "Intenção");
   const root = `organizations/${orgId}`;
-  await assertModuleEnabled(tx, root, "giving");
+  await givingEnabled(tx, root);
   const [org, intent] = await tx.read(root, `${root}/givingIntents/${id}`);
   if (
     org?.status !== "active" ||
@@ -221,6 +222,7 @@ export async function declareGiving(raw: any, uid?: string) {
             amount: money(raw.amount),
             type: raw.type,
             personId: raw.personId || "",
+            ...(raw.campaignId ? { campaignId: raw.campaignId } : {}),
             dataUrl: raw.dataUrl || "",
           },
     ),
@@ -282,11 +284,12 @@ export async function declareGiving(raw: any, uid?: string) {
         (person?.organizationId !== orgId || person.status !== "active")
       )
         throw new AccountError(422, "Pessoa indisponível nesta igreja.");
+      const campaignId = publicFlow ? intent.campaignId || "" : await activeGivingCampaign(tx, root, orgId, raw.campaignId);
       const type = publicFlow
         ? intent.campaignId
           ? "campanha"
           : "oferta"
-        : raw.type;
+        : campaignId ? "campanha" : raw.type;
       if (!["dizimo", "oferta", "missao", "campanha", "outro"].includes(type))
         throw new AccountError(400, "Tipo de contribuição inválido.");
       if (!publicFlow) await quota(tx, root, uid!);
@@ -307,9 +310,8 @@ export async function declareGiving(raw: any, uid?: string) {
         method: raw.personId ? "manual" : "pix",
         receiptId: path ? contributionId : null,
         fingerprint,
-        ...(publicFlow
-          ? { intentId: id, campaignId: intent.campaignId || "" }
-          : {}),
+        campaignId,
+        ...(publicFlow ? { intentId: id } : {}),
       };
       tx.set(`${root}/contributions/${contributionId}`, contribution);
       if (path)
@@ -437,7 +439,7 @@ export async function reconcileContribution(raw: any, uid: string) {
       });
       if (campaign?.organizationId === orgId)
         tx.patch(`${root}/givingCampaigns/${c.campaignId}`, {
-          raisedAmount: (Number(campaign.raisedAmount) || 0) + c.amount,
+          raisedAmount: (Math.round((Number(campaign.raisedAmount) || 0) * 100) + money(c.amount)) / 100,
           updatedAt: now,
         });
     }

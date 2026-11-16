@@ -442,9 +442,8 @@ service cloud.firestore {
       // Direct documents include internal fields such as createdByUserId.
       allow get: if isTenantMember(orgId) && moduleEnabled(orgId, "giving");
       allow list: if isTenantMember(orgId) && moduleEnabled(orgId, "giving");
-      allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && request.resource.data.organizationId == orgId && request.resource.data.raisedAmount == 0;
-      allow update: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["organizationId", "raisedAmount"]);
-      allow delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "giving") && resource.data.raisedAmount == 0;
+      // Campaign lifecycle and reconciliation are server transactions. Keep history.
+      allow write: if false;
     }
 
     // Public declarations are mediated by a scoped, expiring capability.
@@ -524,7 +523,7 @@ service cloud.firestore {
       allow create: if false;
       allow update: if isTenantAdmin(orgId)
         && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt"]);
+          .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt", "tribePrimaryCode", "tribeSecondaryCode", "tribeClassificationReason", "tribeClassificationSource", "tribeClassifiedAt", "tribeRevision"]);
       allow delete: if isTenantAdmin(orgId);
     }
 
@@ -540,11 +539,11 @@ service cloud.firestore {
     }
 
     // Histórico de tribo do membro: auditoria de classificações (IA) e ajustes
-    // manuais. Titular e administrador leem; só admin grava (registro é imutável — sem
-    // update/delete pelo cliente).
+    // manuais. Titular e administrador leem; o backend grava junto à revisão
+    // em uma transação. O cliente não altera esse histórico.
     match /organizations/{orgId}/people/{personId}/tribeHistory/{entryId} {
       allow read: if isTenantAdmin(orgId) || ownsPerson(orgId, personId);
-      allow create: if isTenantAdmin(orgId);
+      allow create: if false;
       allow update, delete: if false;
     }
 
@@ -753,7 +752,7 @@ service cloud.firestore {
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses"
         && canReadOperational(orgId, collection);
-      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+      allow write: if collection != "groups" && collection != "weeklyThemes" && isTenantAdmin(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
     }
@@ -768,7 +767,7 @@ service cloud.firestore {
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses"
         && (isTenantAdmin(orgId) || (!["groups", "families", "financeReports", "followUpTasks", "memberTribeProfiles", "tribeAssessments", "tribeBehaviorSignals", "tribeReviewRequests", "journeyProfiles", "visitorJourneys"].hasAny([collection])));
-      allow write: if isTenantAdmin(orgId) && isOperationalCollection(collection)
+      allow write: if collection != "groups" && collection != "weeklyThemes" && isTenantAdmin(orgId) && isOperationalCollection(collection)
         && operationalModuleEnabled(orgId, collection)
         && collection != "events" && collection != "courses";
     }

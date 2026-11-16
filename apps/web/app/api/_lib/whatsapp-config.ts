@@ -1,3 +1,4 @@
+import { communicationEnabled } from "./communication-operations";
 import { PASTORAL_CONTEXT_LIMITS } from "@alvo/ai";
 import {
   AccountError,
@@ -5,7 +6,6 @@ import {
   type AccountTransaction,
 } from "./member-account-store";
 import { documentId } from "./member-account";
-import { assertModuleEnabled } from "./module-access";
 
 export interface WhatsappChannel {
   organizationId: string;
@@ -93,7 +93,7 @@ export async function whatsappActor(
     )
   )
     throw new AccountError(403, "Acesso restrito à equipe desta igreja.");
-  await assertModuleEnabled(tx, root, "communication");
+  await communicationEnabled(tx, root);
   return { root, org, id };
 }
 export function assistantSettings(raw: unknown) {

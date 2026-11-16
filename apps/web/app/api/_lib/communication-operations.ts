@@ -1,6 +1,11 @@
+import { planHasModule, type PlanId } from "@alvo/firebase";
 import { whatsappPhone } from "@alvo/utils";
 import { createHash } from "node:crypto";
-import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
+import {
+  AccountError,
+  accountTransaction,
+  type AccountTransaction,
+} from "./member-account-store";
 import { documentId } from "./member-account";
 import { assertModuleEnabled } from "./module-access";
 
@@ -9,24 +14,36 @@ export const MAX_MANUAL_WHATSAPP_RECIPIENTS = 100;
 
 function requiredText(value: unknown, label: string, max: number) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max) {
-    throw new AccountError(400, `${label} deve ter entre 1 e ${max} caracteres.`);
+    throw new AccountError(
+      400,
+      `${label} deve ter entre 1 e ${max} caracteres.`,
+    );
   }
   return value.trim();
 }
 
 function ids(value: unknown, label: string) {
-  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MANUAL_WHATSAPP_RECIPIENTS) {
-    throw new AccountError(400, `${label} deve conter de 1 a ${MAX_MANUAL_WHATSAPP_RECIPIENTS} pessoas.`);
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.length > MAX_MANUAL_WHATSAPP_RECIPIENTS
+  ) {
+    throw new AccountError(
+      400,
+      `${label} deve conter de 1 a ${MAX_MANUAL_WHATSAPP_RECIPIENTS} pessoas.`,
+    );
   }
   const result = [...new Set(value.map((item) => documentId(item, "Pessoa")))];
-  if (result.length !== value.length) throw new AccountError(400, `${label} contém pessoas repetidas.`);
+  if (result.length !== value.length)
+    throw new AccountError(400, `${label} contém pessoas repetidas.`);
   return result;
 }
 
 export const normalizeBrazilianWhatsapp = whatsappPhone;
 
 export function manualCampaignInput(raw: unknown) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new AccountError(400, "Campanha inválida.");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new AccountError(400, "Campanha inválida.");
   const data = raw as Record<string, unknown>;
   return {
     organizationId: documentId(data.organizationId, "Igreja"),
@@ -37,33 +54,77 @@ export function manualCampaignInput(raw: unknown) {
 }
 
 export function campaignCompletionInput(raw: unknown) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new AccountError(400, "Confirmação inválida.");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new AccountError(400, "Confirmação inválida.");
   const data = raw as Record<string, unknown>;
   return {
     organizationId: documentId(data.organizationId, "Igreja"),
     campaignId: documentId(data.campaignId, "Campanha"),
-    confirmedRecipientIds: ids(data.confirmedRecipientIds, "Envios confirmados"),
+    confirmedRecipientIds: ids(
+      data.confirmedRecipientIds,
+      "Envios confirmados",
+    ),
   };
 }
 
+export async function communicationEnabled(
+  tx: AccountTransaction,
+  root: string,
+) {
+  await assertModuleEnabled(tx, root, "communication");
+  const [sub] = await tx.read(`${root}/settings/subscription`);
+  const plan =
+    sub?.plan ||
+    (
+      {
+        growth: "comunidade",
+        advanced: "pastoral",
+        enterprise: "enterprise",
+      } as Record<string, string>
+    )[sub?.planTier] ||
+    "free";
+  if (
+    !["free", "comunidade", "pastoral", "rede", "enterprise"].includes(plan) ||
+    !planHasModule(plan as PlanId, "communication")
+  )
+    throw new AccountError(
+      403,
+      "Comunicação não está disponível no plano desta instituição.",
+    );
+}
 async function authorize(tx: AccountTransaction, orgId: string, uid: string) {
   documentId(uid, "Conta");
   const root = `organizations/${orgId}`;
-  await assertModuleEnabled(tx, root, "communication");
+  await communicationEnabled(tx, root);
   const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
   const roles = Array.isArray(actor?.roles) ? actor.roles : [];
-  if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true || !roles.some((role: string) => MANAGERS.includes(role))) {
-    throw new AccountError(403, "Você não pode preparar comunicados nesta igreja.");
+  if (
+    !org ||
+    org.status !== "active" ||
+    !actor ||
+    actor.organizationId !== orgId ||
+    actor.isActive !== true ||
+    !roles.some((role: string) => MANAGERS.includes(role))
+  ) {
+    throw new AccountError(
+      403,
+      "Você não pode preparar comunicados nesta igreja.",
+    );
   }
   return root;
 }
 
 function campaignFingerprint(message: string, recipientIds: string[]) {
-  return createHash("sha256").update(JSON.stringify({ message, recipientIds: [...recipientIds].sort() })).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify({ message, recipientIds: [...recipientIds].sort() }))
+    .digest("hex");
 }
 
 function personName(person: Record<string, any>) {
-  return [person.preferredName || person.firstName, person.preferredName ? "" : person.lastName]
+  return [
+    person.preferredName || person.firstName,
+    person.preferredName ? "" : person.lastName,
+  ]
     .filter((value) => typeof value === "string" && value.trim())
     .join(" ")
     .trim();
@@ -74,33 +135,79 @@ export async function prepareManualWhatsapp(raw: unknown, uid: string) {
   return accountTransaction(async (tx) => {
     const root = await authorize(tx, input.organizationId, uid);
     const campaignPath = `${root}/communicationCampaigns/${input.requestId}`;
-    const [existing, ...people] = await tx.read(campaignPath, ...input.recipientIds.map((id) => `${root}/people/${id}`));
+    const [existing, ...people] = await tx.read(
+      campaignPath,
+      ...input.recipientIds.map((id) => `${root}/people/${id}`),
+    );
     const fingerprint = campaignFingerprint(input.message, input.recipientIds);
     if (existing && existing.fingerprint !== fingerprint) {
-      throw new AccountError(409, "Esta tentativa já pertence a outra campanha. Atualize a tela.");
+      throw new AccountError(
+        409,
+        "Esta tentativa já pertence a outra campanha. Atualize a tela.",
+      );
     }
 
-    const recipients: Array<{ personId: string; name: string; whatsapp: string }> = [];
+    const recipients: Array<{
+      personId: string;
+      name: string;
+      whatsapp: string;
+    }> = [];
+    const phones = new Set<string>();
     const skipped: Array<{ personId: string; reason: string }> = [];
-    const contactStates = await tx.read(...people.map(p => `${root}/whatsappContacts/${createHash("sha256").update(whatsappPhone(p?.whatsappPhone || p?.mobilePhone) ?? "invalid").digest("hex")}`));
+    const contactStates = await tx.read(
+      ...people.map(
+        (p) =>
+          `${root}/whatsappContacts/${createHash("sha256")
+            .update(
+              whatsappPhone(p?.whatsappPhone || p?.mobilePhone) ?? "invalid",
+            )
+            .digest("hex")}`,
+      ),
+    );
     people.forEach((person, index) => {
       const personId = input.recipientIds[index];
-      if (!person || person.organizationId !== input.organizationId || person.status !== "active") {
+      if (
+        !person ||
+        person.organizationId !== input.organizationId ||
+        person.status !== "active"
+      ) {
         skipped.push({ personId, reason: "cadastro inativo ou inexistente" });
         return;
       }
-      if (person.communicationOptOut === true || person.whatsappOptOutAt || contactStates[index]?.optOut) {
-        skipped.push({ personId, reason: "pessoa optou por não receber mensagens" });
+      if (
+        person.communicationOptOut === true ||
+        person.whatsappOptOutAt ||
+        contactStates[index]?.optOut
+      ) {
+        skipped.push({
+          personId,
+          reason: "pessoa optou por não receber mensagens",
+        });
         return;
       }
-      const whatsapp = normalizeBrazilianWhatsapp(person.whatsappPhone || person.mobilePhone);
+      const whatsapp = normalizeBrazilianWhatsapp(
+        person.whatsappPhone || person.mobilePhone,
+      );
       if (!whatsapp) {
         skipped.push({ personId, reason: "WhatsApp inválido" });
         return;
       }
-      recipients.push({ personId, name: personName(person) || "Pessoa", whatsapp });
+      if (phones.has(whatsapp)) {
+        skipped.push({ personId, reason: "telefone já incluído nesta lista" });
+        return;
+      }
+      phones.add(whatsapp);
+      recipients.push({
+        personId,
+        name: personName(person) || "Pessoa",
+        whatsapp,
+      });
     });
-    if (recipients.length === 0) throw new AccountError(409, "Nenhum destinatário elegível para WhatsApp.");
+    if (recipients.length === 0)
+      throw new AccountError(
+        409,
+        "Nenhum destinatário elegível para WhatsApp.",
+      );
 
     if (!existing) {
       const now = new Date().toISOString();
@@ -134,7 +241,16 @@ export async function prepareManualWhatsapp(raw: unknown, uid: string) {
         at: now,
       });
     }
-    return { campaignId: input.requestId, recipients, skipped, replayed: Boolean(existing) };
+    return {
+      campaignId: input.requestId,
+      recipients: existing
+        ? recipients.filter((r) => existing.recipientIds?.includes(r.personId))
+        : recipients,
+      skipped,
+      confirmedRecipientIds: existing?.confirmedRecipientIds || [],
+      message: input.message,
+      replayed: Boolean(existing),
+    };
   });
 }
 
@@ -145,34 +261,47 @@ export async function completeManualWhatsapp(raw: unknown, uid: string) {
     const campaignPath = `${root}/communicationCampaigns/${input.campaignId}`;
     const logPath = `${root}/communicationLog/${input.campaignId}`;
     const [campaign] = await tx.read(campaignPath);
-    if (!campaign || campaign.organizationId !== input.organizationId || campaign.mode !== "manual") {
+    if (
+      !campaign ||
+      campaign.organizationId !== input.organizationId ||
+      campaign.mode !== "manual"
+    ) {
       throw new AccountError(404, "Campanha não encontrada.");
     }
-    const eligible = new Set(Array.isArray(campaign.recipientIds) ? campaign.recipientIds : []);
+    const eligible = new Set(
+      Array.isArray(campaign.recipientIds) ? campaign.recipientIds : [],
+    );
     if (input.confirmedRecipientIds.some((id) => !eligible.has(id))) {
-      throw new AccountError(409, "A confirmação contém uma pessoa que não pertence à campanha.");
+      throw new AccountError(
+        409,
+        "A confirmação contém uma pessoa que não pertence à campanha.",
+      );
     }
-    if (campaign.confirmedAt) {
-      const previous = Array.isArray(campaign.confirmedRecipientIds)
-        ? [...campaign.confirmedRecipientIds].sort()
-        : [];
-      const requested = [...input.confirmedRecipientIds].sort();
-      if (JSON.stringify(previous) !== JSON.stringify(requested)) {
-        throw new AccountError(409, "Esta campanha já teve seus envios confirmados.");
-      }
+    const previous = new Set<string>(
+      Array.isArray(campaign.confirmedRecipientIds)
+        ? campaign.confirmedRecipientIds
+        : [],
+    );
+    if (input.confirmedRecipientIds.every((id) => previous.has(id)))
       return {
         campaignId: input.campaignId,
         status: campaign.status,
-        sentCount: campaign.sentCount,
+        sentCount: previous.size,
         replayed: true,
       };
-    }
+    const allConfirmed = [
+      ...new Set([...previous, ...input.confirmedRecipientIds]),
+    ];
     const now = new Date().toISOString();
     const patch = {
-      status: input.confirmedRecipientIds.length === eligible.size ? "confirmed" : "partially_confirmed",
-      openedCount: input.confirmedRecipientIds.length,
-      sentCount: input.confirmedRecipientIds.length,
-      confirmedRecipientIds: input.confirmedRecipientIds,
+      status:
+        allConfirmed.length === eligible.size
+          ? "confirmed"
+          : "partially_confirmed",
+      // Manual declaration is not a provider delivery receipt.
+      openedCount: campaign.openedCount || 0,
+      sentCount: allConfirmed.length,
+      confirmedRecipientIds: allConfirmed,
       confirmedByUserId: uid,
       confirmedAt: now,
       updatedAt: now,
@@ -187,40 +316,219 @@ export async function completeManualWhatsapp(raw: unknown, uid: string) {
       confirmedCount: input.confirmedRecipientIds.length,
       at: now,
     });
-    return { campaignId: input.campaignId, status: patch.status, sentCount: patch.sentCount, replayed: false };
+    return {
+      campaignId: input.campaignId,
+      status: patch.status,
+      sentCount: patch.sentCount,
+      replayed: false,
+    };
   });
 }
 
-export async function prepareManualContact(raw: Record<string,any>,uid:string) {
-  const orgId=documentId(raw.organizationId,"Igreja"),requestId=documentId(raw.requestId,"Tentativa");
-  const phone=whatsappPhone(raw.phone),message=requiredText(raw.message,"Mensagem",4000);
-  if(!phone)throw new AccountError(400,"Confira o WhatsApp com DDD.");
-  return accountTransaction(async tx=>{
-    const root=await authorize(tx,orgId,uid);
-    const [contact,person]=await tx.read(`${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`,...(raw.personId?[`${root}/people/${documentId(raw.personId,"Pessoa")}`]:[]));
-    if(contact?.optOut || (raw.personId && (!person || person.organizationId!==orgId || person.status!=="active" || person.communicationOptOut || person.whatsappOptOutAt)))throw new AccountError(409,"O contato não permite mensagens ou não está disponível.");
+export async function prepareManualContact(
+  raw: Record<string, any>,
+  uid: string,
+) {
+  const orgId = documentId(raw.organizationId, "Igreja"),
+    requestId = documentId(raw.requestId, "Tentativa");
+  const phone = whatsappPhone(raw.phone),
+    message = requiredText(raw.message, "Mensagem", 4000);
+  if (!phone) throw new AccountError(400, "Confira o WhatsApp com DDD.");
+  return accountTransaction(async (tx) => {
+    const root = await authorize(tx, orgId, uid);
+    const [contact, person] = await tx.read(
+      `${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`,
+      ...(raw.personId
+        ? [`${root}/people/${documentId(raw.personId, "Pessoa")}`]
+        : []),
+    );
+    if (
+      contact?.optOut ||
+      (raw.personId &&
+        (!person ||
+          person.organizationId !== orgId ||
+          person.status !== "active" ||
+          person.communicationOptOut ||
+          person.whatsappOptOutAt))
+    )
+      throw new AccountError(
+        409,
+        "O contato não permite mensagens ou não está disponível.",
+      );
+    if (
+      raw.personId &&
+      whatsappPhone(person?.whatsappPhone || person?.mobilePhone) !== phone
+    )
+      throw new AccountError(
+        409,
+        "O telefone do cadastro mudou. Atualize a seleção.",
+      );
+    await assertWhatsappContactAllowed(tx, root, phone);
     // Handle legacy records whose contact came from a prayer/visitor form without personId.
-    for(const field of ["whatsappPhone","mobilePhone"]){
-      for(const candidate of [phone,phone.slice(2)]){
-        const matches=await tx.query(root,"people",field,candidate,"EQUAL",20);
-        if(matches.some(p=>p.communicationOptOut || p.whatsappOptOutAt))throw new AccountError(409,"Este telefone possui preferência de não receber mensagens.");
+    for (const field of ["whatsappPhone", "mobilePhone"]) {
+      for (const candidate of [phone, phone.slice(2)]) {
+        const matches = await tx.query(
+          root,
+          "people",
+          field,
+          candidate,
+          "EQUAL",
+          20,
+        );
+        if (matches.some((p) => p.communicationOptOut || p.whatsappOptOutAt))
+          throw new AccountError(
+            409,
+            "Este telefone possui preferência de não receber mensagens.",
+          );
       }
     }
-    tx.set(`${root}/communicationAudit/contact_${uid}_${requestId}`,{organizationId:orgId,action:"manual_contact_prepared",actorId:uid,at:new Date().toISOString()});
-    return {url:`https://wa.me/${phone}?text=${encodeURIComponent(message)}`,status:"prepared"};
+    tx.set(`${root}/communicationAudit/contact_${uid}_${requestId}`, {
+      organizationId: orgId,
+      action: "manual_contact_prepared",
+      actorId: uid,
+      at: new Date().toISOString(),
+    });
+    return {
+      url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      status: "prepared",
+    };
   });
 }
 
 /** Shared check for provider sends and leadership shortcuts, including legacy phone fields. */
-export async function assertWhatsappContactAllowed(tx: AccountTransaction, root: string, phone: string) {
-  const [contact] = await tx.read(`${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`);
-  if (contact?.optOut) throw new AccountError(409,"Este contato interrompeu as mensagens.");
-  if(contact?.personId){
-    const [person]=await tx.read(`${root}/people/${documentId(contact.personId,"Pessoa")}`);
-    if(!person || person.status!=="active" || person.communicationOptOut || person.whatsappOptOutAt)throw new AccountError(409,"Este cadastro não permite mensagens.");
+export async function assertWhatsappContactAllowed(
+  tx: AccountTransaction,
+  root: string,
+  phone: string,
+) {
+  const [contact] = await tx.read(
+    `${root}/whatsappContacts/${createHash("sha256").update(phone).digest("hex")}`,
+  );
+  if (contact?.optOut)
+    throw new AccountError(409, "Este contato interrompeu as mensagens.");
+  if (contact?.personId) {
+    const [person] = await tx.read(
+      `${root}/people/${documentId(contact.personId, "Pessoa")}`,
+    );
+    if (
+      !person ||
+      person.status !== "active" ||
+      person.communicationOptOut ||
+      person.whatsappOptOutAt
+    )
+      throw new AccountError(409, "Este cadastro não permite mensagens.");
   }
-  for (const field of ["whatsappPhone", "mobilePhone"]) for (const candidate of [phone, phone.slice(2)]) {
-    const matches=await tx.query(root,"people",field,candidate,"EQUAL",20);
-    if(matches.some(p=>p.communicationOptOut || p.whatsappOptOutAt))throw new AccountError(409,"Este telefone possui preferência de não receber mensagens.");
-  }
+  for (const field of ["whatsappPhone", "mobilePhone"])
+    for (const candidate of [phone, phone.slice(2)]) {
+      const matches = await tx.query(
+        root,
+        "people",
+        field,
+        candidate,
+        "EQUAL",
+        20,
+      );
+      if (matches.some((p) => p.communicationOptOut || p.whatsappOptOutAt))
+        throw new AccountError(
+          409,
+          "Este telefone possui preferência de não receber mensagens.",
+        );
+    }
+}
+
+export async function manualCommunicationData(
+  raw: Record<string, any>,
+  uid: string,
+) {
+  const orgId = documentId(raw.organizationId, "Igreja");
+  return accountTransaction(async (tx) => {
+    const root = await authorize(tx, orgId, uid);
+    if (raw.action === "people") {
+      const cursor = raw.cursor ? documentId(raw.cursor, "Página") : undefined;
+      const rows = await tx.query(
+        root,
+        "people",
+        "status",
+        "active",
+        "EQUAL",
+        201,
+        undefined,
+        { field: "__name__", direction: "ASCENDING" },
+        cursor,
+      );
+      const page = rows.slice(0, 200);
+      return {
+        people: page
+          .filter(
+            (p) =>
+              p.organizationId === orgId &&
+              !p.communicationOptOut &&
+              !p.whatsappOptOutAt &&
+              whatsappPhone(p.whatsappPhone || p.mobilePhone),
+          )
+          .map((p) => ({
+            id: p.id,
+            firstName: personName(p) || "Pessoa",
+            lastName: "",
+            whatsappPhone: whatsappPhone(p.whatsappPhone || p.mobilePhone),
+          })),
+        cursor: rows.length > 200 ? page[page.length - 1].id : null,
+      };
+    }
+    const id = documentId(raw.campaignId, "Campanha");
+    const [campaign] = await tx.read(`${root}/communicationCampaigns/${id}`);
+    if (campaign?.organizationId !== orgId || campaign.mode !== "manual")
+      throw new AccountError(404, "Campanha não encontrada.");
+    const recipientIds = ids(campaign.recipientIds, "Destinatários");
+    if (raw.action === "campaign-contact") {
+      const personId = documentId(raw.personId, "Pessoa");
+      if (!recipientIds.includes(personId))
+        throw new AccountError(403, "Pessoa fora desta campanha.");
+      if (campaign.confirmedRecipientIds?.includes(personId))
+        throw new AccountError(
+          409,
+          "O envio para esta pessoa já foi registrado.",
+        );
+      const [person] = await tx.read(`${root}/people/${personId}`);
+      const phone = whatsappPhone(person?.whatsappPhone || person?.mobilePhone);
+      if (
+        person?.organizationId !== orgId ||
+        person.status !== "active" ||
+        person.communicationOptOut ||
+        person.whatsappOptOutAt ||
+        !phone
+      )
+        throw new AccountError(409, "Este cadastro não permite contato.");
+      await assertWhatsappContactAllowed(tx, root, phone);
+      const message = String(campaign.message).replaceAll(
+        "{{nome}}",
+        personName(person) || "Olá",
+      );
+      return {
+        message,
+        url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      };
+    }
+    if (raw.action !== "resume")
+      throw new AccountError(400, "Operação inválida.");
+    const people = await tx.read(
+      ...recipientIds.map((id) => `${root}/people/${id}`),
+    );
+    return {
+      campaignId: id,
+      message: campaign.message,
+      confirmedRecipientIds: campaign.confirmedRecipientIds || [],
+      recipients: people.flatMap((p, i) =>
+        p?.organizationId === orgId
+          ? [
+              {
+                personId: recipientIds[i],
+                name: personName(p) || "Pessoa",
+                whatsapp: whatsappPhone(p.whatsappPhone || p.mobilePhone) || "",
+              },
+            ]
+          : [],
+      ),
+    };
+  });
 }

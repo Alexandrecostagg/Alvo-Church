@@ -64,6 +64,10 @@ try {
     "qa:platform-admin",
     "qa:home",
     "qa:journeys",
+    "qa:groups",
+    "qa:tribes",
+    "qa:giving",
+    "qa:communication",
   ])
     await run([task]);
   await run(["qa:security"], { SECURITY_AUDIT_API: "1" });

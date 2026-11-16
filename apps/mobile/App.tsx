@@ -1,3 +1,6 @@
+import { GIVING_STATUS, type GivingOverview } from "@alvo/domain";
+import { MobileTribes } from './src/features/tribes/tribes-screen';
+import { MobileCellReport } from "./src/features/groups/cell-report";
 import { MobileRoleHome, MobileScopedGroups } from "./src/features/home/role-home";
 import { CampaignMemberScreen } from "./src/features/campaigns/campaign-member-screen";
 import { mobileWorshipSong, mobileWorshipProgram, type MobileWorshipSong } from "./src/features/worship/worship-model";
@@ -93,6 +96,7 @@ async function memberOperation<T>(user: FirebaseAuthUser, organizationId: string
   } finally { clearTimeout(timeout); }
 }
 type MyGroup = Pick<Group, "id" | "name" | "meetingDayOfWeek" | "meetingTime"> & {
+  address?: string | null; location?: string | null; notice?: string | null;
   meeting: { id: string; startsAt: string; attendanceStatus: string | null; recordedByLeader: boolean } | null;
 };
 
@@ -110,6 +114,7 @@ async function callAi(task: string, input: unknown, idToken: string, organizatio
 type AuthScreen = "splash" | "welcome" | "login" | "register" | "link-institution";
 type Tab = "inicio" | "agenda" | "celula" | "perfil";
 type ModalScreen =
+  | "tribos"
   | "convites"
   | "doacoes"
   | "kids-checkin"
@@ -982,6 +987,18 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
     return()=>{active=false;received.remove();tapped.remove();};
   },[orgId,access.volunteers]);
 
+  const [preparationGroupId,setPreparationGroupId]=useState<string>();
+  const [groupRevision,setGroupRevision]=useState(0);
+  useEffect(()=>{
+    let active=true;
+    const matches=(d:Record<string,unknown>|undefined)=>d?.type==="group_update"&&d.organizationId===orgId;
+    const refresh=()=>{setGroupRevision(n=>n+1);void onRefresh()};
+    const received=Notifications.addNotificationReceivedListener(n=>{if(matches(n.request.content.data))refresh()});
+    const tapped=Notifications.addNotificationResponseReceivedListener(r=>{if(active&&access.groups&&matches(r.notification.request.content.data)){setModalStack([]);setTab("celula");refresh()}});
+    const resumed=AppState.addEventListener("change",state=>{if(state==="active"&&access.groups)refresh()});
+    return()=>{active=false;received.remove();tapped.remove();resumed.remove()};
+  },[orgId,access.groups]);
+
   const [journeyRevision,setJourneyRevision]=useState(0);
   useEffect(()=>{
     let active=true;
@@ -1007,9 +1024,9 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   useAndroidBack(modal !== "cursos" && modal !== "kids-checkin" && (Boolean(modal) || tab !== "inicio"), () => { if (modal) pop(); else setTab("inicio"); });
   useEffect(() => {
     if ((tab === "agenda" && !access.events) || (tab === "celula" && !access.groups)) setTab("inicio");
-    const allowed: Partial<Record<ModalScreen, boolean>> = { convites: access.events, doacoes: access.giving, "kids-checkin": access.children, escala: access.volunteers, musica: access.volunteers, "song-detail": access.volunteers, inscricao: access.events, "lider-celula": access.leader, cursos: access.journeys, promocoes: access.marketplace };
+    const allowed: Partial<Record<ModalScreen, boolean>> = { tribos: access.tribes, convites: access.events, doacoes: access.giving, "kids-checkin": access.children, escala: access.volunteers, musica: access.volunteers, "song-detail": access.volunteers, inscricao: access.events, "lider-celula": access.leader, cursos: access.journeys, promocoes: access.marketplace };
     if (modal && allowed[modal] === false) setModalStack([]);
-  }, [tab, modal, access.events, access.groups, access.giving, access.children, access.volunteers, access.leader, access.journeys, access.marketplace]);
+  }, [tab, modal, access.events, access.groups, access.giving, access.children, access.volunteers, access.tribes, access.leader, access.journeys, access.marketplace]);
 
   function openInscricao(event: Event) { setSelectedEvent(event); push("inscricao"); }
   function openSongDetail(song: Song) { setSelectedSong(song); push("song-detail"); }
@@ -1049,24 +1066,27 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
             if (key === "events" && access.events) { setTab("agenda"); return true; }
             if (key === "invites" && access.events) { push("convites"); return true; }
             if (key === "serving" && access.volunteers) { push("escala"); return true; }
+            if (key === "giving" && access.giving && !["pastoral", "administration"].includes(profile)) { push("doacoes"); return true; }
             if (key === "learning" && access.journeys) { push("cursos"); return true; }
+            if (key === "tribes" && access.tribes && profile === "member") { push("tribos"); return true; }
             if (key === "profile") { setTab("perfil"); return true; }
             return false;
           }}><HomeTab access={access} refreshing={refreshing} onRefresh={onRefresh} onOpenEvent={openInscricao} primary={primary} events={events} groups={groups} dataReady={dataReady} user={user} orgId={orgId} onOpenDoacoes={() => push("doacoes")} onOpenKids={() => push("kids-checkin")} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenCursos={() => push("cursos")} embedded /></MobileRoleHome>}
           {tab === "agenda" && !modal && <AgendaTab events={events} primary={primary} dataReady={dataReady} onInscricao={openInscricao} />}
-          {tab === "celula" && !modal && cellView === "leadership" && roles.includes("group_leader") && access.groups && <MobileScopedGroups key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} profile="cell_leader" onPrepare={access.leader ? () => push("lider-celula") : undefined} />}
-          {tab === "celula" && !modal && (cellView === "personal" || !roles.includes("group_leader")) && <CelulaTab canLead={access.leader} onRefresh={onRefresh} groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={() => push("lider-celula")} />}
+          {tab === "celula" && !modal && cellView === "leadership" && roles.includes("group_leader") && access.groups && <MobileScopedGroups key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} profile="cell_leader" externalRevision={groupRevision} onPrepare={access.leader ? (id) => {setPreparationGroupId(id);push("lider-celula")} : undefined} />}
+          {tab === "celula" && !modal && (cellView === "personal" || !roles.includes("group_leader")) && <CelulaTab canLead={access.leader} onRefresh={onRefresh} groups={groups} primary={primary} dataReady={dataReady} orgId={orgId} user={user} onOpenLider={(id) => {setPreparationGroupId(id);push("lider-celula")}} />}
           {tab === "perfil" && !modal && <PerfilTab access={access} onChooseInstitution={onChooseInstitution} user={user} orgName={orgName} linkedOrg={linkedOrg} orgId={orgId} primary={primary} pushToken={pushToken} onSignOut={onSignOut} onOpenEscala={() => push("escala")} onOpenMusica={() => push("musica")} onOpenMeuPerfil={() => push("meu-perfil")} />}
 
           {/* Modals */}
+          {modal === "tribos" && <MobileTribes key={`${orgId}:${user.uid}`} primary={primary} user={user} orgId={orgId} apiOrigin={WEB_API_URL} onBack={()=>{setJourneyRevision(n=>n+1);pop();}} />}
           {modal === "convites" && <CampaignMemberScreen primary={primary} user={user} orgId={orgId} apiOrigin={WEB_API_URL} onBack={pop} />}
-          {modal === "doacoes" && <DoacoesScreen primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
+          {modal === "doacoes" && <DoacoesScreen key={`${orgId}:${user.uid}`} primary={primary} orgName={orgName} orgId={orgId} user={user} onBack={pop} />}
           {modal === "kids-checkin" && <KidsCheckinScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "escala" && <EscalaScreen primary={primary} user={user} orgId={orgId} onBack={()=>{setServingRevision(v=>v+1);pop();}} refreshRevision={servingRevision} />}
           {modal === "musica" && <MusicaScreen primary={primary} orgId={orgId} events={events} onBack={pop} onOpenSong={openSongDetail} />}
           {modal === "inscricao" && selectedEvent && <InscricaoScreen primary={primary} event={selectedEvent} user={user} orgId={orgId} onBack={pop} />}
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} storageKey={`${orgId}:${user.uid}`} />}
-          {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
+          {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} groupId={preparationGroupId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
           {modal === "promocoes" && <PromocoesScreen loading={promotionsLoading} error={promotionsError} onRetry={() => setPromotionsRevision(r => r + 1)} primary={primary} promotions={promotions} onBack={pop} />}
           {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} orgName={orgName} logoUrl={brandLogo} onBack={pop} />}
@@ -1199,7 +1219,8 @@ function AgendaTab({ events, primary, dataReady, onInscricao }: {
 
 // ─── Célula Tab ───────────────────────────────────────────────────────────────
 
-function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLead, onRefresh }: { groups: MyGroup[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: () => void; canLead: boolean; onRefresh: () => Promise<void> }) {
+function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLead, onRefresh }: { groups: MyGroup[]; primary: string; dataReady: boolean; orgId: string; user: FirebaseAuthUser; onOpenLider: (groupId:string) => void; canLead: boolean; onRefresh: () => Promise<void> }) {
+  const [refreshing,setRefreshing]=useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sel = groups.find(g => g.id === selectedId) ?? groups[0];
   const [confirming, setConfirming] = useState(false);
@@ -1270,11 +1291,11 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLe
   }
 
   return (
-    <ScrollView contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{setRefreshing(true);void onRefresh().finally(()=>setRefreshing(false))}}/>} contentContainerStyle={s.tabContent} showsVerticalScrollIndicator={false}>
       {!dataReady && <LoadingRow primary={primary} label="Carregando células..." />}
 
       {/* Banner exclusivo do líder — visível para group_leader e acima */}
-      {canLead && <TouchableOpacity style={[s.liderBanner, { borderColor: primary }]} onPress={onOpenLider} activeOpacity={0.85}>
+      {canLead && sel && <TouchableOpacity style={[s.liderBanner, { borderColor: primary }]} onPress={()=>onOpenLider(sel.id)} activeOpacity={0.85}>
         <View style={[s.liderBannerIcon, { backgroundColor: primary }]}>
           <Text style={{ fontSize: 22 }}>🎯</Text>
         </View>
@@ -1301,6 +1322,9 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLe
         <>
           <View style={[s.card, { borderLeftColor: primary, borderLeftWidth: 3 }]}>
             <Text style={s.cardTitle}>{(sel ?? groups[0])!.name}</Text>
+            <Text style={s.cardMeta}>{sel.meetingTime||"Horário a definir"} · {sel.location||"Local a definir"}</Text>
+            {!!sel.address&&<><Text style={s.cardMeta}>{sel.address}</Text><Btn color={primary} label="Ver endereço no mapa" onPress={()=>void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sel.address!)}`).catch(()=>Alert.alert("Mapa indisponível","Tente novamente."))}/></>}
+            {!!sel.notice&&<Text style={s.cardMeta}>{sel.notice}</Text>}
             <Text style={s.cardMeta}>{(sel ?? groups[0])!.meetingDayOfWeek != null ? dowLabel((sel ?? groups[0])!.meetingDayOfWeek!) : "Dia a definir"}</Text>
           </View>
 
@@ -1655,6 +1679,27 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   const givingBusy = useRef(false);
   const givingFingerprint = useRef("");
   const [type, setType] = useState<"dizimo" | "oferta" | "missao" | "outro">("dizimo");
+  const [campaignId, setCampaignId] = useState("");
+  const [givingOverview, setGivingOverview] = useState<GivingOverview | null>(null);
+  const [givingLoadError, setGivingLoadError] = useState("");
+  const [givingRevision, setGivingRevision] = useState(0);
+  const [givingHistoryOpen, setGivingHistoryOpen] = useState(false);
+  useEffect(()=>{const listener=AppState.addEventListener("change",state=>{if(state==="active")setGivingRevision(v=>v+1)});return()=>listener.remove()},[]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setGivingLoadError("");
+    async function load() {
+      try {
+        const token = await user.getIdToken();
+        const r = await fetch(`${WEB_API_URL}/api/giving`, {method:"POST",signal:controller.signal,headers:{"content-type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({action:"snapshot",scope:"personal",organizationId:orgId})});
+        const result = await r.json();
+        if(!r.ok) throw Error(result.error || "Não foi possível carregar as campanhas.");
+        if(!controller.signal.aborted) setGivingOverview(result);
+      } catch(e) {if(!controller.signal.aborted)setGivingLoadError(e instanceof Error ? e.message : "Não foi possível atualizar.");}
+    }
+    void load();return()=>controller.abort();
+  },[orgId,user,givingRevision]);
+
   const [amount, setAmount] = useState(""); const [customAmount, setCustomAmount] = useState("");
   const method = "pix";
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
@@ -1703,7 +1748,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
   // verdade em Configurações → Doações. Se a igreja não configurou chave
   // ainda, a API devolve erro claro em vez de mostrar algo falso.
   useEffect(() => {
-    if (method !== "pix" || !finalAmountNumber || finalAmountNumber <= 0) { setPix(null); return; }
+    if (method !== "pix" || !finalAmountNumber || finalAmountNumber <= 0) { setPix(null); setPixLoading(false); setPixError(null); return; }
     let cancelled = false;
     async function loadPix() {
       setPix(null); setPixLoading(true); setPixError(null);
@@ -1712,7 +1757,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
         const res = await fetch(`${WEB_API_URL}/api/giving/pix`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ organizationId: orgId, amount: finalAmountNumber, description: type })
+          body: JSON.stringify({ organizationId: orgId, amount: finalAmountNumber, description: campaignId ? "campanha" : type, campaignId })
         });
         const data = await res.json() as { ok?: boolean; payload?: string; qrDataUrl?: string; pixKey?: string; receiverName?: string; error?: string };
         if (!res.ok || !data.ok) throw new Error(data.error ?? "Não foi possível gerar o PIX");
@@ -1725,7 +1770,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     }
     void loadPix();
     return () => { cancelled = true; };
-  }, [method, finalAmountNumber, orgId, type]);
+  }, [method, finalAmountNumber, orgId, type, campaignId, user]);
 
   async function confirmContribution() {
     if (givingBusy.current) return;
@@ -1733,9 +1778,9 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
     if (method === "pix" && (!pix || pixLoading || pixError)) { Alert.alert("Aguarde o PIX ser gerado antes de confirmar"); return; }
     givingBusy.current = true; setSubmitting(true);
     try {
-      const fingerprint = JSON.stringify([finalAmountNumber, type, receiptBase64]);
+      const fingerprint = JSON.stringify([finalAmountNumber, type, campaignId, receiptBase64]);
       if (givingFingerprint.current !== fingerprint) { givingRequestId.current = Crypto.randomUUID(); givingFingerprint.current = fingerprint; }
-      const response = await fetch(`${WEB_API_URL}/api/finance`, { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}`, "content-type": "application/json" }, body: JSON.stringify({ action: "declare", organizationId: orgId, requestId: givingRequestId.current, amount: finalAmountNumber, type, dataUrl: receiptBase64 ? imageDataUrl(receiptBase64) : undefined }) });
+      const response = await fetch(`${WEB_API_URL}/api/finance`, { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}`, "content-type": "application/json" }, body: JSON.stringify({ action: "declare", organizationId: orgId, requestId: givingRequestId.current, amount: finalAmountNumber, type: campaignId ? "campanha" : type, campaignId, dataUrl: receiptBase64 ? imageDataUrl(receiptBase64) : undefined }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Não foi possível registrar.");
       setSubmitted(true);
@@ -1755,7 +1800,7 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
           <Text style={{ fontSize: 56, marginBottom: 16 }}>🙏</Text>
           <Text style={[s.screenTitle, { textAlign: "center" }]}>Contribuição registrada!</Text>
           <Text style={[s.screenSub, { textAlign: "center" }]}>
-            Fica com status pendente até a secretaria confirmar o recebimento. Obrigado pela fidelidade!
+            Fica aguardando conferência até a secretaria confirmar o recebimento. Você pode acompanhar a situação em Minhas contribuições.
           </Text>
           <Btn label="Concluir" onPress={onBack} color={primary} style={{ marginTop: 32, width: "100%" }} />
         </View>
@@ -1768,14 +1813,27 @@ function DoacoesScreen({ primary, orgName, orgId, user, onBack }: {
       <ModalHeader title="Doações e Dízimos" onBack={onBack} />
       <ScrollView contentContainerStyle={s.tabContent} keyboardShouldPersistTaps="handled">
 
+        <Text style={s.sectionTitle}>Campanhas da igreja</Text>
+        <Text style={s.screenSub}>Escolha uma campanha ou faça uma contribuição geral. O pagamento é feito no aplicativo do seu banco.</Text>
+        {!!givingLoadError && <Text accessibilityRole="alert" style={s.errorText}>{givingLoadError}</Text>}
+        {!givingOverview && !givingLoadError && <ActivityIndicator color={primary}/>}
+        <Btn label="Atualizar campanhas e histórico" variant="outline" onPress={()=>setGivingRevision(v=>v+1)} />
+        <Pressable accessibilityRole="button" onPress={()=>setCampaignId("")} style={[s.card,{borderWidth:2,borderColor:!campaignId?primary:"#d1d5db"}]}><Text style={{fontWeight:"700"}}>Contribuição geral {!campaignId ? "✓" : ""}</Text></Pressable>
+        {givingOverview?.campaigns.map(c=><Pressable accessibilityRole="button" key={c.id} onPress={()=>setCampaignId(c.id)} style={[s.card,{borderWidth:2,borderColor:campaignId===c.id?primary:"#d1d5db"}]}><Text style={{fontWeight:"700",fontSize:17}}>{c.title} {campaignId===c.id?"✓":""}</Text><Text>{c.description}</Text><Text style={{marginTop:8}}>Confirmado: {c.raisedAmount.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})} · Meta: {c.goalAmount.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</Text></Pressable>)}
+        {!!campaignId && !givingOverview?.campaigns.some(c=>c.id===campaignId) && <Text style={s.errorText}>A campanha selecionada está indisponível. Selecione outra opção.</Text>}
+        <Text style={s.sectionTitle}>Minhas contribuições</Text>
+        {givingOverview && !givingOverview.contributions.length && <Text style={s.screenSub}>Nenhuma declaração registrada por esta conta.</Text>}
+        <Btn label={givingHistoryOpen ? "Ocultar histórico" : "Ver minhas contribuições"} variant="outline" onPress={()=>setGivingHistoryOpen(v=>!v)} />
+        {givingHistoryOpen && givingOverview?.contributions.map(c=><View key={c.id} style={s.card}><Text style={{fontWeight:"700"}}>{c.amount.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})} · {c.type}</Text><Text>{c.date} · {GIVING_STATUS[c.status] || "Registro antigo — consultar secretaria"}</Text></View>)}
+        {givingHistoryOpen && givingOverview?.truncated&&<Text style={s.screenSub}>Exibindo até 200 registros recentes.</Text>}
         {/* Type */}
-        <Text style={s.sectionTitle}>Tipo de contribuição</Text>
+        <Text style={s.sectionTitle}>{campaignId ? "Contribuição para a campanha selecionada" : "Tipo de contribuição"}</Text>
         <View style={s.row}>
           {([
             { id: "dizimo", label: "Dízimo" }, { id: "oferta", label: "Oferta" },
             { id: "missao", label: "Missões" }, { id: "outro", label: "Outro" }
           ] as const).map(t => (
-            <Pressable key={t.id} style={[s.typeChip, type === t.id && { backgroundColor: primary, borderColor: primary }]} onPress={() => setType(t.id)}>
+            <Pressable key={t.id} style={[s.typeChip, type === t.id && { backgroundColor: primary, borderColor: primary }]} onPress={() => {setType(t.id);setCampaignId("")}}>
               <Text style={[s.typeChipText, type === t.id && { color: "#fff" }]}>{t.label}</Text>
             </Pressable>
           ))}
@@ -2522,30 +2580,33 @@ function InscricaoScreen({ primary, event, user, orgId, onBack }: { primary: str
 
 type LiderTool = "roteiro" | "dinamica" | "relatorio" | "mensagem";
 
-function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; onBack: () => void }) {
+function LiderCelulaScreen({ primary, user, orgId, groupId, onBack }: { primary: string; user: FirebaseAuthUser; orgId: string; groupId?: string; onBack: () => void }) {
   const [activeTool, setActiveTool] = useState<LiderTool>("roteiro");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Tema semanal do pastor
-  const [pastoralTheme, setPastoralTheme] = useState<{ title: string; bibleVerse?: string; description?: string } | null>(null);
+  const [pastoralTheme, setPastoralTheme] = useState<{ title: string; bibleVerse?: string; description?: string; durationMinutes?: number; scope?: string } | null>(null);
 
+  const [themeRevision,setThemeRevision]=useState(0),[themeError,setThemeError]=useState("");
   useEffect(() => {
+    setPastoralTheme(null);setThemeError("");
     if (!orgId) return;
     let cancelled = false;
     (async () => {
       try {
         const idToken = await user.getIdToken();
-        const r = await fetch(`${WEB_API_URL}/api/weekly-theme?organizationId=${encodeURIComponent(orgId)}`, {
+        const r = await fetch(`${WEB_API_URL}/api/weekly-theme?organizationId=${encodeURIComponent(orgId)}${groupId?`&groupId=${encodeURIComponent(groupId)}`:""}`, {
           headers: { Authorization: `Bearer ${idToken}` }
         });
         const data = await r.json();
-        if (!cancelled && data.theme) setPastoralTheme(data.theme);
-      } catch {}
+        if(!r.ok)throw Error(data.error||"Tema indisponível.");
+        if (!cancelled) setPastoralTheme(data.theme||null);
+      } catch(e) {if(!cancelled)setThemeError((e as Error).message)}
     })();
     return () => { cancelled = true; };
-  }, [user, orgId]);
+  }, [user, orgId, groupId, themeRevision]);
 
   // Roteiro
   const [theme, setTheme] = useState("");
@@ -2615,11 +2676,14 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
       <ModalHeader title="Área do Líder" onBack={onBack} />
 
+      {!!themeError&&<Text style={s.errorText}>{themeError}</Text>}
+      <Btn label="Atualizar tema semanal" color={primary} onPress={()=>setThemeRevision(n=>n+1)}/>
       {/* Banner tema do pastor */}
       {pastoralTheme && (
         <View style={[s.pastoralThemeBanner, { borderColor: primary }]}>
-          <Text style={[s.pastoralThemeLabel, { color: primary }]}>📖 Tema do pastor esta semana</Text>
+          <Text style={[s.pastoralThemeLabel, { color: primary }]}>📖 {pastoralTheme.scope==="open"?"Semana livre · sugestão da liderança":"Tema do pastor esta semana"}</Text>
           <Text style={s.pastoralThemeTitle}>{pastoralTheme.title}</Text>
+          {!!pastoralTheme.durationMinutes&&<Text style={s.cardMeta}>Duração sugerida: {pastoralTheme.durationMinutes} minutos</Text>}
           {pastoralTheme.bibleVerse ? <Text style={s.pastoralThemeVerse}>{pastoralTheme.bibleVerse}</Text> : null}
           {pastoralTheme.description ? <Text style={s.pastoralThemeDesc}>{pastoralTheme.description}</Text> : null}
           <TouchableOpacity
@@ -2686,11 +2750,12 @@ function LiderCelulaScreen({ primary, user, orgId, onBack }: { primary: string; 
           </>
         )}
 
+        {activeTool==="relatorio"&&groupId&&<MobileCellReport apiOrigin={WEB_API_URL} user={user} orgId={orgId} groupId={groupId} primary={primary} draft={result}/> }
         {/* ── Relatório ── */}
         {activeTool === "relatorio" && (
           <>
             <View style={[s.infoBox, { marginBottom: 16 }]}>
-              <Text style={s.infoText}>Preencha os dados do encontro. A Sabedoria Pastoral gera um relatório formatado para enviar ao pastor.</Text>
+              <Text style={s.infoText}>A IA prepara um rascunho. Confira os dados, selecione o encontro acima e salve o relatório revisado para a liderança. Os indicadores usam a chamada registrada, não este texto.</Text>
             </View>
             <Field label="Nome do grupo *" value={repGroupName} onChange={setRepGroupName} placeholder="Ex: CG Centro-Norte" />
             <Field label="Tema do encontro *" value={repTheme} onChange={setRepTheme} placeholder="Ex: Servindo com alegria" />

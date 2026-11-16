@@ -133,6 +133,7 @@ export function ModuleNav() {
     .map((group) => ({
       ...group,
       items: group.items.map((item): NavItem => {
+        if (!staff && !roles.includes("group_leader") && item.href === "/tribes") return { ...item, label: "Meu lugar para servir", href: "/my-tribe", match: pathname => pathname.startsWith("/my-tribe") };
         if (!staff && item.href === "/groups") return { ...item, label: `Minhas ${groupsLabel.toLocaleLowerCase("pt-BR")}`, href: "/my-groups", match: pathname => pathname.startsWith("/my-groups") };
         if (!staff && item.href === "/campaigns") return { ...item, label: "Meus convidados", href: "/my-invites" };
         return item;

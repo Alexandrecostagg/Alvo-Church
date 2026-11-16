@@ -94,7 +94,7 @@ try {
   assert.equal(mobile.status, 401);
   assert(mobile.headers.get("cache-control")?.includes("no-store"));
   await mobile.body?.cancel();
-  for (const path of ["/api/serving", "/api/worship", "/api/campaigns", "/api/media/banner-copy", "/api/learning/manage", "/api/learning/videos", "/api/learning/videos/access"]) {
+  for (const path of ["/api/groups", "/api/tribes", "/api/giving", "/api/communication/send-whatsapp", "/api/home", "/api/serving", "/api/worship", "/api/campaigns", "/api/media/banner-copy", "/api/learning/manage", "/api/learning/videos", "/api/learning/videos/access"]) {
     const response = await request(path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({action:"snapshot", organizationId:"synthetic-runtime-probe", videoId:"synthetic-runtime-probe"})});
     assert.equal(response.status, 401, `Anonymous access must be denied: ${path}`);
     await response.body?.cancel();

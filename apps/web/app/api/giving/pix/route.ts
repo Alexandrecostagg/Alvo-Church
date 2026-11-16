@@ -1,3 +1,4 @@
+import { activeGivingCampaign } from "../../_lib/giving-access";
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { buildPixPayload } from "@alvo/domain";
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
       amount = money(body.amount) / 100;
     const branding = await accountTransaction(async (tx) => {
       const { root } = await financeActor(tx, body.organizationId, uid, false, "giving");
+      await activeGivingCampaign(tx, root, body.organizationId, body.campaignId);
       return (await tx.read(`${root}/settings/branding`))[0];
     });
     if (!branding?.pixKey)

@@ -1,3 +1,4 @@
+import { isCellGroup, isActiveGroupMembership } from "@alvo/domain";
 import { createHash } from "node:crypto";
 import {
   CARE_TASKS,
@@ -66,7 +67,7 @@ export async function journeyEnabled(tx: AccountTransaction, root: string) {
       "Jornadas não está incluído no plano desta instituição.",
     );
 }
-async function boundPerson(
+export async function boundPerson(
   tx: AccountTransaction,
   root: string,
   orgId: string,
@@ -105,7 +106,7 @@ async function cellData(tx: AccountTransaction, root: string, orgId: string) {
   const all = await tx.query(root, "groups", "status", "active", "EQUAL", 201);
   const cells = all
     .slice(0, 200)
-    .filter((g) => g.organizationId === orgId && (g.type || "cell") === "cell");
+    .filter((g) => g.organizationId === orgId && isCellGroup(g));
   const rows = await Promise.all(
     cells.map((g) =>
       tx.query(
@@ -127,8 +128,7 @@ async function cellData(tx: AccountTransaction, root: string, orgId: string) {
           (m) =>
             m.organizationId === orgId &&
             m.groupId === cells[i].id &&
-            m.status !== "inactive" &&
-            !m.leftAt,
+            isActiveGroupMembership(m),
         ),
     ),
     partial: all.length > 200 || rows.some((r) => r.length > 2000),
@@ -201,9 +201,7 @@ export async function personalIntegration(
       409,
       "Consulte a secretaria para revisar suas células.",
     );
-  const cells = all.filter(
-    (g) => g.organizationId === orgId && (g.type || "cell") === "cell",
-  );
+  const cells = all.filter((g) => g.organizationId === orgId && isCellGroup(g));
   const links = await tx.read(
     ...cells.map((g) => `${root}/groups/${g.id}/members/${g.id}_${personId}`),
   );
@@ -212,8 +210,7 @@ export async function personalIntegration(
       links[i]?.organizationId === orgId &&
       links[i]?.personId === personId &&
       links[i]?.groupId === g.id &&
-      !links[i]?.leftAt &&
-      links[i]?.status !== "inactive",
+      isActiveGroupMembership(links[i]),
   );
   return {
     stage: stage(current),
@@ -618,11 +615,50 @@ export async function journeyOperation(
       if (!g) throw new AccountError(409, "Escolha uma célula ativa.");
       const path = `${root}/groups/${groupId}/members/${groupId}_${personId}`,
         [existing] = await tx.read(path);
-      if (existing && !existing.leftAt && existing.status !== "inactive")
+      if (isActiveGroupMembership(existing))
         throw new AccountError(
           409,
           "A pessoa já está vinculada a esta célula.",
         );
+      const [currentGroup] = await tx.read(`${root}/groups/${groupId}`);
+      if (currentGroup?.status !== "active")
+        throw new AccountError(409, "Célula indisponível.");
+      const links = await tx.query(
+        `${root}/groups/${groupId}`,
+        "members",
+        undefined,
+        undefined,
+        "EQUAL",
+        501,
+      );
+      if (links.length > 500)
+        throw new AccountError(
+          409,
+          "Revise os vínculos desta célula antes de continuar.",
+        );
+      const activeLinks = links.filter(
+        (m) =>
+          m.organizationId === orgId &&
+          m.groupId === groupId &&
+          isActiveGroupMembership(m),
+      );
+      const linkedPeople = await tx.read(
+        ...activeLinks.map(
+          (m) => `${root}/people/${documentId(m.personId, "Pessoa")}`,
+        ),
+      );
+      const size = linkedPeople.filter(
+        (p) => p?.organizationId === orgId && p.status === "active",
+      ).length;
+      if (currentGroup.capacity != null && size >= currentGroup.capacity)
+        throw new AccountError(
+          409,
+          "Capacidade da célula atingida. Revise os vínculos ou a capacidade.",
+        );
+      tx.patch(`${root}/groups/${groupId}`, {
+        revision: (currentGroup.revision || 0) + 1,
+        updatedAt: at,
+      });
       tx.set(path, {
         id: `${groupId}_${personId}`,
         organizationId: orgId,

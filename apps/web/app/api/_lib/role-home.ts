@@ -1,3 +1,6 @@
+import { tribeHomeSummary } from './tribe-operations';
+import { groupOperation } from "./group-operations";
+import { isCellGroup, isActiveGroupMembership } from "@alvo/domain";
 import { isCarePending } from "@alvo/domain";
 import { whatsappHref } from "@alvo/utils";
 import { homeEvolution } from "./home-evolution";
@@ -186,6 +189,8 @@ async function ownGroups(
     const m = memberships[i];
     return (
       g.organizationId === c.organizationId &&
+      isCellGroup(g) &&
+      isActiveGroupMembership(m) &&
       m?.organizationId === c.organizationId &&
       m.groupId === g.id &&
       m.personId === personId &&
@@ -218,6 +223,7 @@ async function authorizeGroup(
     `${c.root}/groups/${groupId}/members/${groupId}_${person.id}`,
   );
   if (
+    !isActiveGroupMembership(m) ||
     m?.organizationId !== c.organizationId ||
     m.groupId !== groupId ||
     m.personId !== person.id ||
@@ -242,6 +248,7 @@ async function roster(tx: AccountTransaction, c: Context, groupId: string) {
     );
   const members = rows.filter(
     (m) =>
+      isActiveGroupMembership(m) &&
       m.organizationId === c.organizationId &&
       m.groupId === groupId &&
       validId(m.personId),
@@ -436,6 +443,8 @@ export async function roleHomeOperation(
       "my-groups",
       "group-detail",
       "create-meeting",
+      "close-meeting",
+      "save-report",
       "attendance",
       "absence",
       "close-absence",
@@ -443,6 +452,20 @@ export async function roleHomeOperation(
     ].includes(raw.action)
   )
     throw new AccountError(400, "Operação inválida.");
+  if (
+    ["create-meeting", "attendance", "close-meeting", "save-report"].includes(
+      raw.action,
+    )
+  )
+    return groupOperation(raw, uid, now);
+  if (raw.action === "group-detail") {
+    const d = await groupOperation({ ...raw, action: "detail" }, uid, now);
+    return {
+      ...d,
+      meetingId: d.meeting?.id || null,
+      people: d.people.map((p: Data) => ({ ...p, id: p.personId })),
+    };
+  }
   return accountTransaction(async (tx) => {
     const c = await context(tx, raw, uid);
     const person = await personBinding(tx, c, uid);
@@ -509,7 +532,9 @@ export async function roleHomeOperation(
       const groups = staff
         ? (
             await tx.query(c.root, "groups", "status", "active", "EQUAL", 31)
-          ).filter((g) => g.organizationId === c.organizationId)
+          ).filter(
+            (g) => g.organizationId === c.organizationId && isCellGroup(g),
+          )
         : person
           ? await ownGroups(tx, c, person.id, true)
           : [];
@@ -570,95 +595,7 @@ export async function roleHomeOperation(
       const groupId = documentId(raw.groupId, "Célula");
       const group = await authorizeGroup(tx, c, groupId, person);
       const base = `${c.root}/groups/${groupId}`;
-      if (raw.action === "create-meeting") {
-        const requestId = documentId(raw.requestId, "Tentativa");
-        let startsAt: string;
-        try {
-          startsAt = servingInstant(raw.date, raw.time, c.timezone);
-        } catch {
-          throw new AccountError(400, "Confira data e horário do encontro.");
-        }
-        if (
-          Date.parse(startsAt) < now - 30 * 86400000 ||
-          Date.parse(startsAt) > now + 365 * 86400000
-        )
-          throw new AccountError(
-            400,
-            "Agende entre os últimos 30 dias e os próximos 12 meses.",
-          );
-        const id = `meeting_${digest(uid + groupId + requestId)}`;
-        const [old] = await tx.read(`${base}/meetings/${id}`);
-        if (old) {
-          if (old.scheduledStartAt !== startsAt)
-            throw new AccountError(
-              409,
-              "Tentativa já usada para outro horário.",
-            );
-          return { id, replayed: true };
-        }
-        tx.set(`${base}/meetings/${id}`, {
-          id,
-          organizationId: c.organizationId,
-          groupId,
-          scheduledStartAt: startsAt,
-          meetingStatus: "scheduled",
-          createdByUserId: uid,
-        });
-        audit(tx, c, uid, "meeting_created", now, { groupId, meetingId: id });
-        return { id };
-      }
       const people = await roster(tx, c, groupId);
-      if (raw.action === "attendance") {
-        const meetingId = documentId(raw.meetingId, "Encontro"),
-          personId = documentId(raw.personId, "Pessoa");
-        if (!people.some((p) => p.id === personId))
-          throw new AccountError(403, "Esta pessoa não pertence à célula.");
-        const meetingPath = `${base}/meetings/${meetingId}`,
-          path = `${meetingPath}/attendance/${meetingId}_${personId}`;
-        const [meeting, existing] = await tx.read(meetingPath, path);
-        if (
-          meeting?.organizationId !== c.organizationId ||
-          meeting.groupId !== groupId ||
-          meeting.meetingStatus === "cancelled" ||
-          !Number.isFinite(Date.parse(meeting.scheduledStartAt)) ||
-          Date.parse(meeting.scheduledStartAt) > now + 3 * 3600000 ||
-          Date.parse(meeting.scheduledStartAt) < now - 90 * 86400000
-        )
-          throw new AccountError(
-            409,
-            "Este encontro não está disponível para registrar presença.",
-          );
-        if (
-          !["present", "absent", "justified", "first_time_guest"].includes(
-            raw.status,
-          )
-        )
-          throw new AccountError(400, "Situação de presença inválida.");
-        if (existing?.attendanceStatus === raw.status)
-          return { ok: true, replayed: true };
-        if ((existing?.attendanceStatus || null) !== raw.expectedStatus)
-          throw new AccountError(
-            409,
-            "A presença mudou. Atualize o encontro antes de salvar.",
-          );
-        tx.set(path, {
-          id: `${meetingId}_${personId}`,
-          organizationId: c.organizationId,
-          groupId,
-          groupMeetingId: meetingId,
-          personId,
-          attendanceStatus: raw.status,
-          recordedByUserId: uid,
-          updatedAt: new Date(now).toISOString(),
-        });
-        audit(tx, c, uid, "attendance_recorded", now, {
-          groupId,
-          personId,
-          meetingId,
-          status: raw.status,
-        });
-        return { ok: true };
-      }
       const meetings = (
         await tx.query(
           base,
@@ -699,7 +636,12 @@ export async function roleHomeOperation(
         meetingId: meetingId || null,
         meetings: meetings
           .slice(0, 50)
-          .map((m) => ({ id: m.id, startsAt: m.scheduledStartAt })),
+          .map((m) => ({
+            id: m.id,
+            startsAt: m.scheduledStartAt,
+            status: m.meetingStatus,
+            revision: m.revision || 0,
+          })),
         people: people.map((p) => ({
           id: p.id,
           name: name(p),
@@ -832,6 +774,24 @@ export async function roleHomeOperation(
       absences: [],
       churches: [],
     };
+    if (c.profile !== "network" && staff && c.enabled("communication")) {
+      const prepared = await tx.count(c.root,"communicationCampaigns","status","prepared");
+      const partial = await tx.count(c.root,"communicationCampaigns","status","partially_confirmed");
+      const handoffs = await tx.count(c.root,"whatsappHandoffs","status","open");
+      out.actions.push({key:"communication",title:"Comunicação",detail:"Retomar listas e atender conversas",href:"/communication"});
+      out.metrics.push({key:"communication-pending",label:"Listas manuais a concluir",value:prepared+partial,href:"/communication"});
+      out.metrics.push({key:"communication-handoffs",label:"Conversas aguardando equipe",value:handoffs,href:"/communication"});
+      if(prepared+partial) out.warnings.push(`${prepared+partial} lista(s) de WhatsApp com envios manuais ainda não registrados.`);
+      if(handoffs) out.warnings.push(`${handoffs} conversa(s) aguardando atendimento da equipe em Comunicação.`);
+    }
+    if (c.profile !== "network" && c.enabled("giving")) {
+      out.actions.push({key:"giving", title:staff ? "Doações e campanhas" : "Minhas contribuições", detail:staff ? "Campanhas e declarações recebidas" : "Campanhas da igreja e situação das minhas declarações", href:"/giving"});
+      if(staff && c.enabled("finance")) {
+        const pending = await tx.count(c.root,"contributions","status","pending");
+        out.metrics.push({key:"giving-pending",label:"Contribuições a conferir",value:pending,href:"/giving"});
+        if(pending) out.warnings.push(`${pending} contribuição(ões) aguardando conferência em Finanças. Ainda não são recebimentos confirmados.`);
+      }
+    }
     if (c.profile === "network") {
       const active = await tx.query(
         c.root,
@@ -924,6 +884,13 @@ export async function roleHomeOperation(
       return out;
     }
     const own = person ? await ownGroups(tx, c, person.id, led) : [];
+    if (c.enabled('tribes')) {
+      try {
+        const t = await tribeHomeSummary(tx,c.root,c.organizationId,uid,c.roles,c.profile,now);
+        out.metrics.push({key:'tribe-next-steps',label:'Próximos passos para servir',value:t.pending,href:t.href});
+        out.actions.unshift({key:'tribes',title:t.pending?`${t.pending} próximo(s) passo(s) para servir`:'Descobrir e experimentar servir',detail:staff||led?'Interesses, experiências e retornos para acompanhar':'Meus interesses, convites e retorno à liderança',href:t.href});
+      } catch(e) { out.warnings.push('Não foi possível consultar as experiências de serviço. Abra Tribos para conferir seus vínculos.'); }
+    }
     out.groups = own.map((g) => ({
       id: g.id,
       name: g.name,
@@ -1027,13 +994,26 @@ export async function roleHomeOperation(
         date: p.birthDate.slice(8, 10) + "/" + p.birthDate.slice(5, 7),
         ...(p.groupId ? { groupId: p.groupId } : {}),
       }));
-    if (staff && c.enabled("groups"))
+    if (staff && c.enabled("groups")) {
+      const activeGroups = await tx.query(
+        c.root,
+        "groups",
+        "status",
+        "active",
+        "EQUAL",
+        501,
+      );
+      if (activeGroups.length > 500)
+        out.warnings.push(
+          "Contagem de células parcial: mais de 500 grupos ativos.",
+        );
       out.metrics.push({
         key: "groups",
         label: "Células ativas",
-        value: await tx.count(c.root, "groups", "status", "active"),
+        value: activeGroups.slice(0, 500).filter(isCellGroup).length,
         href: "/groups",
       });
+    }
     if (staff && c.enabled("visitors"))
       out.metrics.push({
         key: "visitors",
@@ -1219,6 +1199,7 @@ export async function roleHomeOperation(
           Date.parse(a.serviceDate) >= now,
       );
       out.metrics = [
+        ...out.metrics,
         ...(c.enabled("groups")
           ? [
               {

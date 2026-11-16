@@ -49,7 +49,7 @@ async function run() {
   const adminToken = await login("principal");
   const memberToken = await login("secundaria");
   await org.set({ id: orgId, organizationId: orgId, status: "active", memberCount: 2 });
-  await org.collection("settings").doc("subscription").set({ organizationId: orgId, plan: "free", billingStatus: "active" });
+  await org.collection("settings").doc("subscription").set({ organizationId: orgId, plan: "comunidade", billingStatus: "active" });
   await org.collection("users").doc(adminId).set({ organizationId: orgId, isActive: true, roles: ["church_admin"] });
   await org.collection("users").doc(memberId).set({ organizationId: orgId, isActive: true, roles: ["member"] });
 
@@ -107,6 +107,7 @@ async function run() {
   await org.collection("programEntitlements").doc(programId).update({ status: "revoked" });
   equal((await api("learning/progress", { action: "read", courseId: programId, catalog: "platform" }, memberToken)).status, 404, "Reembolso revoga acesso ao progresso");
 
+  await org.collection("settings").doc("subscription").set({organizationId:orgId,plan:"free",billingStatus:"active"});
   const freeEventId = "event_free_qa";
   await org.collection("events").doc(freeEventId).set({ id: freeEventId, organizationId: orgId, name: "Evento gratuito QA", slug: "evento-gratuito-qa", status: "published", type: "service", locationType: "onsite", startsAt: new Date().toISOString(), capacity: 2, isPaid: false });
   const memberRegistration = await api("events/attendance", { action: "member", eventId: freeEventId, requestId: randomUUID() }, memberToken);

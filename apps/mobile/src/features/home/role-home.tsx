@@ -1,3 +1,4 @@
+import {MobileCellReport} from "../groups/cell-report";
 import { MobileIntegration } from "./integration";
 import { MobileContact, MobileLeaderInsights } from "./leader-insights";
 import {
@@ -150,6 +151,8 @@ export function MobileRoleHome(
       "/groups",
       "/campaigns",
       "/finance",
+      "/giving",
+      "/communication",
       "/operations",
       "/serving",
       "/me",
@@ -620,7 +623,7 @@ function MobileAbsence(
   );
 }
 export function MobileScopedGroups(
-  props: Props & { profile: HomeProfile; onPrepare?: () => void },
+  props: Props & { profile: HomeProfile; externalRevision?: number; onPrepare?: (groupId:string) => void },
 ) {
   const call = useApi(props);
   const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]),
@@ -645,7 +648,7 @@ export function MobileScopedGroups(
       .then((r) => {
         if (!controller.signal.aborted) {
           setGroups(r.groups);
-          setGroup(r.groups[0]?.id || "");
+          setGroup(current=>r.groups.some(g=>g.id===current)?current:r.groups[0]?.id || "");
         }
       })
       .catch((e) => {
@@ -655,7 +658,7 @@ export function MobileScopedGroups(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [call, props.profile]);
+  }, [call, props.profile, revision, props.externalRevision]);
   useEffect(() => {
     setDetail(undefined);
     if (!groupId) return;
@@ -675,7 +678,7 @@ export function MobileScopedGroups(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [call, groupId, meetingId, revision, props.profile]);
+  }, [call, groupId, meetingId, revision, props.profile, props.externalRevision]);
   async function create() {
     setBusy(true);
     setError("");
@@ -735,8 +738,8 @@ export function MobileScopedGroups(
       keyboardShouldPersistTaps="handled"
     >
       <Text style={s.title}>Minhas células · liderança</Text>
-      {props.onPrepare && (
-        <Button label="Preparar encontro com IA" onPress={props.onPrepare} />
+      {props.onPrepare && groupId && (
+        <Button label="Preparar encontro com IA" onPress={()=>props.onPrepare?.(groupId)} />
       )}
       <Text style={s.meta}>
         Somente as células em que seu cadastro está vinculado como responsável.
@@ -809,6 +812,7 @@ export function MobileScopedGroups(
           />
         </View>
       )}
+      {!!groupId&&<MobileCellReport key={groupId} apiOrigin={props.apiOrigin} user={props.user} orgId={props.orgId} groupId={groupId} primary={props.primary} draft={null}/> }
       {detail && (
         <>
           <Text style={s.heading}>Encontro</Text>
@@ -825,7 +829,7 @@ export function MobileScopedGroups(
             ))}
           </ScrollView>
           <Text style={s.meta}>
-            Últimos 50 encontros. Registro a partir de 3 horas antes, até 90
+            Últimos 25 encontros. O histórico completo está na gestão web. Registro a partir de 3 horas antes, até 90
             dias depois.
           </Text>
           {!detail.meetings.length && (

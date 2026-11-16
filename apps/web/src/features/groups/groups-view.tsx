@@ -1,1341 +1,848 @@
 "use client";
-
-import { manualWhatsappLink } from "@alvo/utils";
-
+import { ContactActions } from "../dashboard/leader-insights";
 import Link from "next/link";
-import { friendlyError } from "../../lib/friendly-error";
-import {
-  AlertTriangle,
-  CalendarDays,
-  CheckCircle2,
-  Crown,
-  Pencil,
-  Sparkles,
-  Trash2,
-  UserPlus,
-  UsersRound,
-  Waypoints,
-  X
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  assignPersonToGroup,
-  createGroup,
-  createGroupMeeting,
-  deleteGroup,
-  fetchGroupAttendance,
-  fetchGroupMeetings,
-  fetchGroupMembers,
-  fetchGroups,
-  fetchPeople,
-  isFirebaseWebRuntimeConfigured,
-  recordGroupAttendance,
-  removeGroupMember,
-  updateGroup,
-  updateGroupMeetingStatus
-} from "@alvo/firebase";
-import type { Group, GroupAttendance, GroupMeeting, GroupMember, Person } from "@alvo/types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { isCellGroup, homeProfiles } from "@alvo/domain";
 import { useAppAuth } from "../../../app/providers";
-import { useGroupsLabel } from "../../../contexts/OrgFeaturesContext";
-
-const weekdayOptions = [
-  { label: "Domingo", value: 0 },
-  { label: "Segunda", value: 1 },
-  { label: "Terça", value: 2 },
-  { label: "Quarta", value: 3 },
-  { label: "Quinta", value: 4 },
-  { label: "Sexta", value: 5 },
-  { label: "Sábado", value: 6 }
-];
-
-type GroupFollowUpItem = {
-  level: "attention" | "risk";
-  message: string;
-  personId: string;
-  personName: string;
-  reason: string;
-  whatsappHref: string | null;
+import { useGroupApi, useGroupResource } from "./group-api";
+import s from "./groups.module.css";
+type Data = Record<string, any>;
+const labels: Record<string, string> = {
+  cell: "Célula",
+  small_group: "Pequeno grupo",
+  class: "Classe / Escola",
+  youth_group: "Grupo de jovens",
+  scheduled: "Agendado / chamada aberta",
+  completed: "Encerrado",
+  cancelled: "Cancelado",
+  present: "Presente",
+  absent: "Ausente",
+  justified: "Justificou",
+  first_time_guest: "Primeira visita",
+  leader: "Líder",
+  co_leader: "Co-líder",
+  supervisor: "Supervisor",
+  member: "Membro",
+  visitor: "Visitante",
 };
-
+const date = (v: string, tz: string) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: tz,
+  }).format(new Date(v));
 export function GroupsView() {
-  const groupsLabel = useGroupsLabel();
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
-  const [meetings, setMeetings] = useState<GroupMeeting[]>([]);
-  const [attendance, setAttendance] = useState<GroupAttendance[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [status, setStatus] = useState("Carregando células...");
-  const [copiedFollowUpPersonId, setCopiedFollowUpPersonId] = useState<string | null>(null);
-  const [copiedMeetingSummaryId, setCopiedMeetingSummaryId] = useState<string | null>(null);
-  const [groupForm, setGroupForm] = useState({
-    capacity: "12",
-    city: "",
-    meetingDayOfWeek: "3",
-    meetingTime: "19:30",
-    name: "",
-    state: "",
-    type: "cell",
-    leaderPersonId: ""
-  });
-  const [groupFormError, setGroupFormError] = useState("");
-  const [groupFormSuccess, setGroupFormSuccess] = useState("");
-  const [groupFormSaving, setGroupFormSaving] = useState(false);
-  const [groupFormOpen, setGroupFormOpen] = useState(false);
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [meetingDate, setMeetingDate] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
-
-  useEffect(() => {
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre no Firebase para carregar células reais.");
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadGroupsCenter() {
-      setStatus("Sincronizando células, membros e presenças...");
-
-      try {
-        const [nextGroups, nextPeople] = await Promise.all([
-          fetchGroups(firebaseConfig, { organizationId }, 80),
-          fetchPeople(firebaseConfig, { organizationId }, 160)
-        ]);
-        const [nextMembers, nextMeetings] = nextGroups.length
-          ? await Promise.all([
-              fetchGroupMembers(firebaseConfig, { organizationId }, nextGroups, 60),
-              fetchGroupMeetings(firebaseConfig, { organizationId }, nextGroups, 8)
-            ])
-          : [[], []];
-        const nextAttendance = nextMeetings.length
-          ? await fetchGroupAttendance(firebaseConfig, { organizationId }, nextMeetings, 80)
-          : [];
-
-        if (cancelled) {
-          return;
-        }
-
-        // Só dados reais — nada de mock que engana.
-        setGroups(nextGroups);
-        setPeople(nextPeople);
-        setGroupMembers(nextMembers);
-        setMeetings(nextMeetings);
-        setAttendance(nextAttendance);
-        setSelectedGroupId((currentId) => currentId ?? nextGroups[0]?.id ?? null);
-        setStatus(
-          `${nextGroups.length} célula(s), ${nextMembers.length} vínculo(s), ${nextMeetings.length} encontro(s).`
-        );
-      } catch (error) {
-        if (!cancelled) {
-          setStatus(friendlyError(error, "Não foi possível carregar células."));
-        }
-      }
-    }
-
-    void loadGroupsCenter();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
-
-  const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
-  const selectedMembers = selectedGroup
-    ? groupMembers.filter((member) => member.groupId === selectedGroup.id)
-    : [];
-  const selectedMeetings = selectedGroup
-    ? meetings.filter((meeting) => meeting.groupId === selectedGroup.id)
-    : [];
-  const selectedAttendance = selectedGroup
-    ? attendance.filter((item) => item.groupId === selectedGroup.id)
-    : [];
-  const selectedActiveMeeting =
-    selectedMeetings.find((meeting) => meeting.meetingStatus === "scheduled") ?? null;
-  const selectedReportMeeting =
-    selectedActiveMeeting ??
-    [...selectedMeetings].sort(
-      (firstMeeting, secondMeeting) =>
-        new Date(secondMeeting.scheduledStartAt).getTime() -
-        new Date(firstMeeting.scheduledStartAt).getTime()
-    )[0] ??
-    null;
-  const peopleWithoutGroup = people.filter(
-    (person) => !groupMembers.some((member) => member.personId === person.id)
+  const { organizationId, user } = useAppAuth();
+  return <Center key={`${organizationId}:${user?.uid}`} />;
+}
+function Center() {
+  const { call } = useGroupApi(),
+    [revision, setRevision] = useState(0),
+    [selected, setSelected] = useState(""),
+    [form, setForm] = useState<Data | null>(null),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState(""),
+    [filter, setFilter] = useState("cell"),
+    [query, setQuery] = useState("");
+  const lock = useRef(false),
+    attempt = useRef<{ signature: string; id: string } | null>(null);
+  const { data, error: loadError } = useGroupResource<Data>(
+    { action: "overview" },
+    revision,
   );
-  const totalCapacity = groups.reduce((sum, group) => sum + (group.capacity ?? 0), 0);
-  // Vagas disponíveis = capacidade total − pessoas já vinculadas (não a capacidade toda).
-  const availableSlots = Math.max(totalCapacity - groupMembers.length, 0);
-  const activeGroups = groups.filter((group) => group.status === "active");
-  const presentCount = attendance.filter((item) =>
-    ["present", "first_time_guest"].includes(item.attendanceStatus)
-  ).length;
-  const attendanceRate = attendance.length
-    ? Math.round((presentCount / attendance.length) * 100)
-    : 0;
-  const groupHealth = selectedGroup
-    ? getGroupHealth(selectedGroup, selectedMembers, selectedAttendance)
-    : null;
-  const selectedMeetingSummary = selectedGroup && selectedReportMeeting
-    ? getMeetingSummary({
-        attendance: selectedAttendance,
-        group: selectedGroup,
-        meeting: selectedReportMeeting,
-        members: selectedMembers
-      })
-    : null;
-  const selectedFollowUpQueue = selectedGroup && selectedReportMeeting
-    ? getGroupFollowUpQueue({
-        attendance: selectedAttendance,
-        meeting: selectedReportMeeting,
-        members: selectedMembers,
-        people
-      })
-    : [];
-
-  async function handleAssignPerson(person: Person) {
-    if (!selectedGroup) {
-      setStatus("Selecione uma célula antes de vincular uma pessoa.");
-      return;
-    }
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de criar o vínculo.");
-      return;
-    }
-
+  useEffect(() => {
+    const f = () => {
+      if (!lock.current) setRevision((n) => n + 1);
+    };
+    window.addEventListener("focus", f);
+    return () => window.removeEventListener("focus", f);
+  }, []);
+  async function mutate(body: Data) {
+    if (lock.current) return false;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const signature = JSON.stringify(body);
+    if (attempt.current?.signature !== signature)
+      attempt.current = { signature, id: crypto.randomUUID() };
     try {
-      const savedMember = await assignPersonToGroup(firebaseConfig, { organizationId }, {
-        assignedByUserId: user.uid,
-        groupId: selectedGroup.id,
-        personId: person.id,
-        roleInGroup: person.memberStatus === "visitor" ? "visitor" : "member"
-      });
-      setGroupMembers((currentMembers) => [
-        savedMember,
-        ...currentMembers.filter((member) => member.id !== savedMember.id)
-      ]);
-      setStatus("Vínculo com célula salvo no Firestore.");
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível vincular a célula."));
-    }
-  }
-
-  function resetGroupForm() {
-    setGroupForm({
-      capacity: "12", city: "", meetingDayOfWeek: "3", meetingTime: "19:30",
-      name: "", state: "", type: "cell", leaderPersonId: ""
-    });
-  }
-
-  function openNewGroupForm() {
-    setEditingGroupId(null);
-    resetGroupForm();
-    setGroupFormError("");
-    setGroupFormSuccess("");
-    setGroupFormOpen(true);
-  }
-
-  function openEditGroup(group: Group) {
-    setEditingGroupId(group.id);
-    const leader = groupMembers.find((m) => m.groupId === group.id && m.roleInGroup === "leader");
-    setGroupForm({
-      capacity: String(group.capacity ?? "12"),
-      city: group.city ?? "",
-      meetingDayOfWeek: String(group.meetingDayOfWeek ?? "3"),
-      meetingTime: group.meetingTime ?? "19:30",
-      name: group.name,
-      state: group.state ?? "",
-      type: group.type,
-      leaderPersonId: leader?.personId ?? ""
-    });
-    setGroupFormError("");
-    setGroupFormSuccess("");
-    setGroupFormOpen(true);
-  }
-
-  async function handleCreateGroup() {
-    const name = groupForm.name.trim();
-    setGroupFormError("");
-    setGroupFormSuccess("");
-
-    if (!name) {
-      setGroupFormError("Digite o nome da célula para continuar.");
-      return;
-    }
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setGroupFormError("Entre na sua conta para salvar a célula.");
-      return;
-    }
-
-    setGroupFormSaving(true);
-    const capacityParsed = Number.parseInt(groupForm.capacity, 10);
-    const capacity = Number.isNaN(capacityParsed) ? undefined : capacityParsed;
-    const dayOfWeek = Number.parseInt(groupForm.meetingDayOfWeek, 10);
-
-    // Vincula o líder escolhido como membro com papel "leader" (modelo aprovado).
-    async function assignLeader(groupId: string) {
-      if (!groupForm.leaderPersonId || !user) return;
-      try {
-        const savedLeader = await assignPersonToGroup(firebaseConfig, { organizationId }, {
-          assignedByUserId: user.uid,
-          groupId,
-          personId: groupForm.leaderPersonId,
-          roleInGroup: "leader"
-        });
-        setGroupMembers((current) => [savedLeader, ...current.filter((m) => m.id !== savedLeader.id)]);
-      } catch (error) {
-        console.error("Falha ao vincular líder:", error);
-      }
-    }
-
-    try {
-      if (editingGroupId) {
-        // Edição de célula existente.
-        await updateGroup(firebaseConfig, { organizationId }, editingGroupId, {
-          name, type: groupForm.type as Group["type"], meetingDayOfWeek: dayOfWeek,
-          meetingTime: groupForm.meetingTime || undefined,
-          city: groupForm.city.trim() || undefined,
-          state: groupForm.state.trim() || undefined, capacity
-        });
-        setGroups((current) => current.map((g) => (g.id === editingGroupId ? {
-          ...g, name, type: groupForm.type as Group["type"], meetingDayOfWeek: dayOfWeek,
-          meetingTime: groupForm.meetingTime || undefined, city: groupForm.city.trim() || undefined,
-          state: groupForm.state.trim() || undefined, capacity
-        } : g)));
-        // Se trocou/definiu o líder e ele ainda não é membro-líder, vincula.
-        const currentLeader = groupMembers.find((m) => m.groupId === editingGroupId && m.roleInGroup === "leader");
-        if (groupForm.leaderPersonId && currentLeader?.personId !== groupForm.leaderPersonId) {
-          await assignLeader(editingGroupId);
-        }
-        setStatus(`Célula "${name}" atualizada.`);
-      } else {
-        const savedGroup = await createGroup(firebaseConfig, { organizationId }, {
-          capacity, city: groupForm.city.trim() || undefined, createdByUserId: user.uid,
-          meetingDayOfWeek: dayOfWeek, meetingTime: groupForm.meetingTime || undefined,
-          name, state: groupForm.state.trim() || undefined, type: groupForm.type as Group["type"]
-        });
-        setGroups((current) => [savedGroup, ...current]);
-        setSelectedGroupId(savedGroup.id);
-        await assignLeader(savedGroup.id);
-        setStatus(`Célula "${savedGroup.name}" criada!`);
-      }
-      setGroupFormOpen(false);
-      setEditingGroupId(null);
-      resetGroupForm();
-    } catch (error) {
-      setGroupFormError(friendlyError(error, "Não foi possível salvar a célula."));
-    } finally {
-      setGroupFormSaving(false);
-    }
-  }
-
-  async function confirmDeleteGroup() {
-    const group = deleteTarget;
-    if (!group) return;
-    setDeleteTarget(null);
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de excluir a célula.");
-      return;
-    }
-    try {
-      await deleteGroup(firebaseConfig, { organizationId }, group.id);
-      setGroups((current) => current.filter((g) => g.id !== group.id));
-      setGroupMembers((current) => current.filter((m) => m.groupId !== group.id));
-      setSelectedGroupId((id) => (id === group.id ? null : id));
-      setStatus(`Célula "${group.name}" excluída.`);
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível excluir a célula."));
-    }
-  }
-
-  async function handleRemoveMember(member: GroupMember) {
-    const person = people.find((p) => p.id === member.personId);
-    const label = person ? getFullName(person) : member.personId;
-    if (!window.confirm(`Remover ${label} desta célula?`)) return;
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de remover o participante.");
-      return;
-    }
-    try {
-      await removeGroupMember(firebaseConfig, { organizationId }, member.groupId, member.personId);
-      setGroupMembers((current) => current.filter((m) => m.id !== member.id));
-      setStatus(`${label} removido da célula.`);
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível remover o participante."));
-    }
-  }
-
-  async function handleCreateMeeting() {
-    if (!selectedGroup) {
-      setStatus("Selecione uma célula antes de abrir um encontro.");
-      return;
-    }
-
-    // Usa a data escolhida (datetime-local) ou "agora" se em branco.
-    const scheduledStartAt = meetingDate ? new Date(meetingDate).toISOString() : new Date().toISOString();
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de abrir o encontro.");
-      return;
-    }
-
-    try {
-      const savedMeeting = await createGroupMeeting(firebaseConfig, { organizationId }, {
-        createdByUserId: user.uid,
-        groupId: selectedGroup.id,
-        scheduledStartAt
-      });
-      setMeetings((currentMeetings) => [savedMeeting, ...currentMeetings]);
-      setMeetingDate("");
-      setStatus("Encontro salvo no Firestore.");
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível abrir o encontro."));
-    }
-  }
-
-  async function handleAttendance(
-    member: GroupMember,
-    attendanceStatus: GroupAttendance["attendanceStatus"]
-  ) {
-    if (!selectedGroup || !selectedActiveMeeting) {
-      setStatus("Abra um encontro antes de registrar presença.");
-      return;
-    }
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de registrar presença.");
-      return;
-    }
-
-    try {
-      const savedAttendance = await recordGroupAttendance(firebaseConfig, { organizationId }, {
-        groupId: selectedGroup.id,
-        groupMeetingId: selectedActiveMeeting.id,
-        personId: member.personId,
-        recordedByUserId: user.uid,
-        status: attendanceStatus
-      });
-      setAttendance((currentAttendance) => [
-        savedAttendance,
-        ...currentAttendance.filter((item) => item.id !== savedAttendance.id)
-      ]);
-      setStatus("Presença salva no Firestore.");
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível registrar presença."));
-    }
-  }
-
-  async function handleCloseMeeting() {
-    if (!selectedGroup || !selectedActiveMeeting) {
-      setStatus("Abra ou selecione um encontro antes de encerrar.");
-      return;
-    }
-
-    if (!configured || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setStatus("Entre na conta e confira a conexão antes de encerrar o encontro.");
-      return;
-    }
-
-    try {
-      await updateGroupMeetingStatus(firebaseConfig, { organizationId }, {
-        groupId: selectedGroup.id,
-        meetingId: selectedActiveMeeting.id,
-        status: "completed",
-        updatedByUserId: user.uid
-      });
-      setMeetings((currentMeetings) =>
-        currentMeetings.map((meeting) =>
-          meeting.id === selectedActiveMeeting.id
-            ? { ...meeting, meetingStatus: "completed" }
-            : meeting
-        )
+      const r = await call<Data>({ ...body, requestId: attempt.current.id });
+      attempt.current = null;
+      setMessage(
+        "Alteração salva. Os painéis e o app consultarão os dados atualizados. Avisos dependem de conta e aparelho vinculados.",
       );
-      setStatus("Encontro encerrado no Firestore.");
-    } catch (error) {
-      setStatus(friendlyError(error, "Não foi possível encerrar o encontro."));
+      setRevision((n) => n + 1);
+      return r;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    } finally {
+      lock.current = false;
+      setBusy(false);
     }
   }
-
-  async function handleCopyFollowUp(item: GroupFollowUpItem) {
-    try {
-      await navigator.clipboard.writeText(item.message);
-      setCopiedFollowUpPersonId(item.personId);
-      setStatus(`Mensagem de cuidado copiada para ${item.personName}.`);
-    } catch {
-      setStatus("Não foi possível copiar automaticamente. Selecione a mensagem e copie manualmente.");
-    }
-  }
-
-  async function handleCopyMeetingSummary() {
-    if (!selectedMeetingSummary) {
-      setStatus("Abra um encontro para gerar resumo.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(selectedMeetingSummary.text);
-      setCopiedMeetingSummaryId(selectedMeetingSummary.meetingId);
-      setStatus(`Resumo de ${selectedMeetingSummary.groupName} copiado.`);
-    } catch {
-      setStatus("Não foi possível copiar o resumo automaticamente.");
-    }
-  }
-
+  const groups = (data?.groups || []).filter(
+    (g: Data) =>
+      (filter === "all" ||
+        (filter === "cell" && isCellGroup(g)) ||
+        (filter === "other" && !isCellGroup(g))) &&
+      g.name.toLowerCase().includes(query.toLowerCase()),
+  );
+  const id = groups.some((g: Data) => g.id === selected)
+    ? selected
+    : groups[0]?.id;
   return (
-    <div className="page-root groups-page">
-      <header className="page-header">
-        <div className="page-header-left">
-          <h1 className="page-title">{groupsLabel}</h1>
-          <p className="page-subtitle">Acompanhe capacidade, participantes, encontros e conexões</p>
+    <main className={s.page}>
+      <header className={s.heading}>
+        <div>
+          <small>ENCONTROS · COMUNHÃO · CUIDADO</small>
+          <h1>Células e grupos</h1>
+          <p>Organize os vínculos, escolha o encontro e acompanhe a chamada.</p>
         </div>
-        <div className="page-header-actions">
-          <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", background: "var(--alvo-surface-muted)", padding: "4px 10px", borderRadius: 8 }}>
-            {status}
-          </span>
+        <div className={s.actions}>
+          <button disabled={busy} onClick={() => setRevision((n) => n + 1)}>
+            Atualizar
+          </button>
+          {data?.canManage && (
+            <button
+              className={s.primary}
+              disabled={busy}
+              onClick={() => setForm({})}
+            >
+              + Nova célula / grupo
+            </button>
+          )}
         </div>
       </header>
-
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-icon"><Waypoints size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Células ativas</span><span className="stat-value">{activeGroups.length}</span></div>
+      <div className={s.feedback} aria-live="polite">
+        {message && <p className={s.success}>{message}</p>}
+        {(error || loadError) && (
+          <p role="alert" className={s.error}>
+            {error || loadError}
+          </p>
+        )}
+      </div>
+      {data?.partial && (
+        <p role="status" className={s.error}>
+          Consulta parcial: limite de 200 grupos ou 2.000 pessoas atingido. Os
+          indicadores abaixo não representam toda a instituição.
+        </p>
+      )}
+      {data && (
+        <section className={s.stats} aria-label="Indicadores de células">
+          {[
+            [data.stats.cells, "Células e pequenos grupos ativos"],
+            [data.stats.people, "Pessoas únicas nas células"],
+            [data.stats.links, "Vínculos nas células"],
+            [
+              data.stats.available,
+              `Vagas com capacidade definida${data.stats.unlimited ? ` · ${data.stats.unlimited} sem limite informado` : ""}`,
+            ],
+            ...(data.canManage
+              ? [[data.withoutCell.length, "Pessoas sem célula ativa"]]
+              : []),
+          ].map(([n, l]) => (
+            <div key={l}>
+              <strong>{n}</strong>
+              <span>{l}</span>
+            </div>
+          ))}
+        </section>
+      )}
+      {form && data && (
+        <GroupForm
+          key={form.id || "new"}
+          group={form}
+          people={data.people}
+          busy={busy}
+          cancel={() => setForm(null)}
+          save={async (values) => {
+            const r = await mutate({
+              action: "save-group",
+              groupId: form.id,
+              expectedRevision: form.revision || 0,
+              ...values,
+            });
+            if (r) {
+              setForm(null);
+              setSelected(r.id);
+              setFilter("all");
+            }
+          }}
+        />
+      )}
+      <section className={s.panel}>
+        <div className={s.controls}>
+          <label>
+            Buscar grupo
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nome da célula ou grupo"
+            />
+          </label>
+          <label>
+            Tipo
+            <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+              <option value="cell">Células e pequenos grupos</option>
+              <option value="other">Classes e outros grupos</option>
+              <option value="all">Todos os grupos</option>
+            </select>
+          </label>
+          <label>
+            Grupo selecionado
+            <select
+              value={id || ""}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              {!groups.length && <option>Nenhum grupo encontrado</option>}
+              {groups.map((g: Data) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} · {labels[g.type] || g.type}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><UsersRound size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Participantes</span><span className="stat-value">{groupMembers.length}</span></div>
+        <p>
+          Classes e grupos de jovens ficam separados dos indicadores de
+          integração em células.
+        </p>
+      </section>
+      {!data && !loadError && <p role="status">Carregando grupos…</p>}
+      {id && data && (
+        <Workspace
+          key={id}
+          id={id}
+          revision={revision}
+          busy={busy}
+          mutate={mutate}
+          people={data.people}
+          canManage={data.canManage}
+          edit={() => setForm(data.groups.find((g: Data) => g.id === id))}
+        />
+      )}
+    </main>
+  );
+}
+function GroupForm({
+  group,
+  people,
+  busy,
+  cancel,
+  save,
+}: {
+  group: Data;
+  people: Data[];
+  busy: boolean;
+  cancel: () => void;
+  save: (v: Data) => Promise<void>;
+}) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.currentTarget));
+    await save(d);
+  }
+  return (
+    <section className={s.panel}>
+      <h2>
+        {group.id ? "Editar grupo e liderança" : "Cadastrar célula ou grupo"}
+      </h2>
+      <p>
+        A troca abaixo substitui o líder principal. Co-líderes e supervisores já
+        cadastrados são preservados. O responsável precisa de conta vinculada e
+        acesso de liderança.
+      </p>
+      <form onSubmit={submit}>
+        <fieldset disabled={busy} className={s.form}>
+          <label>
+            Nome
+            <input
+              name="name"
+              required
+              maxLength={160}
+              defaultValue={group.name}
+            />
+          </label>
+          <label>
+            Tipo
+            <select name="type" defaultValue={group.type || "cell"}>
+              {["cell", "small_group", "class", "youth_group"].map((t) => (
+                <option key={t} value={t}>
+                  {labels[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Líder principal
+            <select
+              name="leaderPersonId"
+              defaultValue={group.leaderPersonId || ""}
+            >
+              <option value="">Sem líder principal</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Capacidade máxima (em branco: não definida)
+            <input
+              name="capacity"
+              type="number"
+              min={1}
+              max={500}
+              defaultValue={group.capacity ?? ""}
+            />
+          </label>
+          <label>
+            Dia da semana
+            <select
+              name="meetingDayOfWeek"
+              defaultValue={group.meetingDayOfWeek ?? 3}
+            >
+              {[
+                "Domingo",
+                "Segunda",
+                "Terça",
+                "Quarta",
+                "Quinta",
+                "Sexta",
+                "Sábado",
+              ].map((d, i) => (
+                <option key={d} value={i}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Horário habitual
+            <input
+              name="meetingTime"
+              type="time"
+              defaultValue={group.meetingTime || "19:30"}
+            />
+          </label>
+          <label>
+            Local do encontro
+            <input
+              name="location"
+              maxLength={160}
+              defaultValue={group.location}
+              placeholder="Ex.: Salão da comunidade"
+            />
+          </label>
+          <label>
+            Endereço para os participantes
+            <input
+              name="address"
+              maxLength={350}
+              defaultValue={group.address}
+              placeholder="Rua, número, bairro e referência"
+            />
+          </label>
+          <label>
+            Cidade
+            <input name="city" maxLength={100} defaultValue={group.city} />
+          </label>
+          <label>
+            Estado
+            <input name="state" maxLength={30} defaultValue={group.state} />
+          </label>
+          <div className={s.actions}>
+            <button className={s.primary}>
+              {busy ? "Salvando…" : "Salvar grupo"}
+            </button>
+            <button type="button" onClick={cancel}>
+              Cancelar
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+  );
+}
+function Workspace({
+  id,
+  revision,
+  busy,
+  mutate,
+  people,
+  canManage,
+  edit,
+}: {
+  id: string;
+  revision: number;
+  busy: boolean;
+  mutate: (v: Data) => Promise<any>;
+  people: Data[];
+  canManage: boolean;
+  edit: () => void;
+}) {
+  const { roles } = useAppAuth();
+  const [reportRevision, setReportRevision] = useState<number>();
+  const [meetingId, setMeeting] = useState(""),
+    [page, setPage] = useState(0),
+    [create, setCreate] = useState(false),
+    [search, setSearch] = useState(""),
+    [candidate, setCandidate] = useState(""),
+    [personPage, setPersonPage] = useState(0),
+    [confirmArchive, setConfirmArchive] = useState(false),
+    [remove, setRemove] = useState(""),
+    [report, setReport] = useState<string | null>(null),
+    [follow, setFollow] = useState("");
+  const { data, error } = useGroupResource<Data>(
+    { action: "detail", groupId: id, meetingId: meetingId || undefined, page },
+    revision,
+  );
+  useEffect(() => {
+    if (!meetingId && data?.meeting?.id) setMeeting(data.meeting.id);
+  }, [meetingId, data?.meeting?.id]);
+  if (!data)
+    return (
+      <p role={error ? "alert" : "status"}>
+        {error || "Carregando participantes e encontros…"}
+      </p>
+    );
+  const d = data,
+    g = d.group,
+    m = d.meeting,
+    summary = d.summary;
+  const available = people.filter(
+    (p) =>
+      !d.people.some((m: Data) => m.personId === p.id) &&
+      p.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const address = [g.address, g.city, g.state].filter(Boolean).join(", ");
+  return (
+    <section className={s.panel}>
+      <div className={s.heading}>
+        <div>
+          <small>{labels[g.type] || g.type}</small>
+          <h2>{g.name}</h2>
+          <p>
+            {g.location || "Local a definir"} ·{" "}
+            {g.meetingTime || "Horário a definir"} · {d.people.length}{" "}
+            participantes ativos
+          </p>
+          {address && (
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+            >
+              Ver endereço no mapa
+            </a>
+          )}
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><UserPlus size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Vagas disponíveis</span><span className="stat-value">{totalCapacity ? availableSlots : "—"}</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><CheckCircle2 size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Taxa de presença</span><span className="stat-value">{attendanceRate}%</span></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}><AlertTriangle size={20} /></div>
-          <div className="stat-body"><span className="stat-label">Sem célula</span><span className="stat-value">{peopleWithoutGroup.length}</span></div>
+        <div className={s.actions}>
+          {canManage && (
+            <>
+              <button disabled={busy} onClick={edit}>
+                Editar grupo
+              </button>
+              <button disabled={busy} onClick={() => setConfirmArchive(true)}>
+                Arquivar
+              </button>
+            </>
+          )}
+          <Link href={`/groups/${id}/banner`}>Preparar banner</Link>
         </div>
       </div>
-
-      <section className="groups-workbench">
-        <aside className="groups-list-panel">
-          <div className="section-heading compact">
-            <div>
-              <p className="eyebrow">Mapa de células</p>
-              <h2>{groups.length} grupo(s)</h2>
-            </div>
-          </div>
-          <div className="group-card-list">
-            {!groupFormOpen && (
-              <button
-                className="primary-button full"
-                onClick={openNewGroupForm}
-                type="button"
-                style={{ marginBottom: 8 }}
-              >
-                <UserPlus size={15} />
-                + Nova célula
-              </button>
-            )}
-            {groupFormOpen && (
-            <div className="quick-group-form antigravity-float-delayed">
-              <p className="eyebrow">{editingGroupId ? "Editar célula" : "Nova célula"}</p>
-              {groupFormError && (
-                <div className="form-inline-error">
-                  ⚠️ {groupFormError}
-                </div>
-              )}
-              {groupFormSuccess && (
-                <div className="form-inline-success">
-                  {groupFormSuccess}
-                </div>
-              )}
-              <label>
-                Nome da célula *
-                <input
-                  onChange={(event) => {
-                    setGroupFormError("");
-                    setGroupForm((currentForm) => ({ ...currentForm, name: event.target.value }));
-                  }}
-                  placeholder="Ex.: Célula Centro Sul"
-                  value={groupForm.name}
-                  style={groupFormError && !groupForm.name ? { borderColor: '#ef4444' } : {}}
-                />
-              </label>
-              <label>
-                Líder da célula
-                <select
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, leaderPersonId: event.target.value }))
-                  }
-                  value={groupForm.leaderPersonId}
-                >
-                  <option value="">Selecionar líder...</option>
-                  {people.filter(p => ["member", "leader", "volunteer"].includes(p.memberStatus)).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Tipo
-                <select
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({ ...currentForm, type: event.target.value }))
-                  }
-                  value={groupForm.type}
-                >
-                  <option value="cell">Célula</option>
-                  <option value="small_group">Pequeno Grupo</option>
-                  <option value="class">Classe / Escola</option>
-                  <option value="youth_group">Grupo de Jovens</option>
-                </select>
-              </label>
-              <div className="quick-group-grid">
-                <label>
-                  Dia
-                  <select
-                    onChange={(event) =>
-                      setGroupForm((currentForm) => ({
-                        ...currentForm,
-                        meetingDayOfWeek: event.target.value
-                      }))
-                    }
-                    value={groupForm.meetingDayOfWeek}
-                  >
-                    {weekdayOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Horário
-                  <input
-                    onChange={(event) =>
-                      setGroupForm((currentForm) => ({
-                        ...currentForm,
-                        meetingTime: event.target.value
-                      }))
-                    }
-                    type="time"
-                    value={groupForm.meetingTime}
-                  />
-                </label>
-              </div>
-              <div className="quick-group-grid">
-                <label>
-                  Cidade
-                  <input
-                    onChange={(event) =>
-                      setGroupForm((currentForm) => ({ ...currentForm, city: event.target.value }))
-                    }
-                    placeholder="Cidade"
-                    value={groupForm.city}
-                  />
-                </label>
-                <label>
-                  Estado (UF)
-                  <input
-                    maxLength={2}
-                    onChange={(event) =>
-                      setGroupForm((currentForm) => ({ ...currentForm, state: event.target.value.toUpperCase() }))
-                    }
-                    placeholder="PA"
-                    value={groupForm.state}
-                  />
-                </label>
-              </div>
-              <label>
-                Vagas
-                <input
-                  min="1"
-                  onChange={(event) =>
-                    setGroupForm((currentForm) => ({
-                      ...currentForm,
-                      capacity: event.target.value
-                    }))
-                  }
-                  type="number"
-                  value={groupForm.capacity}
-                />
-              </label>
-              <button
-                className="primary-button full"
-                onClick={() => void handleCreateGroup()}
-                type="button"
-                disabled={groupFormSaving}
-                style={groupFormSaving ? { opacity: 0.7 } : {}}
-              >
-                <UserPlus size={15} />
-                {groupFormSaving ? "Salvando..." : editingGroupId ? "Salvar alterações" : "Criar célula"}
-              </button>
-              <button
-                className="ghost-button full"
-                onClick={() => { setGroupFormOpen(false); setEditingGroupId(null); setGroupFormError(""); resetGroupForm(); }}
-                type="button"
-              >
-                Cancelar
-              </button>
-            </div>
-            )}
-            {groups.length ? (
-              groups.map((group) => {
-                const members = groupMembers.filter((member) => member.groupId === group.id);
-                const occupancy = getOccupancyPercent(group, members.length);
-
-                return (
-                  <button
-                    className={selectedGroupId === group.id ? "group-card is-selected" : "group-card"}
-                    key={group.id}
-                    onClick={() => setSelectedGroupId(group.id)}
-                    type="button"
-                  >
-                    <span>{getGroupTypeLabel(group.type)}</span>
-                    <strong>{group.name}</strong>
-                    <p>
-                      {getMeetingLabel(group)} - {group.city ?? "cidade não informada"}
-                    </p>
-                    <div className="occupancy-bar">
-                      <i style={{ width: `${occupancy}%` }} />
-                    </div>
-                    <small>
-                      {members.length}/{group.capacity ?? "sem limite"} participantes
-                    </small>
-                  </button>
-                );
+      {confirmArchive && (
+        <div role="alert" className={s.notice}>
+          <p>
+            Arquivar oculta o grupo das novas operações e do app, preservando
+            encontros e relatórios.
+          </p>
+          <button
+            disabled={busy}
+            onClick={() =>
+              mutate({
+                action: "archive-group",
+                groupId: id,
+                expectedRevision: g.revision,
               })
-            ) : (
-              <div className="empty-state">
-                <strong>Nenhuma célula cadastrada</strong>
-                <p>Quando os grupos forem criados, eles aparecem aqui.</p>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <article className="group-detail-panel">
-          {selectedGroup ? (
-            <>
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Célula selecionada</p>
-                  <h2>{selectedGroup.name}</h2>
-                </div>
-                <div className="section-actions">
-                  {groupHealth ? (
-                    <span className={`group-health-pill is-${groupHealth.level}`}>
-                      {groupHealth.label}
-                    </span>
-                  ) : null}
-                  <Link href={`/groups/${selectedGroup.id}/banner`} className="primary-button compact-button" style={{ backgroundColor: "#10b981", color: "white" }}>
-                    <Sparkles size={15} />
-                    Gerar Banner da Célula
-                  </Link>
-                  <input
-                    type="datetime-local"
-                    value={meetingDate}
-                    onChange={(event) => setMeetingDate(event.target.value)}
-                    title="Data do encontro (deixe em branco para agora)"
-                    style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid var(--alvo-line)", fontSize: 12 }}
-                  />
-                  <button className="primary-button compact-button" onClick={() => void handleCreateMeeting()} type="button">
-                    <CalendarDays size={15} />
-                    Abrir encontro
-                  </button>
-                  {selectedActiveMeeting ? (
-                    <button className="ghost-button" onClick={() => void handleCloseMeeting()} type="button">
-                      Encerrar
-                    </button>
-                  ) : null}
-                  <button className="ghost-button" onClick={() => openEditGroup(selectedGroup)} type="button" title="Editar célula" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <Pencil size={14} /> Editar
-                  </button>
-                  <button className="ghost-button" onClick={() => setDeleteTarget(selectedGroup)} type="button" title="Excluir célula" style={{ display: "flex", alignItems: "center", gap: 4, color: "#dc2626" }}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="meeting-live-card">
-                <div>
-                  <p className="eyebrow">Encontro ativo</p>
-                  <h3>
-                    {selectedActiveMeeting
-                      ? formatDate(selectedActiveMeeting.scheduledStartAt)
-                      : "Nenhum encontro aberto"}
-                  </h3>
-                  <p>
-                    {selectedActiveMeeting
-                      ? "Use os botões nos participantes para registrar presença."
-                      : "Abra um encontro para liberar a chamada da célula."}
-                  </p>
-                </div>
-                <span>
-                  {selectedActiveMeeting
-                    ? selectedAttendance.filter(
-                        (item) => item.groupMeetingId === selectedActiveMeeting.id
-                      ).length
-                    : 0}
-                  /{selectedMembers.length}
-                </span>
-              </div>
-
-              {selectedMeetingSummary ? (
-                <div className="meeting-summary-card">
-                  <div className="meeting-summary-heading">
-                    <div>
-                      <p className="eyebrow">Resumo do encontro</p>
-                      <h3>{selectedMeetingSummary.groupName}</h3>
-                      <p>{formatDate(selectedMeetingSummary.scheduledStartAt)} - {selectedMeetingSummary.status}</p>
-                    </div>
-                    <button className="ghost-button" onClick={() => void handleCopyMeetingSummary()} type="button">
-                      {copiedMeetingSummaryId === selectedMeetingSummary.meetingId ? "Copiado" : "Copiar resumo"}
-                    </button>
-                  </div>
-                  <div className="meeting-summary-grid">
-                    <div>
-                      <span>Presentes</span>
-                      <strong>{selectedMeetingSummary.present}</strong>
-                    </div>
-                    <div>
-                      <span>Visitantes</span>
-                      <strong>{selectedMeetingSummary.guests}</strong>
-                    </div>
-                    <div>
-                      <span>Justificados</span>
-                      <strong>{selectedMeetingSummary.justified}</strong>
-                    </div>
-                    <div>
-                      <span>Ausentes</span>
-                      <strong>{selectedMeetingSummary.absent}</strong>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="group-detail-grid">
-                <div>
-                  <span>Horário</span>
-                  <strong>{getMeetingLabel(selectedGroup)}</strong>
-                </div>
-                <div>
-                  <span>Local</span>
-                  <strong>{selectedGroup.city ?? "Não informado"}</strong>
-                </div>
-                <div>
-                  <span>Membros</span>
-                  <strong>{selectedMembers.length}</strong>
-                </div>
-                <div>
-                  <span>Encontros</span>
-                  <strong>{selectedMeetings.length}</strong>
-                </div>
-              </div>
-
-              <div className="group-columns">
-                <div className="group-subpanel">
-                  <p className="eyebrow">Participantes</p>
-                  <div className="group-member-list">
-                    {selectedMembers.length ? (
-                      selectedMembers.map((member) => {
-                        const person = people.find((item) => item.id === member.personId);
-
-                        return (
-                          <div key={member.id}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                              <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {member.roleInGroup === "leader" && <Crown size={13} style={{ color: "#d97706" }} />}
-                                {person ? getFullName(person) : member.personId}
-                              </strong>
-                              <button
-                                className="ghost-button"
-                                onClick={() => void handleRemoveMember(member)}
-                                type="button"
-                                title="Remover da célula"
-                                style={{ padding: "2px 6px", color: "#dc2626", lineHeight: 1 }}
-                              >
-                                <X size={13} />
-                              </button>
-                            </div>
-                            <p>{getRoleLabel(member.roleInGroup)} - desde {formatDate(member.joinedAt)}</p>
-                            <div className="attendance-actions">
-                              <button
-                                className="ghost-button"
-                                onClick={() => void handleAttendance(member, "present")}
-                                type="button"
-                              >
-                                Presente
-                              </button>
-                              <button
-                                className="ghost-button"
-                                onClick={() => void handleAttendance(member, "first_time_guest")}
-                                type="button"
-                              >
-                                Visitante
-                              </button>
-                              <button
-                                className="ghost-button"
-                                onClick={() => void handleAttendance(member, "justified")}
-                                type="button"
-                              >
-                                Justificou
-                              </button>
-                              <button
-                                className="ghost-button"
-                                onClick={() => void handleAttendance(member, "absent")}
-                                type="button"
-                              >
-                                Ausente
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="empty-state">
-                        <strong>Sem participantes</strong>
-                        <p>Use a fila ao lado para conectar pessoas.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="group-subpanel">
-                  <p className="eyebrow">Últimos encontros</p>
-                  <div className="group-member-list">
-                    {selectedMeetings.length ? (
-                      selectedMeetings.map((meeting) => {
-                        const meetingAttendance = selectedAttendance.filter(
-                          (item) => item.groupMeetingId === meeting.id
-                        );
-
-                        return (
-                          <div key={meeting.id}>
-                            <strong>{formatDate(meeting.scheduledStartAt)}</strong>
-                            <p>
-                              {meeting.meetingStatus} - {meetingAttendance.length} presença(s)
-                            </p>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="empty-state">
-                        <strong>Sem encontros</strong>
-                        <p>Registros de reunião e presença aparecerao aqui.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="group-followup-panel">
-                <div className="section-heading compact">
-                  <div>
-                    <p className="eyebrow">Acompanhamento pós-célula</p>
-                    <h3>{selectedFollowUpQueue.length} cuidado(s) sugeridos</h3>
-                  </div>
-                  <span className="soft-pill">Liderança</span>
-                </div>
-                <div className="group-followup-list">
-                  {selectedFollowUpQueue.length ? (
-                    selectedFollowUpQueue.map((item) => (
-                      <div className={`group-followup-item is-${item.level}`} key={item.personId}>
-                        <span>{item.level === "risk" ? "Prioritario" : "Acompanhar"}</span>
-                        <strong>{item.personName}</strong>
-                        <p>{item.reason}</p>
-                        <small>{item.message}</small>
-                        <div className="followup-actions">
-                          <button
-                            className="ghost-button"
-                            onClick={() => void handleCopyFollowUp(item)}
-                            type="button"
-                          >
-                            {copiedFollowUpPersonId === item.personId ? "Copiado" : "Copiar"}
-                          </button>
-                          {item.whatsappHref ? (
-                            <a className="primary-button compact-button" href={item.whatsappHref} rel="noreferrer" target="_blank">
-                              WhatsApp
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">
-                      <strong>Sem alerta pastoral</strong>
-                      <p>Quando houver falta, ausência de chamada ou visitante novo, aparecerá aqui.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="empty-state">
-              <AlertTriangle size={20} />
-              <strong>Selecione uma célula</strong>
-              <p>Escolha um grupo para ver participantes, encontros e integração.</p>
-            </div>
-          )}
-        </article>
-
-        <aside className="groups-list-panel">
-          <div className="section-heading compact">
-            <div>
-              <p className="eyebrow">Fila de integração</p>
-              <h2>{peopleWithoutGroup.length} sem célula</h2>
-            </div>
-          </div>
-          <div className="group-member-list">
-            {peopleWithoutGroup.length ? (
-              peopleWithoutGroup.slice(0, 10).map((person) => (
-                <button
-                  className="person-link-card"
-                  key={person.id}
-                  onClick={() => void handleAssignPerson(person)}
-                  type="button"
-                >
-                  <strong>{getFullName(person)}</strong>
-                  <p>{getMemberStatusLabel(person.memberStatus)}</p>
-                  <small>Vincular a {selectedGroup?.name ?? "célula selecionada"}</small>
-                </button>
-              ))
-            ) : (
-              <div className="empty-state">
-                <strong>Todo mundo conectado</strong>
-                <p>Nenhuma pessoa da base esta fora de célula agora.</p>
-              </div>
-            )}
-          </div>
-        </aside>
-      </section>
-
-      {deleteTarget && (
-        <div
-          onClick={() => setDeleteTarget(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            style={{ maxWidth: 420, width: "100%", background: "var(--alvo-surface, #fff)", borderRadius: 16, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+            }
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(220,38,38,0.12)", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <AlertTriangle size={20} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--alvo-ink, #0f172a)" }}>Excluir esta célula?</h3>
-            </div>
-            <p style={{ margin: "0 0 6px", fontSize: 14, color: "var(--alvo-ink, #0f172a)" }}>
-              Você está prestes a excluir <strong>“{deleteTarget.name}”</strong>.
-            </p>
-            <p style={{ margin: "0 0 18px", fontSize: 13, color: "#dc2626", fontWeight: 600 }}>
-              Esta ação é irreversível. Os vínculos, encontros e presenças da célula deixarão de aparecer e não poderão ser recuperados.
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button className="ghost-button" onClick={() => setDeleteTarget(null)} type="button">Cancelar</button>
-              <button
-                onClick={() => void confirmDeleteGroup()}
-                type="button"
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, background: "#dc2626", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-              >
-                <Trash2 size={15} /> Sim, excluir definitivamente
-              </button>
-            </div>
-          </div>
+            Confirmar arquivamento
+          </button>
+          <button onClick={() => setConfirmArchive(false)}>Cancelar</button>
         </div>
       )}
-    </div>
+      {d.partial && (
+        <p className={s.error}>
+          Histórico parcial: limite de consulta atingido. Não interprete estes
+          totais como todo o histórico.
+        </p>
+      )}
+      <div className={s.heading}>
+        <h3>Encontros e chamada</h3>
+        <button
+          className={s.primary}
+          disabled={busy}
+          onClick={() => setCreate(!create)}
+        >
+          {create ? "Fechar formulário" : "+ Novo encontro"}
+        </button>
+      </div>
+      {create && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const v = Object.fromEntries(new FormData(e.currentTarget));
+            const r = await mutate({
+              action: "create-meeting",
+              groupId: id,
+              ...v,
+            });
+            if (r) {
+              setMeeting(r.id);
+              setPage(0);
+              setCreate(false);
+            }
+          }}
+        >
+          <fieldset className={s.form} disabled={busy}>
+            <p>
+              Data e horário no fuso {d.timezone}. Repetir o mesmo horário
+              reutiliza o encontro.
+            </p>
+            <label>
+              Data
+              <input name="date" type="date" required />
+            </label>
+            <label>
+              Horário
+              <input
+                name="time"
+                type="time"
+                required
+                defaultValue={g.meetingTime || "19:30"}
+              />
+            </label>
+            <button className={s.primary}>
+              {busy ? "Salvando…" : "Criar encontro"}
+            </button>
+          </fieldset>
+        </form>
+      )}
+      {d.openOld > 0 && (
+        <p className={s.notice}>
+          {d.openOld} encontro(s) antigo(s) ainda com chamada aberta. Selecione
+          a data e encerre quando a revisão estiver concluída.
+        </p>
+      )}
+      <label>
+        Selecionar encontro
+        <select
+          value={m?.id || ""}
+          onChange={(e) => {
+            setMeeting(e.target.value);
+            setReport(null);
+            setReportRevision(undefined);
+          }}
+        >
+          {!d.meetings.length && (
+            <option value="">Nenhum encontro nesta página</option>
+          )}
+          {m && !d.meetings.some((x: Data) => x.id === m.id) && (
+            <option value={m.id}>
+              {date(m.startsAt, d.timezone)} · selecionado
+            </option>
+          )}
+          {d.meetings.map((x: Data) => (
+            <option key={x.id} value={x.id}>
+              {date(x.startsAt, d.timezone)} · {labels[x.status]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className={s.actions}>
+        <button disabled={!page || busy} onClick={() => setPage((n) => n - 1)}>
+          Encontros mais recentes
+        </button>
+        <span>Página {page + 1}</span>
+        <button
+          disabled={!d.hasMore || busy}
+          onClick={() => setPage((n) => n + 1)}
+        >
+          Encontros anteriores
+        </button>
+      </div>
+      {m && (
+        <>
+          <h3>
+            {date(m.startsAt, d.timezone)} · {labels[m.status]}
+          </h3>
+          <div className={s.stats}>
+            {[
+              [summary.present, "Presentes (inclui visitas)"],
+              [summary.absent, "Ausentes registrados"],
+              [summary.justified, "Justificados"],
+              [summary.pending, "Sem registro"],
+              [
+                summary.expected,
+                m.legacyRoster
+                  ? "Participantes atuais · encontro antigo"
+                  : "Participantes previstos no encontro",
+              ],
+            ].map(([n, l]) => (
+              <div key={l}>
+                <strong>{n}</strong>
+                <span>{l}</span>
+              </div>
+            ))}
+          </div>
+          <p>
+            Falta de registro não significa ausência.{" "}
+            {d.historicalRecords > 0
+              ? `${d.historicalRecords} registro(s) de pessoas que já saíram do grupo permanecem no histórico.`
+              : ""}{" "}
+            {m.legacyRoster
+              ? "Este encontro antigo não registrou a composição da época; o total previsto usa os vínculos atuais."
+              : ""}
+          </p>
+          {m.status === "scheduled" && (
+            <button
+              disabled={busy || Date.parse(m.startsAt) > Date.now()}
+              onClick={() =>
+                mutate({
+                  action: "close-meeting",
+                  groupId: id,
+                  meetingId: m.id,
+                  expectedRevision: m.revision,
+                })
+              }
+            >
+              Encerrar encontro · preservar pendências
+            </button>
+          )}
+        </>
+      )}
+      <h3>Participantes ativos</h3>
+      <p>
+        A chamada mostra o estado confirmado pelo servidor. Alterações
+        simultâneas exigem atualização.
+      </p>
+      <div className={s.roster}>
+        {d.people.map((p: Data) => (
+          <article key={p.personId}>
+            <div>
+              <strong>{p.name}</strong>
+              <p>
+                {labels[p.role] || p.role} ·{" "}
+                {labels[p.status] || "Sem registro"}
+              </p>
+            </div>
+            <div className={s.actions}>
+              {m &&
+                m.status !== "cancelled" &&
+                ["present", "first_time_guest", "justified", "absent"].map(
+                  (st) => (
+                    <button
+                      disabled={busy || p.status === st}
+                      aria-pressed={p.status === st}
+                      key={st}
+                      onClick={() =>
+                        mutate({
+                          action: "attendance",
+                          groupId: id,
+                          meetingId: m.id,
+                          personId: p.personId,
+                          expectedStatus: p.status,
+                          status: st,
+                        })
+                      }
+                    >
+                      {labels[st]}
+                    </button>
+                  ),
+                )}
+              <button disabled={busy} onClick={() => setFollow(p.personId)}>
+                Criar acompanhamento
+              </button>
+              {canManage && (
+                <button disabled={busy} onClick={() => setRemove(p.personId)}>
+                  Remover vínculo
+                </button>
+              )}
+            </div>
+            <ContactActions
+              profile={homeProfiles(roles)[0]}
+              personId={p.personId}
+              groupId={id}
+              reason="care"
+            />
+          </article>
+        ))}
+      </div>
+      {remove && (
+        <div className={s.notice}>
+          <p>
+            Remover o vínculo ativo preserva o histórico e retira o acesso a
+            este grupo.
+          </p>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              if (
+                await mutate({
+                  action: "remove-member",
+                  groupId: id,
+                  personId: remove,
+                  expectedRevision: g.revision,
+                })
+              )
+                setRemove("");
+            }}
+          >
+            Confirmar remoção
+          </button>
+          <button onClick={() => setRemove("")}>Cancelar</button>
+        </div>
+      )}
+      {follow && (
+        <form
+          className={s.notice}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const due = new FormData(e.currentTarget).get("due");
+            const r = await mutate({
+              action: "follow-up",
+              groupId: id,
+              personId: follow,
+              dueAt: new Date(String(due)).toISOString(),
+            });
+            if (r) setFollow("");
+          }}
+        >
+          <p>
+            Será criada uma tarefa em Jornadas, atribuída à sua conta. O prazo
+            usa o horário deste dispositivo.
+          </p>
+          <label>
+            Prazo
+            <input name="due" type="datetime-local" required />
+          </label>
+          <button disabled={busy}>Salvar acompanhamento</button>
+          <button type="button" onClick={() => setFollow("")}>
+            Cancelar
+          </button>
+        </form>
+      )}
+      {canManage && (
+        <section className={s.notice}>
+          <h3>Adicionar participante</h3>
+          <label>
+            Buscar pessoa
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPersonPage(0);
+              }}
+            />
+          </label>
+          <label>
+            Pessoa
+            <select
+              value={candidate}
+              onChange={(e) => setCandidate(e.target.value)}
+            >
+              <option value="">Selecione</option>
+              {available
+                .slice(personPage * 40, personPage * 40 + 40)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <div className={s.actions}>
+            <button
+              disabled={!personPage}
+              onClick={() => setPersonPage((n) => n - 1)}
+            >
+              Anteriores
+            </button>
+            <span>{available.length} pessoas encontradas</span>
+            <button
+              disabled={(personPage + 1) * 40 >= available.length}
+              onClick={() => setPersonPage((n) => n + 1)}
+            >
+              Mais pessoas
+            </button>
+            <button
+              disabled={busy || !candidate}
+              onClick={async () => {
+                if (
+                  await mutate({
+                    action: "assign-member",
+                    groupId: id,
+                    personId: candidate,
+                    expectedRevision: g.revision,
+                  })
+                )
+                  setCandidate("");
+              }}
+            >
+              Vincular pessoa
+            </button>
+          </div>
+        </section>
+      )}
+      {m && (
+        <form
+          className={s.notice}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (
+              await mutate({
+                action: "save-report",
+                groupId: id,
+                meetingId: m.id,
+                text: report ?? d.report?.text ?? "",
+                expectedRevision: reportRevision ?? d.report?.revision ?? 0,
+              })
+            )
+              setReport(null);
+            setReportRevision(undefined);
+          }}
+        >
+          <h3>Relatório do encontro</h3>
+          <p>
+            Salve o resumo revisado para consulta da liderança. Os indicadores
+            usam a chamada registrada, não números escritos no texto.
+          </p>
+          <label>
+            Resumo e próximos passos
+            <textarea
+              rows={6}
+              maxLength={12000}
+              required
+              value={report ?? d.report?.text ?? ""}
+              onChange={(e) => {
+                if (report === null) setReportRevision(d.report?.revision || 0);
+                setReport(e.target.value);
+              }}
+            />
+          </label>
+          <button disabled={busy} className={s.primary}>
+            {busy ? "Salvando…" : "Salvar relatório"}
+          </button>
+          {d.report?.updatedAt && (
+            <p>Último registro: {date(d.report.updatedAt, d.timezone)}</p>
+          )}
+        </form>
+      )}
+    </section>
   );
-}
-
-function getFullName(person: Person) {
-  const first = (person.preferredName || person.firstName || "").trim();
-  const last = (person.lastName || "").trim();
-  if (!last) return first;
-  // Evita nome duplicado quando o sobrenome já está contido no primeiro nome.
-  if (first.toLowerCase().includes(last.toLowerCase())) return first;
-  return `${first} ${last}`;
-}
-
-function slugifyLocal(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function getGroupTypeLabel(type: Group["type"]) {
-  switch (type) {
-    case "cell":
-      return "Célula";
-    case "small_group":
-      return "Pequeno grupo";
-    case "class":
-      return "Classe";
-    case "youth_group":
-      return "Jovens";
-    case "ministry_team":
-      return "Ministério";
-  }
-}
-
-function getMemberStatusLabel(status: Person["memberStatus"]) {
-  switch (status) {
-    case "visitor":
-      return "Visitante";
-    case "congregant":
-      return "Congregado / aspirante";
-    case "new_believer":
-      return "Novo convertido";
-    case "member":
-      return "Membro";
-    case "leader":
-      return "Líder";
-    case "volunteer":
-      return "Voluntário";
-  }
-}
-
-function getRoleLabel(role: GroupMember["roleInGroup"]) {
-  switch (role) {
-    case "member":
-      return "Membro";
-    case "visitor":
-      return "Visitante";
-    case "leader":
-      return "Líder";
-    case "co_leader":
-      return "Co-líder";
-    case "host":
-      return "Anfitrião";
-    case "supervisor":
-      return "Supervisor";
-  }
-}
-
-function getAttendanceLabel(status: GroupAttendance["attendanceStatus"]) {
-  switch (status) {
-    case "present":
-      return "Presente";
-    case "absent":
-      return "Ausente";
-    case "justified":
-      return "Justificado";
-    case "first_time_guest":
-      return "Visitante pela primeira vez";
-  }
-}
-
-function getMeetingLabel(group: Group) {
-  const day = typeof group.meetingDayOfWeek === "number"
-    ? getWeekdayLabel(group.meetingDayOfWeek)
-    : "dia a definir";
-
-  return `${day} - ${group.meetingTime ?? "horário a definir"}`;
-}
-
-function getWeekdayLabel(day: number) {
-  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-
-  return weekdays[day] ?? "dia a definir";
-}
-
-function getOccupancyPercent(group: Group, memberCount: number) {
-  // Sem capacidade definida não há como calcular ocupação — evita número fake.
-  if (!group.capacity) {
-    return 0;
-  }
-
-  return Math.min(Math.round((memberCount / group.capacity) * 100), 100);
-}
-
-function getGroupHealth(
-  group: Group,
-  members: readonly GroupMember[],
-  attendance: readonly GroupAttendance[]
-) {
-  const occupancy = getOccupancyPercent(group, members.length);
-  const present = attendance.filter((item) =>
-    ["present", "first_time_guest"].includes(item.attendanceStatus)
-  ).length;
-  const attendanceRate = attendance.length ? Math.round((present / attendance.length) * 100) : 0;
-
-  if (occupancy >= 95) {
-    return {
-      label: "Quase cheia",
-      level: "attention" as const
-    };
-  }
-
-  if (attendance.length && attendanceRate < 55) {
-    return {
-      label: "Cuidar presença",
-      level: "risk" as const
-    };
-  }
-
-  return {
-    label: "Saudavel",
-    level: "stable" as const
-  };
-}
-
-function getMeetingSummary({
-  attendance,
-  group,
-  meeting,
-  members
-}: {
-  attendance: readonly GroupAttendance[];
-  group: Group;
-  meeting: GroupMeeting;
-  members: readonly GroupMember[];
-}) {
-  const meetingAttendance = attendance.filter(
-    (item) => item.groupMeetingId === meeting.id
-  );
-  const present = meetingAttendance.filter((item) => item.attendanceStatus === "present").length;
-  const guests = meetingAttendance.filter((item) => item.attendanceStatus === "first_time_guest").length;
-  const justified = meetingAttendance.filter((item) => item.attendanceStatus === "justified").length;
-  const absent = meetingAttendance.filter((item) => item.attendanceStatus === "absent").length;
-  const pending = Math.max(members.length - meetingAttendance.length, 0);
-  const status = meeting.meetingStatus === "completed" ? "encerrado" : "em andamento";
-  const text = [
-    `Resumo da célula ${group.name}`,
-    `Data: ${formatDate(meeting.scheduledStartAt)}`,
-    `Status: ${status}`,
-    `Presentes: ${present}`,
-    `Visitantes: ${guests}`,
-    `Justificados: ${justified}`,
-    `Ausentes: ${absent}`,
-    `Sem registro: ${pending}`
-  ].join("\n");
-
-  return {
-    absent,
-    groupName: group.name,
-    guests,
-    justified,
-    meetingId: meeting.id,
-    pending,
-    present,
-    scheduledStartAt: meeting.scheduledStartAt,
-    status,
-    text
-  };
-}
-
-function getGroupFollowUpQueue({
-  attendance,
-  meeting,
-  members,
-  people
-}: {
-  attendance: readonly GroupAttendance[];
-  meeting: GroupMeeting;
-  members: readonly GroupMember[];
-  people: readonly Person[];
-}) {
-  return members
-    .map((member) => {
-      const person = people.find((item) => item.id === member.personId);
-      const attendanceRecord = attendance.find(
-        (item) => item.groupMeetingId === meeting.id && item.personId === member.personId
-      );
-      const joinedRecently = isWithinDays(member.joinedAt, 21);
-      const personName = person ? getFullName(person) : member.personId;
-
-      if (attendanceRecord?.attendanceStatus === "absent") {
-        const message = `Olá, ${getFirstName(personName)}! Sentimos sua falta na célula. Está tudo bem por aí? Se precisar de algo, queremos caminhar perto de você.`;
-
-        return {
-          level: "risk" as const,
-          message,
-          personId: member.personId,
-          personName,
-          reason: "Ausente no encontro ativo",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
-        };
-      }
-
-      if (!attendanceRecord) {
-        const message = `Olá, ${getFirstName(personName)}! Estamos fechando a chamada da célula e queria confirmar se você conseguiu participar do encontro.`;
-
-        return {
-          level: "attention" as const,
-          message,
-          personId: member.personId,
-          personName,
-          reason: "Presença não registrada",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
-        };
-      }
-
-      if (
-        attendanceRecord.attendanceStatus === "first_time_guest" ||
-        joinedRecently ||
-        person?.memberStatus === "visitor" ||
-        person?.memberStatus === "new_believer"
-      ) {
-        const message = `Olá, ${getFirstName(personName)}! Que alegria ter você caminhando com a célula. Como foi o encontro para você? Queremos te ajudar nos próximos passos.`;
-
-        return {
-          level: "attention" as const,
-          message,
-          personId: member.personId,
-          personName,
-          reason: "Pessoa em fase de integração",
-          whatsappHref: person ? getWhatsappHref(person, message) : null
-        };
-      }
-
-      return null;
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
-}
-
-function getFirstName(name: string) {
-  return name.split(" ").filter(Boolean)[0] ?? "tudo bem";
-}
-
-function getWhatsappHref(person: Person | undefined, message: string) {
-  return manualWhatsappLink(person, message);
-}
-
-function isWithinDays(value: string, days: number) {
-  if (!value) {
-    return false;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return false;
-  }
-
-  return Date.now() - date.getTime() <= days * 24 * 60 * 60 * 1000;
-}
-
-function formatDate(value: string) {
-  if (!value) {
-    return "data não informada";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit"
-  }).format(date);
 }

@@ -379,7 +379,7 @@ export function MemberProfileView() {
               </button>
             </article>
 
-            <Link href="/tribes" style={{ textDecoration: "none" }}>
+            <Link href="/my-tribe" style={{ textDecoration: "none" }}>
               <article style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)", height: "100%" }}>
                 <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)" }}>Tribo (vocação ministerial)</span>
                 <strong style={S.value}>

@@ -1,3 +1,8 @@
+import {
+  currentGroupMeeting,
+  isCellGroup,
+  isActiveGroupMembership,
+} from "@alvo/domain";
 import { personalIntegration, journeyEnabled } from "./journey-operations";
 import {
   AccountError,
@@ -159,8 +164,13 @@ export async function mobileMemberOperation(
         "status",
         "active",
         "EQUAL",
-        500,
+        501,
       );
+      if (groups.length > 500)
+        throw new AccountError(
+          409,
+          "Consulta de células excedeu o limite. Procure a secretaria.",
+        );
       const memberships = await tx.read(
         ...groups.map(
           (g) => `${root}/groups/${g.id}/members/${g.id}_${personId}`,
@@ -169,6 +179,8 @@ export async function mobileMemberOperation(
       const mine = groups.filter(
         (g, i) =>
           g.organizationId === orgId &&
+          isCellGroup(g) &&
+          isActiveGroupMembership(memberships[i]) &&
           memberships[i]?.organizationId === orgId &&
           memberships[i]?.personId === personId &&
           memberships[i]?.groupId === g.id,
@@ -178,23 +190,31 @@ export async function mobileMemberOperation(
         const meetings = await tx.query(
           `${root}/groups/${group.id}`,
           "meetings",
-          "meetingStatus",
-          "scheduled",
-          "EQUAL",
-          100,
+          "scheduledStartAt",
+          new Date(Date.now() - 3 * 3600000).toISOString(),
+          "GREATER_THAN_OR_EQUAL",
+          501,
+          {
+            field: "scheduledStartAt",
+            value: new Date(Date.now() + 3 * 3600000).toISOString(),
+            op: "LESS_THAN_OR_EQUAL",
+          },
+          { field: "scheduledStartAt", direction: "DESCENDING" },
         );
-        const current = meetings
-          .filter(
-            (m) =>
-              m.organizationId === orgId &&
-              m.groupId === group.id &&
-              Math.abs(Date.parse(m.scheduledStartAt) - Date.now()) <=
-                3 * 60 * 60 * 1000,
-          )
-          .sort(
-            (a, b) =>
-              Date.parse(a.scheduledStartAt) - Date.parse(b.scheduledStartAt),
-          )[0];
+        if (meetings.length > 500)
+          throw new AccountError(
+            409,
+            "Há muitos encontros neste horário. Peça à liderança para revisar os duplicados.",
+          );
+        const current = currentGroupMeeting(
+          meetings.filter(
+            (m) => m.organizationId === orgId && m.groupId === group.id,
+          ) as Array<{
+            id: string;
+            scheduledStartAt: string;
+            meetingStatus: string;
+          }>,
+        );
         const [attendance] = current
           ? await tx.read(
               `${root}/groups/${group.id}/meetings/${current.id}/attendance/${current.id}_${personId}`,
@@ -205,6 +225,14 @@ export async function mobileMemberOperation(
           name: group.name,
           meetingDayOfWeek: group.meetingDayOfWeek ?? null,
           meetingTime: group.meetingTime ?? null,
+          location: group.location || null,
+          address:
+            [group.address, group.city, group.state]
+              .filter(Boolean)
+              .join(", ") || null,
+          notice: group.updatedAt
+            ? "Confira as informações atualizadas da sua célula."
+            : null,
           meeting: current
             ? {
                 id: current.id,
@@ -231,6 +259,8 @@ export async function mobileMemberOperation(
     if (
       group?.organizationId !== orgId ||
       group.status !== "active" ||
+      !isCellGroup(group) ||
+      !isActiveGroupMembership(membership) ||
       membership?.organizationId !== orgId ||
       membership.personId !== personId ||
       membership.groupId !== groupId ||
