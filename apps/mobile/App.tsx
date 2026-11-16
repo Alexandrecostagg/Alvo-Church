@@ -643,7 +643,7 @@ function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry 
 }
 
 // Escola de discipulado no app: o membro navega pelos cursos, assiste a aula
-// (abre o vídeo no YouTube) e marca o progresso — que grava no mesmo Firestore
+// (abre o link externo ou o player privado Esdras) e marca o progresso — que grava no mesmo Firestore
 // que a Escola EAD do web usa.
 function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
   primary: string; orgId: string; user: FirebaseAuthUser; orgName: string; logoUrl?: string; onBack: () => void;
@@ -743,11 +743,21 @@ function CursosScreen({ primary, orgId, user, orgName, logoUrl, onBack }: {
 
   async function watchLesson(lesson: Lesson) {
     try {
-      const url = trustedExternalUrl(lesson.videoUrl);
-      if (!url) throw new Error("Link da aula inválido. Procure o suporte da instituição.");
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert("Não foi possível abrir", "O link do vídeo desta aula parece inválido.");
+      if (lesson.videoAssetId) {
+        const response = await fetch(`${WEB_API_URL}/api/learning/videos/access`, {
+          method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${await user.getIdToken()}` },
+          body: JSON.stringify({ organizationId: orgId, videoId: lesson.videoAssetId, handoff: true }),
+        });
+        const data = await response.json() as { watchPath?: string; error?: string };
+        if (!response.ok || !data.watchPath?.startsWith("/api/learning/videos/watch?")) throw new Error(data.error || "Não foi possível abrir a aula.");
+        await Linking.openURL(`${WEB_API_URL}${data.watchPath}`);
+      } else {
+        const url = trustedExternalUrl(lesson.videoUrl);
+        if (!url) throw new Error("Link da aula inválido. Procure o suporte da instituição.");
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      Alert.alert("Não foi possível abrir", error instanceof Error ? error.message : "Tente abrir a aula novamente.");
     }
   }
 

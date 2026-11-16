@@ -1381,7 +1381,8 @@ export interface Lesson {
   courseId: string;
   moduleId: string;
   title: string;
-  videoUrl: string; // Vimeo, YouTube ou Cloudflare Stream
+  videoUrl: string; // External video URL; empty for a private Esdras upload.
+  videoAssetId?: string; // Private, organization-scoped course video.
   durationMinutes: number;
   sortOrder: number;
   materialUrl?: string; // link opcional de material de apoio (PDF/slide) anexado à aula

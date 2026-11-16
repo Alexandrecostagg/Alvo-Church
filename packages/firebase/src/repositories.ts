@@ -2693,6 +2693,8 @@ function toLesson(documentId: string, data: DocumentData): Lesson {
     moduleId: String(data.moduleId ?? ""),
     title: String(data.title ?? ""),
     videoUrl: String(data.videoUrl ?? ""),
+    videoAssetId: typeof data.videoAssetId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(data.videoAssetId) ? data.videoAssetId : undefined,
+    materialUrl: typeof data.materialUrl === "string" ? data.materialUrl : undefined,
     durationMinutes: Number(data.durationMinutes ?? 0),
     sortOrder: Number(data.sortOrder ?? 0)
   };

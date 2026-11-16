@@ -94,11 +94,23 @@ try {
   assert.equal(mobile.status, 401);
   assert(mobile.headers.get("cache-control")?.includes("no-store"));
   await mobile.body?.cancel();
-  for (const path of ["/api/serving", "/api/worship", "/api/campaigns", "/api/media/banner-copy"]) {
-    const response = await request(path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({action:"snapshot", organizationId:"synthetic-runtime-probe"})});
+  for (const path of ["/api/serving", "/api/worship", "/api/campaigns", "/api/media/banner-copy", "/api/learning/manage", "/api/learning/videos", "/api/learning/videos/access"]) {
+    const response = await request(path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({action:"snapshot", organizationId:"synthetic-runtime-probe", videoId:"synthetic-runtime-probe"})});
     assert.equal(response.status, 401, `Anonymous access must be denied: ${path}`);
     await response.body?.cancel();
   }
+  const videoPart = await request("/api/learning/videos/part?organizationId=synthetic-runtime-probe&videoId=synthetic-runtime-probe&part=1", { method: "PUT", body: new Uint8Array(24) });
+  assert.equal(videoPart.status, 401);
+  await videoPart.body?.cancel();
+  const videoPlayback = await request("/api/learning/videos/play/synthetic-runtime-probe/synthetic-runtime-probe");
+  assert.equal(videoPlayback.status, 401);
+  assert(videoPlayback.headers.get("cache-control")?.includes("no-store"));
+  await videoPlayback.body?.cancel();
+  const videoWatch = await request("/api/learning/videos/watch");
+  assert.equal(videoWatch.status, 200);
+  assert(videoWatch.headers.get("cache-control")?.includes("no-store"));
+  assert(videoWatch.headers.get("content-security-policy")?.includes("media-src 'self' blob:"));
+  assert((await videoWatch.text()).includes('controls playsinline'));
   const background = await request("/api/media/bg-proxy");
   assert.equal(background.status, 401);
   await background.body?.cancel();

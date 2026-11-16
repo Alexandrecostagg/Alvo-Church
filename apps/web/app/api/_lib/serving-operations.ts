@@ -732,6 +732,8 @@ export async function prepareServingWhatsapp(
     });
     return {
       url: `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
+      webUrl: `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`,
+      message: text,
       status: "prepared",
     };
   });
