@@ -83,8 +83,8 @@ async function run() {
   equal(rejected.data.store.status, "rejected", "Loja pendente pode ser rejeitada");
   equal(rejected.data.store.rejectionReason, "Cadastro sem dados suficientes", "Rejeição preserva o motivo");
   equal((await org.collection("communityStoreModerationLogs").get()).size, 3, "Cada transição gera um log atômico");
-  equal((await org.collection("settings").doc("subscription").get()).data()?.plan, "free", "Plano gratuito continua ativo");
-  equal((await org.collection("people").get()).size, 0, "Entrega não cria membros nem altera o teto de 50");
+  equal((await org.collection("settings").doc("subscription").get()).data()?.plan, "pastoral", "Moderação preserva o plano contratado");
+  equal((await org.collection("people").get()).size, 0, "Moderação não cria membros");
 }
 
 run().then(async () => {
