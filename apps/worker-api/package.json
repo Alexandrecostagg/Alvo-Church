@@ -13,7 +13,7 @@
     "@alvo/domain": "workspace:*",
     "@alvo/types": "workspace:*",
     "@alvo/utils": "workspace:*",
-    "hono": "^4.13.14"
+    "hono": "^4.13.18"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250303.0",
