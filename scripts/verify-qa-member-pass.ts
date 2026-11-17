@@ -65,7 +65,8 @@ async function run() {
   equal(await direct("people/person_1", memberToken), 200, "Leitura própria com vínculo");
   equal(await direct("people/person_2", memberToken), 403, "Cadastro alheio negado");
   equal(await direct("memberBenefitValidations/other", memberToken), 403, "Validação alheia negada");
-  equal(await direct(`users/${member}`, memberToken, "PATCH", "occupation", { stringValue: "QA" }), 200, "Perfil pessoal continua editável");
+  // A edição autorizada pelo backend é exercitada em qa:own-profile.
+  equal(await direct(`users/${member}`, memberToken, "PATCH", "occupation", { stringValue: "QA" }), 403, "Perfil pessoal exige o backend mesmo com vínculo confirmado");
   equal(await direct(`users/${member}`, memberToken, "PATCH", "roles", { arrayValue: { values: [{ stringValue: "church_admin" }] } }), 403, "Escalação de cargo negada");
   equal(await direct(`users/${member}`, adminToken, "DELETE"), 403, "Desvincular antes de excluir conta");
   const own = await pass(memberToken, `&personId=person_2&userId=${admin}`);
