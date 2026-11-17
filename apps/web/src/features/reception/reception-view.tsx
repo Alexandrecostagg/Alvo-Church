@@ -1,1056 +1,909 @@
 "use client";
-
-import { manualWhatsappLink } from "@alvo/utils";
-
-import { registerPerson } from "../../lib/register-person";
 import Link from "next/link";
-import {
-  CheckCircle2,
-  Megaphone,
-  MessageSquareText,
-  QrCode,
-  Smartphone,
-  UserPlus,
-  Tv,
-  Smartphone as TabletIcon,
-  X,
-  Send,
-  MessageSquare,
-  ArrowRight,
-  Award
-} from "lucide-react";
-import { useEffect, useState, useRef, type FormEvent } from "react";
-import {
-  fetchVisitorIntakes,
-  fetchVisitorJourneys,
-  isFirebaseWebRuntimeConfigured,
-  updateVisitorIntakeStatus
-} from "@alvo/firebase";
-import type { VisitorIntake, VisitorJourney } from "@alvo/types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAppAuth } from "../../../app/providers";
-
-type CapturedVisitor = {
+import { invalidateOrgDataCache } from "../../lib/org-data-cache";
+import s from "./reception.module.css";
+type Row = {
   id: string;
-  journeyId?: string;
   name: string;
-  nextStep: string;
-  personId?: string;
-  phone?: string;
+  phone: string;
   source: string;
   status: string;
-  note?: string;
-  consentMarketing?: boolean;
+  personId: string | null;
+  journeyId: string | null;
+  stage: string | null;
+  note: string;
+  consentContact: boolean;
+  contactState: string;
+  greetingApproved: boolean;
+  greetingDate: string;
+  greetingText: string;
+  greetedAt: string | null;
+  revision: number;
+  createdAt: string;
+  careRequestId: string | null;
 };
-
-function mapIntakeToCapturedVisitor(
-  intake: VisitorIntake,
-  journey?: VisitorJourney
-): CapturedVisitor {
-  return {
-    id: intake.id,
-    journeyId: intake.journeyId || journey?.id,
-    name: intake.name,
-    nextStep: getVisitorNextStep(journey),
-    personId: intake.personId,
-    phone: intake.phone || undefined,
-    source: intake.source,
-    status: getVisitorIntakeStatusLabel(intake.status),
-    consentMarketing: intake.consentMarketing,
-    note: intake.greeting || undefined
+type PublicRow = { id: string; name: string; text: string; revision: number };
+type Overview = {
+  organizationId: string;
+  summary: {
+    total: number;
+    pending: number;
+    greetings: number | null;
+    activeJourneys: number | null;
   };
-}
-
-function getVisitorNextStep(journey?: VisitorJourney) {
-  switch (journey?.currentStage) {
-    case "welcomed":
-      return "Convidar para célula";
-    case "invited_to_group":
-      return "Acompanhar presença no grupo";
-    case "attending_class":
-      return "Acompanhar classe de integração";
-    case "ready_for_membership":
-      return "Preparar cadastro como membro";
-    case "completed":
-      return "Jornada concluída";
-    case "new_visitor":
-    default:
-      return "Enviar boas-vindas no WhatsApp";
-  }
-}
-
-function getVisitorIntakeStatusLabel(status: VisitorIntake["status"]) {
-  switch (status) {
-    case "captured":
-      return "Capturado";
-    case "journey_created":
-      return "Jornada iniciada";
-    case "greeting_scheduled":
-      return "Pronto para saudação";
-    case "archived":
-      return "Arquivado";
-    default:
-      return "Jornada iniciada";
-  }
-}
-
+  items: Row[];
+  pulpit: PublicRow[];
+  hasMore: boolean;
+  partial: boolean;
+  asOf: string;
+  day: string;
+  today: string;
+  timezone: string;
+  publicUrl: string | null;
+  publicFormsEnabled: boolean;
+  canCare: boolean;
+};
+const empty = {
+  name: "",
+  phone: "",
+  source: "Recepção",
+  note: "",
+  consentContact: false,
+  existingPersonId: "",
+};
+const stage: Record<string, string> = {
+  new_visitor: "Acolhimento inicial",
+  welcomed: "Acolhido",
+  invited_to_group: "Convidado para célula",
+  attending_class: "Em integração",
+  ready_for_membership: "Pronto para membresia",
+  completed: "Jornada concluída",
+};
+const actionLabel: Record<string, string> = {
+  captured_new: "Cadastro e jornada criados",
+  captured_existing: "Entrada vinculada a pessoa existente",
+  integrated_new: "Integrado com novo cadastro",
+  "integrate-existing": "Integrado a cadastro existente",
+  "prepare-whatsapp": "Mensagem preparada, sem confirmação de envio",
+  "contact-consent": "Preferência de contato atualizada",
+  "contact-complete": "Contato registrado",
+  "approve-greeting": "Autorização de saudação atualizada",
+  greet: "Saudação registrada",
+  "pastoral-care": "Encaminhado ao Cuidado Pastoral",
+};
+const origin: Record<string, string> = {
+  public_form: "Formulário público",
+  whatsapp: "WhatsApp",
+  reception: "Recepção",
+  campaign: "Campanha de convites",
+};
+const date = (v: string) => new Date(v).toLocaleString("pt-BR");
 export function ReceptionView() {
-  const { configured, firebaseReady, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
-  
-  const attempt = useRef(crypto.randomUUID());
-  const busy = useRef(false);
-  const [saving, setSaving] = useState(false);
-  // Estado básico
-  const [visitorDraft, setVisitorDraft] = useState({
-    name: "",
-    phone: "",
-    source: "Convite de membro",
-    note: ""
-  });
-  const [capturedVisitors, setCapturedVisitors] = useState<CapturedVisitor[]>([]);
-  const [visitorJourneys, setVisitorJourneys] = useState<VisitorJourney[]>([]);
-  const [visitorIntakes, setVisitorIntakes] = useState<VisitorIntake[]>([]);
-  const [preparedCommunicationIds, setPreparedCommunicationIds] = useState<string[]>([]);
-  const greetingBusy = useRef(false);
-  const [greetedVisitorIds, setGreetedVisitorIds] = useState<string[]>([]);
-  const [status, setStatus] = useState("Pronto para receber visitantes.");
-  const [lastCreated, setLastCreated] = useState<CapturedVisitor | null>(null);
-
-  // Estados Interativos Adicionais
-  const [kioskMode, setKioskMode] = useState(false);
-  const [pulpitMode, setPulpitMode] = useState(false);
-  const [kioskStep, setKioskStep] = useState<"form" | "success">("form");
-
-  // A tela sempre abre em "Integração e Boas-vindas" primeiro — mesmo vindo
-  // do atalho "Painel Pastor" (?pastor=1). Entrar no modo púlpito é uma
-  // ação explícita do botão "Painel do Pastor" logo abaixo.
-  
-  // Template de comunicação por WhatsApp
-  const [activeTemplateVisitor, setActiveTemplateVisitor] = useState<CapturedVisitor | null>(null);
-  const [customMsg, setCustomMsg] = useState("");
-
-  // Sync real-time do Firestore
-  useEffect(() => {
-    setCapturedVisitors([]); setVisitorJourneys([]); setVisitorIntakes([]);
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadVisitors() {
-      try {
-        const [nextJourneys, nextIntakes] = await Promise.all([
-          fetchVisitorJourneys(firebaseConfig, { organizationId }, 20),
-          fetchVisitorIntakes(firebaseConfig, { organizationId }, 20)
-        ]);
-
-        if (cancelled) return;
-
-        setVisitorJourneys(nextJourneys);
-        setVisitorIntakes(nextIntakes);
-        {
-          const journeyById = new Map(nextJourneys.map((journey) => [journey.id, journey]));
-          setCapturedVisitors(
-            nextIntakes.filter((intake) => intake.status !== "archived").map((intake) =>
-              mapIntakeToCapturedVisitor(
-                intake,
-                intake.journeyId ? journeyById.get(intake.journeyId) : undefined
-              )
-            )
-          );
-        }
-        setStatus("Informações atualizadas.");
-      } catch (error) {
-        if (!cancelled) {
-          setCapturedVisitors([]); setStatus("Não foi possível carregar a recepção. Tente atualizar a página.");
-        }
-      }
-    }
-
-    void loadVisitors();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, firebaseConfig, firebaseReady, organizationId, user]);
-
-  // Função central para capturar visitante
-  async function registerVisitor(name: string, phone: string, source: string, note?: string, intakeId?: string) {
-    if (busy.current) return null;
-    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para salvar o visitante."); return null; }
-    busy.current = true; setSaving(true);
-    try {
-      const [firstName, ...parts] = name.trim().split(/\s+/);
-      const created = await registerPerson(user, { organizationId, requestId: attempt.current, workflow: "reception", person: { firstName, lastName: parts.join(" "), whatsappPhone: phone, memberStatus: "visitor" }, reception: { source, note, intakeId } });
-      const savedVisitor: CapturedVisitor = { id: created.intakeId!, journeyId: created.journeyId, personId: created.personId, name, phone, source, note, status: "Jornada iniciada", nextStep: "Enviar boas-vindas no WhatsApp" };
-      setCapturedVisitors(current => [savedVisitor, ...current.filter(v => v.id !== savedVisitor.id)]);
-      setLastCreated(savedVisitor); attempt.current = crypto.randomUUID();
-      setStatus("Visitante e jornada salvos. Duas tarefas de acolhimento criadas.");
-      return savedVisitor;
-    } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível salvar. Os campos foram preservados."); return null; }
-    finally { busy.current = false; setSaving(false); }
+  const { user, organizationId, signOut } = useAppAuth();
+  const [data, setData] = useState<Overview>(),
+    [selectedId, setSelectedId] = useState(""),
+    [directory, setDirectory] = useState<
+      Array<{ id: string; name: string; phone: string }>
+    >([]),
+    [directoryPartial, setDirectoryPartial] = useState(false);
+  const [form, setForm] = useState({ ...empty }),
+    [view, setView] = useState("all"),
+    [offset, setOffset] = useState(0),
+    [refresh, setRefresh] = useState(0),
+    [day, setDay] = useState(""),
+    [mode, setMode] = useState("desk");
+  const [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [pulpit, setPulpit] = useState<PublicRow[]>([]);
+  const [pulpitPartial, setPulpitPartial] = useState(false);
+  const [personId, setPersonId] = useState(""),
+    [message, setMessage] = useState(""),
+    [url, setUrl] = useState(""),
+    [careMessage, setCareMessage] = useState(""),
+    [channel, setChannel] = useState("presential"),
+    [greeting, setGreeting] = useState({ approved: false, day: "", text: "" }),
+    [history, setHistory] = useState<Array<{ action: string; at: string }>>([]);
+  const scope = organizationId + ":" + user?.uid,
+    scopeRef = useRef(scope);
+  scopeRef.current = scope;
+  const attempt = useRef(""),
+    integrationAttempt = useRef(""),
+    lock = useRef(false);
+  const selected =
+    data && data.organizationId === organizationId
+      ? data.items.find((r) => r.id === selectedId)
+      : undefined;
+  async function api(body: Record<string, unknown>) {
+    if (!user || !organizationId) throw new Error("Entre na sua conta.");
+    const response = await fetch("/api/reception", {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + (await user.getIdToken()),
+      },
+      body: JSON.stringify({ ...body, organizationId }),
+    });
+    const result = await response.json();
+    if (!response.ok)
+      throw new Error(result.error || "Não foi possível concluir.");
+    return result;
   }
-
-  // Submit do formulário do painel
-  const handleVisitorCaptureSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!visitorDraft.name.trim()) {
-      setStatus("Por favor, preencha o nome do visitante.");
-      return;
-    }
-
-    const saved = await registerVisitor(
-      visitorDraft.name.trim(),
-      visitorDraft.phone.trim(),
-      visitorDraft.source,
-      visitorDraft.note.trim()
-    );
-
-    if (saved) setVisitorDraft({ name: "", phone: "", source: "Convite de membro", note: "" });
-  };
-
-  // Submit do formulário do Totem de Autoatendimento
-  const handleKioskSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const name = (formData.get("kiosk_name") as string || "").trim();
-    const phone = (formData.get("kiosk_phone") as string || "").trim();
-    const source = (formData.get("kiosk_source") as string || "Passando na rua");
-
-    if (!name) return;
-
-    if (!await registerVisitor(name, phone, source, "Autoatendimento Totem Entrada")) return;
-    setKioskStep("success");
-
-    // Volta para o formulário após 5 segundos
-    setTimeout(() => {
-      setKioskStep("form");
-      form.reset();
-    }, 5500);
-  };
-
-  // Prepara WhatsApp Follow-up com Templates Reativos
-  const openWhatsAppTemplateModal = (visitor: CapturedVisitor) => {
-    setActiveTemplateVisitor(visitor);
-    const templateText = `Olá, ${visitor.name}! Que alegria enorme ter você hoje conosco na ${tenantRuntime?.organization?.displayName || tenantRuntime?.organization?.name || "nossa igreja"}! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
-    setCustomMsg(templateText);
-  };
-
-  const handleSendWhatsAppMessage = async () => {
-    if (!activeTemplateVisitor) return;
-
-    const phoneClean = (activeTemplateVisitor.phone || "").replace(/\D/g, "");
-    if (!phoneClean) {
-      alert("Este visitante não possui telefone cadastrado!");
-      return;
-    }
-
-    const url = manualWhatsappLink({ id: activeTemplateVisitor.personId, whatsappPhone: activeTemplateVisitor.phone, communicationOptOut: activeTemplateVisitor.consentMarketing === false }, customMsg);
-    if (!url) { setStatus("Confira o telefone e a autorização de contato do visitante."); return; }
-    window.open(url, "_blank", "noopener,noreferrer");
-
-    // Marca como completado reativamente no painel
-    setPreparedCommunicationIds((current) =>
-      current.includes(activeTemplateVisitor.id) ? current : [...current, activeTemplateVisitor.id]
-    );
-    setCapturedVisitors((current) =>
-      current.map((visitor) =>
-        visitor.id === activeTemplateVisitor.id
-          ? { ...visitor, status: "WhatsApp preparado" }
-          : visitor
-      )
-    );
-
-    if (firebaseConnected) {
-      try {
-        await updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
-          intakeId: activeTemplateVisitor.id,
-          status: "greeting_scheduled",
-          updatedByUserId: user.uid
-        });
-      } catch (error) {
-        setStatus("WhatsApp preparado. Não foi possível concluir a atualização agora.");
-        setActiveTemplateVisitor(null);
-        return;
-      }
-    }
-
-    setStatus(`WhatsApp de boas-vindas preparado para ${activeTemplateVisitor.name}.`);
-    setActiveTemplateVisitor(null);
-  };
-
-  const handleMarkGreetingComplete = async (visitorId: string) => {
-    if (greetingBusy.current) return;
-    const visitor = capturedVisitors.find((item) => item.id === visitorId);
-    if (!visitor || !firebaseConnected) {
-      setStatus("Conecte-se para registrar a saudação.");
-      return;
-    }
-    greetingBusy.current = true;
-    setStatus("Salvando saudação…");
-    try {
-      await updateVisitorIntakeStatus(firebaseConfig, { organizationId }, {
-        intakeId: visitor.id,
-        status: "archived",
-        updatedByUserId: user.uid
+  useEffect(() => {
+    setData(undefined);
+    setSelectedId("");
+    setForm({ ...empty });
+    setDirectory([]);
+    setHistory([]);
+    setUrl("");
+    setPulpit([]);
+    setError("");
+    setNotice("");
+    setDay("");
+    setMode("desk");
+    setOffset(0);
+    attempt.current = crypto.randomUUID();
+  }, [scope]);
+  useEffect(() => {
+    if (!user || !organizationId) return;
+    let active = true;
+    const current = scope;
+    setLoading(true);
+    if (mode === "pulpit") setPulpit([]);
+    setError("");
+    api({
+      action: mode === "pulpit" ? "pulpit" : "overview",
+      view,
+      offset,
+      day: day || undefined,
+    })
+      .then((result) => {
+        if (!active || scopeRef.current !== current) return;
+        if (mode === "pulpit") {
+          setPulpit(result.items);
+          setPulpitPartial(result.partial);
+        } else setData(result);
+      })
+      .catch((e) => {
+        if (active && scopeRef.current === current) {
+          setData(undefined);
+          setPulpit([]);
+          setError(e.message);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
-      // Saudação no altar não comprova contato pessoal nem altera a etapa pastoral.
-      setGreetedVisitorIds((ids) => ids.includes(visitorId) ? ids : [...ids, visitorId]);
-      setCapturedVisitors((items) => items.map((item) =>
-        item.id === visitorId ? { ...item, status: "Saudado no altar" } : item
-      ));
-      setStatus(`${visitor.name}: saudação salva. O acompanhamento continua em Jornadas.`);
-    } catch {
-      setStatus("Não foi possível salvar a saudação. Tente novamente; a jornada foi preservada.");
-    } finally {
-      greetingBusy.current = false;
+    return () => {
+      active = false;
+    };
+  }, [scope, view, offset, refresh, day, mode]);
+  useEffect(() => {
+    if (mode !== "pulpit") return;
+    const timer = setInterval(() => setRefresh((v) => v + 1), 30000);
+    return () => clearInterval(timer);
+  }, [mode]);
+  useEffect(() => {
+    if (!selected) {
+      setHistory([]);
+      setUrl("");
+      return;
     }
+    setPersonId("");
+    setMessage(
+      `Olá, ${selected.name}! Foi uma alegria receber você. Como podemos ajudar no seu acolhimento?`,
+    );
+    setCareMessage("");
+    setGreeting({
+      approved: selected.greetingApproved,
+      day: selected.greetingDate || data?.today || "",
+      text: selected.greetingText,
+    });
+    setUrl("");
+    setHistory([]);
+    integrationAttempt.current = crypto.randomUUID();
+  }, [selected?.id]);
+  useEffect(() => {
+    if (selected)
+      setGreeting({
+        approved: selected.greetingApproved,
+        day: selected.greetingDate || data?.today || "",
+        text: selected.greetingText,
+      });
+  }, [selected?.id, selected?.revision]);
+  async function run(work: () => Promise<void>) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    const current = scope;
+    try {
+      await work();
+    } catch (e) {
+      if (scopeRef.current === current)
+        setError(e instanceof Error ? e.message : "Não foi possível concluir.");
+    } finally {
+      lock.current = false;
+      if (scopeRef.current === current) setBusy(false);
+    }
+  }
+  async function loadDirectory() {
+    await run(async () => {
+      const current = scope;
+      const result = await api({ action: "directory" });
+      if (scopeRef.current !== current) return;
+      setDirectory(result.people);
+      setDirectoryPartial(result.partial);
+      setNotice("Cadastros disponíveis para selecionar.");
+    });
+  }
+  async function mutate(
+    action: string,
+    extra: Record<string, unknown> = {},
+    row: Pick<Row, "id" | "revision"> | undefined = selected,
+  ) {
+    if (!row) return;
+    await run(async () => {
+      const current = scope;
+      const result = await api({
+        action,
+        intakeId: row.id,
+        revision: row.revision,
+        ...extra,
+      });
+      if (scopeRef.current !== current) return;
+      invalidateOrgDataCache(organizationId!);
+      setNotice(
+        action === "prepare-whatsapp"
+          ? "Mensagem preparada. Abra o WhatsApp e confira antes de enviar."
+          : "Alteração registrada.",
+      );
+      setRefresh((v) => v + 1);
+      setUrl(result.url || "");
+      setHistory([]);
+    });
+  }
+  async function capture(e: FormEvent) {
+    e.preventDefault();
+    await run(async () => {
+      const current = scope,
+        result = await api({
+          action: "capture",
+          ...form,
+          requestId: attempt.current,
+        });
+      if (scopeRef.current !== current) return;
+      invalidateOrgDataCache(organizationId!);
+      setForm({ ...empty });
+      attempt.current = crypto.randomUUID();
+      setSelectedId(result.intakeId);
+      setOffset(0);
+      setView("all");
+      setRefresh((v) => v + 1);
+      setNotice(
+        "Entrada integrada. O cadastro e a jornada estão disponíveis para acompanhamento.",
+      );
+    });
+  }
+  async function showHistory() {
+    if (!selected) return;
+    const id = selected.id,
+      current = scope;
+    await run(async () => {
+      const result = await api({ action: "history", intakeId: id });
+      if (scopeRef.current === current) {
+        setHistory(result.items);
+        setNotice(
+          result.partial
+            ? "Exibindo os últimos 50 eventos."
+            : "Histórico atualizado.",
+        );
+      }
+    });
+  }
+  async function openTotem() {
+    if (!data?.publicUrl) return;
+    const target = data.publicUrl;
+    await run(async () => {
+      await signOut();
+      setData(undefined);
+      setSelectedId("");
+      setPulpit([]);
+      window.location.replace(target);
+    });
+  }
+  function selectPerson(id: string) {
+    const person = directory.find((p) => p.id === id);
+    setForm((f) => ({
+      ...f,
+      existingPersonId: id,
+      name: person?.name || "",
+      phone: person?.phone || "",
+      consentContact: false,
+    }));
+    attempt.current = crypto.randomUUID();
+  }
+  const changeForm = (key: keyof typeof empty, value: string | boolean) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    attempt.current = crypto.randomUUID();
   };
-
-  // Filtros
-  const pendingCommunicationVisitors = capturedVisitors.filter(
-    (visitor) => !preparedCommunicationIds.includes(visitor.id)
-  );
-
-  const celebrationGreetingVisitors = capturedVisitors.filter(
-    (visitor) => !greetedVisitorIds.includes(visitor.id)
-  );
-
-  const cloudVisitorCount = visitorIntakes.length;
-  const localVisitorCount = cloudVisitorCount ? 0 : capturedVisitors.length;
-  const totalVisitorCount = capturedVisitors.length;
-  const firebaseConnected = configured && firebaseReady && user && isFirebaseWebRuntimeConfigured(firebaseConfig);
-
   return (
-    <main className="form-page reception-page">
-      
-      {/* 1. MODO TOTEM DE AUTOATENDIMENTO (Fullscreen Tablet/Kiosk Mode) */}
-      {kioskMode && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "#090d16",
-            zIndex: 300,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "2rem",
-            color: "white"
-          }}
-          className="animate-entrance"
-        >
-          {/* Botão de Fechar Totem */}
+    <main className={s.workspace}>
+      <header className={s.header}>
+        <div>
+          <p className={s.eyebrow}>
+            {mode === "pulpit" ? "SAUDAÇÃO PÚBLICA" : "RECEPÇÃO E ACOLHIMENTO"}
+          </p>
+          <h1>
+            {mode === "pulpit"
+              ? "Painel do pastor"
+              : "Da chegada ao acompanhamento"}
+          </h1>
+          <p>
+            {mode === "pulpit"
+              ? "Somente nomes e textos autorizados para a data escolhida."
+              : "Registre a chegada, confira o vínculo e acompanhe o próximo passo de cada pessoa."}
+          </p>
+        </div>
+        <div className={s.actions}>
+          <Link href="/app">Dashboard</Link>
           <button
-            onClick={() => setKioskMode(false)}
-            style={{
-              position: "absolute",
-              top: 24,
-              right: 24,
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "50%",
-              width: 50,
-              height: 50,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#94a3b8",
-              cursor: "pointer"
+            onClick={() => {
+              setMode(mode === "desk" ? "pulpit" : "desk");
+              setNotice("");
+              setError("");
             }}
           >
-            <X size={24} />
+            {mode === "desk" ? "Painel do pastor" : "Voltar à recepção"}
           </button>
-
-          {kioskStep === "form" ? (
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 580,
-                backgroundColor: "rgba(30, 41, 59, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 32,
-                padding: "3.5rem 3rem",
-                textAlign: "center",
-                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6)",
-                backdropFilter: "blur(8px)"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", backgroundColor: "rgba(249, 115, 22, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f97316" }}>
-                  <Award size={32} />
-                </div>
-              </div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.25rem" }}>Seja Bem-vindo! ⛪</h2>
-              <p style={{ color: "#94a3b8", fontSize: "0.95rem", marginBottom: "2.5rem" }}>
-                Ficamos muito contentes com sua presença. Preencha seus dados rápidos para podermos te acolher com carinho hoje!
-              </p>
-
-              <form onSubmit={handleKioskSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "left" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", color: "#f97316", fontWeight: 800 }}>Seu Nome Completo *</label>
-                  <input
-                    required
-                    name="kiosk_name"
-                    placeholder="Digite seu nome completo"
-                    style={{ width: "100%", padding: "1rem 1.25rem", fontSize: "1.1rem", backgroundColor: "#0f172a", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 16, color: "white", outline: "none" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", color: "#f97316", fontWeight: 800 }}>WhatsApp / Celular</label>
-                  <input
-                    name="kiosk_phone"
-                    placeholder="(00) 90000-0000"
-                    style={{ width: "100%", padding: "1rem 1.25rem", fontSize: "1.1rem", backgroundColor: "#0f172a", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 16, color: "white", outline: "none" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", color: "#f97316", fontWeight: 800 }}>Como você conheceu a Plataforma Esdras?</label>
-                  <select
-                    name="kiosk_source"
-                    style={{ width: "100%", padding: "1rem 1.25rem", fontSize: "1.1rem", backgroundColor: "#0f172a", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 16, color: "white", outline: "none" }}
-                  >
-                    <option value="Convite de membro">Fui convidado por um amigo / familiar</option>
-                    <option value="Instagram">Instagram / Redes Sociais</option>
-                    <option value="Passando na rua">Moro perto / vi o templo</option>
-                    <option value="Evento especial">Vim para um evento especial</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit" disabled={saving}
-                  className="primary-button"
-                  style={{ width: "100%", padding: "1.1rem", fontSize: "1.15rem", backgroundColor: "#f97316", color: "white", borderRadius: 16, marginTop: "1rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                >
-                  Confirmar Cadastro
-                  <ArrowRight size={20} />
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                maxWidth: 500
-              }}
-              className="animate-entrance"
-            >
-              <div
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: "50%",
-                  backgroundColor: "#16a34a",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  margin: "0 auto 2rem",
-                  boxShadow: "0 0 40px rgba(22, 163, 74, 0.4)"
-                }}
-              >
-                <CheckCircle2 size={54} strokeWidth={3} />
-              </div>
-              <h1 style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: "0.5rem" }}>Cadastro Concluído! 🎉</h1>
-              <p style={{ fontSize: "1.25rem", color: "#94a3b8", lineHeight: "1.8rem" }}>
-                Muito obrigado, <strong>{lastCreated?.name}</strong>! Já registramos a sua chegada.
-              </p>
-              <p style={{ fontSize: "0.95rem", color: "#f97316", fontWeight: 700, marginTop: "1.5rem" }}>
-                Procure nossa equipe de acolhimento na saída para retirar um presente especial! 🎁
-              </p>
-              <div style={{ marginTop: "3rem", fontSize: "0.85rem", color: "#64748b" }}>
-                Esta tela reiniciará automaticamente em instantes...
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 2. MODO ALTAR / TELEPROMPTER DO PASTOR (Pulpit Live Feed Screen) */}
-      {pulpitMode && (
-        <div className="pulpit-live-feed animate-entrance">
-          {/* Cabeçalho de Púlpito */}
-          <div className="pulpit-header">
-            <div>
-              <span className="pulpit-eyebrow">
-                <Tv size={16} />
-                Painel do Pastor
-              </span>
-              <h1>Boas-vindas no Culto</h1>
-              <p>Lista limpa para saudação pública, com observações importantes da recepção.</p>
-            </div>
-            <div className="pulpit-header-actions">
-              <span className="pulpit-counter">
-                <strong>{celebrationGreetingVisitors.length}</strong>
-                <span>na lista</span>
-              </span>
-              <button
-                onClick={() => setPulpitMode(false)}
-                className="pulpit-back-btn"
-              >
-                Voltar
-              </button>
-            </div>
-          </div>
-
-          {/* Lista Teleprompter */}
-          <div className="pulpit-card-grid">
-            {celebrationGreetingVisitors.length > 0 ? (
-              celebrationGreetingVisitors.map((visitor, idx) => (
-                <div
-                  key={visitor.id}
-                  className="pulpit-card"
-                >
-                  <div>
-                    <span className="pulpit-card-number">#{idx + 1}</span>
-                    <h2 className="pulpit-card-title">
-                      {visitor.name}
-                    </h2>
-                    {visitor.note && (
-                      <p className="pulpit-card-note">
-                        <Megaphone size={20} />
-                        {visitor.note}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="pulpit-card-footer">
-                    <span className="pulpit-card-source">Origem: <strong>{visitor.source}</strong></span>
-                    <button
-                      onClick={() => handleMarkGreetingComplete(visitor.id)}
-                      className="pulpit-card-btn"
-                    >
-                      <CheckCircle2 size={18} />
-                      Cumprimentado
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="pulpit-empty-state">
-                <Tv size={64} />
-                <h3>Nenhum visitante pendente de boas-vindas no altar.</h3>
-                <p>Quando a recepção preparar nomes para saudação, eles aparecerão aqui.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 3. MODAL / GAVETA DE TEMPLATE WHATSAPP */}
-      {activeTemplateVisitor && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.8)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(6px)"
-          }}
-          className="animate-entrance"
-        >
-          <div
-            style={{
-              background: "var(--alvo-surface)",
-              border: "1px solid var(--alvo-line)",
-              borderRadius: 24,
-              padding: "2.5rem",
-              width: "100%",
-              maxWidth: 520,
-              boxShadow: "var(--alvo-shadow-strong)",
-              color: "var(--alvo-ink)"
-            }}
+          <button
+            disabled={busy || loading}
+            onClick={() => setRefresh((v) => v + 1)}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--alvo-ink)", display: "flex", alignItems: "center", gap: 8 }}>
-                <MessageSquare size={20} style={{ color: "#25d366" }} />
-                Disparar WhatsApp de Boas-vindas
-              </h3>
-              <button
-                onClick={() => setActiveTemplateVisitor(null)}
-                style={{ background: "none", border: "none", color: "var(--alvo-ink-soft)", cursor: "pointer" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <p style={{ fontSize: "0.85rem", color: "var(--alvo-ink-soft)" }}>
-                Selecione ou edite a mensagem abaixo para enviar diretamente ao celular de <strong>{activeTemplateVisitor.name}</strong> ({activeTemplateVisitor.phone}):
-              </p>
-
-              {/* Botões rápidos de alternar templates */}
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  onClick={() => {
-                    const text = `Olá, ${activeTemplateVisitor.name}! Que alegria enorme ter você hoje conosco na ${tenantRuntime?.organization?.displayName || tenantRuntime?.organization?.name || "nossa igreja"}! ⛪✨\n\nQueremos que se sinta muito bem-vindo. Se precisar de qualquer ajuda, oração ou informação sobre nossas células, estou à disposição por aqui! Que Deus te abençoe!`;
-                    setCustomMsg(text);
-                  }}
-                  style={{
-                    backgroundColor: "var(--alvo-surface-muted)",
-                    border: "1px solid var(--alvo-line)",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                    color: "var(--alvo-ink-soft)",
-                    cursor: "pointer"
-                  }}
-                >
-                  Template 1 (Geral)
-                </button>
-                <button
-                  onClick={() => {
-                    const text = `Olá, ${activeTemplateVisitor.name}! Ficamos muito felizes com a sua visita na Plataforma Esdras por convite de membro! 😊\n\nGostaríamos de te convidar para o nosso encontro de Célula de meio de semana. É um lugar descontraído para fazermos novos amigos e conversar sobre a bíblia. O que acha de nos fazer uma visita?`;
-                    setCustomMsg(text);
-                  }}
-                  style={{
-                    backgroundColor: "var(--alvo-surface-muted)",
-                    border: "1px solid var(--alvo-line)",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                    color: "var(--alvo-ink-soft)",
-                    cursor: "pointer"
-                  }}
-                >
-                  Template 2 (Célula)
-                </button>
-              </div>
-
-              {/* Textarea Editor */}
-              <textarea
-                value={customMsg}
-                onChange={(e) => setCustomMsg(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 180,
-                  padding: "1rem",
-                  backgroundColor: "var(--alvo-field-bg)",
-                  border: "1px solid var(--alvo-line)",
-                  borderRadius: 12,
-                  color: "var(--alvo-ink)",
-                  fontSize: "0.85rem",
-                  lineHeight: "1.3rem",
-                  outline: "none",
-                  resize: "none"
-                }}
-              />
-
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTemplateVisitor(null)}
-                  className="secondary-button"
-                  style={{ width: "50%", padding: "0.85rem", color: "var(--alvo-ink-soft)", borderColor: "var(--alvo-line)" }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSendWhatsAppMessage}
-                  disabled={!activeTemplateVisitor.phone}
-                  className="primary-button"
-                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "#25d366", color: "white", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "none", opacity: activeTemplateVisitor.phone ? 1 : 0.55 }}
-                >
-                  <Send size={16} />
-                  {activeTemplateVisitor.phone ? "Enviar WhatsApp" : "Sem telefone"}
-                </button>
-              </div>
-            </div>
-          </div>
+            Atualizar
+          </button>
         </div>
-      )}
-
-      {/* Main Header */}
-      <header className="reception-header-container">
-        <div className="reception-header-top-row">
-          <Link className="back-link-premium" href="/app">
-            ← Voltar ao painel
-          </Link>
-        </div>
-        
-        <div className="reception-header-main-row">
-          <div className="reception-header-left">
-            <span className="eyebrow-premium">Recepção Inteligente</span>
-            <h1 className="title-premium">Integração e Boas-vindas</h1>
-            <p className="desc-premium">
-              Uma tela rápida para tablet, celular ou notebook na entrada: captura o
-              visitante, inicia a jornada pastoral e aciona follow-ups e altar.
-            </p>
-          </div>
-          
-          <div className="reception-header-right"><Link className="reception-action-btn-ghost" href="/campaigns#recepcao">Convidados de campanhas</Link>
-             <button
-               onClick={() => setKioskMode(true)}
-               className="reception-action-btn-ghost"
-             >
-               <TabletIcon size={16} />
-               Modo Totem
-             </button>
-             <button
-               onClick={() => setPulpitMode(true)}
-               className="reception-action-btn-purple"
-             >
-               <Tv size={16} />
-               Painel do Pastor
-             </button>
-          </div>
-        </div>
-
-        <nav className="reception-nav-tabs">
-          <Link className="reception-tab-item is-active" href="/reception">
-            Painel Geral
-          </Link>
-          <Link className="reception-tab-item" href="/members">
-            Base de Membros
-          </Link>
-          <Link className="reception-tab-item" href="/members/new">
-            Cadastrar Membro
-          </Link>
-        </nav>
       </header>
-
-      {/* KPI Cards Strip */}
-      <section className="reception-kpi-grid">
-        <div className="reception-kpi-card">
-          <span className="reception-kpi-label">Total de Visitantes</span>
-          <strong className="reception-kpi-val val-blue">
-            {totalVisitorCount}
-          </strong>
-          <small className="reception-kpi-desc text-green">
-             {cloudVisitorCount ? `${cloudVisitorCount} registros atualizados` : `${localVisitorCount} registros recentes`}
-          </small>
-        </div>
-        <div className="reception-kpi-card">
-          <span className="reception-kpi-label">Aguardando WhatsApp</span>
-          <strong className="reception-kpi-val val-orange">
-            {pendingCommunicationVisitors.length}
-          </strong>
-          <small className="reception-kpi-desc">
-             Contatos ainda não iniciados
-          </small>
-        </div>
-        <div className="reception-kpi-card">
-          <span className="reception-kpi-label">Para Saudar no Altar</span>
-          <strong className="reception-kpi-val val-purple">
-            {celebrationGreetingVisitors.length}
-          </strong>
-          <small className="reception-kpi-desc">
-             Nomes prontos no teleprompter
-          </small>
-        </div>
-        <div className="reception-kpi-card">
-          <span className="reception-kpi-label">Jornadas Ativas</span>
-          <strong className="reception-kpi-val val-green">
-            {visitorJourneys.length}
-          </strong>
-          <small className="reception-kpi-desc text-green">
-             {firebaseConnected ? "Atualizadas" : "Aguardando atualização"}
-          </small>
-        </div>
-      </section>
-
-      {/* Main Grid: Ficha de Cadastro + Fluxo / Success Alert */}
-      <section className="reception-command-grid">
-        
-        {/* Lado Esquerdo: Ficha de Entrada de Visitante */}
-        <form className="visitor-form reception-capture-card" onSubmit={handleVisitorCaptureSubmit}>
-          <p className="eyebrow">Entrada Rápida</p>
-          <h2>Registrar Visitante</h2>
-          
-          <label style={{ color: "var(--alvo-ink)" }}>
-            Nome Completo do Visitante *
-            <input
-              aria-label="Nome do visitante"
-              required
-              onChange={(event) =>
-                setVisitorDraft((draft) => ({ ...draft, name: event.target.value }))
-              }
-              placeholder="Ex: João Pereira"
-              value={visitorDraft.name}
-              style={{ backgroundColor: "var(--alvo-field-bg)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "var(--alvo-ink)" }}
-            />
-          </label>
-          <label style={{ color: "var(--alvo-ink)" }}>
-            WhatsApp ou Telefone
-            <input
-              aria-label="WhatsApp ou telefone"
-              onChange={(event) =>
-                setVisitorDraft((draft) => ({ ...draft, phone: event.target.value }))
-              }
-              placeholder="(00) 90000-0000"
-              value={visitorDraft.phone}
-              style={{ backgroundColor: "var(--alvo-field-bg)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "var(--alvo-ink)" }}
-            />
-          </label>
-          
-          <div className="reception-form-row">
-            <label style={{ color: "var(--alvo-ink)" }}>
-              Origem do Contato
-              <select
-                aria-label="Origem do visitante"
-                onChange={(event) =>
-                  setVisitorDraft((draft) => ({ ...draft, source: event.target.value }))
-                }
-                value={visitorDraft.source}
-                style={{ backgroundColor: "var(--alvo-field-bg)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "var(--alvo-ink)" }}
+      <div className={s.actions}>
+        <label>
+          Data da saudação{" "}
+          <input
+            type="date"
+            value={day || data?.day || ""}
+            onChange={(e) => setDay(e.target.value)}
+          />
+        </label>
+        <span>Sem autorização explícita, o nome não aparece no painel.</span>
+      </div>
+      {error && (
+        <p role="alert" className={s.error}>
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className={s.notice}>
+          {notice}
+        </p>
+      )}
+      {loading && <p role="status">Atualizando recepção…</p>}
+      {mode === "pulpit" ? (
+        <section className={s.pulpit} aria-label="Nomes para saudação">
+          {pulpitPartial && (
+            <p>
+              Esta lista é parcial: há mais de 1.000 entradas nesta data.
+              Confira a fila com a equipe de recepção.
+            </p>
+          )}
+          {!loading && !pulpit.length && (
+            <p>Nenhuma saudação autorizada e pendente nesta data.</p>
+          )}
+          {pulpit.map((r) => (
+            <article key={r.id}>
+              <h2>{r.name}</h2>
+              {r.text && <p>{r.text}</p>}
+              <button
+                disabled={busy || (!!day && day !== data?.today)}
+                onClick={() => mutate("greet", {}, r)}
               >
-                <option>Convite de membro</option>
-                <option>WhatsApp</option>
-                <option>Instagram</option>
-                <option>Passando na rua</option>
-                <option>Evento especial</option>
-              </select>
-            </label>
-            <label style={{ color: "var(--alvo-ink)" }}>
-              Anotação / Observação
-              <input
-                placeholder="Ex: Convidado por Patrícia"
-                value={visitorDraft.note}
-                onChange={(e) => setVisitorDraft(draft => ({ ...draft, note: e.target.value }))}
-                style={{ backgroundColor: "var(--alvo-field-bg)", border: "1px solid var(--alvo-line)", borderRadius: 12, color: "var(--alvo-ink)" }}
-              />
-            </label>
-          </div>
-
-          <button className="primary-button compact" type="submit" disabled={saving} style={{ color: "white", borderRadius: 12, height: 48, marginTop: "1rem" }}>
-            <UserPlus size={17} />
-            Iniciar Jornada Pastoral
-          </button>
-          <p className="form-status" style={{ color: "var(--alvo-blue)" }}>✨ {status}</p>
-        </form>
-
-        {/* Lado Direito: Banner de Fluxo e Success Alert */}
-        <article className="reception-route-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Acolhimento Estruturado</p>
-              <h2 style={{ color: "var(--alvo-ink)" }}>Fluxo da Porta ao Cuidado</h2>
-            </div>
-            <span className="soft-pill">4 etapas pastorais</span>
-          </div>
-          <div className="reception-step-lane">
-            <div>
-              <div className="reception-step-head">
-                <QrCode size={20} style={{ color: "var(--alvo-blue)" }} />
-                <strong>1. Capturar</strong>
-              </div>
-              <p>Voluntário ou Totem de entrada registra dados.</p>
-            </div>
-            <div>
-              <div className="reception-step-head">
-                <Megaphone size={20} style={{ color: "#a855f7" }} />
-                <strong>2. Saudar</strong>
-              </div>
-              <p>Boas-vindas públicas no púlpito pelo pastor.</p>
-            </div>
-            <div>
-              <div className="reception-step-head">
-                <Smartphone size={20} style={{ color: "var(--alvo-accent)" }} />
-                <strong>3. Conectar</strong>
-              </div>
-              <p>Acolhimento envia WhatsApp personalizado.</p>
-            </div>
-            <div>
-              <div className="reception-step-head">
-                <MessageSquareText size={20} style={{ color: "var(--alvo-green)" }} />
-                <strong>4. Integrar</strong>
-              </div>
-              <p>Membro acompanha e encaminha para célula.</p>
-            </div>
-          </div>
-          {lastCreated ? (
-            <div className="reception-success-card animate-entrance" style={{ background: "rgba(6, 182, 212, 0.08)", border: "1px solid rgba(6, 182, 212, 0.25)" }}>
-              <div className="success-icon" style={{ backgroundColor: "var(--alvo-blue)" }}>
-                <CheckCircle2 size={24} strokeWidth={3} />
-              </div>
-              <div className="success-content">
-                <strong style={{ color: "var(--alvo-ink)" }}>{lastCreated.name}</strong>
-                <p style={{ color: "var(--alvo-ink-soft)" }}>
-                  {lastCreated.status === "Cadastro concluído" 
-                    ? "Jornada pastoral iniciada com sucesso!" 
-                    : lastCreated.status}
+                Marcar como saudado
+              </button>
+            </article>
+          ))}
+        </section>
+      ) : (
+        data &&
+        data.organizationId === organizationId && (
+          <>
+            <section className={s.metrics} aria-label="Indicadores da recepção">
+              {[
+                ["Entradas registradas", data.summary.total],
+                ["Aguardando integração", data.summary.pending],
+                ["Saudações nesta data", data.summary.greetings ?? "—"],
+                ["Jornadas ativas", data.summary.activeJourneys ?? "—"],
+              ].map(([label, value]) => (
+                <article key={label}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </article>
+              ))}
+            </section>
+            <p className={s.muted}>
+              Entradas podem incluir retornos da mesma pessoa. Consulta:{" "}
+              {date(data.asOf)} · {data.timezone}.{" "}
+              {data.partial &&
+                "A lista exibe até 1.000 entradas; os totais de entradas e pendências consultam a base completa."}
+            </p>
+            <nav className={s.actions} aria-label="Atalhos de acolhimento">
+              <Link href="/members">Pessoas</Link>
+              <Link href="/journeys">Jornadas e tarefas</Link>
+              <Link href="/groups">Células</Link>
+              <Link href="/campaigns">Convidados de campanhas</Link>
+              {data.canCare && (
+                <Link href="/pastoral-ai">Cuidado Pastoral</Link>
+              )}
+            </nav>
+            <details className={s.card}>
+              <summary>Autoatendimento e link de visitantes</summary>
+              <p>
+                Para deixar este dispositivo com visitantes, encerre a sessão da
+                equipe e abra o formulário público. Cada envio limpa os campos e
+                permite iniciar outro cadastro.
+              </p>
+              {data.publicUrl && data.publicFormsEnabled ? (
+                <div className={s.actions}>
+                  <a
+                    href={data.publicUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ver formulário público
+                  </a>
+                  <button disabled={busy} onClick={openTotem}>
+                    Sair da conta e abrir totem
+                  </button>
+                </div>
+              ) : (
+                <p>
+                  O formulário público está indisponível. Confira o endereço e o
+                  módulo da instituição.
                 </p>
-                {lastCreated.personId ? (
-                  <Link className="primary-pill compact" href={`/members/${lastCreated.personId}`} style={{ backgroundColor: "var(--alvo-blue)" }}>
-                    Ver Perfil Completo
-                  </Link>
-                ) : (
-                  <span className="soft-pill">Aguardando confirmação</span>
+              )}
+            </details>
+            <div className={s.columns}>
+              <section className={s.card}>
+                <p className={s.eyebrow}>ENTRADA RÁPIDA</p>
+                <h2>Registrar chegada</h2>
+                <p>Confira se a pessoa já tem cadastro antes de criar outro.</p>
+                <button disabled={busy} onClick={loadDirectory}>
+                  Consultar cadastros existentes
+                </button>
+                {directoryPartial && (
+                  <p>
+                    Exibindo até 500 cadastros. Consulte Pessoas se não
+                    encontrar o cadastro.
+                  </p>
                 )}
-              </div>
-            </div>
-          ) : null}
-        </article>
-      </section>
-
-      {/* Seção das Filas de Trabalho e Triagem */}
-      <section className="reception-workbench page-workbench">
-        
-        {/* Fila de Mensagens WhatsApp */}
-        <div className="queue-panel">
-          <div className="queue-heading" style={{ borderBottomColor: "var(--alvo-line)" }}>
-            <MessageSquareText size={18} style={{ color: "#25d366" }} />
-            <strong style={{ color: "var(--alvo-ink)" }}>Fila de Comunicação</strong>
-            <span style={{ backgroundColor: "rgba(37,211,102,0.15)", color: "#25d366" }}>{pendingCommunicationVisitors.length}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-            {pendingCommunicationVisitors.length ? (
-              pendingCommunicationVisitors.map((visitor) => (
-                <div className="queue-item" key={`communication-${visitor.id}`}>
-                  <div>
-                    <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
-                    {!visitor.personId && <button type="button" disabled={saving} onClick={() => void registerVisitor(visitor.name, visitor.phone ?? "", visitor.source, visitor.note, visitor.id)}>Integrar ao cadastro e iniciar jornada</button>}
-                    <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.source} · {visitor.phone || "Sem telefone"}</p>
-                  </div>
+                <form onSubmit={capture}>
+                  <fieldset disabled={busy}>
+                    <label>
+                      Cadastro
+                      <select
+                        value={form.existingPersonId}
+                        onChange={(e) => selectPerson(e.target.value)}
+                      >
+                        <option value="">
+                          Criar novo cadastro de visitante
+                        </option>
+                        {directory.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                            {p.phone ? " · " + p.phone : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Nome completo
+                      <input
+                        required
+                        maxLength={120}
+                        value={form.name}
+                        onChange={(e) => changeForm("name", e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Telefone (opcional)
+                      <input
+                        type="tel"
+                        maxLength={30}
+                        value={form.phone}
+                        onChange={(e) => changeForm("phone", e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Origem
+                      <input
+                        required
+                        maxLength={120}
+                        value={form.source}
+                        onChange={(e) => changeForm("source", e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Observação interna (opcional)
+                      <textarea
+                        maxLength={1000}
+                        value={form.note}
+                        onChange={(e) => changeForm("note", e.target.value)}
+                      />
+                    </label>
+                    <label className={s.check}>
+                      <input
+                        type="checkbox"
+                        checked={form.consentContact}
+                        onChange={(e) =>
+                          changeForm("consentContact", e.target.checked)
+                        }
+                      />
+                      A pessoa autorizou contato por WhatsApp.
+                    </label>
+                    <p className={s.muted}>
+                      Sem autorização, o acolhimento pode continuar
+                      pessoalmente. Nenhuma mensagem é enviada ao salvar.
+                    </p>
+                    <button className={s.primary} type="submit">
+                      Registrar e integrar
+                    </button>
+                  </fieldset>
+                </form>
+              </section>
+              <section className={s.card}>
+                <p className={s.eyebrow}>FILA DA RECEPÇÃO</p>
+                <h2>Entradas e retornos</h2>
+                <div className={s.actions}>
                   <button
-                    className="queue-action"
-                    disabled={!visitor.phone}
-                    onClick={() => openWhatsAppTemplateModal(visitor)}
-                    type="button"
-                    title={visitor.phone ? "Preparar mensagem de WhatsApp" : "Cadastre um telefone para disparar WhatsApp"}
+                    aria-pressed={view === "all"}
+                    onClick={() => {
+                      setView("all");
+                      setOffset(0);
+                      setSelectedId("");
+                    }}
                   >
-                    <CheckCircle2 size={16} />
-                    {visitor.phone ? "Disparar" : "Sem telefone"}
+                    Todas
+                  </button>
+                  <button
+                    aria-pressed={view === "pending"}
+                    onClick={() => {
+                      setView("pending");
+                      setOffset(0);
+                      setSelectedId("");
+                    }}
+                  >
+                    Aguardando integração
                   </button>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state compact">
-                <strong>Comunicação em dia</strong>
-                <p>Todos os visitantes da fila local já receberam o encaminhamento de boas-vindas.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Fila de Cumprimentos do Altar */}
-        <div className="queue-panel">
-          <div className="queue-heading" style={{ borderBottomColor: "var(--alvo-line)" }}>
-            <Megaphone size={18} style={{ color: "#8b5cf6" }} />
-            <strong style={{ color: "var(--alvo-ink)" }}>Fila de Boas-vindas Altar</strong>
-            <span style={{ backgroundColor: "rgba(139,92,246,0.15)", color: "#8b5cf6" }}>{celebrationGreetingVisitors.length}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-            {celebrationGreetingVisitors.length ? (
-              celebrationGreetingVisitors.map((visitor) => (
-                <div className="queue-item" key={`greeting-${visitor.id}`}>
-                  <div>
-                    <strong style={{ color: "var(--alvo-ink)" }}>{visitor.name}</strong>
-                    {!visitor.personId && <button type="button" disabled={saving} onClick={() => void registerVisitor(visitor.name, visitor.phone ?? "", visitor.source, visitor.note, visitor.id)}>Integrar ao cadastro e iniciar jornada</button>}
-                    <p style={{ color: "var(--alvo-ink-soft)" }}>{visitor.note || "Visitante da celebração de hoje"}</p>
-                  </div>
+                {!data.items.length && <p>Nenhuma entrada neste filtro.</p>}
+                <div className={s.list}>
+                  {data.items.map((r) => (
+                    <button
+                      key={r.id}
+                      aria-pressed={selectedId === r.id}
+                      onClick={() => setSelectedId(r.id)}
+                    >
+                      <strong>{r.name}</strong>
+                      <span>
+                        {r.status === "archived"
+                          ? "Arquivada"
+                          : r.personId
+                            ? "Integrada"
+                            : "Aguardando integração"}{" "}
+                        · {date(r.createdAt)}
+                      </span>
+                      <small>
+                        {r.greetedAt
+                          ? "Saudação registrada"
+                          : r.greetingApproved
+                            ? "Saudação autorizada"
+                            : "Sem saudação autorizada"}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+                <div className={s.actions}>
                   <button
-                    className="queue-action"
-                    onClick={() => handleMarkGreetingComplete(visitor.id)}
-                    type="button"
+                    disabled={!offset || loading}
+                    onClick={() => {
+                      setOffset((v) => v - 100);
+                      setSelectedId("");
+                    }}
                   >
-                    <CheckCircle2 size={16} />
-                    Saudar
+                    Anterior
+                  </button>
+                  <span>Página {offset / 100 + 1}</span>
+                  <button
+                    disabled={!data.hasMore || loading}
+                    onClick={() => {
+                      setOffset((v) => v + 100);
+                      setSelectedId("");
+                    }}
+                  >
+                    Próxima
                   </button>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state compact">
-                <strong>Altar em dia</strong>
-                <p>Todos os visitantes da fila local já foram marcados como saudados.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Entradas e jornadas de acolhimento */}
-      <section className="reception-live-grid">
-        
-        {/* Entradas recentes */}
-        <article className="directory-panel">
-          <div className="section-heading" style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1rem" }}>
-            <div>
-              <p className="eyebrow" style={{ color: "#0ea5e9" }}>Recepção</p>
-              <h2 style={{ color: "var(--alvo-ink)" }}>Entradas recentes</h2>
+              </section>
             </div>
-            <span className="soft-pill">{visitorIntakes.length} cadastradas</span>
-          </div>
-          <div className="visitor-list">
-            {visitorIntakes.length ? (
-              visitorIntakes.map((intake) => (
-                <div className="visitor-row" key={intake.id} style={{ borderBottomColor: "var(--alvo-line)", padding: "10px 0" }}>
-                  <div className="avatar" style={{ backgroundColor: "#0ea5e9", color: "white", fontWeight: 700 }}>
-                    {getInitials(intake.name)}
+            {selected && (
+              <section className={s.card} aria-label="Entrada selecionada">
+                <p className={s.eyebrow}>ACOMPANHAMENTO</p>
+                <h2>{selected.name}</h2>
+                <p>
+                  {selected.phone || "Sem telefone"} ·{" "}
+                  {origin[selected.source] || selected.source} ·{" "}
+                  {selected.stage
+                    ? stage[selected.stage] || selected.stage
+                    : "Aguardando integração"}
+                </p>
+                {selected.note && (
+                  <p className={s.internal}>
+                    Observação interna: {selected.note}
+                  </p>
+                )}
+                {selected.status === "archived" ? (
+                  <p>
+                    Entrada arquivada. Consulte a jornada da pessoa para
+                    continuar o acompanhamento.
+                  </p>
+                ) : (
+                  <div className={s.columns}>
+                    <section>
+                      <h3>1. Integrar e acolher</h3>
+                      {!selected.personId ? (
+                        <>
+                          <p>
+                            Vincule a uma pessoa existente ou confirme a criação
+                            de um novo cadastro.
+                          </p>
+                          <button disabled={busy} onClick={loadDirectory}>
+                            Consultar cadastros
+                          </button>
+                          <label>
+                            Pessoa existente
+                            <select
+                              value={personId}
+                              onChange={(e) => setPersonId(e.target.value)}
+                            >
+                              <option value="">Selecione…</option>
+                              {directory.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <div className={s.actions}>
+                            <button
+                              disabled={busy || !personId}
+                              onClick={() =>
+                                mutate("integrate-existing", { personId })
+                              }
+                            >
+                              Vincular cadastro
+                            </button>
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                mutate("integrate-new", {
+                                  requestId: integrationAttempt.current,
+                                })
+                              }
+                            >
+                              Integrar como novo visitante
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p>
+                          Cadastro vinculado. As tarefas e etapas continuam em{" "}
+                          <Link href="/journeys">Jornadas</Link>.
+                        </p>
+                      )}
+                      <label className={s.check}>
+                        <input
+                          type="checkbox"
+                          disabled={busy}
+                          checked={selected.consentContact}
+                          onChange={(e) =>
+                            mutate("contact-consent", {
+                              allowed: e.target.checked,
+                            })
+                          }
+                        />
+                        Contato por WhatsApp autorizado nesta entrada
+                      </label>
+                      <p className={s.muted}>
+                        A preferência do cadastro da pessoa também será
+                        conferida antes de preparar a mensagem.
+                      </p>
+                      <label>
+                        Mensagem de boas-vindas
+                        <textarea
+                          maxLength={2000}
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                        />
+                      </label>
+                      <button
+                        disabled={
+                          busy || !selected.consentContact || !selected.phone
+                        }
+                        onClick={() => mutate("prepare-whatsapp", { message })}
+                      >
+                        Preparar WhatsApp
+                      </button>
+                      {url && (
+                        <p>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Abrir mensagem no WhatsApp
+                          </a>{" "}
+                          · Confira o destinatário e envie pelo seu WhatsApp.
+                        </p>
+                      )}
+                      <p>
+                        Contato:{" "}
+                        {selected.contactState === "recorded"
+                          ? "registrado pela equipe"
+                          : selected.contactState === "prepared"
+                            ? "mensagem preparada; envio não confirmado"
+                            : "ainda não registrado"}
+                        .
+                      </p>
+                      <label>
+                        Como o contato aconteceu
+                        <select
+                          value={channel}
+                          onChange={(e) => setChannel(e.target.value)}
+                        >
+                          <option value="presential">Presencial</option>
+                          <option value="phone">Telefone</option>
+                          <option value="whatsapp">WhatsApp</option>
+                        </select>
+                      </label>
+                      <button
+                        disabled={busy}
+                        onClick={() => mutate("contact-complete", { channel })}
+                      >
+                        Confirmar contato realizado
+                      </button>
+                      <p className={s.muted}>
+                        Este registro não conclui automaticamente as tarefas de
+                        Jornadas.
+                      </p>
+                    </section>
+                    <section>
+                      <h3>2. Preparar saudação</h3>
+                      <p>
+                        Confirme com a pessoa a autorização para apresentar seu
+                        nome e este texto em público.
+                      </p>
+                      <label className={s.check}>
+                        <input
+                          type="checkbox"
+                          checked={greeting.approved}
+                          onChange={(e) =>
+                            setGreeting((g) => ({
+                              ...g,
+                              approved: e.target.checked,
+                            }))
+                          }
+                        />
+                        Pessoa autorizou saudação pública
+                      </label>
+                      <label>
+                        Data
+                        <input
+                          type="date"
+                          value={greeting.day}
+                          onChange={(e) =>
+                            setGreeting((g) => ({ ...g, day: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        Texto público (opcional)
+                        <textarea
+                          maxLength={300}
+                          value={greeting.text}
+                          onChange={(e) =>
+                            setGreeting((g) => ({ ...g, text: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <div className={s.preview}>
+                        <strong>{selected.name}</strong>
+                        <p>
+                          {greeting.text || "Apenas o nome será apresentado."}
+                        </p>
+                      </div>
+                      <button
+                        disabled={busy || !greeting.day}
+                        onClick={() => mutate("approve-greeting", greeting)}
+                      >
+                        Salvar autorização de saudação
+                      </button>
+                      {selected.greetedAt && (
+                        <p>
+                          Saudação registrada em {date(selected.greetedAt)}. Uma
+                          nova autorização permite outra saudação.
+                        </p>
+                      )}
+                      {data.canCare && (
+                        <>
+                          <h3>3. Encaminhar ao cuidado</h3>
+                          {selected.careRequestId ? (
+                            <p>
+                              Pedido registrado. Acompanhe em{" "}
+                              <Link href="/pastoral-ai">Cuidado Pastoral</Link>.
+                            </p>
+                          ) : (
+                            <>
+                              <label>
+                                Pedido autorizado para a equipe pastoral
+                                <textarea
+                                  maxLength={2000}
+                                  value={careMessage}
+                                  onChange={(e) =>
+                                    setCareMessage(e.target.value)
+                                  }
+                                />
+                              </label>
+                              <button
+                                disabled={busy || !careMessage.trim()}
+                                onClick={() =>
+                                  mutate("pastoral-care", {
+                                    message: careMessage,
+                                  })
+                                }
+                              >
+                                Encaminhar ao Cuidado Pastoral
+                              </button>
+                              <p className={s.muted}>
+                                O pedido é privado e aguarda triagem pastoral. A
+                                observação interna não é copiada.
+                              </p>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </section>
                   </div>
-                  <div>
-                    <strong style={{ color: "var(--alvo-ink)" }}>{intake.name}</strong>
-                    <p style={{ color: "var(--alvo-ink-soft)" }}>{intake.source} - {intake.status || "Ativo"}</p>
-                    <small style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>{intake.greeting ?? "Acolhimento pastoral pendente"}</small>
-                  </div>
-                  <span style={{ fontSize: "0.75rem", background: "rgba(16,185,129,0.15)", color: "#10b981", padding: "4px 8px", borderRadius: 8 }}>Registrado</span>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state" style={{ padding: "3rem 1rem" }}>
-                <strong style={{ color: "var(--alvo-ink-soft)", display: "block", marginBottom: 4 }}>Nenhum visitante registrado</strong>
-                <p style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>Os próximos visitantes aparecerão aqui.</p>
-              </div>
+                )}
+                <details>
+                  <summary>Histórico da entrada</summary>
+                  <button disabled={busy} onClick={showHistory}>
+                    Consultar histórico
+                  </button>
+                  <ul>
+                    {history.map((e, i) => (
+                      <li key={i}>
+                        {date(e.at)} · {actionLabel[e.action] || e.action}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </section>
             )}
-          </div>
-        </article>
-
-        {/* Jornadas Pastorais Ativas */}
-        <article className="directory-panel">
-          <div className="section-heading" style={{ borderBottomColor: "var(--alvo-line)", paddingBottom: "1rem", marginBottom: "1rem" }}>
-            <div>
-              <p className="eyebrow" style={{ color: "#10b981" }}>Monitor de Funil</p>
-              <h2 style={{ color: "var(--alvo-ink)" }}>Acompanhamento Pastoral</h2>
-            </div>
-            <span className="soft-pill">{visitorJourneys.length} ativas</span>
-          </div>
-          <div className="visitor-list">
-            {visitorJourneys.length ? (
-              visitorJourneys.map((journey) => (
-                <div className="visitor-row" key={journey.id} style={{ borderBottomColor: "var(--alvo-line)", padding: "10px 0" }}>
-                  <div className="avatar" style={{ backgroundColor: "#10b981", color: "white", fontWeight: 700 }}>J</div>
-                  <div>
-                    <strong style={{ color: "var(--alvo-ink)" }}>{journey.personId}</strong>
-                    <p style={{ color: "var(--alvo-ink-soft)" }}>Estágio: {journey.currentStage} · Origem: {journey.originChannel}</p>
-                    <small style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>Próximo passo planejado em: {journey.nextActionAt ?? "Imediato"}</small>
-                  </div>
-                  <span style={{ fontSize: "0.75rem", background: "var(--alvo-surface-muted)", color: "var(--alvo-ink-soft)", padding: "4px 8px", borderRadius: 8 }}>{journey.status}</span>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state" style={{ padding: "3rem 1rem" }}>
-                <strong style={{ color: "var(--alvo-ink-soft)", display: "block", marginBottom: 4 }}>Nenhuma Jornada Ativa Carregada</strong>
-                <p style={{ color: "var(--alvo-ink-soft)", opacity: 0.8 }}>As jornadas pastorais ajudam a consolidar os novos convertidos em membros ativos.</p>
-              </div>
-            )}
-          </div>
-        </article>
-
-      </section>
-
+          </>
+        )
+      )}
     </main>
   );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
 }

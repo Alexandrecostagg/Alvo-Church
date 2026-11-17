@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
-import { AccountError, accountTransaction, type AccountTransaction } from "./member-account-store";
+import {
+  AccountError,
+  accountTransaction,
+  type AccountTransaction,
+} from "./member-account-store";
 import { documentId } from "./member-account";
-import { assertModuleEnabled } from "./module-access";
+import { marketplaceActor } from "./community-marketplace";
 
-const MODERATOR_ROLES = ["super_admin", "church_admin", "pastor", "secretary"];
 const TRANSITIONS = {
   approve: { from: ["pending"], to: "approved" },
   reject: { from: ["pending"], to: "rejected" },
@@ -18,25 +21,47 @@ export interface MarketplaceModerationOperation {
   storeId: string;
   action: MarketplaceModerationAction;
   reason: string;
+  revision?: number;
 }
 
 function text(value: unknown, label: string, max: number, required = true) {
-  if (typeof value !== "string" || value.trim().length > max || (required && !value.trim())) {
+  if (
+    typeof value !== "string" ||
+    value.trim().length > max ||
+    (required && !value.trim())
+  ) {
     throw new AccountError(400, `${label} inválido.`);
   }
   return value.trim();
 }
 
-export function marketplaceModerationInput(raw: unknown): MarketplaceModerationOperation {
+export function marketplaceModerationInput(
+  raw: unknown,
+): MarketplaceModerationOperation {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new AccountError(400, "Operação de moderação inválida.");
   }
   const data = raw as Record<string, unknown>;
-  const action = text(data.action, "Operação", 20) as MarketplaceModerationAction;
-  if (!(action in TRANSITIONS)) throw new AccountError(400, "Operação de moderação inválida.");
+  const action = text(
+    data.action,
+    "Operação",
+    20,
+  ) as MarketplaceModerationAction;
+  if (!Object.hasOwn(TRANSITIONS, action))
+    throw new AccountError(400, "Operação de moderação inválida.");
   const reason = text(data.reason ?? "", "Motivo", 500, action !== "approve");
-  if (reason && reason.length < 5) throw new AccountError(400, "Explique o motivo com pelo menos 5 caracteres.");
+  if (reason && reason.length < 5)
+    throw new AccountError(
+      400,
+      "Explique o motivo com pelo menos 5 caracteres.",
+    );
+  if (
+    data.revision !== undefined &&
+    (!Number.isSafeInteger(data.revision) || Number(data.revision) < 0)
+  )
+    throw new AccountError(400, "Revisão inválida.");
   return {
+    ...(data.revision !== undefined ? { revision: Number(data.revision) } : {}),
     organizationId: documentId(data.organizationId, "Igreja"),
     requestId: documentId(data.requestId, "Tentativa"),
     storeId: documentId(data.storeId, "Loja"),
@@ -46,20 +71,17 @@ export function marketplaceModerationInput(raw: unknown): MarketplaceModerationO
 }
 
 async function authorize(tx: AccountTransaction, orgId: string, uid: string) {
-  documentId(uid, "Conta");
-  const root = `organizations/${orgId}`;
-  await assertModuleEnabled(tx, root, "marketplace");
-  const [org, actor] = await tx.read(root, `${root}/users/${uid}`);
-  const roles = Array.isArray(actor?.roles) ? actor.roles : [];
-  if (!org || org.status !== "active" || !actor || actor.organizationId !== orgId || actor.isActive !== true || !roles.some((role: string) => MODERATOR_ROLES.includes(role))) {
+  const { root, staff } = await marketplaceActor(tx, orgId, uid);
+  if (!staff)
     throw new AccountError(403, "Você não pode moderar lojas nesta igreja.");
-  }
   return root;
 }
 
 export async function moderateMarketplaceStore(raw: unknown, uid: string) {
   const operation = marketplaceModerationInput(raw);
-  const fingerprint = createHash("sha256").update(JSON.stringify(operation)).digest("hex");
+  const fingerprint = createHash("sha256")
+    .update(JSON.stringify(operation))
+    .digest("hex");
   return accountTransaction(async (tx) => {
     const root = await authorize(tx, operation.organizationId, uid);
     const storePath = `${root}/communityStores/${operation.storeId}`;
@@ -67,18 +89,37 @@ export async function moderateMarketplaceStore(raw: unknown, uid: string) {
     const [attempt, store] = await tx.read(attemptPath, storePath);
 
     if (attempt) {
-      if (attempt.fingerprint !== fingerprint) throw new AccountError(409, "Esta tentativa já foi usada em outra moderação.");
+      if (attempt.fingerprint !== fingerprint)
+        throw new AccountError(
+          409,
+          "Esta tentativa já foi usada em outra moderação.",
+        );
       return { ...attempt.result, replayed: true };
     }
-    if (!store || store.organizationId !== operation.organizationId) throw new AccountError(404, "Loja não encontrada.");
+    if (!store || store.organizationId !== operation.organizationId)
+      throw new AccountError(404, "Loja não encontrada.");
 
+    if (
+      operation.revision !== undefined &&
+      operation.revision !== (store.revision || 0)
+    )
+      throw new AccountError(409, "A loja mudou. Recarregue antes de moderar.");
     const transition = TRANSITIONS[operation.action];
-    if (!(transition.from as readonly string[]).includes(String(store.status))) {
-      throw new AccountError(409, "A situação atual da loja não permite esta ação.");
+    if (
+      !(transition.from as readonly string[]).includes(String(store.status))
+    ) {
+      throw new AccountError(
+        409,
+        "A situação atual da loja não permite esta ação.",
+      );
     }
 
     const now = new Date().toISOString();
-    const { rejectionReason: _oldRejection, suspensionReason: _oldSuspension, ...preserved } = store;
+    const {
+      rejectionReason: _oldRejection,
+      suspensionReason: _oldSuspension,
+      ...preserved
+    } = store;
     const updatedStore = {
       ...preserved,
       id: operation.storeId,
@@ -86,9 +127,14 @@ export async function moderateMarketplaceStore(raw: unknown, uid: string) {
       status: transition.to,
       moderatedBy: uid,
       updatedAt: now,
+      revision: (store.revision || 0) + 1,
       ...(operation.action === "approve" ? { approvedAt: now } : {}),
-      ...(operation.action === "reject" ? { rejectionReason: operation.reason } : {}),
-      ...(operation.action === "suspend" ? { suspensionReason: operation.reason } : {}),
+      ...(operation.action === "reject"
+        ? { rejectionReason: operation.reason }
+        : {}),
+      ...(operation.action === "suspend"
+        ? { suspensionReason: operation.reason }
+        : {}),
     };
     const result = { store: updatedStore };
 
@@ -103,7 +149,12 @@ export async function moderateMarketplaceStore(raw: unknown, uid: string) {
       newStatus: transition.to,
       timestamp: now,
     });
-    tx.set(attemptPath, { organizationId: operation.organizationId, fingerprint, result, createdAt: now });
+    tx.set(attemptPath, {
+      organizationId: operation.organizationId,
+      fingerprint,
+      result,
+      createdAt: now,
+    });
     return { ...result, replayed: false };
   });
 }

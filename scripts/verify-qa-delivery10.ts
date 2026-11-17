@@ -51,7 +51,7 @@ async function run() {
   const adminToken = await login("principal");
   const memberToken = await login("secundaria");
   await org.set({ id: orgId, organizationId: orgId, status: "active", displayName: "Igreja QA Entrega 10", memberCount: 2 });
-  await org.collection("settings").doc("subscription").set({ organizationId: orgId, plan: "free", billingStatus: "active" });
+  await org.collection("settings").doc("subscription").set({ organizationId: orgId, plan: "pastoral", billingStatus: "active" });
   await org.collection("users").doc(adminId).set({ organizationId: orgId, isActive: true, roles: ["church_admin"] });
   await org.collection("users").doc(memberId).set({ organizationId: orgId, isActive: true, roles: ["member"] });
   const store = { id: "store_pending", organizationId: orgId, ownerId: memberId, name: "Loja QA", description: "Loja criada para homologação", category: "services", status: "pending", images: [], contact: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

@@ -144,6 +144,7 @@ function RoleHomeContent() {
                   value={data.profile}
                   onChange={(e) => {
                     setProfile(e.target.value as HomeProfile);
+                    setAbsence(false);
                     setMessage("");
                   }}
                   aria-label="Minha visão"
@@ -182,6 +183,56 @@ function RoleHomeContent() {
               ))}
             </section>
           )}
+          {data.care && (
+            <section
+              className={styles.panel}
+              aria-label="Cuidado pastoral prioritário"
+            >
+              <h2>
+                {data.profile === "cell_leader"
+                  ? "Cuidados atribuídos a mim"
+                  : "Prioridades do cuidado pastoral"}
+              </h2>
+              <p>{data.care.scope}</p>
+              <p>
+                {data.care.summary.open} aberto(s) · {data.care.summary.urgent}{" "}
+                urgente(s) · {data.care.summary.overdue} com prazo vencido
+                {data.profile !== "cell_leader"
+                  ? ` · ${data.care.summary.unassigned} sem responsável`
+                  : ""}
+              </p>
+              {data.care.partial && (
+                <p role="alert">
+                  Amostra limitada; consulte a fila completa antes de concluir
+                  sobre a cobertura.
+                </p>
+              )}
+              {!data.care.requests.length && (
+                <p>Nenhum pedido aberto neste escopo.</p>
+              )}
+              {data.care.requests.map((r) => (
+                <article key={r.id} className={styles.row}>
+                  <strong>{r.personName}</strong>
+                  <span>
+                    {r.priority === "urgent"
+                      ? "Urgente"
+                      : r.priority === "important"
+                        ? "Importante"
+                        : "Normal"}{" "}
+                    · {r.ownerName || "Sem responsável"}
+                  </span>
+                  {r.dueAt && (
+                    <span>
+                      Prazo: {new Date(r.dueAt).toLocaleDateString("pt-BR")}
+                    </span>
+                  )}
+                </article>
+              ))}
+              <Link href={"/pastoral-ai?profile=" + data.profile}>
+                Abrir fila de cuidado
+              </Link>
+            </section>
+          )}
           {["pastoral", "administration", "cell_leader"].includes(
             data.profile,
           ) &&
@@ -216,7 +267,7 @@ function RoleHomeContent() {
               <section id="acompanhamento" className={styles.panel}>
                 <div className={styles.sectionHead}>
                   <h2>
-                    <HeartHandshake size={21} /> Quem precisa de cuidado
+                    <HeartHandshake size={21} /> Contatos e ausências percebidas
                   </h2>
                   <button
                     className={styles.primary}
@@ -231,7 +282,7 @@ function RoleHomeContent() {
                 </p>
                 {!data.absences.length && (
                   <p className={styles.empty}>
-                    Nenhum acompanhamento em aberto nesta visão.
+                    Nenhum contato ou ausência percebida em aberto nesta visão.
                   </p>
                 )}
                 {data.absences.map((a) => (
@@ -328,6 +379,32 @@ function RoleHomeContent() {
                     </div>
                     <span>
                       {c.members ?? "—"} membros · {c.groups ?? "—"} células
+                      {c.receptionAsOf && (
+                        <>
+                          <br />
+                          {c.receptionPending ?? "—"} entrada(s) aguardando
+                          integração
+                          <br />
+                          <small>
+                            Recepção consultada em{" "}
+                            {new Date(c.receptionAsOf).toLocaleString("pt-BR")}
+                          </small>
+                        </>
+                      )}
+                      {c.careAsOf && (
+                        <>
+                          <br />
+                          {c.careOpen ?? "—"} pedido(s) pastorais abertos ·{" "}
+                          {c.careInProgress ?? "—"} em acompanhamento ·{" "}
+                          {c.careUrgent ?? "—"} urgente(s) ·{" "}
+                          {c.careOverdue ?? "—"} com prazo vencido
+                          <br />
+                          <small>
+                            Fila consultada em{" "}
+                            {new Date(c.careAsOf).toLocaleString("pt-BR")}
+                          </small>
+                        </>
+                      )}
                     </span>
                   </article>
                 ))}

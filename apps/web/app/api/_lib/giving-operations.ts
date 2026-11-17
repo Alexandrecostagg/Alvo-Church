@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { AccountError, accountTransaction } from "./member-account-store";
 import { documentId } from "./member-account";
 import { financeActor, money, textField } from "./finance-operations";
+import { ownContributions } from "./own-contributions";
 type Data = Record<string, any>;
 export async function givingOperation(body: Data, uid: string): Promise<any> {
   const orgId = documentId(body.organizationId, "Igreja");
@@ -23,7 +24,7 @@ export async function givingOperation(body: Data, uid: string): Promise<any> {
       `${root}/settings/features`,
     );
     if (body.action === "snapshot") {
-      const [campaigns, contributions, intents] = await Promise.all([
+      const [campaigns, contributionResult, intents] = await Promise.all([
         tx.query(
           root,
           "givingCampaigns",
@@ -32,16 +33,20 @@ export async function givingOperation(body: Data, uid: string): Promise<any> {
           "EQUAL",
           501,
         ),
-        tx.query(
-          root,
-          "contributions",
-          manager ? undefined : "userId",
-          manager ? undefined : uid,
-          "EQUAL",
-          201,
-          undefined,
-          { field: "date", direction: "DESCENDING" },
-        ),
+        manager
+          ? tx
+              .query(
+                root,
+                "contributions",
+                undefined,
+                undefined,
+                "EQUAL",
+                201,
+                undefined,
+                { field: "date", direction: "DESCENDING" },
+              )
+              .then((rows) => ({ rows, truncated: rows.length > 200 }))
+          : ownContributions(tx, root, orgId, uid),
         manager
           ? tx.query(
               root,
@@ -55,6 +60,7 @@ export async function givingOperation(body: Data, uid: string): Promise<any> {
             )
           : Promise.resolve([]),
       ]);
+      const contributions = contributionResult.rows;
       if (campaigns.length > 500)
         throw new AccountError(
           422,
@@ -87,9 +93,7 @@ export async function givingOperation(body: Data, uid: string): Promise<any> {
           })),
         contributions: contributions
           .slice(0, 200)
-          .filter(
-            (c) => c.organizationId === orgId && (manager || c.userId === uid),
-          )
+          .filter((c) => c.organizationId === orgId)
           .map((c) => ({
             id: c.id,
             contributorName: manager
@@ -116,7 +120,7 @@ export async function givingOperation(body: Data, uid: string): Promise<any> {
         pendingCount: manager
           ? await tx.count(root, "contributions", "status", "pending")
           : 0,
-        truncated: contributions.length > 200 || intents.length > 200,
+        truncated: contributionResult.truncated || intents.length > 200,
       } satisfies GivingOverview;
     }
     if (!manager)

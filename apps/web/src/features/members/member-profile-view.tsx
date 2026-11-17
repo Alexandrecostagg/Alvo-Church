@@ -1,843 +1,560 @@
 "use client";
-import { financeRequest } from "../../lib/finance-client";
-
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState, useRef } from "react";
-import {
-  createFirebaseWebRuntimeConfigFromEnv,
-  fetchFamilyById,
-  fetchFamilyMembers,
-  fetchMemberContributionsByPersonId,
-  fetchPeople,
-  fetchPersonById,
-  fetchGroups,
-  fetchGroupMembers,
-  fetchServiceAssignments,
-  savePersonProfile,
-  isFirebaseWebRuntimeConfigured
-} from "@alvo/firebase";
-import {
-  getTribeDisplayLabel,
-  getTribeMinistrySummary
-} from "@alvo/domain";
+import { useEffect, useRef, useState } from "react";
 import type {
-  ContributionType,
   Family,
-  FamilyMember,
   Group,
   MemberContribution,
   Person,
-  ServiceAssignment
+  ServiceAssignment,
 } from "@alvo/types";
-import {
-  Tent,
-  QrCode,
-  CalendarCheck,
-  MapPin,
-  Smartphone,
-  Mail,
-  User,
-  Bookmark,
-  Heart,
-  Users,
-  DollarSign,
-  BookOpen,
-  Music,
-  CheckCircle,
-  Plus,
-  Compass,
-  ArrowRight,
-  ShieldAlert
-} from "lucide-react";
+import { getTribeDisplayLabel, type PersonalIntegration } from "@alvo/domain";
+import { manualWhatsappLink } from "@alvo/utils";
 import { useAppAuth } from "../../../app/providers";
-import { formatCalendarDate } from "../../lib/member-form";
+import { peopleRequest } from "../../lib/people-client";
+import { financeRequest } from "../../lib/finance-client";
+import { personName, statusLabels } from "./members-view";
+import s from "./people.module.css";
 
-const JOURNEY_STAGES = [
-  { code: "reception", label: "Recepção", desc: "Cadastrado na entrada" },
-  { code: "contact", label: "Acolhimento", desc: "Primeiro follow-up ativo" },
-  { code: "cell", label: "Frequente em Célula", desc: "Participando de pequenos grupos" },
-  { code: "class", label: "Classe de Maturidade", desc: "Formação de discipulado" },
-  { code: "baptism", label: "Batismo / Aliança", desc: "Membro formal da igreja" },
-  { code: "leader", label: "Liderança", desc: "Líder de Célula ou Voluntário" }
-];
-
-const MINISTRY_NAMES: Record<string, string> = {
-  reception: "Recepção e Portaria",
-  media: "Mídia, Som e Transmissão",
-  worship: "Louvor e Banda",
-  kids: "Crianças",
-  operations: "Limpeza e Organização"
+type Detail = {
+  person: Person;
+  family: Family | null;
+  familyPeople: Person[];
+  integration: PersonalIntegration | null;
+  groups: Group[];
+  contributions: MemberContribution[] | null;
+  assignments: ServiceAssignment[] | null;
+  notices: string[];
 };
-
-const CONTRIBUTION_TYPE_LABELS: Record<ContributionType, string> = {
-  dizimo: "Dízimo",
-  oferta: "Oferta",
-  campanha: "Campanha",
-  missao: "Missões",
-  outro: "Outro"
-};
-
-const S = {
-  card: {
-    backgroundColor: "var(--alvo-surface)",
-    border: "1px solid var(--alvo-line)",
-    borderRadius: 20,
-    padding: "1.25rem",
-  } as React.CSSProperties,
-  cardLg: {
-    backgroundColor: "var(--alvo-surface)",
-    border: "1px solid var(--alvo-line)",
-    borderRadius: 24,
-    padding: "2rem",
-  } as React.CSSProperties,
-  cardMuted: {
-    backgroundColor: "var(--alvo-surface-muted)",
-    border: "1px solid var(--alvo-line)",
-    borderRadius: 20,
-    padding: "1.25rem",
-  } as React.CSSProperties,
-  label: { fontSize: "0.75rem", color: "var(--alvo-ink-soft)" } as React.CSSProperties,
-  value: { display: "block", fontSize: "1.5rem", fontWeight: 800, color: "var(--alvo-ink)", marginTop: 4 } as React.CSSProperties,
-  hint: { fontSize: "0.7rem", color: "var(--alvo-ink-soft)", marginTop: 4 } as React.CSSProperties,
-  divider: { borderBottom: "1px solid var(--alvo-line)" } as React.CSSProperties,
-  ink: { color: "var(--alvo-ink)" } as React.CSSProperties,
-  soft: { color: "var(--alvo-ink-soft)" } as React.CSSProperties,
-};
-
+const money = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const date = (s?: string) =>
+  s
+    ? new Date(s.length === 10 ? `${s}T12:00:00` : s).toLocaleDateString(
+        "pt-BR",
+      )
+    : "Não informado";
+const contributionStatus = (s?: string) =>
+  s === "confirmed"
+    ? "Confirmada"
+    : s === "rejected"
+      ? "Rejeitada"
+      : s === "pending"
+        ? "Aguardando conferência"
+        : "Sem confirmação registrada";
 export function MemberProfileView() {
-  const contributionAttempt = useRef("");
-  const contributionBusy = useRef(false);
-  const params = useParams<{ personId?: string }>();
-  const personId = typeof params.personId === "string" ? params.personId : "";
-  const { configured, firebaseReady, user, organizationId, firebaseConfig } = useAppAuth();
-  const [person, setPerson] = useState<Person | null>(null);
-  const [family, setFamily] = useState<Family | null>(null);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
-  const [status, setStatus] = useState("Carregando ficha do membro...");
-  const [personGroup, setPersonGroup] = useState<Group | null>(null);
-  const [communicationBusy, setCommunicationBusy] = useState(false);
-
-  const [activeStage, setActiveStage] = useState("contact");
-  const [activeTab, setActiveTab] = useState<"cell" | "finance" | "academy" | "serving">("cell");
-
-  const [contributions, setContributions] = useState<MemberContribution[]>([]);
-  const [assignments, setAssignments] = useState<ServiceAssignment[]>([]);
-  const [newAmount, setNewAmount] = useState("");
-  const [newCategory, setNewCategory] = useState<ContributionType>("dizimo");
-
-  async function toggleWhatsappOptOut() {
-    if (!person || communicationBusy) return;
-    setCommunicationBusy(true);
-    const optedOut = person.communicationOptOut === true;
-    const updated: Person = {
-      ...person,
-      communicationOptOut: !optedOut,
-      whatsappOptOutAt: optedOut ? undefined : new Date().toISOString(),
-    };
-    try {
-      await savePersonProfile(firebaseConfig, { organizationId }, updated);
-      setPerson(updated);
-      setStatus(optedOut ? "WhatsApp autorizado para próximas campanhas." : "Opt-out de WhatsApp registrado.");
-    } catch {
-      setStatus("Não foi possível alterar a preferência de WhatsApp.");
-    } finally {
-      setCommunicationBusy(false);
-    }
-  }
-
+  const { personId } = useParams<{ personId: string }>();
+  const { tenantReady, user, organizationId, roles } = useAppAuth();
+  const allowed = roles.some((r) =>
+    ["church_admin", "super_admin", "pastor", "secretary"].includes(r),
+  );
+  const [data, setData] = useState<Detail | null>(null);
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [tab, setTab] = useState("care");
+  const [reload, setReload] = useState(0);
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("dizimo");
+  const generation = useRef(0),
+    lock = useRef(false);
+  const attempt = useRef({ snapshot: "", id: "" });
   useEffect(() => {
-    if (!personId) {
-      setStatus("Membro não informado.");
-      return;
-    }
-
-    if (!configured || !firebaseReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      setPerson(null);
-      setFamily(null);
-      setFamilyPeople([]);
-      setStatus("Entre na sua conta para abrir a ficha completa.");
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadProfile() {
-      setStatus("Buscando pessoa, família e contexto pastoral...");
-
-      try {
-        const nextPerson = await fetchPersonById(firebaseConfig, { organizationId }, personId);
-
-        if (cancelled) return;
-
-        if (!nextPerson) {
-          setStatus("Membro não encontrado.");
-          setPerson(null);
-          return;
+    const version = ++generation.current;
+    setData(null);
+    setConsent(false);
+    setTab("care");
+    setAmount("");
+    setStatus("");
+    setBusy(false);
+    lock.current = false;
+    attempt.current = { snapshot: "", id: "" };
+    if (!tenantReady || !user || !allowed) return;
+    setLoading(true);
+    peopleRequest(user, { action: "detail", organizationId, personId })
+      .then((result) => {
+        if (generation.current === version) {
+          setData(result);
+          setStatus("Ficha atualizada.");
         }
-
-        setPerson(nextPerson);
-        if (nextPerson.memberStatus === "visitor") {
-          setActiveStage("reception");
-        } else if (nextPerson.memberStatus === "congregant" || nextPerson.memberStatus === "new_believer") {
-          setActiveStage("cell");
-        } else if (nextPerson.memberStatus === "member") {
-          setActiveStage("baptism");
-        } else if (nextPerson.memberStatus === "leader" || nextPerson.memberStatus === "volunteer") {
-          setActiveStage("leader");
-        }
-
-        // Os três blocos abaixo (célula, escalas/contribuições e família) são
-        // independentes entre si — só dependem de nextPerson. Rodam em
-        // paralelo: antes eram 3 estágios em série e a ficha levava a SOMA
-        // das latências; agora leva a do mais lento.
-
-        // Célula da pessoa: procura o vínculo dela entre os grupos ativos
-        const groupTask = (async () => {
-          try {
-            const allGroups = await fetchGroups(firebaseConfig, { organizationId }, 50);
-            const memberships = await fetchGroupMembers(firebaseConfig, { organizationId }, allGroups, 50);
-            if (!cancelled) {
-              const membership = memberships.find((m) => m.personId === personId);
-              setPersonGroup(membership ? allGroups.find((g) => g.id === membership.groupId) ?? null : null);
-            }
-          } catch {
-            if (!cancelled) setPersonGroup(null);
-          }
-        })();
-
-        // Escalas e contribuições reais da pessoa (para as abas Servir/Finanças)
-        const servingTask = (async () => {
-          const [allAssignments, nextContributions] = await Promise.all([
-            fetchServiceAssignments(firebaseConfig, { organizationId }, 300).catch(() => [] as ServiceAssignment[]),
-            fetchMemberContributionsByPersonId(firebaseConfig, { organizationId }, personId).catch(() => [] as MemberContribution[])
-          ]);
-          if (cancelled) return;
-          setAssignments(allAssignments.filter((item) => item.personId === personId));
-          setContributions(nextContributions);
-        })();
-
-        // Família vinculada (quando existe)
-        const familyTask = (async (): Promise<"with-family" | "no-family"> => {
-          if (!nextPerson.primaryFamilyId) {
-            if (!cancelled) {
-              setFamily(null);
-              setFamilyMembers([]);
-              setFamilyPeople([]);
-            }
-            return "no-family";
-          }
-
-          const [nextFamily, nextFamilyMembers, nextPeople] = await Promise.all([
-            fetchFamilyById(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
-            fetchFamilyMembers(firebaseConfig, { organizationId }, nextPerson.primaryFamilyId),
-            fetchPeople(firebaseConfig, { organizationId }, 80)
-          ]);
-
-          if (!cancelled) {
-            const familyPersonIds = new Set(nextFamilyMembers.map((member) => member.personId));
-            setFamily(nextFamily);
-            setFamilyMembers(nextFamilyMembers);
-            setFamilyPeople(nextPeople.filter((item) => familyPersonIds.has(item.id)));
-          }
-          return "with-family";
-        })();
-
-        // groupTask e servingTask nunca rejeitam (têm catch interno); só a
-        // família pode falhar — e mantém a mesma mensagem de erro de antes.
-        const [, , familyOutcome] = await Promise.all([groupTask, servingTask, familyTask]);
-
-        if (cancelled) return;
-        setStatus(
-          familyOutcome === "no-family"
-            ? "Ficha carregada sem família vinculada."
-            : "Ficha completa carregada."
-        );
-      } catch (error) {
-        if (!cancelled) {
-          setStatus("Não foi possível carregar a ficha. Tente novamente.");
-        }
+      })
+      .catch((e) => {
+        if (generation.current === version) setStatus(e.message);
+      })
+      .finally(() => {
+        if (generation.current === version) setLoading(false);
+      });
+    return () => {
+      generation.current++;
+    };
+  }, [tenantReady, user, organizationId, personId, allowed, reload]);
+  async function preference() {
+    if (!data || !user || lock.current) return;
+    const version = generation.current;
+    const current =
+      data.person.communicationOptOut === true ||
+      !!data.person.whatsappOptOutAt;
+    lock.current = true;
+    setBusy(true);
+    try {
+      const result = await peopleRequest(user, {
+        action: "preference",
+        organizationId,
+        personId,
+        expectedOptOut: current,
+        optOut: !current,
+        consentConfirmed: consent,
+      });
+      if (version !== generation.current) return;
+      setData((old) => (old ? { ...old, person: result.person } : old));
+      setConsent(false);
+      setStatus(
+        current
+          ? "Nova autorização de contato registrada."
+          : "Bloqueio de contato registrado.",
+      );
+    } catch (e) {
+      if (version === generation.current)
+        setStatus(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      if (version === generation.current) {
+        lock.current = false;
+        setBusy(false);
       }
     }
-
-    void loadProfile();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, firebaseConfig, firebaseReady, personId, organizationId, user]);
-
-  const fullName = person ? getFullName(person) : "Ficha de membro";
-  const profileHealth = person ? getProfileHealth(person) : [];
-
-  const totalGiven = useMemo(() => {
-    return contributions.reduce((sum, item) => sum + item.amount, 0);
-  }, [contributions]);
-
-  const servingSummary = useMemo(() => {
-    if (!assignments.length) return null;
-
-    const sorted = [...assignments].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
-    const ministryCodes = Array.from(new Set(sorted.map((item) => item.ministryCode)));
-    const now = new Date();
-    const upcoming = assignments
-      .filter((item) => !["declined", "absent"].includes(item.status) && new Date(item.serviceDate) >= now)
-      .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))[0] ?? null;
-
-    return { latest: sorted[0], ministryCodes, upcoming };
-  }, [assignments]);
-
-  const handleAddContribution = async (e: React.FormEvent) => {
+  }
+  async function declare(e: React.FormEvent) {
     e.preventDefault();
-    const amountVal = parseFloat(newAmount);
-    if (isNaN(amountVal) || amountVal <= 0) return;
-
-    if (!configured || !firebaseReady || !user) { setStatus("Entre na sua conta para registrar."); return; }
-    if (contributionBusy.current) return;
-    contributionBusy.current = true; contributionAttempt.current ||= crypto.randomUUID();
-    let entry: MemberContribution;
+    if (!user || lock.current) return;
+    const value = Number(amount.replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) {
+      setStatus("Informe um valor válido.");
+      return;
+    }
+    const snapshot = JSON.stringify({
+      organizationId,
+      personId,
+      value,
+      category,
+    });
+    if (snapshot !== attempt.current.snapshot)
+      attempt.current = { snapshot, id: crypto.randomUUID() };
+    const version = generation.current;
+    lock.current = true;
+    setBusy(true);
     try {
-      const result = await financeRequest(user, { action: "declare", organizationId, personId, requestId: contributionAttempt.current, amount: amountVal, type: newCategory });
-      entry = { ...result.contribution, id: result.contributionId };
-      contributionAttempt.current = "";
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Não foi possível registrar."); return; }
-    finally { contributionBusy.current = false; }
-
-    setContributions(prev => [entry, ...prev]);
-    setNewAmount("");
-    setStatus(`Contribuição de R$ ${amountVal.toFixed(2)} registrada para conferência financeira.`);
-  };
-
+      const result = await financeRequest(user, {
+        action: "declare",
+        organizationId,
+        personId,
+        amount: value,
+        type: category,
+        requestId: attempt.current.id,
+      });
+      if (version !== generation.current) return;
+      const entry = { ...result.contribution, id: result.contributionId };
+      setData((old) =>
+        old
+          ? {
+              ...old,
+              contributions: [
+                entry,
+                ...(old.contributions || []).filter((c) => c.id !== entry.id),
+              ],
+            }
+          : old,
+      );
+      attempt.current = { snapshot: "", id: "" };
+      setAmount("");
+      setStatus("Declaração salva. O recebimento será conferido em Finanças.");
+    } catch (e) {
+      if (version === generation.current)
+        setStatus(
+          e instanceof Error ? e.message : "Não foi possível registrar.",
+        );
+    } finally {
+      if (version === generation.current) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  const p = data?.person;
+  const optedOut = p?.communicationOptOut === true || !!p?.whatsappOptOutAt;
+  const whatsapp = p
+    ? manualWhatsappLink(
+        p,
+        `Olá, ${p.preferredName || p.firstName}! Gostaríamos de saber como você está. Podemos conversar?`,
+      )
+    : null;
+  const address = p?.address
+    ? [
+        p.address.street,
+        p.address.number,
+        p.address.district,
+        p.address.city,
+        p.address.state,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const contributions = data?.contributions || [];
+  const confirmed = contributions
+    .filter((c) => c.status === "confirmed")
+    .reduce((sum, c) => sum + c.amount, 0);
+  const nextAssignments = [...(data?.assignments || [])]
+    .filter(
+      (a) =>
+        !["declined", "absent", "cancelled"].includes(a.status) &&
+        new Date(a.serviceDate).getTime() >= Date.now(),
+    )
+    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
   return (
-    <main className="form-page profile-page animate-entrance" style={{ maxWidth: 1400, padding: "2rem" }}>
-
-      {/* Cabeçalho do Perfil */}
-      <section className="profile-hero" style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "2rem" }}>
-        <div>
-          <Link className="back-link" href="/members" style={{ color: "var(--alvo-accent)" }}>
-            Voltar para membros
-          </Link>
-          <p className="eyebrow" style={{ color: "var(--alvo-accent)" }}>Ficha Inteligente</p>
-          <h1>{fullName}</h1>
-          <p style={{ color: "var(--alvo-ink-soft)", fontSize: 17, lineHeight: 1.55, maxWidth: 760 }}>
-            Visão pastoral integrada: acompanhe o progresso da jornada da alma, a participação nas células,
-            doações fiéis, voluntariado e trilha acadêmica de forma unificada.
+    <main className={s.page}>
+      <Link href="/members">Voltar para pessoas</Link>
+      <h1>{p ? personName(p) : "Ficha da pessoa"}</h1>
+      {!tenantReady ? (
+        <p>Verificando acesso…</p>
+      ) : !allowed ? (
+        <section className={s.card}>
+          <p>
+            A ficha completa é restrita à secretaria e aos pastores. Consulte
+            seu perfil ou o painel da liderança.
           </p>
-        </div>
-        <aside style={{ backgroundColor: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 24, padding: "1.5rem" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>
-            {person ? getMemberStatusLabel(person.memberStatus) : "Aguardando"}
-          </span>
-          <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--alvo-ink)", marginTop: 4, fontFamily: "monospace" }}>
-            {person?.memberCardCode ?? "Sem identificação externa"}
-          </strong>
-          <p style={{ fontSize: "0.75rem", color: "var(--alvo-ink-soft)", marginTop: 8 }}>{status}</p>
-        </aside>
-      </section>
-
-      {person ? (
+          <Link href="/app">Meu painel</Link> ·{" "}
+          <Link href="/me">Meu perfil</Link>
+        </section>
+      ) : (
         <>
-          {/* Métricas Principais */}
-          <section className="profile-summary-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1.25rem", marginTop: "2rem" }}>
-            <article style={S.card}>
-              <span style={S.label}>Idade</span>
-              <strong style={S.value}>
-                {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "Não informada"}
-              </strong>
-              <p style={S.hint}>
-                {person.birthDate ? formatDate(person.birthDate) : "nascimento não informado"}
-              </p>
-            </article>
-
-            <article style={S.card}>
-              <span style={S.label}>Casa / Família</span>
-              <strong style={{ ...S.value, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                {family ? family.displayName || family.familyName : "Sem família vinculada"}
-              </strong>
-              <p style={S.hint}>
-                {familyPeople.length} pessoas mapeadas no domicílio
-              </p>
-            </article>
-
-            <article style={S.card}>
-              <span style={S.label}>Parcerias / Esdras Passe</span>
-              <strong style={{ ...S.value, color: person.partnerBenefitsEnabled ? "#10b981" : "var(--alvo-ink-soft)" }}>
-                {person.partnerBenefitsEnabled ? "Habilitado" : "Não habilitado"}
-              </strong>
-              <p style={S.hint}>{person.partnerBenefitsEnabled ? "Validação de convênios ativada" : "Convênios ainda não ativados"}</p>
-            </article>
-
-            <article style={S.card}>
-              <span style={S.label}>Privacidade / LGPD</span>
-              <strong style={{ ...S.value, color: person.consentLgpdAt ? "#10b981" : "#d97706" }}>
-                {person.consentLgpdAt ? "Confirmado" : "Pendente"}
-              </strong>
-              <p style={S.hint}>{person.consentLgpdAt ? "Termo de consentimento assinado" : "Termo de consentimento ainda não assinado"}</p>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => void toggleWhatsappOptOut()} disabled={communicationBusy} style={{ marginTop: 10 }}>
-                {person.communicationOptOut ? "Reautorizar WhatsApp" : "Registrar opt-out do WhatsApp"}
-              </button>
-            </article>
-
-            <Link href="/my-tribe" style={{ textDecoration: "none" }}>
-              <article style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)", height: "100%" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)" }}>Tribo (vocação ministerial)</span>
-                <strong style={S.value}>
-                  {person.tribePrimaryCode ? getTribeDisplayLabel(person.tribePrimaryCode) : "Não classificada"}
-                </strong>
-                <p style={{ ...S.hint, color: "var(--alvo-accent)" }}>
-                  {person.tribePrimaryCode
-                    ? getTribeMinistrySummary(person.tribePrimaryCode)
-                    : "Classifique na página de Tribos"}
+          <div className={s.actions}>
+            <button
+              disabled={loading || busy}
+              onClick={() => setReload((v) => v + 1)}
+            >
+              Atualizar ficha
+            </button>
+            {whatsapp && (
+              <Link className={s.action} href={whatsapp}>
+                Preparar WhatsApp
+              </Link>
+            )}
+            {address && (
+              <a
+                className={s.action}
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir endereço no mapa
+              </a>
+            )}
+          </div>
+          <p role="status" className={s.status}>
+            {loading ? "Carregando ficha…" : busy ? "Salvando…" : status}
+          </p>
+          {data && p && (
+            <>
+              {data.notices.map((n) => (
+                <p className={s.notice} key={n}>
+                  {n}
                 </p>
-              </article>
-            </Link>
-
-            <Link href="/groups" style={{ textDecoration: "none" }}>
-              <article style={{ ...S.card, backgroundColor: "rgba(16,185,129,0.08)", borderLeft: "4px solid #10b981", height: "100%" }}>
-                <span style={{ fontSize: "0.75rem", color: "#059669" }}>Célula (comunidade)</span>
-                <strong style={S.value}>
-                  {personGroup ? personGroup.name : "Sem célula"}
-                </strong>
-                <p style={{ ...S.hint, color: "#059669" }}>
-                  {personGroup
-                    ? [personGroup.meetingTime, personGroup.city].filter(Boolean).join(" · ") || "Detalhes na página de Células"
-                    : "Vincule na página de Células"}
-                </p>
-              </article>
-            </Link>
-          </section>
-
-          {/* Linha do Tempo da Jornada Pastoral */}
-          <section style={{ marginTop: "2.5rem" }}>
-            <div style={S.cardLg}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-                <div>
-                  <span style={{ fontSize: "0.8rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Funil de Integração</span>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--alvo-ink)", marginTop: 4 }}>Linha do Tempo da Jornada Pastoral</h2>
-                </div>
-                <span style={{ fontSize: "0.8rem", background: "var(--alvo-accent-soft)", color: "var(--alvo-accent)", padding: "6px 12px", borderRadius: 10, fontWeight: 700 }}>
-                  Estágio atual: {JOURNEY_STAGES.find(s => s.code === activeStage)?.label || activeStage}
-                </span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", position: "relative", padding: "1rem 0" }}>
-                <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 4, backgroundColor: "var(--alvo-line)", zIndex: 1, transform: "translateY(-50%)" }} />
-
-                {JOURNEY_STAGES.map((stage, idx) => {
-                  const isCompleted = JOURNEY_STAGES.findIndex(s => s.code === activeStage) >= idx;
-                  const isActive = stage.code === activeStage;
-
-                  return (
-                    <button
-                      key={stage.code}
-                      onClick={() => setActiveStage(stage.code)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        zIndex: 2,
-                        width: "15%",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        outline: "none"
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: "50%",
-                          backgroundColor: isActive ? "var(--alvo-accent)" : isCompleted ? "var(--alvo-accent-dark)" : "var(--alvo-surface-muted)",
-                          border: isActive ? "4px solid var(--alvo-accent-soft)" : "2px solid var(--alvo-line)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: isCompleted || isActive ? "white" : "var(--alvo-ink-soft)",
-                          fontWeight: 800,
-                          transition: "all 0.3s ease"
-                        }}
-                        className={isActive ? "antigravity-float" : ""}
-                      >
-                        {idx + 1}
-                      </div>
-                      <strong style={{ color: isActive ? "var(--alvo-accent)" : isCompleted ? "var(--alvo-ink)" : "var(--alvo-ink-soft)", fontSize: "0.85rem", marginTop: 12, display: "block" }}>
-                        {stage.label}
-                      </strong>
-                      <span style={{ color: "var(--alvo-ink-soft)", fontSize: "0.7rem", marginTop: 4, display: "block", lineHeight: "1rem" }}>
-                        {stage.desc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          {/* Grid Principal */}
-          <section className="profile-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem", marginTop: "2.5rem" }}>
-
-            {/* Painel de Abas */}
-            <article style={S.cardLg}>
-
-              <div style={{ display: "flex", borderBottom: "1px solid var(--alvo-line)", paddingBottom: "1rem", gap: "1.5rem" }}>
-                {([
-                  { key: "cell", icon: <Users size={16} />, label: "⛪ Célula & Grupos" },
-                  { key: "finance", icon: <DollarSign size={16} />, label: "💵 Contribuições" },
-                  { key: "academy", icon: <BookOpen size={16} />, label: "🎓 Ensino / EAD" },
-                  { key: "serving", icon: <Music size={16} />, label: "🎸 Ministérios / Escalas" },
-                ] as const).map(tab => (
+              ))}
+              <section className={s.metrics}>
+                <article className={s.card}>
+                  Situação pastoral
+                  <strong>
+                    {statusLabels[p.memberStatus] || p.memberStatus}
+                  </strong>
+                  <p>
+                    {p.status === "active"
+                      ? "Cadastro ativo"
+                      : "Cadastro inativo"}
+                  </p>
+                </article>
+                <article className={s.card}>
+                  Família
+                  <strong>
+                    {data.family?.displayName ||
+                      data.family?.familyName ||
+                      "Sem família"}
+                  </strong>
+                </article>
+                <article className={s.card}>
+                  Tribo
+                  <strong>
+                    {p.tribePrimaryCode
+                      ? getTribeDisplayLabel(p.tribePrimaryCode)
+                      : "Não classificada"}
+                  </strong>
+                  <Link href="/tribes">Consultar tribos</Link>
+                </article>
+              </section>
+              <div className={s.tabs} aria-label="Seções da ficha">
+                {[
+                  ["care", "Integração e família"],
+                  ["finance", "Contribuições"],
+                  ["serving", "Escalas"],
+                  ["contact", "Contato e privacidade"],
+                ].map(([key, label]) => (
                   <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: activeTab === tab.key ? "var(--alvo-accent)" : "var(--alvo-ink-soft)",
-                      fontWeight: 800,
-                      fontSize: "0.95rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingBottom: "12px",
-                      borderBottom: activeTab === tab.key ? "3px solid var(--alvo-accent)" : "none"
-                    }}
+                    key={key}
+                    aria-pressed={tab === key}
+                    onClick={() => setTab(key)}
                   >
-                    {tab.icon}
-                    {tab.label}
+                    {label}
                   </button>
                 ))}
               </div>
-
-              <div style={{ marginTop: "2rem" }}>
-
-                {activeTab === "cell" && (
-                  <div>
-                    <h3>{personGroup?.name ?? "Sem célula vinculada"}</h3>
-                    <p>{personGroup ? [personGroup.meetingTime, personGroup.city].filter(Boolean).join(" · ") : "Vincule o membro a uma célula para acompanhar sua participação."}</p>
+              {tab === "care" && (
+                <div className={s.grid}>
+                  <section className={s.card}>
+                    <h2>Jornada de integração</h2>
+                    <p>
+                      <strong>
+                        {data.integration?.label ||
+                          "Consulta de integração indisponível"}
+                      </strong>
+                    </p>
+                    <p>
+                      A etapa exibida é a registrada em Jornadas e compartilhada
+                      com o app do membro.
+                    </p>
+                    <Link href="/journeys">Acompanhar em Jornadas</Link>
+                    <h2 style={{ marginTop: 24 }}>Células ativas</h2>
+                    {data.integration ? (
+                      data.groups.length ? (
+                        data.groups.map((g) => (
+                          <p key={g.id}>
+                            <strong>{g.name}</strong>
+                            <br />
+                            {[g.meetingTime, g.city]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        ))
+                      ) : (
+                        <p>Nenhuma célula ativa vinculada.</p>
+                      )
+                    ) : (
+                      <p>
+                        Não foi possível consultar os vínculos. Consulte
+                        Células.
+                      </p>
+                    )}
                     <Link href="/groups">Consultar células e presenças</Link>
-                  </div>
-                )}
-
-                {activeTab === "finance" && (
-                  <div className="animate-entrance">
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "2rem" }}>
-                      <div style={S.card}>
-                        <span style={S.label}>Contribuição Consolidada</span>
-                        <strong style={{ display: "block", fontSize: "2rem", color: "#10b981", marginTop: 4 }}>
-                          R$ {totalGiven.toFixed(2)}
-                        </strong>
-                        <p style={S.hint}>Dízimos e Ofertas registradas no CPF</p>
-                      </div>
-
-                      <form onSubmit={handleAddContribution} style={S.cardMuted}>
-                        <h4 style={{ fontSize: "0.85rem", color: "var(--alvo-ink)", fontWeight: 800, marginBottom: "1rem" }}>Lançar Nova Doação</h4>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <select
-                            value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value as ContributionType)}
-                            style={{ flex: 1, padding: "8px", backgroundColor: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 8, color: "var(--alvo-ink)" }}
+                    <h2 style={{ marginTop: 24 }}>Ensino</h2>
+                    <p>
+                      O progresso das aulas permanece na Escola EAD; ele ainda
+                      não é consolidado nesta ficha.
+                    </p>
+                    <Link href="/learning/manage">Consultar cursos</Link>
+                  </section>
+                  <section className={s.card}>
+                    <h2>Pessoas da família</h2>
+                    {data.familyPeople.length ? (
+                      <div className={s.list}>
+                        {data.familyPeople.map((relative) => (
+                          <Link
+                            className={s.row}
+                            key={relative.id}
+                            href={`/members/${relative.id}`}
                           >
-                            <option value="dizimo">Dízimo</option>
-                            <option value="oferta">Oferta</option>
-                            <option value="missao">Missões</option>
-                            <option value="campanha">Campanha</option>
-                            <option value="outro">Outro</option>
-                          </select>
-                          <input
-                            type="number"
-                            required
-                            placeholder="R$ 100,00"
-                            value={newAmount}
-                            onChange={(e) => setNewAmount(e.target.value)}
-                            style={{ flex: 1, padding: "8px", backgroundColor: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 8, color: "var(--alvo-ink)" }}
-                          />
-                          <button type="submit" style={{ backgroundColor: "var(--alvo-accent)", color: "white", border: "none", borderRadius: 8, padding: "0 12px", cursor: "pointer" }}>
-                            <Plus size={16} />
+                            {personName(relative)}
+                            {relative.status !== "active" ? " · Inativo" : ""}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>Sem pessoas vinculadas a uma família disponível.</p>
+                    )}
+                    <p>
+                      Os nomes vêm do vínculo familiar registrado. Responsáveis
+                      legais são conferidos no serviço Kids.
+                    </p>
+                  </section>
+                </div>
+              )}
+              {tab === "finance" && (
+                <section className={s.card}>
+                  <h2>Contribuições desta pessoa</h2>
+                  {data.contributions === null ? (
+                    <p>Consulta financeira indisponível nesta instituição.</p>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>{money(confirmed)}</strong> confirmados nos{" "}
+                        {contributions.length} registros exibidos.
+                      </p>
+                      <p>
+                        Declarações e comprovantes aguardam conferência.
+                        Registros antigos sem situação explícita não entram
+                        neste total.
+                      </p>
+                      <form onSubmit={declare}>
+                        <div className={s.filters}>
+                          <label>
+                            Valor declarado (R$)
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              required
+                              value={amount}
+                              onChange={(e) => setAmount(e.target.value)}
+                              disabled={busy}
+                            />
+                          </label>
+                          <label>
+                            Categoria
+                            <select
+                              value={category}
+                              onChange={(e) => setCategory(e.target.value)}
+                              disabled={busy}
+                            >
+                              {[
+                                ["dizimo", "Dízimo"],
+                                ["oferta", "Oferta"],
+                                ["missao", "Missões"],
+                                ["outro", "Outro"],
+                              ].map(([k, v]) => (
+                                <option key={k} value={k}>
+                                  {v}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button type="submit" disabled={busy}>
+                            Registrar declaração
                           </button>
                         </div>
                       </form>
+                      <div className={s.table}>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Data</th>
+                              <th>Categoria</th>
+                              <th>Situação</th>
+                              <th>Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {contributions.map((c) => (
+                              <tr key={c.id}>
+                                <td>{date(c.date)}</td>
+                                <td>{c.type}</td>
+                                <td>{contributionStatus(c.status)}</td>
+                                <td>{money(c.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {!contributions.length && (
+                        <p>Nenhuma contribuição registrada.</p>
+                      )}
+                    </>
+                  )}
+                  <div className={s.actions}>
+                    <Link href="/finance">Abrir Finanças</Link>
+                  </div>
+                </section>
+              )}
+              {tab === "serving" && (
+                <section className={s.card}>
+                  <h2>Próximas escalas</h2>
+                  {data.assignments === null ? (
+                    <p>Consulta de escalas indisponível.</p>
+                  ) : nextAssignments.length ? (
+                    <div className={s.list}>
+                      {nextAssignments.map((a) => (
+                        <article className={s.row} key={a.id}>
+                          <span>
+                            <strong>
+                              {a.ministryCode} · {a.role}
+                            </strong>
+                            <small>
+                              {date(a.serviceDate)} ·{" "}
+                              {a.status === "confirmed"
+                                ? "Confirmada"
+                                : "Aguardando participação"}
+                            </small>
+                          </span>
+                        </article>
+                      ))}
                     </div>
-
-                    <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--alvo-ink)", fontSize: "0.85rem" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "1px solid var(--alvo-line)", textAlign: "left" }}>
-                          {["Data", "Categoria", "Canal", "Observação", "Valor"].map(h => (
-                            <th key={h} style={{ padding: "10px 0", color: "var(--alvo-ink-soft)", textAlign: h === "Valor" ? "right" : "left" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {contributions.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} style={{ padding: "16px 0", color: "var(--alvo-ink-soft)" }}>
-                              Nenhuma contribuição registrada para este membro.
-                            </td>
-                          </tr>
-                        ) : contributions.map((item) => (
-                          <tr key={item.id} style={{ borderBottom: "1px solid var(--alvo-line)" }}>
-                            <td style={{ padding: "12px 0" }}>{formatDate(item.date)}</td>
-                            <td style={{ padding: "12px 0", fontWeight: 700 }}>{CONTRIBUTION_TYPE_LABELS[item.type] ?? item.type}</td>
-                            <td style={{ padding: "12px 0" }}>
-                              <span style={{ backgroundColor: "var(--alvo-surface-muted)", border: "1px solid var(--alvo-line)", padding: "2px 8px", borderRadius: 6, fontSize: "0.75rem" }}>{item.culto || "Lançamento Manual"}</span>
-                            </td>
-                            <td style={{ padding: "12px 0", color: "var(--alvo-ink-soft)" }}>{item.description || "—"}</td>
-                            <td style={{ padding: "12px 0", textAlign: "right", color: "#10b981", fontWeight: 700 }}>R$ {item.amount.toFixed(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  ) : (
+                    <p>
+                      Nenhuma escala futura encontrada nos registros
+                      consultados.
+                    </p>
+                  )}
+                  <div className={s.actions}>
+                    <Link href="/serving">Consultar todas as escalas</Link>
                   </div>
-                )}
-
-                {activeTab === "academy" && (
-                  <div>
-                    <h3>Ensino / EAD</h3>
-                    <p>O acompanhamento acadêmico ainda não está disponível nesta ficha.</p>
-                    <Link href="/learning/manage">Consultar cursos</Link>
-                  </div>
-                )}
-
-                {activeTab === "serving" && (
-                  <div className="animate-entrance">
-                    <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--alvo-ink)", marginBottom: "1.5rem" }}>
-                      Ministérios Ativos & Próximas Escalas
-                    </h3>
-
-                    {servingSummary ? (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                        <div style={{ ...S.card, backgroundColor: "rgba(139,92,246,0.05)", borderLeft: "4px solid #8b5cf6" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#8b5cf6", textTransform: "uppercase", fontWeight: 800 }}>Ministério Principal</span>
-                          <strong style={{ ...S.value, fontSize: "1.25rem" }}>
-                            {MINISTRY_NAMES[servingSummary.latest.ministryCode] ?? servingSummary.latest.ministryCode}
-                          </strong>
-                          <p style={{ ...S.hint, fontSize: "0.8rem" }}>
-                            Função: <strong style={S.ink}>{servingSummary.latest.role}</strong>
-                          </p>
-                          {servingSummary.ministryCodes.length > 1 && (
-                            <p style={S.hint}>
-                              Também serve em: {servingSummary.ministryCodes
-                                .slice(1)
-                                .map((code) => MINISTRY_NAMES[code] ?? code)
-                                .join(", ")}
-                            </p>
-                          )}
-                        </div>
-
-                        <div style={{ ...S.card, backgroundColor: "var(--alvo-accent-soft)", borderLeft: "4px solid var(--alvo-accent)" }}>
-                          <span style={{ fontSize: "0.75rem", color: "var(--alvo-accent)", textTransform: "uppercase", fontWeight: 800 }}>Próxima Escala</span>
-                          {servingSummary.upcoming ? (
-                            <>
-                              <strong style={{ ...S.value, fontSize: "1.25rem" }}>
-                                {MINISTRY_NAMES[servingSummary.upcoming.ministryCode] ?? servingSummary.upcoming.ministryCode}
-                              </strong>
-                              <p style={{ ...S.hint, fontSize: "0.8rem" }}>
-                                Data: <strong style={S.ink}>{formatDateTime(servingSummary.upcoming.serviceDate)}</strong>
-                              </p>
-                              {["confirmed", "present"].includes(servingSummary.upcoming.status) ? (
-                                <p style={{ ...S.hint, color: "#10b981", fontWeight: 700 }}>
-                                  ✓ Presença confirmada
-                                </p>
-                              ) : (
-                                <p style={{ ...S.hint, color: "#f59e0b", fontWeight: 700 }}>
-                                  Aguardando confirmação
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <strong style={{ ...S.value, fontSize: "1.25rem" }}>Sem escala futura</strong>
-                              <p style={{ ...S.hint, fontSize: "0.8rem" }}>
-                                Nenhuma escala agendada para os próximos cultos.
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={S.cardMuted}>
-                        <strong style={{ ...S.value, fontSize: "1.1rem" }}>Nenhum ministério ativo</strong>
-                        <p style={{ ...S.hint, fontSize: "0.85rem", lineHeight: "1.4" }}>
-                          Esta pessoa ainda não foi escalada em nenhum ministério. Use a área de Escalas para incluí-la em uma equipe de voluntariado.
-                        </p>
-                      </div>
+                </section>
+              )}
+              {tab === "contact" && (
+                <div className={s.grid}>
+                  <section className={s.card}>
+                    <h2>Contato</h2>
+                    <p>
+                      Telefone:{" "}
+                      {p.mobilePhone || p.whatsappPhone || "Não informado"}
+                    </p>
+                    <p>E-mail: {p.email || "Não informado"}</p>
+                    <p>Endereço: {address || "Não informado"}</p>
+                    <p>Nascimento: {date(p.birthDate)}</p>
+                    <h2>WhatsApp</h2>
+                    <p>
+                      {optedOut
+                        ? "Contato bloqueado pela preferência registrada."
+                        : "Sem bloqueio de contato registrado."}
+                    </p>
+                    {optedOut && (
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={consent}
+                          onChange={(e) => setConsent(e.target.checked)}
+                          disabled={busy}
+                        />{" "}
+                        A pessoa autorizou novamente o contato por WhatsApp.
+                      </label>
                     )}
-                  </div>
-                )}
-
-              </div>
-            </article>
-
-            {/* Dados Pastorais / Sidebar */}
-            <aside style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-
-              <div style={S.cardLg}>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", marginBottom: "1.25rem" }}>Contato Rápido</h3>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.85rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink-soft)" }}>
-                    <Smartphone size={16} style={{ color: "var(--alvo-accent)" }} />
-                    <span>{person.mobilePhone || person.whatsappPhone || "Telefone não informado"}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink-soft)" }}>
-                    <Mail size={16} style={{ color: "var(--alvo-accent)" }} />
-                    <span style={{ wordBreak: "break-all" }}>{person.email || "contato@plataformaesdras.com.br"}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--alvo-ink-soft)" }}>
-                    <MapPin size={16} style={{ color: "var(--alvo-accent)" }} />
-                    <span>{formatAddress(person.address)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={S.cardLg}>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)", marginBottom: "1.25rem" }}>Atenção Pastoral</h3>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {profileHealth.map((item) => (
-                    <div key={item.title} style={{ borderBottom: "1px solid var(--alvo-line)", paddingBottom: "0.75rem" }}>
-                      <strong style={{ display: "block", fontSize: "0.85rem", color: "var(--alvo-accent)" }}>{item.title}</strong>
-                      <p style={{ ...S.hint, lineHeight: "1.4" }}>{item.detail}</p>
+                    <div className={s.actions}>
+                      <button
+                        disabled={busy || (optedOut && !consent)}
+                        onClick={() => void preference()}
+                      >
+                        {optedOut
+                          ? "Registrar nova autorização"
+                          : "Bloquear contato por WhatsApp"}
+                      </button>
                     </div>
-                  ))}
+                  </section>
+                  <section className={s.card}>
+                    <h2>Esdras Passe</h2>
+                    <p>
+                      {p.partnerBenefitsEnabled
+                        ? "Benefícios habilitados"
+                        : "Benefícios não habilitados"}
+                    </p>
+                    <p>Identificação: {p.memberCardCode || "Não emitida"}</p>
+                    <p>
+                      A carteira e o QR de validação são acessados pelo próprio
+                      membro no app. Esta ficha não emite um QR.
+                    </p>
+                    <p>Consentimento registrado: {date(p.consentLgpdAt)}</p>
+                  </section>
                 </div>
-              </div>
-
-              {/* Esdras Passe Card */}
-              <div style={S.cardLg}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--alvo-ink)" }}>Esdras Passe</h3>
-                  <QrCode size={20} style={{ color: "var(--alvo-accent)" }} />
-                </div>
-                <p style={{ ...S.hint, lineHeight: "1.4", marginBottom: "1.5rem", fontSize: "0.8rem" }}>
-                  Carteira digital com QR Code criptografado para validação em parceiros locais da comunidade Esdras.
-                </p>
-
-                <div style={{ display: "flex", gap: "1rem", alignItems: "center", backgroundColor: "var(--alvo-surface-muted)", padding: "1rem", borderRadius: 16, border: "1px solid var(--alvo-line)" }}>
-                  <div style={{ backgroundColor: "var(--alvo-ink)", padding: 6, borderRadius: 8, color: "white" }}>
-                    <QrCode size={50} />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "0.65rem", color: "var(--alvo-ink-soft)", textTransform: "uppercase", display: "block" }}>MEMBER IDENTIFIER</span>
-                    <strong style={{ fontSize: "1rem", color: "var(--alvo-ink)", fontFamily: "monospace" }}>{person.memberCardCode || "Não emitido"}</strong>
-                  </div>
-                </div>
-              </div>
-
-            </aside>
-          </section>
+              )}
+            </>
+          )}
         </>
-      ) : (
-        <section className="profile-panel" style={{ marginTop: "2rem", ...S.cardLg }}>
-          <h2 style={S.ink}>{status}</h2>
-          <p style={{ ...S.soft, marginTop: "1rem" }}>
-            Se você acabou de cadastrar o membro, retorne à lista de busca e verifique a ficha novamente.
-          </p>
-          <Link className="primary-button" href="/members" style={{ marginTop: "1.5rem" }}>
-            Voltar para membros
-          </Link>
-        </section>
       )}
-
     </main>
   );
-}
-
-function getFullName(person: Person) {
-  return `${person.preferredName || person.firstName} ${person.lastName}`.trim();
-}
-
-function calculateAge(birthDate: string) {
-  const birth = new Date(`${birthDate}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDelta = today.getMonth() - birth.getMonth();
-
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
-    age -= 1;
-  }
-
-  return Number.isFinite(age) ? age : 0;
-}
-
-function formatDate(value: string) {
-  try {
-    return formatCalendarDate(value);
-  } catch (e) {
-    return value;
-  }
-}
-
-function formatDateTime(value: string) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function formatAddress(address: Person["address"] | Family["address"]) {
-  if (!address) {
-    return "Endereço não informado";
-  }
-
-  return [address.street, address.number, address.district, address.city, address.state]
-    .filter(Boolean)
-    .join(", ") || "Endereço não informado";
-}
-
-function getMemberStatusLabel(status: Person["memberStatus"]) {
-  switch (status) {
-    case "visitor":
-      return "Visitante";
-    case "congregant":
-      return "Congregado";
-    case "new_believer":
-      return "Novo Convertido";
-    case "member":
-      return "Membro";
-    case "leader":
-      return "Líder";
-    case "volunteer":
-      return "Voluntário";
-    default:
-      return "Membro";
-  }
-}
-
-function getProfileHealth(person: Person) {
-  const items = [];
-
-  if (!person.primaryFamilyId) {
-    items.push({
-      title: "Vincular Família",
-      detail: "Sem grupo familiar vinculado. Ligue esta pessoa a uma casa para rastreamento de núcleo domiciliar."
-    });
-  }
-
-  if (!person.whatsappPhone && !person.mobilePhone) {
-    items.push({
-      title: "Telefone de Contato",
-      detail: "Nenhum celular ou WhatsApp registrado na base de dados sensível."
-    });
-  }
-
-  if (!person.consentLgpdAt) {
-    items.push({
-      title: "Consentimento LGPD",
-      detail: "Membro ainda não tem assinatura de conformidade com dados protegidos."
-    });
-  }
-
-  if (!items.length) {
-    items.push({
-      title: "Engajamento Excelente",
-      detail: "Todas as tarefas cadastrais e de privacidade estão resolvidas para esta pessoa."
-    });
-  }
-
-  return items;
 }

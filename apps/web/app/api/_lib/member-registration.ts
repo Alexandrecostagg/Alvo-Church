@@ -9,6 +9,7 @@ import {
   resolveBillingStatus,
   type PlanId,
 } from "@alvo/firebase/src/plans";
+import { planHasModule } from "@alvo/firebase";
 import { generateSecureCode } from "@alvo/utils";
 import { birthDateError, isValidCpf } from "../../../src/lib/member-form";
 
@@ -56,13 +57,41 @@ function choice(data: Data, key: string, values: string[], fallback: string) {
 export function validateRegistration(raw: unknown) {
   const body = record(raw),
     source = record(body.person);
-  const workflow = choice(body, "workflow", ["member", "reception", "serving"], "member");
-  const receptionSource = workflow === "reception" ? record(body.reception) : null;
-  const reception = receptionSource ? { source: str(receptionSource, "source", 120, true), note: str(receptionSource, "note", 1000), intakeId: str(receptionSource, "intakeId", 128) } : null;
-  if (reception?.intakeId && !/^[a-zA-Z0-9_-]+$/.test(reception.intakeId)) return reject("Visitante inválido.");
+  const workflow = choice(
+    body,
+    "workflow",
+    ["member", "reception", "serving"],
+    "member",
+  );
+  const receptionSource =
+    workflow === "reception" ? record(body.reception) : null;
+  const reception = receptionSource
+    ? {
+        source: str(receptionSource, "source", 120, true),
+        note: str(receptionSource, "note", 1000),
+        intakeId: str(receptionSource, "intakeId", 128),
+        consentContact: flag(receptionSource, "consentContact"),
+      }
+    : null;
+  if (reception?.intakeId && !/^[a-zA-Z0-9_-]+$/.test(reception.intakeId))
+    return reject("Visitante inválido.");
   const servingSource = workflow === "serving" ? record(body.serving) : null;
-  const serving = servingSource ? { serviceTeamId: str(servingSource, "serviceTeamId", 128, true), role: str(servingSource, "role", 120, true), serviceDate: str(servingSource, "serviceDate", 30, true) } : null;
-  if (serving && (!/^[a-zA-Z0-9_-]+$/.test(serving.serviceTeamId!) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(serving.serviceDate!) || !Number.isFinite(Date.parse(serving.serviceDate!)))) return reject("Escala inválida.");
+  const serving = servingSource
+    ? {
+        serviceTeamId: str(servingSource, "serviceTeamId", 128, true),
+        role: str(servingSource, "role", 120, true),
+        serviceDate: str(servingSource, "serviceDate", 30, true),
+      }
+    : null;
+  if (
+    serving &&
+    (!/^[a-zA-Z0-9_-]+$/.test(serving.serviceTeamId!) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(
+        serving.serviceDate!,
+      ) ||
+      !Number.isFinite(Date.parse(serving.serviceDate!)))
+  )
+    return reject("Escala inválida.");
   const organizationId = str(body, "organizationId", 128, true)!;
   const requestId = str(body, "requestId", 36, true)!;
   if (
@@ -163,7 +192,17 @@ export function validateRegistration(raw: unknown) {
     : null;
   if (workflow === "reception") person.memberStatus = "visitor";
   if (workflow === "serving") person.memberStatus = "volunteer";
-  return { organizationId, requestId, person, family, familyMember, consent, workflow, reception, serving };
+  return {
+    organizationId,
+    requestId,
+    person,
+    family,
+    familyMember,
+    consent,
+    workflow,
+    reception,
+    serving,
+  };
 }
 
 function encode(value: any): Data {
@@ -262,10 +301,15 @@ export async function registerMember(raw: unknown, uid: string) {
         orgPath,
         `${orgPath}/users/${uid}`,
         `${orgPath}/settings/subscription`,
+        `${orgPath}/settings/features`,
         operationPath,
         ...(cpfPath ? [cpfPath] : []),
-        ...(reception?.intakeId ? [`${orgPath}/visitorIntakes/${reception.intakeId}`] : []),
-        ...(serving ? [`${orgPath}/serviceTeams/${serving.serviceTeamId}`] : []),
+        ...(reception?.intakeId
+          ? [`${orgPath}/visitorIntakes/${reception.intakeId}`]
+          : []),
+        ...(serving
+          ? [`${orgPath}/serviceTeams/${serving.serviceTeamId}`]
+          : []),
       ];
       const rows = (await call(":batchGet", {
         documents: paths.map(name),
@@ -295,6 +339,39 @@ export async function registerMember(raw: unknown, uid: string) {
           403,
           "Você não pode cadastrar membros nesta igreja.",
         );
+      const features = docs.get(name(`${orgPath}/settings/features`));
+      for (const module of workflow === "reception"
+        ? ["core", "visitors", "journeys"]
+        : ["core"]) {
+        if (features?.modules?.[module]?.enabled === false)
+          throw new RegistrationError(
+            403,
+            "Este módulo está temporariamente indisponível.",
+          );
+      }
+      const receptionSubscription = docs.get(
+        name(`${orgPath}/settings/subscription`),
+      );
+      if (
+        workflow === "reception" &&
+        receptionSubscription &&
+        !planHasModule(
+          receptionSubscription.plan ||
+            (
+              {
+                enterprise: "enterprise",
+                advanced: "pastoral",
+                growth: "comunidade",
+              } as Data
+            )[receptionSubscription.planTier] ||
+            "free",
+          "journeys",
+        )
+      )
+        throw new RegistrationError(
+          403,
+          "Jornadas não está incluído neste plano.",
+        );
       const previous = docs.get(name(operationPath));
       if (previous) {
         if (previous.uid !== uid || previous.fingerprint !== fingerprint)
@@ -304,11 +381,33 @@ export async function registerMember(raw: unknown, uid: string) {
           );
         return { ...previous.result, replayed: true };
       }
-      const intake = reception?.intakeId ? docs.get(name(`${orgPath}/visitorIntakes/${reception.intakeId}`)) : null;
-      if (reception?.intakeId && (!intake || intake.organizationId !== organizationId || intake.personId || intake.status !== "captured")) throw new RegistrationError(409, "Este visitante já foi integrado ou não está disponível. Atualize a lista.");
+      const intake = reception?.intakeId
+        ? docs.get(name(`${orgPath}/visitorIntakes/${reception.intakeId}`))
+        : null;
+      if (
+        reception?.intakeId &&
+        (!intake ||
+          intake.organizationId !== organizationId ||
+          intake.personId ||
+          intake.status !== "captured")
+      )
+        throw new RegistrationError(
+          409,
+          "Este visitante já foi integrado ou não está disponível. Atualize a lista.",
+        );
       if (serving) {
-        const team = docs.get(name(`${orgPath}/serviceTeams/${serving.serviceTeamId}`));
-        if (!team || team.organizationId !== organizationId || team.status === "inactive") throw new RegistrationError(409, "Ministério indisponível. Atualize a lista.");
+        const team = docs.get(
+          name(`${orgPath}/serviceTeams/${serving.serviceTeamId}`),
+        );
+        if (
+          !team ||
+          team.organizationId !== organizationId ||
+          team.status === "inactive"
+        )
+          throw new RegistrationError(
+            409,
+            "Ministério indisponível. Atualize a lista.",
+          );
       }
       if (cpfPath && docs.has(name(cpfPath)))
         throw new RegistrationError(
@@ -378,10 +477,22 @@ export async function registerMember(raw: unknown, uid: string) {
         ? `ESDRAS-${generateSecureCode(24)}`
         : undefined;
       const createdAt = new Date().toISOString();
-      const intakeId = workflow === "reception" ? reception?.intakeId ?? `visitor_intake_${requestId}` : undefined;
+      const intakeId =
+        workflow === "reception"
+          ? (reception?.intakeId ?? `visitor_intake_${requestId}`)
+          : undefined;
       const journeyId = intakeId ? `journey_${requestId}` : undefined;
-      const assignmentId = serving ? `service_assignment_${requestId}` : undefined;
-      const result = { personId, familyId, memberCardCode, intakeId, journeyId, assignmentId };
+      const assignmentId = serving
+        ? `service_assignment_${requestId}`
+        : undefined;
+      const result = {
+        personId,
+        familyId,
+        memberCardCode,
+        intakeId,
+        journeyId,
+        assignmentId,
+      };
       const create = (path: string, data: Data) => ({
         update: { name: name(path), fields: encode(data).mapValue.fields },
         currentDocument: { exists: false },
@@ -394,7 +505,13 @@ export async function registerMember(raw: unknown, uid: string) {
           primaryFamilyId: familyId,
           memberCardCode,
           consentLgpdAt: consent ? createdAt : undefined,
-          ...(intake?.consentMarketing === false ? { communicationOptOut: true, whatsappOptOutAt: createdAt } : {}),
+          ...((
+            intake
+              ? intake.consentMarketing !== true
+              : reception && !reception.consentContact
+          )
+            ? { communicationOptOut: true, whatsappOptOutAt: createdAt }
+            : {}),
           status: "active",
           createdAt,
         }),
@@ -408,16 +525,102 @@ export async function registerMember(raw: unknown, uid: string) {
         },
       ];
       if (reception && intakeId && journeyId) {
-        const intakeData = { organizationId, id: intakeId, personId, journeyId, name: `${person.firstName} ${person.lastName}`.trim(), phone: person.whatsappPhone ?? person.mobilePhone ?? null, source: reception.source, greeting: reception.note ?? "", status: "journey_created", capturedByUserId: uid, createdAt: intake?.createdAt ?? createdAt, integratedAt: createdAt };
-        if (intake) writes.push({ update: { name: name(`${orgPath}/visitorIntakes/${intakeId}`), fields: encode(intakeData).mapValue.fields }, updateMask: { fieldPaths: Object.keys(intakeData) }, currentDocument: { exists: true } });
-        else writes.push(create(`${orgPath}/visitorIntakes/${intakeId}`, intakeData));
-        writes.push(create(`${orgPath}/visitorJourneys/${journeyId}`, { id: journeyId, organizationId, personId, originChannel: intake?.source === "whatsapp" ? "whatsapp" : intake?.source === "public_form" ? "form" : "secretary", currentStage: "new_visitor", status: "active", assignedToUserId: uid, firstVisitDate: createdAt, nextActionAt: createdAt, createdAt }));
-        for (const [suffix, title, type] of [["welcome", "Enviar boas-vindas no WhatsApp", "welcome_message"], ["group", "Convidar para uma célula", "invite_to_group"]]) {
+        const intakeData = {
+          organizationId,
+          id: intakeId,
+          personId,
+          journeyId,
+          name: `${person.firstName} ${person.lastName}`.trim(),
+          phone: person.whatsappPhone ?? person.mobilePhone ?? null,
+          source: reception.source,
+          greeting: reception.note ?? "",
+          status: "journey_created",
+          capturedByUserId: uid,
+          createdAt: intake?.createdAt ?? createdAt,
+          integratedAt: createdAt,
+          consentMarketing: intake
+            ? intake.consentMarketing === true
+            : reception.consentContact,
+          revision: (intake?.revision || 0) + 1,
+        };
+        if (intake)
+          writes.push({
+            update: {
+              name: name(`${orgPath}/visitorIntakes/${intakeId}`),
+              fields: encode(intakeData).mapValue.fields,
+            },
+            updateMask: { fieldPaths: Object.keys(intakeData) },
+            currentDocument: { exists: true },
+          });
+        else
+          writes.push(
+            create(`${orgPath}/visitorIntakes/${intakeId}`, intakeData),
+          );
+        writes.push(
+          create(`${orgPath}/visitorJourneys/${journeyId}`, {
+            id: journeyId,
+            organizationId,
+            personId,
+            originChannel:
+              intake?.source === "whatsapp"
+                ? "whatsapp"
+                : intake?.source === "public_form"
+                  ? "form"
+                  : "secretary",
+            currentStage: "new_visitor",
+            status: "active",
+            assignedToUserId: uid,
+            firstVisitDate: intake?.createdAt ?? createdAt,
+            nextActionAt: createdAt,
+            createdAt,
+          }),
+        );
+        writes.push(
+          create(
+            `${orgPath}/receptionAudit/${intakeId}_${intakeData.revision}`,
+            {
+              requestId: intakeId,
+              actorUserId: uid,
+              action: intake ? "integrated_new" : "captured_new",
+              revision: intakeData.revision,
+              at: createdAt,
+            },
+          ),
+        );
+        for (const [suffix, title, type] of [
+          ["welcome", "Realizar acolhimento pessoal", "welcome_message"],
+          ["group", "Convidar para uma célula", "invite_to_group"],
+        ]) {
           const id = `followup_${requestId}_${suffix}`;
-          writes.push(create(`${orgPath}/followUpTasks/${id}`, { id, organizationId, personId, visitorJourneyId: journeyId, assignedToUserId: uid, title, type, status: "open", createdAt, dueAt: createdAt }));
+          writes.push(
+            create(`${orgPath}/followUpTasks/${id}`, {
+              id,
+              organizationId,
+              personId,
+              visitorJourneyId: journeyId,
+              assignedToUserId: uid,
+              title,
+              type,
+              status: "open",
+              createdAt,
+              dueAt: createdAt,
+            }),
+          );
         }
       }
-      if (serving && assignmentId) writes.push(create(`${orgPath}/serviceAssignments/${assignmentId}`, { ...serving, id: assignmentId, organizationId, personId, ministryCode: serving.serviceTeamId, status: "pending", createdAt, updatedAt: createdAt }));
+      if (serving && assignmentId)
+        writes.push(
+          create(`${orgPath}/serviceAssignments/${assignmentId}`, {
+            ...serving,
+            id: assignmentId,
+            organizationId,
+            personId,
+            ministryCode: serving.serviceTeamId,
+            status: "pending",
+            createdAt,
+            updatedAt: createdAt,
+          }),
+        );
       if (family && familyId) {
         writes.push(
           create(`${orgPath}/families/${familyId}`, {

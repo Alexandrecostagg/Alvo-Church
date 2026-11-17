@@ -84,6 +84,13 @@ export interface RoleHomeSnapshot {
     date: string;
     groupId?: string;
   }>;
+  care?: {
+    scope: string;
+    asOf: string;
+    partial: boolean;
+    summary: { open: number; urgent: number; unassigned: number; overdue: number; inProgress: number };
+    requests: Array<{ id: string; personName: string; priority: string; dueAt: string | null; ownerName: string; status: string; revision: number }>;
+  };
   integrationEnabled?: boolean;
   tasks: Array<{
     id: string;
@@ -108,6 +115,13 @@ export interface RoleHomeSnapshot {
     date: string | null;
     members: number | null;
     groups: number | null;
+    careOpen?: number | null;
+    careInProgress?: number | null;
+    careUrgent?: number | null;
+    careOverdue?: number | null;
+    careAsOf?: string;
+    receptionPending?: number | null;
+    receptionAsOf?: string;
   }>;
 }
 export function isChurchStaff(roles: readonly string[]) {
@@ -173,7 +187,7 @@ export function homeRouteAllowed(
   )
     return isChurchStaff(roles);
   if (path.startsWith("/pastoral-ai") || path.startsWith("/care-radar"))
-    return isChurchStaff(roles);
+    return roles.some(r => ["super_admin", "church_admin", "pastor", "group_leader"].includes(r));
   return true;
 }
 export function birthdayInPeriod(

@@ -215,7 +215,7 @@ export function MobileLeaderInsights(
           {tab === "attention" ? (
             <View style={s.alert}>
               <Text style={s.strong}>
-                {p.care ?? "—"} acompanhamentos abertos
+                {p.care ?? "—"} contatos e ausências em aberto
               </Text>
               <Text style={s.strong}>
                 {meetings - recorded} encontros sem chamada

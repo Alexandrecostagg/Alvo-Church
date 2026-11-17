@@ -1,5 +1,6 @@
+import { homeDestination } from "../packages/domain/src/home-navigation";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
@@ -549,6 +550,30 @@ async function main() {
         !n.birthdays.length,
       "painel de rede não lê fichas pessoais de filiais",
     );
+    await db
+      .doc(`organizations/${child}/networkSnapshots/today`)
+      .update({ totalMembers: "invalid" });
+    const invalidSnapshot = await overview("network", ids.network);
+    check(
+      invalidSnapshot.churches[0].members === null &&
+        invalidSnapshot.warnings.some((w) => w.includes("inválido")),
+      "consolidado inválido não vira número ou zero na rede",
+    );
+    await db
+      .doc(`organizations/${child}/networkSnapshots/today`)
+      .update({
+        totalMembers: 800,
+        date: new Date(now - 10 * 86400000).toISOString().slice(0, 10),
+      });
+    const staleSnapshot = await overview("network", ids.network);
+    check(
+      staleSnapshot.churches[0].members === 800 &&
+        staleSnapshot.warnings.some((w) => w.includes("mais de 7 dias")),
+      "rede distingue consolidados antigos dos indicadores atuais",
+    );
+    await db
+      .doc(`organizations/${child}/networkSnapshots/today`)
+      .update({ date });
     await denied(
       { action: "overview", profile: "network" },
       ids.pastor,
@@ -602,17 +627,15 @@ async function main() {
       "plano gratuito não libera rede de igrejas",
     );
     await db.doc(`${root}/settings/subscription`).update({ plan: "rede" });
-    await db
-      .doc(`${root}/people/member`)
-      .update({
-        whatsappPhone: "62999990000",
-        address: {
-          street: "Rua Fictícia",
-          number: "10",
-          city: "Cidade QA",
-          state: "PA",
-        },
-      });
+    await db.doc(`${root}/people/member`).update({
+      whatsappPhone: "62999990000",
+      address: {
+        street: "Rua Fictícia",
+        number: "10",
+        city: "Cidade QA",
+        state: "PA",
+      },
+    });
     const contactBody = {
       action: "contact",
       profile: "cell_leader",
@@ -627,6 +650,29 @@ async function main() {
         contact.message.includes("Pessoa fictícia member"),
       "WhatsApp direto com nome e mensagem contextual",
     );
+    const optedOut = db.doc(
+      `${root}/whatsappContacts/${createHash("sha256").update("5562999990000").digest("hex")}`,
+    );
+    await optedOut.set({ organizationId: org, optOut: true });
+    await denied(
+      contactBody,
+      ids.leader,
+      409,
+      "dashboard respeita saída registrada no WhatsApp sem depender do cadastro",
+    );
+    await optedOut.delete();
+    await db
+      .doc(`${root}/settings/features`)
+      .update({ "modules.communication.enabled": false });
+    await denied(
+      contactBody,
+      ids.leader,
+      403,
+      "dashboard bloqueia contato quando Comunicação está desativada",
+    );
+    await db
+      .doc(`${root}/settings/features`)
+      .update({ "modules.communication.enabled": true });
     const birthday = await op(
       { ...contactBody, reason: "birthday" },
       ids.leader,
@@ -683,14 +729,12 @@ async function main() {
       evolution.weeks.reduce((s: number, w: any) => s + w.present, 0) === 1,
       "gráfico conta presença persistida",
     );
-    await db
-      .doc(`${root}/groups/alpha/meetings/no_call`)
-      .set({
-        organizationId: org,
-        groupId: "alpha",
-        scheduledStartAt: new Date(now - 2 * 86400000).toISOString(),
-        meetingStatus: "completed",
-      });
+    await db.doc(`${root}/groups/alpha/meetings/no_call`).set({
+      organizationId: org,
+      groupId: "alpha",
+      scheduledStartAt: new Date(now - 2 * 86400000).toISOString(),
+      meetingStatus: "completed",
+    });
     const missing = await op(
       { action: "evolution", profile: "cell_leader" },
       ids.leader,
@@ -768,6 +812,133 @@ async function main() {
         remove.delete(db.doc(`${root}/people/count_${i}`));
       await remove.commit();
     }
+    for (const [profile, uid] of [
+      ["pastoral", ids.pastor],
+      ["administration", ids.network],
+      ["cell_leader", ids.leader],
+      ["member", ids.member],
+      ["network", ids.network],
+    ]) {
+      const snapshot = await overview(profile, uid);
+      check(
+        snapshot.actions.every((a) =>
+          homeDestination(a.href, snapshot.profile),
+        ) &&
+          snapshot.metrics.every(
+            (m) => !m.href || homeDestination(m.href, snapshot.profile),
+          ),
+        `todos os atalhos e indicadores abrem no app: ${profile}`,
+      );
+      if (profile !== "network")
+        check(
+          snapshot.actions.some((a) => a.key === "events") &&
+            snapshot.actions.some((a) => a.key === "learning"),
+          `agenda e aprendizado acessíveis: ${profile}`,
+        );
+    }
+    for (let start = 0; start < 510; start += 300) {
+      const batch = db.batch();
+      for (let i = start; i < Math.min(start + 300, 510); i++)
+        batch.set(db.doc(`${root}/events/old_${i}`), {
+          organizationId: org,
+          status: "published",
+          name: "Evento antigo",
+          startsAt: new Date(now - 86400000).toISOString(),
+        });
+      await batch.commit();
+    }
+    check(
+      (await overview("member", ids.member)).events.some(
+        (e) => e.id === "next",
+      ),
+      "mais de 500 eventos passados não ocultam a agenda futura",
+    );
+    const nextBatch = db.batch();
+    for (let i = 1; i <= 8; i++)
+      nextBatch.set(db.doc(`${root}/events/future_${i}`), {
+        organizationId: org,
+        status: "published",
+        name: `Futuro ${i}`,
+        startsAt: new Date(now + (i + 1) * 86400000).toISOString(),
+      });
+    await nextBatch.commit();
+    const agenda = await overview("member", ids.member);
+    check(
+      agenda.events.length === 6 &&
+        agenda.events[0].id === "next" &&
+        agenda.events[5].id === "future_5" &&
+        agenda.warnings.some((w) => w.includes("6 eventos")),
+      "agenda ordenada, limitada e com aviso explícito",
+    );
+    const classBatch = db.batch();
+    for (let i = 0; i < 35; i++)
+      classBatch.set(db.doc(`${root}/groups/000_class_${i}`), {
+        organizationId: org,
+        status: "active",
+        type: "class",
+        name: "Classe",
+      });
+    await classBatch.commit();
+    const withClasses = await op({ action: "evolution", profile: "pastoral" });
+    check(
+      withClasses.groups.length === 2 && !withClasses.partial,
+      "classes anteriores na consulta não ocultam células do gráfico",
+    );
+    // Remove classes before exercising roster limits for leaders.
+    const deleteClasses = db.batch();
+    for (let i = 0; i < 35; i++)
+      deleteClasses.delete(db.doc(`${root}/groups/000_class_${i}`));
+    await deleteClasses.commit();
+    await db.doc(`${root}/people/inactive`).set({
+      organizationId: org,
+      status: "inactive",
+      firstName: "INACTIVE_SECRET",
+    });
+    const careBatch = db.batch();
+    careBatch.set(db.doc(`${root}/perceivedAbsences/000_inactive`), {
+      organizationId: org,
+      personId: "inactive",
+      status: "open",
+      date,
+    });
+    for (let i = 0; i < 35; i++)
+      careBatch.set(db.doc(`${root}/perceivedAbsences/many_${i}`), {
+        organizationId: org,
+        personId: "member",
+        status: "open",
+        date,
+      });
+    await careBatch.commit();
+    const careList = await overview("pastoral", ids.pastor);
+    check(
+      !JSON.stringify(careList).includes("INACTIVE_SECRET") &&
+        careList.warnings.some((w) => w.includes("inativos")),
+      "cadastros inativos não são exibidos como contatos ativos",
+    );
+    check(
+      careList.absences.length <= 30 &&
+        careList.warnings.some((w) =>
+          w.includes("lista rápida de acompanhamento"),
+        ),
+      "limite de contatos é informado também ao pastor",
+    );
+    // Restore fixtures used by visual QA.
+    for (const collection of ["events", "perceivedAbsences"]) {
+      const docs = await db.collection(`${root}/${collection}`).get();
+      for (let start = 0; start < docs.size; start += 300) {
+        const batch = db.batch();
+        for (const doc of docs.docs.slice(start, start + 300))
+          if (
+            doc.id.startsWith("old_") ||
+            doc.id.startsWith("future_") ||
+            doc.id.startsWith("many_") ||
+            doc.id === "000_inactive"
+          )
+            batch.delete(doc.ref);
+        await batch.commit();
+      }
+    }
+    await db.doc(`${root}/people/inactive`).delete();
     check(
       external === 0,
       "nenhum serviço externo, mensagem ou cobrança acionado",

@@ -489,9 +489,11 @@ export type CommunityOfferType = "percentage" | "fixed_amount" | "freebie" | "pr
 export interface CommunityStore {
   id: string;
   organizationId: string;
-  ownerId: string; // PersonId - Proprietário/Comerciante
+  ownerId: string; // Firebase Auth UID do proprietário/comerciante
   name: string;
   description: string;
+  offerings?: string;
+  revision?: number;
   category: PartnerBenefitCategory;
   status: CommunityStoreStatus;
   images: string[]; // URLs de banners/imagens
@@ -580,7 +582,7 @@ export interface CommunityStoreModerationLog {
   id: string;
   organizationId: string;
   storeId: string;
-  action: "created" | "approved" | "rejected" | "suspended" | "reactivated" | "updated";
+  action: "created" | "approved" | "rejected" | "suspended" | "reactivated" | "updated" | "resubmitted";
   moderatedBy: string; // UserId
   reason?: string;
   previousStatus?: CommunityStoreStatus;

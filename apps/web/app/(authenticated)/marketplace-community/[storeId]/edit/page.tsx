@@ -9,8 +9,7 @@ const StoreFormView = dynamic(
   { ssr: false }
 );
 
-// This would be called in a real app - for now we'll fetch on the client side
 export default function Page({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = use(params);
-  return <StoreFormView />;
+  return <StoreFormView storeId={storeId} />;
 }

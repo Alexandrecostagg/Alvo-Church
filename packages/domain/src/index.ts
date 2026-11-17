@@ -1122,3 +1122,7 @@ export * from "./integration";
 export * from "./groups";
 export * from './tribe-service';
 export * from './giving';
+
+export * from "./own-profile";
+
+export { homeDestination, type HomeDestination } from "./home-navigation";

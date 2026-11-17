@@ -1,0 +1,162 @@
+.page {
+  max-width: 1440px;
+  margin: auto;
+  padding: clamp(16px, 3vw, 40px);
+  color: var(--alvo-ink);
+}
+.page h1 {
+  font-size: clamp(28px, 4vw, 48px);
+  margin: 18px 0 10px;
+}
+.page h2 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+.page p {
+  line-height: 1.6;
+}
+.actions,
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 20px 0;
+}
+.page a {
+  color: var(--alvo-accent);
+}
+.page button,
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border: 1px solid var(--alvo-line);
+  border-radius: 12px;
+  background: var(--alvo-surface);
+  color: var(--alvo-ink);
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: 44px;
+}
+.page button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.page :is(button, a, input, select):focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+.filters label {
+  display: grid;
+  gap: 7px;
+  flex: 1 1 180px;
+}
+.page input:not([type="checkbox"]),
+.page select {
+  padding: 12px;
+  background: var(--alvo-surface);
+  border: 1px solid var(--alvo-line);
+  border-radius: 10px;
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--alvo-surface);
+  border: 1px solid var(--alvo-line);
+  border-radius: 20px;
+  padding: 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.metrics strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 8px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 22px;
+}
+.list {
+  display: grid;
+  gap: 12px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--alvo-line);
+  border-radius: 14px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.row small {
+  display: block;
+  margin-top: 6px;
+  color: var(--alvo-ink-soft);
+}
+.notice {
+  padding: 16px;
+  border: 1px solid #d3ab4b;
+  background: var(--alvo-surface);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.status {
+  min-height: 24px;
+  margin: 12px 0;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.tabs button[aria-pressed="true"] {
+  border-color: var(--alvo-accent);
+  background: var(--alvo-accent-soft);
+}
+.table {
+  overflow-x: auto;
+}
+.table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--alvo-line);
+}
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 16px;
+  }
+  .row {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+.directoryList {
+  max-height: 640px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

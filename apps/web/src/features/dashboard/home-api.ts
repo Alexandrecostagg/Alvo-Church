@@ -37,8 +37,24 @@ export function useHomeResource<T>(
   revision = 0,
 ) {
   const { call, identity, ready } = useHomeApi();
+  const [focusRevision, setFocusRevision] = useState(0);
+  useEffect(() => {
+    let last = 0;
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 1000)
+        return;
+      last = Date.now();
+      setFocusRevision((n) => n + 1);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
   const query = JSON.stringify(body),
-    key = `${identity}:${query}:${revision}`;
+    key = `${identity}:${query}:${revision}:${focusRevision}`;
   const [result, setResult] = useState<{
     key: string;
     data?: T;

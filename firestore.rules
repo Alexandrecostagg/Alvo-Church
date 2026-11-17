@@ -98,7 +98,7 @@ service cloud.firestore {
     // lista fechada. Coleção nova exige regra e revisão de segurança próprias.
     function isOperationalCollection(collection) {
       return [
-        "badges", "churchAttendance",
+        "badges",
         "courses", "events", "families",
         "financeReports", "followUpTasks", "groupBanners", "groups",
         "journeyProfiles",
@@ -251,7 +251,7 @@ service cloud.firestore {
 
       // Users may edit their own profile but never their roles,
       // active flag or tenant binding.
-      allow update: if !request.resource.data.diff(resource.data).affectedKeys().hasAny(["personId"])
+      allow update: if !request.resource.data.diff(resource.data).affectedKeys().hasAny(["personId", "ownProfileRevision", "ownProfileUpdatedAt", "ministerialInterests", "servingProfile", "availability", "occupation", "educationLevel", "householdIncomeRange"])
         && (canManageTenantUsers(orgId) || (
           signedIn()
           && request.auth.uid == userId
@@ -379,7 +379,7 @@ service cloud.firestore {
     // in-app no app), só admin publica/edita.
     match /organizations/{orgId}/marketplacePromotions/{promotionId} {
       allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace");
-      allow write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "marketplace");
+      allow write: if false;
     }
 
     // Comunicação (histórico de envios + templates): só liderança (admin) —
@@ -428,11 +428,10 @@ service cloud.firestore {
     // IP e honeypot). Não permitir create direto impede contornar as proteções
     // da API por REST/SDK do Firestore.
     match /organizations/{orgId}/visitorIntakes/{intakeId} {
-      // Recepção autenticada continua podendo registrar atendimento interno;
-      // o visitante público só entra pela API server-side.
-      allow create: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
+      // Escritas passam pelo backend com revisão, autorização e histórico.
+      allow create: if false;
       allow read: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
-      allow update, delete: if isTenantAdmin(orgId) && moduleEnabled(orgId, "visitors");
+      allow update, delete: if false;
     }
 
     // Campanhas de oferta: gestão só do time; membros podem consultar.
@@ -483,34 +482,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Prayer requests: any signed-in tenant member can submit one (from the
-    // app or reception). Pastoral staff can read/triage/resolve all of them;
-    // regular members can only read ones the author opted to make public
-    // (the community prayer wall), and may only bump the prayer counter.
+    // Pastoral records contain private reports, assignments and contact details.
+    // The authenticated backend returns a scoped DTO, including a minimal public wall.
     match /organizations/{orgId}/prayerRequests/{requestId} {
-      allow create: if isTenantMember(orgId)
-        && request.resource.data.organizationId == orgId
-        && request.resource.data.status == "open"
-        && request.resource.data.isPublic is bool
-        && request.resource.data.prayerCount == 0
-        && request.resource.data.message is string
-        && request.resource.data.message.size() >= 1
-        && request.resource.data.message.size() <= 2000
-        && request.resource.data.personName is string
-        && request.resource.data.personName.size() <= 160;
-
-      allow read: if isTenantAdmin(orgId)
-        || (isTenantMember(orgId) && resource.data.isPublic == true);
-
-      allow update: if isTenantAdmin(orgId)
-        || (
-          isTenantMember(orgId)
-          && resource.data.isPublic == true
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["prayerCount"])
-          && request.resource.data.prayerCount == resource.data.prayerCount + 1
-        );
-
-      allow delete: if isTenantAdmin(orgId);
+      allow read, write: if false;
+    }
+    match /organizations/{orgId}/churchAttendance/{recordId} {
+      allow read, write: if false;
     }
 
     // Cadastro de pessoas: limitado pelo plano da organização (Gratuito 50,
@@ -523,7 +501,7 @@ service cloud.firestore {
       allow create: if false;
       allow update: if isTenantAdmin(orgId)
         && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt", "tribePrimaryCode", "tribeSecondaryCode", "tribeClassificationReason", "tribeClassificationSource", "tribeClassifiedAt", "tribeRevision"]);
+          .hasAny(["organizationId", "cpf", "memberCardCode", "partnerBenefitsEnabled", "consentLgpdAt", "communicationOptOut", "whatsappOptOutAt", "tribePrimaryCode", "tribeSecondaryCode", "tribeClassificationReason", "tribeClassificationSource", "tribeClassifiedAt", "tribeRevision"]);
       allow delete: if isTenantAdmin(orgId);
     }
 
@@ -713,20 +691,11 @@ service cloud.firestore {
     }
     match /organizations/{orgId}/communityStores/{id} {
       allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && (isTenantAdmin(orgId) || resource.data.status == "approved" || resource.data.ownerId == request.auth.uid);
-      allow create: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && request.resource.data.organizationId == orgId
-        && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == "pending"
-        && !request.resource.data.keys().hasAny(["moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
-      // Editing a published store by its owner sends it back for moderation.
-      allow update: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && request.resource.data.organizationId == orgId
-        && request.resource.data.ownerId == resource.data.ownerId
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.status == "pending"
-        && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(["ownerId", "organizationId", "createdAt", "moderatedBy", "approvedAt", "rejectionReason", "suspensionReason"]);
-      allow delete: if false;
+      // Validated, revision-checked writes are performed by the backend.
+      allow write: if false;
       match /offers/{offerId} {
         allow read: if isTenantMember(orgId) && moduleEnabled(orgId, "marketplace") && (isTenantAdmin(orgId) || (get(/databases/$(database)/documents/organizations/$(orgId)/communityStores/$(id)).data.status == "approved" && resource.data.status == "active"));
-        allow write: if isTenantAdmin(orgId) && moduleEnabled(orgId, "marketplace");
+        allow write: if false;
       }
     }
     match /organizations/{orgId}/communityStoreModerationLogs/{id} {

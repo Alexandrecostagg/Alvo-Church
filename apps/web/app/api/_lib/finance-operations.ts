@@ -9,6 +9,8 @@ import {
 import { documentId } from "./member-account";
 import { deletePhoto, getPhoto, photoBytes, putPhoto } from "./kids-media";
 import { assertModuleEnabled } from "./module-access";
+import { boundPerson } from "./journey-operations";
+import { financeDate } from "./finance-report";
 
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 export function money(value: unknown): number {
@@ -267,14 +269,7 @@ export async function declareGiving(raw: any, uid?: string) {
       const actor = (auth as any).actor;
       let personId = raw.personId ? documentId(raw.personId, "Pessoa") : "";
       if (!publicFlow && !personId) {
-        const [link] = await tx.read(`${root}/memberAccountLinks/${uid}`);
-        if (
-          link?.userId === uid &&
-          link?.organizationId === orgId &&
-          link.verifiedBy &&
-          actor.personId === link.personId
-        )
-          personId = documentId(link.personId, "Pessoa");
+        personId = (await boundPerson(tx, root, orgId, uid!)) || "";
       }
       const [person] = personId
         ? await tx.read(`${root}/people/${personId}`)
@@ -284,12 +279,16 @@ export async function declareGiving(raw: any, uid?: string) {
         (person?.organizationId !== orgId || person.status !== "active")
       )
         throw new AccountError(422, "Pessoa indisponível nesta igreja.");
-      const campaignId = publicFlow ? intent.campaignId || "" : await activeGivingCampaign(tx, root, orgId, raw.campaignId);
+      const campaignId = publicFlow
+        ? intent.campaignId || ""
+        : await activeGivingCampaign(tx, root, orgId, raw.campaignId);
       const type = publicFlow
         ? intent.campaignId
           ? "campanha"
           : "oferta"
-        : campaignId ? "campanha" : raw.type;
+        : campaignId
+          ? "campanha"
+          : raw.type;
       if (!["dizimo", "oferta", "missao", "campanha", "outro"].includes(type))
         throw new AccountError(400, "Tipo de contribuição inválido.");
       if (!publicFlow) await quota(tx, root, uid!);
@@ -410,6 +409,14 @@ export async function reconcileContribution(raw: any, uid: string) {
     money(c.amount);
     const now = new Date().toISOString(),
       ledgerId = `contribution_${id}`;
+    const [existingLedger] = await tx.read(
+      `${root}/financialTransactions/${ledgerId}`,
+    );
+    if (action === "confirm" && existingLedger)
+      throw new AccountError(
+        409,
+        "Já existe um lançamento para esta contribuição. Revise o histórico antes de confirmar.",
+      );
     const [intent] = c.intentId
       ? await tx.read(
           `${root}/givingIntents/${documentId(c.intentId, "Intenção")}`,
@@ -439,7 +446,10 @@ export async function reconcileContribution(raw: any, uid: string) {
       });
       if (campaign?.organizationId === orgId)
         tx.patch(`${root}/givingCampaigns/${c.campaignId}`, {
-          raisedAmount: (Math.round((Number(campaign.raisedAmount) || 0) * 100) + money(c.amount)) / 100,
+          raisedAmount:
+            (Math.round((Number(campaign.raisedAmount) || 0) * 100) +
+              money(c.amount)) /
+            100,
           updatedAt: now,
         });
     }
@@ -474,10 +484,17 @@ export async function manualLedger(raw: any, uid: string) {
     const amountCents = money(raw.amount),
       label = textField(raw.label, "Descrição"),
       note = textField(raw.note, "Observação", 1000, true);
+    const date = raw.date === undefined ? undefined : financeDate(raw.date);
     if (!["income", "expense", "missions"].includes(raw.kind))
       throw new AccountError(400, "Categoria inválida.");
     const fingerprint = hash(
-      JSON.stringify({ amountCents, label, note, kind: raw.kind }),
+      JSON.stringify({
+        amountCents,
+        label,
+        note,
+        kind: raw.kind,
+        ...(date ? { date } : {}),
+      }),
     );
     if (old) {
       if (old.fingerprint !== fingerprint)
@@ -492,7 +509,7 @@ export async function manualLedger(raw: any, uid: string) {
       note,
       amount: amountCents / 100,
       amountCents,
-      date: now,
+      date: date || now,
       createdAt: now,
       createdByUserId: uid,
       fingerprint,

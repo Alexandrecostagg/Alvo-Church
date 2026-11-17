@@ -1,3 +1,4 @@
+import { careReplyInput } from '../_lib/pastoral-care';
 import { NextRequest, NextResponse } from "next/server";
 import {
   generateCellScript,
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       throw new AccountError(400, "Use o gerador de banners para esta tarefa.");
     if (!rawInput || typeof rawInput !== "object" || Array.isArray(rawInput))
       throw new AccountError(400, "Dados de Sabedoria Pastoral inválidos.");
-    const input = validatedAiInput(task, rawInput as Record<string, unknown>);
+    const input = task === "care_reply" ? await careReplyInput(organizationId, uid, body.requestId, body.profile) : validatedAiInput(task, rawInput as Record<string, unknown>);
     await aiGate(organizationId, uid, task, false);
     const keys = {
       geminiApiKey: process.env.GEMINI_API_KEY,

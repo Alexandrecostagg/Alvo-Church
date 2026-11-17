@@ -1,8 +1,15 @@
-import { tribeHomeSummary } from './tribe-operations';
+import { assertWhatsappContactAllowed } from "./communication-operations";
+import {
+  careContext,
+  careQueue,
+  networkCare,
+  pastoralRoles,
+} from "./pastoral-care";
+import { tribeHomeSummary } from "./tribe-operations";
 import { groupOperation } from "./group-operations";
 import { isCellGroup, isActiveGroupMembership } from "@alvo/domain";
 import { isCarePending } from "@alvo/domain";
-import { whatsappHref } from "@alvo/utils";
+import { whatsappHref, whatsappPhone } from "@alvo/utils";
 import { homeEvolution } from "./home-evolution";
 import { createHash } from "node:crypto";
 import {
@@ -423,6 +430,40 @@ function actionList(c: Context) {
                 module: "journeys",
               },
             ];
+  if (c.profile !== "network") {
+    const extra = [
+      {
+        key: "events",
+        title: "Agenda da igreja",
+        detail: "Eventos publicados e inscrições",
+        href: "/events",
+        module: "events",
+      },
+      {
+        key: "learning",
+        title: "Meu aprendizado",
+        detail: "Cursos e próximos passos",
+        href: "/learning/academy",
+        module: "journeys",
+      },
+      ...(staff || c.profile === "cell_leader"
+        ? [
+            {
+              key: "journeys",
+              title: "Jornadas de integração",
+              detail: "Acompanhar próximos passos e tarefas",
+              href: "/journeys",
+              module: "journeys",
+            },
+          ]
+        : []),
+    ];
+    actions.push(
+      ...extra.filter(
+        (a) => !actions.some((existing) => existing.key === a.key),
+      ),
+    );
+  }
   return actions
     .filter((a) => !a.module || c.enabled(a.module))
     .map(({ module, ...a }) => a);
@@ -495,12 +536,22 @@ export async function roleHomeOperation(
           ? `Olá, ${name(target)}! Aqui é da ${church}. Passando para desejar um feliz aniversário! Que seu novo ano seja cheio de paz e alegria.`
           : `Olá, ${name(target)}! Aqui é da ${church}. Como você está? Gostaríamos de saber se podemos ajudar em algo. Quando puder, fale com a gente.`;
       if (raw.channel === "whatsapp") {
+        if (!c.enabled("communication"))
+          throw new AccountError(
+            403,
+            "Comunicação indisponível nesta instituição.",
+          );
         const url = whatsappHref(target, message);
         if (!url)
           throw new AccountError(
             409,
             "WhatsApp indisponível: confira o telefone e a preferência de contato no cadastro.",
           );
+        await assertWhatsappContactAllowed(
+          tx,
+          c.root,
+          whatsappPhone(target.whatsappPhone || target.mobilePhone)!,
+        );
         return { url, message };
       }
       if (raw.channel !== "map") throw new AccountError(400, "Canal inválido.");
@@ -529,16 +580,15 @@ export async function roleHomeOperation(
     if (raw.action === "evolution") {
       if ((!staff && !led) || !c.enabled("groups"))
         throw new AccountError(403, "Evolução indisponível para esta visão.");
-      const groups = staff
-        ? (
-            await tx.query(c.root, "groups", "status", "active", "EQUAL", 31)
-          ).filter(
-            (g) => g.organizationId === c.organizationId && isCellGroup(g),
-          )
+      const candidates = staff
+        ? await tx.query(c.root, "groups", "status", "active", "EQUAL", 501)
         : person
           ? await ownGroups(tx, c, person.id, true)
           : [];
-      return homeEvolution(
+      const groups = candidates.filter(
+        (g) => g.organizationId === c.organizationId && isCellGroup(g),
+      );
+      const result = await homeEvolution(
         tx,
         c.root,
         c.organizationId,
@@ -546,7 +596,10 @@ export async function roleHomeOperation(
         c.timezone,
         now,
       );
+      if (staff && candidates.length > 500) result.partial = true;
+      return result;
     }
+
     if (raw.action === "search-people") {
       if (!staff || !c.enabled("core"))
         throw new AccountError(403, "Consulta restrita à equipe da igreja.");
@@ -634,14 +687,12 @@ export async function roleHomeOperation(
         group: { id: group.id, name: group.name },
         timezone: c.timezone,
         meetingId: meetingId || null,
-        meetings: meetings
-          .slice(0, 50)
-          .map((m) => ({
-            id: m.id,
-            startsAt: m.scheduledStartAt,
-            status: m.meetingStatus,
-            revision: m.revision || 0,
-          })),
+        meetings: meetings.slice(0, 50).map((m) => ({
+          id: m.id,
+          startsAt: m.scheduledStartAt,
+          status: m.meetingStatus,
+          revision: m.revision || 0,
+        })),
         people: people.map((p) => ({
           id: p.id,
           name: name(p),
@@ -774,23 +825,150 @@ export async function roleHomeOperation(
       absences: [],
       churches: [],
     };
+    if (
+      c.profile !== "network" &&
+      (led || c.roles.some((r) => pastoralRoles.includes(r))) &&
+      c.profile !== "member" &&
+      c.enabled("ai")
+    ) {
+      try {
+        const care = await careQueue(
+          tx,
+          await careContext(
+            tx,
+            { organizationId: c.organizationId, profile: c.profile },
+            uid,
+          ),
+          now,
+        );
+        out.care = {
+          scope: led
+            ? "Somente pedidos atribuídos a você em suas células"
+            : "Fila pastoral da instituição",
+          asOf: care.asOf,
+          partial: care.partial,
+          summary: care.summary,
+          requests: care.requests.slice(0, 5).map((r) => ({
+            id: r.id,
+            personName: r.personName,
+            priority: r.priority,
+            dueAt: r.dueAt,
+            ownerName: r.ownerName,
+            status: r.status,
+            revision: r.revision,
+          })),
+        };
+        out.actions.push({
+          key: "pastoral-care",
+          title: "Cuidado Pastoral",
+          detail: led
+            ? "Meus pedidos atribuídos"
+            : "Triagem, responsáveis e prazos",
+          href: "/pastoral-ai?profile=" + c.profile,
+        });
+      } catch (e) {
+        if (!(e instanceof AccountError) || e.status !== 403) throw e;
+      }
+    }
+    if (c.profile !== "network" && c.enabled("marketplace")) {
+      out.actions.push({
+        key: "marketplace",
+        title: "Marketplace da Comunidade",
+        detail: "Conhecer negócios e acompanhar suas lojas",
+        href: "/marketplace-community",
+      });
+      if (staff) {
+        const pending = await tx.count(
+          c.root,
+          "communityStores",
+          "status",
+          "pending",
+        );
+        out.metrics.push({
+          key: "marketplace-pending",
+          label: "Lojas aguardando análise",
+          value: pending,
+          href: "/marketplace-community/admin/moderation",
+        });
+        if (pending)
+          out.warnings.push(
+            `${pending} loja(s) aguardando análise para publicação no Marketplace.`,
+          );
+      }
+    }
     if (c.profile !== "network" && staff && c.enabled("communication")) {
-      const prepared = await tx.count(c.root,"communicationCampaigns","status","prepared");
-      const partial = await tx.count(c.root,"communicationCampaigns","status","partially_confirmed");
-      const handoffs = await tx.count(c.root,"whatsappHandoffs","status","open");
-      out.actions.push({key:"communication",title:"Comunicação",detail:"Retomar listas e atender conversas",href:"/communication"});
-      out.metrics.push({key:"communication-pending",label:"Listas manuais a concluir",value:prepared+partial,href:"/communication"});
-      out.metrics.push({key:"communication-handoffs",label:"Conversas aguardando equipe",value:handoffs,href:"/communication"});
-      if(prepared+partial) out.warnings.push(`${prepared+partial} lista(s) de WhatsApp com envios manuais ainda não registrados.`);
-      if(handoffs) out.warnings.push(`${handoffs} conversa(s) aguardando atendimento da equipe em Comunicação.`);
+      const prepared = await tx.count(
+        c.root,
+        "communicationCampaigns",
+        "status",
+        "prepared",
+      );
+      const partial = await tx.count(
+        c.root,
+        "communicationCampaigns",
+        "status",
+        "partially_confirmed",
+      );
+      const handoffs = await tx.count(
+        c.root,
+        "whatsappHandoffs",
+        "status",
+        "open",
+      );
+      out.actions.push({
+        key: "communication",
+        title: "Comunicação",
+        detail: "Retomar listas e atender conversas",
+        href: "/communication",
+      });
+      out.metrics.push({
+        key: "communication-pending",
+        label: "Listas manuais a concluir",
+        value: prepared + partial,
+        href: "/communication",
+      });
+      out.metrics.push({
+        key: "communication-handoffs",
+        label: "Conversas aguardando equipe",
+        value: handoffs,
+        href: "/communication",
+      });
+      if (prepared + partial)
+        out.warnings.push(
+          `${prepared + partial} lista(s) de WhatsApp com envios manuais ainda não registrados.`,
+        );
+      if (handoffs)
+        out.warnings.push(
+          `${handoffs} conversa(s) aguardando atendimento da equipe em Comunicação.`,
+        );
     }
     if (c.profile !== "network" && c.enabled("giving")) {
-      out.actions.push({key:"giving", title:staff ? "Doações e campanhas" : "Minhas contribuições", detail:staff ? "Campanhas e declarações recebidas" : "Campanhas da igreja e situação das minhas declarações", href:"/giving"});
-      if(staff && c.enabled("finance")) {
-        const pending = await tx.count(c.root,"contributions","status","pending");
-        out.metrics.push({key:"giving-pending",label:"Contribuições a conferir",value:pending,href:"/giving"});
-        if(pending) out.warnings.push(`${pending} contribuição(ões) aguardando conferência em Finanças. Ainda não são recebimentos confirmados.`);
-      }
+      out.actions.push({
+        key: "giving",
+        title: staff ? "Doações e campanhas" : "Minhas contribuições",
+        detail: staff
+          ? "Campanhas e declarações recebidas"
+          : "Campanhas da igreja e situação das minhas declarações",
+        href: "/giving",
+      });
+    }
+    if (c.profile !== "network" && staff && c.enabled("finance")) {
+      const pending = await tx.count(
+        c.root,
+        "contributions",
+        "status",
+        "pending",
+      );
+      out.metrics.push({
+        key: "giving-pending",
+        label: "Contribuições a conferir",
+        value: pending,
+        href: "/finance",
+      });
+      if (pending)
+        out.warnings.push(
+          `${pending} contribuição(ões) aguardando conferência em Finanças. Ainda não são recebimentos confirmados.`,
+        );
     }
     if (c.profile === "network") {
       const active = await tx.query(
@@ -835,20 +1013,64 @@ export async function roleHomeOperation(
           { field: "date", direction: "DESCENDING" },
         );
         const s =
-          snapshots[0]?.organizationId === a.childOrganizationId
+          snapshots[0]?.organizationId === a.childOrganizationId &&
+          Number.isSafeInteger(snapshots[0]?.totalMembers) &&
+          snapshots[0].totalMembers >= 0 &&
+          Number.isSafeInteger(snapshots[0]?.activeGroups) &&
+          snapshots[0].activeGroups >= 0 &&
+          /^\d{4}-\d{2}-\d{2}$/.test(snapshots[0]?.date || "") &&
+          Number.isFinite(Date.parse(snapshots[0].date + "T00:00:00Z")) &&
+          snapshots[0].date <= day(now, c.timezone)
             ? snapshots[0]
             : null;
+        if (snapshots.length && !s)
+          out.warnings.push(
+            `${child.displayName || child.name || a.childName}: consolidado inválido; indicadores indisponíveis.`,
+          );
+        if (
+          s &&
+          Date.parse(day(now, c.timezone) + "T00:00:00Z") -
+            Date.parse(s.date + "T00:00:00Z") >
+            7 * 86400000
+        )
+          out.warnings.push(
+            `${child.displayName || child.name || a.childName}: consolidado de ${s.date}, com mais de 7 dias. Os totais incluem esse período anterior.`,
+          );
         if (s) {
           covered++;
           members += Number(s.totalMembers || 0);
           groups += Number(s.activeGroups || 0);
         }
+        const childRoot = `organizations/${a.childOrganizationId}`;
+        const [childFeatures, childSubscription] = await tx.read(
+          childRoot + "/settings/features",
+          childRoot + "/settings/subscription",
+        );
+        const childPlan =
+          childSubscription?.plan ||
+          (
+            {
+              enterprise: "enterprise",
+              advanced: "pastoral",
+              growth: "comunidade",
+            } as Data
+          )[childSubscription?.planTier] ||
+          "free";
+        const receptionAvailable =
+          c.enabled("visitors") &&
+          childFeatures?.modules?.visitors?.enabled !== false &&
+          planHasModule(childPlan, "visitors");
+        const receptionPending = receptionAvailable
+          ? await tx.count(childRoot, "visitorIntakes", "status", "captured")
+          : null;
         out.churches.push({
           id: a.childOrganizationId,
           name: child.displayName || child.name || a.childName,
           date: s?.date || null,
           members: s ? Number(s.totalMembers || 0) : null,
           groups: s ? Number(s.activeGroups || 0) : null,
+          receptionPending,
+          receptionAsOf: new Date(now).toISOString(),
         });
       }
       out.metrics = [
@@ -874,6 +1096,30 @@ export async function roleHomeOperation(
           value: covered ? groups : null,
         },
       ];
+      if (c.enabled("visitors")) {
+        const coveredReception = out.churches.filter(
+          (ch) => ch.receptionPending !== null,
+        );
+        out.metrics.push({
+          key: "network-reception",
+          label: "Entradas aguardando integração nas igrejas cobertas",
+          value: coveredReception.length
+            ? coveredReception.reduce(
+                (sum, ch) => sum + (ch.receptionPending || 0),
+                0,
+              )
+            : null,
+        });
+        out.metrics.push({
+          key: "network-reception-coverage",
+          label: "Igrejas com dados da recepção disponíveis",
+          value: coveredReception.length,
+        });
+        if (coveredReception.length < out.churches.length)
+          out.warnings.push(
+            "Há igrejas com recepção indisponível. Ausência de dados não significa fila vazia.",
+          );
+      }
       out.warnings.push(
         "Os indicadores usam os últimos consolidados compartilhados por cada igreja. Não dão acesso a fichas pessoais das filiais.",
       );
@@ -881,15 +1127,94 @@ export async function roleHomeOperation(
         out.warnings.push(
           "A visão rápida reúne até 50 igrejas. Abra Rede de Igrejas para consultar a relação completa.",
         );
+      if (c.enabled("ai")) {
+        try {
+          const care = await networkCare(
+            tx,
+            await careContext(
+              tx,
+              { organizationId: c.organizationId, profile: "network" },
+              uid,
+            ),
+          );
+          for (const church of out.churches) {
+            const row = care.churches.find((x) => x.id === church.id);
+            church.careOpen = row?.open ?? null;
+            church.careInProgress = row?.inProgress ?? null;
+            church.careUrgent = row?.urgent ?? null;
+            church.careOverdue = row?.overdue ?? null;
+            church.careAsOf = care.asOf;
+          }
+          out.metrics.push({
+            key: "network-care",
+            label: "Pedidos pastorais abertos nas igrejas cobertas",
+            value: care.summary.covered ? care.summary.open : null,
+          });
+          out.metrics.push({
+            key: "network-care-urgent",
+            label: "Pedidos urgentes nas igrejas cobertas",
+            value: care.summary.covered ? care.summary.urgent : null,
+          });
+          out.metrics.push({
+            key: "network-care-overdue",
+            label: "Prazos vencidos nas igrejas cobertas",
+            value: care.summary.covered ? care.summary.overdue : null,
+          });
+          out.metrics.push({
+            key: "network-care-coverage",
+            label: "Igrejas com dados pastorais disponíveis",
+            value: care.summary.covered,
+          });
+          out.actions.push({
+            key: "pastoral-care",
+            title: "Cuidado da rede",
+            detail: "Comparar filas e cobertura, sem relatos pessoais",
+            href: "/pastoral-ai?profile=network",
+          });
+          if (care.summary.covered < care.summary.total)
+            out.warnings.push(
+              "Há instituições sem dados pastorais disponíveis. Ausência de dados não significa ausência de pedidos.",
+            );
+        } catch (e) {
+          if (!(e instanceof AccountError) || e.status !== 403) throw e;
+        }
+      }
       return out;
     }
     const own = person ? await ownGroups(tx, c, person.id, led) : [];
-    if (c.enabled('tribes')) {
+    if (c.enabled("tribes")) {
       try {
-        const t = await tribeHomeSummary(tx,c.root,c.organizationId,uid,c.roles,c.profile,now);
-        out.metrics.push({key:'tribe-next-steps',label:'Próximos passos para servir',value:t.pending,href:t.href});
-        out.actions.unshift({key:'tribes',title:t.pending?`${t.pending} próximo(s) passo(s) para servir`:'Descobrir e experimentar servir',detail:staff||led?'Interesses, experiências e retornos para acompanhar':'Meus interesses, convites e retorno à liderança',href:t.href});
-      } catch(e) { out.warnings.push('Não foi possível consultar as experiências de serviço. Abra Tribos para conferir seus vínculos.'); }
+        const t = await tribeHomeSummary(
+          tx,
+          c.root,
+          c.organizationId,
+          uid,
+          c.roles,
+          c.profile,
+          now,
+        );
+        out.metrics.push({
+          key: "tribe-next-steps",
+          label: "Próximos passos para servir",
+          value: t.pending,
+          href: t.href,
+        });
+        out.actions.unshift({
+          key: "tribes",
+          title: t.pending
+            ? `${t.pending} próximo(s) passo(s) para servir`
+            : "Descobrir e experimentar servir",
+          detail:
+            staff || led
+              ? "Interesses, experiências e retornos para acompanhar"
+              : "Meus interesses, convites e retorno à liderança",
+          href: t.href,
+        });
+      } catch (e) {
+        out.warnings.push(
+          "Não foi possível consultar as experiências de serviço. Abra Tribos para conferir seus vínculos.",
+        );
+      }
     }
     out.groups = own.map((g) => ({
       id: g.id,
@@ -908,10 +1233,12 @@ export async function roleHomeOperation(
       const events = await tx.query(
         c.root,
         "events",
-        "status",
-        "published",
-        "EQUAL",
-        501,
+        "startsAt",
+        new Date(now).toISOString(),
+        "GREATER_THAN_OR_EQUAL",
+        7,
+        { field: "status", value: "published" },
+        { field: "startsAt", direction: "ASCENDING" },
       );
       out.events = events
         .filter(
@@ -919,7 +1246,6 @@ export async function roleHomeOperation(
             e.organizationId === c.organizationId &&
             Date.parse(e.startsAt) >= now,
         )
-        .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
         .slice(0, 6)
         .map((e) => ({
           id: e.id,
@@ -927,11 +1253,12 @@ export async function roleHomeOperation(
           startsAt: e.startsAt,
           location: e.locationName || e.location || "Local a confirmar",
         }));
-      if (events.length > 500)
+      if (events.length > 6)
         out.warnings.push(
-          "Há muitos eventos publicados. Abra a agenda para consultar todos os períodos.",
+          "Agenda resumida aos próximos 6 eventos. Abra a agenda para consultar os demais.",
         );
     }
+
     const period = raw.birthdayPeriod || "week";
     if (!["today", "week", "month"].includes(period))
       throw new AccountError(400, "Período de aniversários inválido.");
@@ -980,20 +1307,23 @@ export async function roleHomeOperation(
         },
       );
     }
-    out.birthdays = people
+    const birthdayPeople = people
       .filter(
         (p) =>
           p.organizationId === c.organizationId &&
           birthdayInPeriod(p.birthDate, day(now, c.timezone), period),
       )
-      .sort((a, b) => a.birthDate.slice(5).localeCompare(b.birthDate.slice(5)))
-      .slice(0, 20)
-      .map((p) => ({
-        id: p.id,
-        name: name(p),
-        date: p.birthDate.slice(8, 10) + "/" + p.birthDate.slice(5, 7),
-        ...(p.groupId ? { groupId: p.groupId } : {}),
-      }));
+      .sort((a, b) => a.birthDate.slice(5).localeCompare(b.birthDate.slice(5)));
+    if (birthdayPeople.length > 20)
+      out.warnings.push(
+        "Aniversários: mostrando até 20 pessoas do período. Consulte os cadastros da sua área para os demais.",
+      );
+    out.birthdays = birthdayPeople.slice(0, 20).map((p) => ({
+      id: p.id,
+      name: name(p),
+      date: p.birthDate.slice(8, 10) + "/" + p.birthDate.slice(5, 7),
+      ...(p.groupId ? { groupId: p.groupId } : {}),
+    }));
     if (staff && c.enabled("groups")) {
       const activeGroups = await tx.query(
         c.root,
@@ -1010,17 +1340,27 @@ export async function roleHomeOperation(
       out.metrics.push({
         key: "groups",
         label: "Células ativas",
-        value: activeGroups.slice(0, 500).filter(isCellGroup).length,
+        value:
+          activeGroups.length > 500
+            ? null
+            : activeGroups.filter(isCellGroup).length,
         href: "/groups",
       });
     }
-    if (staff && c.enabled("visitors"))
+    if (staff && c.enabled("visitors")) {
       out.metrics.push({
         key: "visitors",
-        label: "Cadastros de visitantes",
+        label: "Entradas registradas na recepção",
         value: await tx.count(c.root, "visitorIntakes"),
         href: "/reception",
       });
+      out.metrics.push({
+        key: "reception-pending",
+        label: "Entradas aguardando integração",
+        value: await tx.count(c.root, "visitorIntakes", "status", "captured"),
+        href: "/reception",
+      });
+    }
     if (staff || led) {
       if (c.enabled("journeys")) {
         const tasks = staff
@@ -1078,6 +1418,7 @@ export async function roleHomeOperation(
         );
         out.tasks = pending.slice(0, 10).flatMap((t, i) =>
           targets[i]?.organizationId === c.organizationId &&
+          targets[i]?.status === "active" &&
           targets[i]?.status === "active"
             ? [
                 {
@@ -1136,7 +1477,7 @@ export async function roleHomeOperation(
               )),
         );
         const open = scopedRecords.slice(0, 30);
-        if (!staff && records.length >= 51)
+        if (scopedRecords.length > 30 || records.length >= 51)
           out.warnings.push(
             "A lista rápida de acompanhamento é parcial. Consulte a administração para conferir todos os registros.",
           );
@@ -1145,6 +1486,7 @@ export async function roleHomeOperation(
         );
         out.absences = open.flatMap((a, i) =>
           targets[i]?.organizationId === c.organizationId &&
+          targets[i]?.status === "active" &&
           (staff ||
             leaderRoster.some(
               (p) => p.id === a.personId && p.groupId === a.groupId,
@@ -1161,10 +1503,14 @@ export async function roleHomeOperation(
               ]
             : [],
         );
+        if (out.absences.length < open.length)
+          out.warnings.push(
+            "Há contatos vinculados a cadastros inativos ou indisponíveis. O total inclui esses registros; a lista mostra apenas pessoas ativas.",
+          );
         out.metrics.push({
           key: "care",
           label: staff
-            ? "Acompanhamentos em aberto"
+            ? "Contatos e ausências em aberto"
             : "Acompanhamentos nas suas células",
           value: staff
             ? await tx.count(c.root, "perceivedAbsences", "status", "open")

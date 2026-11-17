@@ -195,7 +195,7 @@ export function LeaderInsights({
                   <strong>
                     {data.metrics.find((m) => m.key === "care")?.value ?? "—"}
                   </strong>
-                  <b>Acompanhamentos abertos</b>
+                  <b>Contatos e ausências em aberto</b>
                   <p>Confira quem precisa de contato e registre o retorno.</p>
                 </a>
                 <div className={styles.attentionCard}>

@@ -1,463 +1,338 @@
 "use client";
-
 import Link from "next/link";
-import { friendlyError } from "../../lib/friendly-error";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import {
-  createFirebaseWebRuntimeConfigFromEnv,
-  fetchFamilies,
-  fetchPeople,
-  isFirebaseWebRuntimeConfigured
-} from "@alvo/firebase";
+import { useEffect, useRef, useState } from "react";
 import type { Family, Person } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
-import { loadLocalMemberStore } from "../../lib/local-member-store";
+import { peopleRequest } from "../../lib/people-client";
+import s from "./people.module.css";
 
-export function MembersView() {
-  const { configured, firebaseReady, tenantReady, user, organizationId, firebaseConfig } = useAppAuth();
-  const [people, setPeople] = useState<Person[]>([]);
-  const [families, setFamilies] = useState<Family[]>([]);
-  const [status, setStatus] = useState("Entre no painel para consultar a base real.");
-  const [query, setQuery] = useState(() => getInitialQuery());
-  const [memberStatusFilter, setMemberStatusFilter] = useState("all");
-  const [passFilter, setPassFilter] = useState("all");
-  const deferredQuery = useDeferredValue(query);
-
-  useEffect(() => {
-    function loadLocalMembers() {
-      const localStore = loadLocalMemberStore();
-      const localPeople = localStore.people.filter((p) => p.organizationId === organizationId);
-      const localFamilies = localStore.families.filter((f) => f.organizationId === organizationId);
-      setPeople((current) => mergeById(current.filter((p) => p.organizationId === organizationId), localPeople));
-      setFamilies((current) => mergeById(current.filter((f) => f.organizationId === organizationId), localFamilies));
-      if (localPeople.length || localFamilies.length) {
-        setStatus(`${localPeople.length} cadastro(s) local(is) carregado(s) neste navegador.`);
-      }
-    }
-
-    loadLocalMembers();
-    window.addEventListener("alvo-local-members-updated", loadLocalMembers);
-
-    return () => {
-      window.removeEventListener("alvo-local-members-updated", loadLocalMembers);
-    };
-  }, [organizationId]);
-
-  useEffect(() => {
-    if (!configured || !firebaseReady || !tenantReady || !user || !isFirebaseWebRuntimeConfigured(firebaseConfig)) {
-      return;
-    }
-
-    let cancelled = false;
-
-    setPeople([]);
-    setFamilies([]);
-    async function loadMembers() {
-      setStatus("Carregando membros e famílias...");
-
-      try {
-        const [nextPeople, nextFamilies] = await Promise.all([
-          fetchPeople(firebaseConfig, { organizationId }, 40),
-          fetchFamilies(firebaseConfig, { organizationId }, 20)
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        const localStore = loadLocalMemberStore();
-        setPeople(mergeById(nextPeople, localStore.people.filter((p) => p.organizationId === organizationId)));
-        setFamilies(mergeById(nextFamilies, localStore.families.filter((f) => f.organizationId === organizationId)));
-        setStatus(
-          `${nextPeople.length} pessoa(s) e ${nextFamilies.length} familia(s) carregadas.`
-        );
-      } catch (error) {
-        if (!cancelled) {
-          setStatus(friendlyError(error, "Não foi possível carregar membros."));
-        }
-      }
-    }
-
-    void loadMembers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, firebaseConfig, firebaseReady, tenantReady, organizationId, user]);
-
-  const members = people.filter((person) =>
-    ["member", "leader", "volunteer"].includes(person.memberStatus)
-  );
-  const visitors = people.filter((person) => person.memberStatus === "visitor");
-  const esdrasPassEnabled = people.filter((person) => person.partnerBenefitsEnabled);
-  const ungroupedPeople = people.filter((person) => !person.primaryFamilyId);
-  const peopleWithProtectedData = people.filter(
-    (person) => person.cpf || person.birthDate || person.householdIncomeRange
-  );
-  const filteredPeople = people.filter((person) => {
-    const normalizedQuery = normalizeSearch(deferredQuery);
-    const matchesQuery = normalizedQuery
-      ? normalizeSearch(
-          `${getFullName(person)} ${person.email ?? ""} ${person.mobilePhone ?? ""} ${
-            person.whatsappPhone ?? ""
-          } ${person.cpf ?? ""} ${formatAddress(person.address)}`
-        ).includes(normalizedQuery)
-      : true;
-    const matchesStatus =
-      memberStatusFilter === "all" || person.memberStatus === memberStatusFilter;
-    const matchesPass =
-      passFilter === "all" ||
-      (passFilter === "enabled" && person.partnerBenefitsEnabled) ||
-      (passFilter === "disabled" && !person.partnerBenefitsEnabled);
-
-    return matchesQuery && matchesStatus && matchesPass;
-  });
-  const directoryFlowSteps = [
-    {
-      label: "01",
-      title: "Cadastrar pessoa",
-      detail: "Comece pelo membro, visitante ou aspirante com dados essenciais.",
-      href: "/members/new"
-    },
-    {
-      label: "02",
-      title: "Vincular família",
-      detail: "Organize casa, responsáveis, renda declarada e endereço protegido.",
-      href: "/members/new"
-    },
-    {
-      label: "03",
-      title: "Ativar cuidado",
-      detail: "Use status pastoral para alimentar jornadas, grupos e comunicação.",
-      href: "/journeys"
-    },
-    {
-      label: "04",
-      title: "Liberar Esdras Passe",
-      detail: "Habilite benefícios externos sem expor CPF, renda ou histórico pastoral.",
-      href: "/members/new"
-    }
-  ];
-
-  return (
-    <main className="form-page directory-page animate-entrance">
-      <section className="form-hero">
-        <Link className="back-link" href="/app">
-          Voltar ao painel
-        </Link>
-        <p className="eyebrow">Base pastoral</p>
-        <h1>Membros, famílias e aspirantes</h1>
-        <p>
-          Visão operacional para líderes acompanharem pessoas, casas, visitantes em
-          transição e elegibilidade para Esdras Passe.
-        </p>
-        <div className="directory-actions">
-          <Link className="primary-button" href="/members/new">
-            Cadastrar membro
-          </Link>
-          <Link className="ghost-button" href="/reception">
-            Capturar visitante
-          </Link>
-          <span className="form-status">{status}</span>
-        </div>
-      </section>
-
-      <section className="member-command-center">
-        <article className="member-flow-card antigravity-float">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Fluxo recomendado</p>
-              <h2>Da ficha ao cuidado pastoral</h2>
-            </div>
-            <span className="soft-pill">4 passos</span>
-          </div>
-          <div className="member-flow-lane">
-            {directoryFlowSteps.map((step) => (
-              <Link className="member-flow-step" href={step.href} key={step.label}>
-                <div className="member-flow-step-head">
-                  <span>{step.label}</span>
-                  <strong>{step.title}</strong>
-                </div>
-                <p>{step.detail}</p>
-              </Link>
-            ))}
-          </div>
-        </article>
-
-        <aside className="member-segment-card antigravity-float-delayed">
-          <p className="eyebrow">Atenção rápida</p>
-          <h2>Segmentos que pedem cuidado</h2>
-          <div className="segment-list">
-            <div>
-              <span>Sem família</span>
-              <strong>{ungroupedPeople.length}</strong>
-              <p>pessoas sem grupo familiar vinculado</p>
-            </div>
-            <div>
-              <span>Dados protegidos</span>
-              <strong>{peopleWithProtectedData.length}</strong>
-              <p>perfis com CPF, renda ou nascimento</p>
-            </div>
-            <div>
-              <span>Pass externo</span>
-              <strong>{esdrasPassEnabled.length}</strong>
-              <p>podem se identificar em parceiros</p>
-            </div>
-          </div>
-        </aside>
-      </section>
-
-      <section className="directory-metrics">
-        <article>
-          <span>Pessoas</span>
-          <strong>{people.length}</strong>
-          <p>{members.length} membro(s) ativo(s)</p>
-        </article>
-        <article>
-          <span>Famílias</span>
-          <strong>{families.length}</strong>
-          <p>casas cadastradas</p>
-        </article>
-        <article>
-          <span>Aspirantes</span>
-          <strong>{visitors.length}</strong>
-          <p>visitantes em transição</p>
-        </article>
-        <article>
-          <span>Esdras Passe</span>
-          <strong>{esdrasPassEnabled.length}</strong>
-          <p>pessoas habilitadas</p>
-        </article>
-      </section>
-
-      <section className="directory-grid">
-        <article className="directory-panel span-2">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Pessoas</p>
-              <h2>Cadastro sensível</h2>
-            </div>
-            <span className="soft-pill">
-              {filteredPeople.length} de {people.length}
-            </span>
-          </div>
-          <div className="directory-toolbar" aria-label="Filtros da base de membros">
-            <label>
-              Buscar
-              <input
-                aria-label="Buscar membro"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Nome, CPF, telefone, bairro..."
-                value={query}
-              />
-            </label>
-            <label>
-              Status
-              <select
-                aria-label="Filtrar por status"
-                onChange={(event) => setMemberStatusFilter(event.target.value)}
-                value={memberStatusFilter}
-              >
-                <option value="all">Todos</option>
-                <option value="visitor">Visitantes</option>
-                <option value="congregant">Congregados</option>
-                <option value="new_believer">Novos convertidos</option>
-                <option value="member">Membros</option>
-                <option value="leader">Líderes</option>
-                <option value="volunteer">Voluntários</option>
-              </select>
-            </label>
-            <label>
-              Esdras Passe
-              <select
-                aria-label="Filtrar por Esdras Passe"
-                onChange={(event) => setPassFilter(event.target.value)}
-                value={passFilter}
-              >
-                <option value="all">Todos</option>
-                <option value="enabled">Habilitados</option>
-                <option value="disabled">Não habilitados</option>
-              </select>
-            </label>
-          </div>
-          <div className="directory-list">
-            {filteredPeople.length ? (
-              filteredPeople.map((person) => (
-                <Link key={person.id} className="directory-row" href={`/members/${person.id}`}>
-                  <div className="avatar">{getInitials(getFullName(person))}</div>
-                  <div>
-                    <strong>{getFullName(person)}</strong>
-                    <p>
-                      {getMemberStatusLabel(person.memberStatus)} - {person.birthDate ? `${calculateAge(person.birthDate)} anos` : "idade não informada"}
-                    </p>
-                    <small>
-                      {person.cpf ? `CPF ${maskCpf(person.cpf)} - ` : ""}
-                      {formatAddress(person.address)}
-                    </small>
-                  </div>
-                  <span className={person.partnerBenefitsEnabled ? "pass-status on" : "pass-status"}>
-                    {person.partnerBenefitsEnabled ? "Esdras Passe" : "Interno"}
-                  </span>
-                  <small className="row-action">Abrir ficha</small>
-                </Link>
-              ))
-            ) : (
-              <div className="empty-state">
-                <strong>{people.length ? "Nenhum resultado" : "Nenhum membro carregado"}</strong>
-                <p>
-                  {people.length
-                    ? "Ajuste os filtros para encontrar outra pessoa."
-                    : "Cadastre uma pessoa para iniciar a base da sua igreja."}
-                </p>
-                {!people.length ? (
-                  <Link className="ghost-button" href="/members/new">
-                    Criar primeiro cadastro
-                  </Link>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </article>
-
-        <article className="directory-panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Familias</p>
-              <h2>Casas</h2>
-            </div>
-            <span className="soft-pill">{families.length}</span>
-          </div>
-          <div className="directory-list">
-            {families.length ? (
-              families.map((family) => (
-                <div key={family.id} className="family-card">
-                  <strong>{family.displayName || family.familyName}</strong>
-                  <p>
-                    {countFamilyPeople(people, family.id)} pessoa(s) -{" "}
-                    {getIncomeRangeLabel(family.incomeRange)}
-                  </p>
-                  <small>{formatAddress(family.address)}</small>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state">
-                <strong>Nenhuma família</strong>
-                <p>Crie uma família no cadastro de membro para popular esta visão.</p>
-                <Link className="ghost-button" href="/members/new">
-                  Vincular família
-                </Link>
-              </div>
-            )}
-          </div>
-        </article>
-      </section>
-    </main>
-  );
-}
-
-function getInitialQuery() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return new URLSearchParams(window.location.search).get("q") ?? "";
-}
-
-function getFullName(person: Person) {
-  return `${person.preferredName || person.firstName} ${person.lastName}`.trim();
-}
-
-function normalizeSearch(value: string) {
-  return value
+export const personName = (p: Person) =>
+  `${p.preferredName || p.firstName} ${p.lastName || ""}`.trim();
+export const statusLabels: Record<string, string> = {
+  visitor: "Visitante",
+  congregant: "Congregado",
+  new_believer: "Novo convertido",
+  member: "Membro",
+  leader: "Líder",
+  volunteer: "Voluntário",
+};
+const normalize = (s: string) =>
+  s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
-function calculateAge(birthDate: string) {
-  const birth = new Date(`${birthDate}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDelta = today.getMonth() - birth.getMonth();
-
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
-    age -= 1;
+type Directory = {
+  people: Person[];
+  families: (Family & { peopleCount: number })[];
+  totalPeople: number;
+  totalFamilies: number;
+  peopleCursor: string | null;
+  familiesCursor: string | null;
+};
+const empty: Directory = {
+  people: [],
+  families: [],
+  totalPeople: 0,
+  totalFamilies: 0,
+  peopleCursor: null,
+  familiesCursor: null,
+};
+export function MembersView() {
+  const { tenantReady, user, organizationId, roles } = useAppAuth();
+  const allowed = roles.some((r) =>
+    ["church_admin", "super_admin", "pastor", "secretary"].includes(r),
+  );
+  const [data, setData] = useState(empty);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [attention, setAttention] = useState("all");
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [reload, setReload] = useState(0);
+  const generation = useRef(0);
+  const lock = useRef(false);
+  useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") || "");
+  }, []);
+  useEffect(() => {
+    const version = ++generation.current;
+    setData(empty);
+    setLoaded(false);
+    setStatus("");
+    lock.current = false;
+    setBusy(false);
+    if (!tenantReady || !user || !allowed) return;
+    setBusy(true);
+    lock.current = true;
+    Promise.all([
+      peopleRequest(user, { organizationId, action: "people" }),
+      peopleRequest(user, { organizationId, action: "families" }),
+    ])
+      .then(([p, f]) => {
+        if (version !== generation.current) return;
+        setData({
+          people: p.items,
+          families: f.items,
+          totalPeople: p.total,
+          totalFamilies: f.total,
+          peopleCursor: p.nextCursor,
+          familiesCursor: f.nextCursor,
+        });
+        setLoaded(true);
+        setStatus("Base atualizada.");
+      })
+      .catch((e) => {
+        if (version === generation.current) setStatus(e.message);
+      })
+      .finally(() => {
+        if (version === generation.current) {
+          setBusy(false);
+          lock.current = false;
+        }
+      });
+    return () => {
+      generation.current++;
+    };
+  }, [tenantReady, user, organizationId, allowed, reload]);
+  async function more(kind: "people" | "families") {
+    if (!user || lock.current) return;
+    const version = generation.current;
+    lock.current = true;
+    setBusy(true);
+    try {
+      const result = await peopleRequest(user, {
+        organizationId,
+        action: kind,
+        cursor: kind === "people" ? data.peopleCursor : data.familiesCursor,
+      });
+      if (version !== generation.current) return;
+      setData((old) =>
+        kind === "people"
+          ? {
+              ...old,
+              people: [
+                ...new Map(
+                  [...old.people, ...result.items].map((p) => [p.id, p]),
+                ).values(),
+              ],
+              peopleCursor: result.nextCursor,
+              totalPeople: result.total,
+            }
+          : {
+              ...old,
+              families: [
+                ...new Map(
+                  [...old.families, ...result.items].map((f) => [f.id, f]),
+                ).values(),
+              ],
+              familiesCursor: result.nextCursor,
+              totalFamilies: result.total,
+            },
+      );
+      setStatus("Mais registros carregados.");
+    } catch (e) {
+      if (version === generation.current)
+        setStatus(
+          e instanceof Error ? e.message : "Não foi possível carregar.",
+        );
+    } finally {
+      if (version === generation.current) {
+        setBusy(false);
+        lock.current = false;
+      }
+    }
   }
-
-  return Number.isFinite(age) ? age : 0;
-}
-
-function formatAddress(address: Person["address"] | Family["address"]) {
-  if (!address) {
-    return "endereço não informado";
-  }
-
-  return [address.street, address.number, address.district, address.city, address.state]
-    .filter(Boolean)
-    .join(", ") || "endereco nao informado";
-}
-
-function maskCpf(cpf: string) {
-  const numbers = cpf.replace(/\D/g, "");
-
-  if (numbers.length !== 11) {
-    return cpf;
-  }
-
-  return `***.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-**`;
-}
-
-function countFamilyPeople(people: readonly Person[], familyId: string) {
-  return people.filter((person) => person.primaryFamilyId === familyId).length;
-}
-
-function mergeById<T extends { id: string }>(base: readonly T[], incoming: readonly T[]) {
-  const map = new Map(base.map((item) => [item.id, item]));
-  incoming.forEach((item) => map.set(item.id, item));
-  return Array.from(map.values());
-}
-
-function getMemberStatusLabel(status: Person["memberStatus"]) {
-  switch (status) {
-    case "visitor":
-      return "Visitante";
-    case "congregant":
-      return "Congregado";
-    case "new_believer":
-      return "Novo convertido";
-    case "member":
-      return "Membro";
-    case "leader":
-      return "Líder";
-    case "volunteer":
-      return "Voluntário";
-  }
-}
-
-function getIncomeRangeLabel(range: Family["incomeRange"]) {
-  switch (range) {
-    case "up_to_1_minimum_wage":
-      return "até 1 salário mínimo";
-    case "one_to_3_minimum_wages":
-      return "1 a 3 salários mínimos";
-    case "three_to_5_minimum_wages":
-      return "3 a 5 salários mínimos";
-    case "five_to_10_minimum_wages":
-      return "5 a 10 salários mínimos";
-    case "above_10_minimum_wages":
-      return "acima de 10 salários mínimos";
-    case "not_informed":
-    case undefined:
-      return "renda não informada";
-  }
+  const rows = data.people.filter(
+    (p) =>
+      normalize(
+        `${personName(p)} ${p.email || ""} ${p.mobilePhone || ""} ${p.whatsappPhone || ""} ${p.cpf || ""}`,
+      ).includes(normalize(query)) &&
+      (filter === "all" || p.memberStatus === filter) &&
+      (attention === "all" ||
+        (attention === "family" && !p.primaryFamilyId) ||
+        (attention === "contact" &&
+          !p.mobilePhone &&
+          !p.whatsappPhone &&
+          !p.email) ||
+        (attention === "pass" && p.partnerBenefitsEnabled)),
+  );
+  return (
+    <main className={s.page}>
+      <Link href="/app">Voltar ao painel</Link>
+      <h1>Pessoas e famílias</h1>
+      <p>
+        Cadastros da igreja para acompanhamento pastoral, integração e contato.
+      </p>
+      {!tenantReady ? (
+        <p role="status">Verificando acesso…</p>
+      ) : !allowed ? (
+        <section className={s.card}>
+          <h2>Acesso à base completa restrito</h2>
+          <p>
+            A secretaria e os pastores consultam estes dados. Líderes acompanham
+            as pessoas das suas células no painel de liderança.
+          </p>
+          <Link href="/app">Abrir meu painel</Link> ·{" "}
+          <Link href="/me">Meu perfil</Link>
+        </section>
+      ) : (
+        <>
+          <div className={s.actions}>
+            <Link className={s.action} href="/members/new">
+              Cadastrar pessoa
+            </Link>
+            <Link className={s.action} href="/reception">
+              Receber visitante
+            </Link>
+            <button disabled={busy} onClick={() => setReload((v) => v + 1)}>
+              Atualizar
+            </button>
+          </div>
+          <p className={s.status} role="status">
+            {busy ? "Carregando cadastros…" : status}
+          </p>
+          {loaded && (
+            <>
+              <section className={s.metrics}>
+                <article className={s.card}>
+                  Pessoas cadastradas<strong>{data.totalPeople}</strong>
+                </article>
+                <article className={s.card}>
+                  Famílias cadastradas<strong>{data.totalFamilies}</strong>
+                </article>
+                <article className={s.card}>
+                  Sem família nesta consulta
+                  <strong>
+                    {data.people.filter((p) => !p.primaryFamilyId).length}
+                  </strong>
+                </article>
+                <article className={s.card}>
+                  Sem contato nesta consulta
+                  <strong>
+                    {
+                      data.people.filter(
+                        (p) => !p.mobilePhone && !p.whatsappPhone && !p.email,
+                      ).length
+                    }
+                  </strong>
+                </article>
+              </section>
+              {data.peopleCursor && (
+                <p className={s.notice}>
+                  Exibindo {data.people.length} de {data.totalPeople} pessoas.
+                  Os filtros e alertas usam os registros carregados. Carregue
+                  mais para ampliar a busca.
+                </p>
+              )}
+              <div className={s.grid}>
+                <section className={s.card}>
+                  <h2>Buscar pessoa</h2>
+                  <div className={s.filters}>
+                    <label>
+                      Nome, e-mail, CPF ou telefone
+                      <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Situação pastoral
+                      <select
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                      >
+                        <option value="all">Todas</option>
+                        {Object.entries(statusLabels).map(([k, v]) => (
+                          <option key={k} value={k}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Atenção
+                      <select
+                        value={attention}
+                        onChange={(e) => setAttention(e.target.value)}
+                      >
+                        <option value="all">Todas as pessoas</option>
+                        <option value="family">Sem família</option>
+                        <option value="contact">Sem contato</option>
+                        <option value="pass">Esdras Passe habilitado</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p>
+                    {rows.length} resultado(s) nos {data.people.length}{" "}
+                    registros carregados.
+                  </p>
+                  <div className={`${s.list} ${s.directoryList}`}>
+                    {rows.map((p) => (
+                      <Link
+                        className={s.row}
+                        href={`/members/${p.id}`}
+                        key={p.id}
+                      >
+                        <span>
+                          <strong>{personName(p)}</strong>
+                          <small>
+                            {statusLabels[p.memberStatus] || p.memberStatus} ·{" "}
+                            {p.status === "active"
+                              ? "Cadastro ativo"
+                              : "Cadastro inativo"}
+                            {!p.primaryFamilyId ? " · Sem família" : ""}
+                          </small>
+                        </span>
+                        <span>Abrir ficha →</span>
+                      </Link>
+                    ))}
+                  </div>
+                  {!rows.length && (
+                    <p>
+                      {data.totalPeople
+                        ? "Nenhum resultado nesta consulta. Ajuste os filtros ou carregue mais registros."
+                        : "Nenhuma pessoa cadastrada."}
+                    </p>
+                  )}
+                  {data.peopleCursor && (
+                    <button disabled={busy} onClick={() => void more("people")}>
+                      Carregar mais pessoas
+                    </button>
+                  )}
+                </section>
+                <section className={s.card}>
+                  <h2>Famílias</h2>
+                  <p>
+                    {data.families.length} de {data.totalFamilies} famílias. Os
+                    vínculos são consultados na base da igreja.
+                  </p>
+                  <div className={`${s.list} ${s.directoryList}`}>
+                    {data.families.map((f) => (
+                      <article className={s.row} key={f.id}>
+                        <span>
+                          <strong>{f.displayName || f.familyName}</strong>
+                          <small>{f.peopleCount} pessoa(s) vinculada(s)</small>
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                  {!data.families.length && <p>Nenhuma família cadastrada.</p>}
+                  {data.familiesCursor && (
+                    <button
+                      disabled={busy}
+                      onClick={() => void more("families")}
+                    >
+                      Carregar mais famílias
+                    </button>
+                  )}
+                </section>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </main>
+  );
 }

@@ -45,23 +45,19 @@ import {
   View
 } from "react-native";
 import {
-  addPrayerRequest,
   fetchOrganizationById,
   fetchMobileTenantAccess,
   fetchOrganizationDirectory,
-  fetchPublicPrayerWall,
   fetchTenantUser,
   fetchTenantRuntimeSnapshot,
   fetchOrgFeatures,
   fetchUpcomingMemberEvents,
-  incrementPrayerCount,
   isFirebaseWebRuntimeConfigured,
   registerWithFirebaseMobileEmailPassword,
   sendPasswordResetEmailMobile,
   signInWithFirebaseMobileEmailPassword,
   signOutFromFirebaseMobile,
   subscribeToFirebaseMobileAuthState,
-  fetchMarketplacePromotions,
   fetchWorshipSongs,
   fetchWorshipSetlistByEventId,
   saveMobilePushToken,
@@ -330,7 +326,11 @@ function TenantApp({ user, configured, linkedOrg, onSignOut, onChooseInstitution
       if (sequence === loadSequence.current) { setDataReady(true); setRefreshing(false); }
     }
   }, [configured, linkedOrg.id, user]);
-  useEffect(() => { void load(); return () => { loadSequence.current++; }; }, [load]);
+  useEffect(() => {
+    void load();
+    const resumed = AppState.addEventListener("change", state => { if (state === "active") void load(); });
+    return () => { loadSequence.current++; resumed.remove(); };
+  }, [load]);
 
   if (!tenantRuntime) return <SafeAreaView style={[s.fill, s.center, { padding: 24 }]}>
     {!dataReady ? <LoadingRow primary={BRAND} label="Carregando sua instituição…" /> : <><Text style={s.errorText}>{loadError}</Text><Btn label="Tentar novamente" onPress={() => void load()} loading={refreshing} /></>}
@@ -612,8 +612,9 @@ function LinkInstitutionScreen({ configured, user, onLink, onSkip }: { configure
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
-function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry }: {
-  primary: string; promotions: MarketplacePromotion[]; onBack: () => void; loading: boolean; error: string; onRetry: () => void;
+type MobilePromotion = MarketplacePromotion & {whatsappUrl?:string;mapsUrl?:string};
+function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry, hasMore, onMore }: {
+  primary: string; promotions: MobilePromotion[]; onBack: () => void; loading: boolean; error: string; onRetry: () => void; hasMore: boolean; onMore: () => void;
 }) {
   return (
     <View style={[s.fill, { backgroundColor: "#f8f9fa" }]}>
@@ -623,7 +624,7 @@ function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry 
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🏷️</Text>
           <Text style={[s.screenTitle, { textAlign: "center" }]}>Nenhuma promoção agora</Text>
           <Text style={[s.screenSub, { textAlign: "center" }]}>
-            Quando um comerciante da comunidade publicar uma promoção, ela aparece aqui — prestigie quem é da casa!
+            As promoções aprovadas pela equipe aparecem aqui. Conheça também as lojas no Marketplace.
           </Text>
         </View>
       ) : (
@@ -637,12 +638,18 @@ function PromocoesScreen({ primary, promotions, onBack, loading, error, onRetry 
               <Text style={s.promoTitle}>{p.title}</Text>
               {!!p.description && <Text style={s.promoDesc}>{p.description}</Text>}
               {!!p.validUntil && (
-                <Text style={s.promoValid}>Válido até {new Date(p.validUntil).toLocaleDateString("pt-BR")}</Text>
+                <Text style={s.promoValid}>Válido até {(/^\d{4}-\d{2}-\d{2}$/.test(p.validUntil) ? p.validUntil.split("-").reverse().join("/") : new Date(p.validUntil).toLocaleDateString("pt-BR"))}</Text>
               )}
+              <Btn label="Ver loja" onPress={() => { void Linking.openURL(`${WEB_API_URL}/marketplace-community/${encodeURIComponent(p.storeId)}`).catch(() => Alert.alert("Não foi possível abrir a loja.")); }} />
+              {!!p.whatsappUrl && <Btn label="Conversar no WhatsApp" onPress={() => { if (p.whatsappUrl?.startsWith("https://wa.me/")) void Linking.openURL(p.whatsappUrl).catch(() => Alert.alert("Não foi possível abrir o WhatsApp.")); }} />}
             </View>
           ))}
         </ScrollView>
       )}
+      <View style={{padding:16,gap:8}}>
+        {hasMore && !loading && <Btn label="Carregar mais promoções" onPress={onMore} />}
+        <Btn label="Explorar lojas da comunidade" onPress={() => { void Linking.openURL(`${WEB_API_URL}/marketplace-community`).catch(() => Alert.alert("Não foi possível abrir o marketplace.")); }} />
+      </View>
     </View>
   );
 }
@@ -940,10 +947,12 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   // Promoções do marketplace (notificação in-app): busca ao abrir; "vistas"
   // ficam em memória da sessão (badge some depois de abrir o sino).
-  const [promotions, setPromotions] = useState<MarketplacePromotion[]>([]);
+  const [promotions, setPromotions] = useState<MobilePromotion[]>([]);
   const [promotionsLoading, setPromotionsLoading] = useState(true);
   const [promotionsError, setPromotionsError] = useState("");
   const [promotionsRevision, setPromotionsRevision] = useState(0);
+  const [promotionCursor,setPromotionCursor]=useState<string|null>(null);
+  const [promotionPage,setPromotionPage]=useState<string|null>(null);
   const [seenPromoIds, setSeenPromoIds] = useState<Set<string>>(new Set());
 
   const primary = tenantRuntime?.settings?.branding?.primaryColor ?? BRAND;
@@ -952,20 +961,25 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   const orgId = tenantRuntime?.organization?.id ?? linkedOrg?.id ?? "";
   const brandLogo = tenantRuntime?.settings?.branding?.logoLightUrl ?? tenantRuntime?.settings?.branding?.logoDarkUrl ?? tenantRuntime?.settings?.branding?.iconUrl ?? undefined;
 
+  const refreshPromotions = useCallback(() => {setPromotionPage(null);setPromotionsRevision(r=>r+1);},[]);
+  useEffect(() => {setSeenPromoIds(new Set());setPromotions([]);setPromotionCursor(null);setPromotionPage(null);},[orgId,user.uid]);
+  useEffect(() => {const listener=AppState.addEventListener("change",state=>{if(state==="active")refreshPromotions();});return()=>listener.remove();},[refreshPromotions]);
   useEffect(() => {
-    if (!access.marketplace) { setPromotions([]); setPromotionsLoading(false); return; }
+    if (!access.marketplace || !orgId) { setPromotions([]); setPromotionsLoading(false); setPromotionCursor(null); return; }
     setPromotionsLoading(true); setPromotionsError("");
+    if(!promotionPage)setPromotions([]);
     let cancelled = false;
     (async () => {
       try {
-        const promos = await fetchMarketplacePromotions(firebaseConfig, { organizationId: orgId }, 30);
-        if (!cancelled) setPromotions(promos.filter(p => !p.validUntil || Date.parse(p.validUntil) >= Date.now()));
+        const response=await fetch(`${WEB_API_URL}/api/marketplace/community`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({organizationId:orgId,action:"feed",cursor:promotionPage})});
+        const data=await response.json();if(!response.ok)throw Error(data.error||"Não foi possível carregar as promoções.");
+        if (!cancelled) {setPromotions(previous=>promotionPage?[...previous,...data.promotions.filter((p:MobilePromotion)=>!previous.some(v=>v.id===p.id))]:data.promotions);setPromotionCursor(data.cursor);}
       } catch (e) {
-        if (!cancelled) setPromotionsError("Não foi possível carregar as promoções.");
+        if (!cancelled) setPromotionsError(e instanceof Error?e.message:"Não foi possível carregar as promoções.");
       } finally { if (!cancelled) setPromotionsLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [orgId, access.marketplace, promotionsRevision]);
+  }, [orgId, user, access.marketplace, promotionsRevision, promotionPage]);
 
   const [pendingServing,setPendingServing] = useState(0);
   const [servingRevision,setServingRevision] = useState(0);
@@ -995,7 +1009,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
     const refresh=()=>{setGroupRevision(n=>n+1);void onRefresh()};
     const received=Notifications.addNotificationReceivedListener(n=>{if(matches(n.request.content.data))refresh()});
     const tapped=Notifications.addNotificationResponseReceivedListener(r=>{if(active&&access.groups&&matches(r.notification.request.content.data)){setModalStack([]);setTab("celula");refresh()}});
-    const resumed=AppState.addEventListener("change",state=>{if(state==="active"&&access.groups)refresh()});
+    const resumed=AppState.addEventListener("change",state=>{if(state==="active"&&access.groups)setGroupRevision(n=>n+1)});
     return()=>{active=false;received.remove();tapped.remove();resumed.remove()};
   },[orgId,access.groups]);
 
@@ -1016,11 +1030,12 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
   function pop() { setModalStack(p => p.slice(0, -1)); }
 
   function openPromocoes() {
-    setSeenPromoIds(new Set(promotions.map((p) => p.id)));
+    refreshPromotions();
     push("promocoes");
   }
 
   const modal = modalStack[modalStack.length - 1] ?? null;
+  useEffect(() => { if(modal === "promocoes" && !promotionsLoading && !promotionsError) setSeenPromoIds(previous=>new Set([...previous,...promotions.map(p=>p.id)])); },[modal,promotions,promotionsLoading,promotionsError]);
   useAndroidBack(modal !== "cursos" && modal !== "kids-checkin" && (Boolean(modal) || tab !== "inicio"), () => { if (modal) pop(); else setTab("inicio"); });
   useEffect(() => {
     if ((tab === "agenda" && !access.events) || (tab === "celula" && !access.groups)) setTab("inicio");
@@ -1061,7 +1076,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
         {!!servingNoticeError && !modal && <Text style={[s.errorText,{padding:10}]}>{servingNoticeError}</Text>}
         {/* Content */}
         <View style={s.fill}>
-          {tab === "inicio" && !modal && <MobileRoleHome externalRevision={journeyRevision} key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} onAction={(key, profile) => {
+          {tab === "inicio" && !modal && <MobileRoleHome onRefresh={onRefresh} refreshing={refreshing} externalRevision={journeyRevision + groupRevision + servingRevision} key={`${orgId}:${user.uid}:${roles.join(",")}`} user={user} orgId={orgId} apiOrigin={WEB_API_URL} primary={primary} onAction={(key, profile) => {
             if (["groups", "weekly"].includes(key) && access.groups) { setCellView(profile === "cell_leader" ? "leadership" : "personal"); setTab("celula"); return true; }
             if (key === "events" && access.events) { setTab("agenda"); return true; }
             if (key === "invites" && access.events) { push("convites"); return true; }
@@ -1088,7 +1103,7 @@ function MainApp({ user, tenantRuntime, events, groups, dataReady, linkedOrg, pu
           {modal === "song-detail" && selectedSong && <SongDetailScreen song={selectedSong} primary={primary} onBack={pop} storageKey={`${orgId}:${user.uid}`} />}
           {modal === "lider-celula" && <LiderCelulaScreen primary={primary} user={user} orgId={orgId} groupId={preparationGroupId} onBack={pop} />}
           {modal === "meu-perfil" && <MeuPerfilScreen primary={primary} user={user} orgId={orgId} onBack={pop} />}
-          {modal === "promocoes" && <PromocoesScreen loading={promotionsLoading} error={promotionsError} onRetry={() => setPromotionsRevision(r => r + 1)} primary={primary} promotions={promotions} onBack={pop} />}
+          {modal === "promocoes" && <PromocoesScreen loading={promotionsLoading} error={promotionsError} onRetry={refreshPromotions} hasMore={!!promotionCursor} onMore={() => setPromotionPage(promotionCursor)} primary={primary} promotions={promotions} onBack={pop} />}
           {modal === "cursos" && <CursosScreen primary={primary} orgId={orgId} user={user} orgName={orgName} logoUrl={brandLogo} onBack={pop} />}
         </View>
 
@@ -1242,48 +1257,55 @@ function CelulaTab({ groups, primary, dataReady, orgId, user, onOpenLider, canLe
   const [wallError, setWallError] = useState("");
   const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
 
+  const prayerAttempt=useRef<string>("");
+  const prayerGeneration=useRef(0);
+  async function prayerApi(body:Record<string,unknown>){
+    const response=await fetch(WEB_API_URL+"/api/pastoral",{method:"POST",headers:{"content-type":"application/json",Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({...body,organizationId:orgId})});
+    const result=await response.json();if(!response.ok)throw Error(result.error || "Pedido indisponível.");return result;
+  }
   async function loadWall() {
+    const generation=prayerGeneration.current;
     setWallLoading(true); setWallError("");
     try {
-      const items = await fetchPublicPrayerWall(firebaseConfig, { organizationId: orgId }, 50);
-      setWall(items);
+      const result = await prayerApi({action:"wall"});
+      if(generation===prayerGeneration.current)setWall(result.items);
     } catch {
-      setWallError("Não foi possível carregar o mural de oração.");
+      if(generation===prayerGeneration.current)setWallError("Não foi possível carregar o mural de oração.");
     } finally {
-      setWallLoading(false);
+      if(generation===prayerGeneration.current)setWallLoading(false);
     }
   }
 
-  useEffect(() => { if (orgId) void loadWall(); }, [orgId]);
+  useEffect(() => {prayerGeneration.current++;setWall([]);setPrayer("");setPrayerSent(false);setPrayerSending(false);setPrayerPublic(false);setPrayedIds(new Set());prayerAttempt.current="";if (orgId) void loadWall();return ()=>{prayerGeneration.current++;};}, [orgId,user.uid]);
 
   async function submitPrayer() {
     const text = prayer.trim();
     if (!text || prayerSending) return;
+    const generation=prayerGeneration.current;
     setPrayerSending(true);
     try {
-      await addPrayerRequest(firebaseConfig, { organizationId: orgId }, {
-        personName: user.displayName ?? user.email ?? "Membro",
-        phone: user.phoneNumber ?? undefined,
-        message: text,
-        source: "app",
-        isPublic: prayerPublic
-      });
+      prayerAttempt.current ||= Crypto.randomUUID();
+      await prayerApi({action:"submit",requestId:prayerAttempt.current,message:text,isPublic:prayerPublic});
+      if(generation!==prayerGeneration.current)return;
+      prayerAttempt.current="";
       setPrayerSent(true);
       if (prayerPublic) void loadWall();
     } catch {
-      Alert.alert("Não foi possível enviar", "Verifique sua conexão e tente novamente.");
+      if(generation===prayerGeneration.current)Alert.alert("Não foi possível enviar", "Verifique sua conexão e tente novamente.");
     } finally {
-      setPrayerSending(false);
+      if(generation===prayerGeneration.current)setPrayerSending(false);
     }
   }
 
   async function prayFor(id: string) {
     if (prayedIds.has(id)) return;
+    const generation=prayerGeneration.current;
     setPrayedIds(prev => new Set(prev).add(id));
     setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: r.prayerCount + 1 } : r));
     try {
-      await incrementPrayerCount(firebaseConfig, { organizationId: orgId }, id);
+      await prayerApi({action:"pray",requestId:id});
     } catch {
+      if(generation!==prayerGeneration.current)return;
       // reverte silenciosamente se falhar
       setWall(prev => prev.map(r => r.id === id ? { ...r, prayerCount: Math.max(0, r.prayerCount - 1) } : r));
       setPrayedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
@@ -1496,52 +1518,55 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
   const [loadError, setLoadError] = useState("");
   const [revision, setRevision] = useState(0);
 
-  // Load existing profile from Firestore users doc
+  const [profileVersion, setProfileVersion] = useState(0);
+  const [linkedPerson, setLinkedPerson] = useState<string | null>(null);
+  const saveLock = useRef(false);
+  const profileGeneration = useRef(0);
+  // The web and app share the verified account/person profile.
+  async function profileRequest(body: Record<string, unknown>) {
+    const response = await fetch(`${WEB_API_URL}/api/members/profile`, {method:"POST",headers:{"content-type":"application/json",Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify({...body,organizationId:orgId})});
+    const result = await response.json();
+    if (!response.ok) throw Error(result.error || "Não foi possível atualizar o perfil.");
+    return result;
+  }
   useEffect(() => {
     if (!orgId) return;
-    let cancelled = false;
+    let cancelled = false; profileGeneration.current++; saveLock.current = false; setSaving(false); setSaved(false);
     async function load() {
       try {
-        const sdk = await import("@alvo/firebase");
-        const existing = await sdk.fetchTenantUser(firebaseConfig, { organizationId: orgId, userId: user.uid });
-        if (!cancelled && existing) {
-          const d = existing;
-          if (d.ministerialInterests) setInterests(d.ministerialInterests);
-          if (d.servingProfile) setServing(d.servingProfile);
-          if (d.availability) setAvailability(d.availability);
-          if (d.occupation) setOccupation(d.occupation);
-          if (d.educationLevel) setEducation(d.educationLevel);
-          if (d.householdIncomeRange) setIncome(d.householdIncomeRange);
+        const result = await profileRequest({action:"read"});
+        if (!cancelled) {
+          const d = result.profile;
+          setInterests(d.ministerialInterests || []); setServing(d.servingProfile || "");
+          setAvailability(d.availability || []); setOccupation(d.occupation || "");
+          setEducation(d.educationLevel || "not_informed"); setIncome(d.householdIncomeRange || "not_informed");
+          setProfileVersion(result.revision); setLinkedPerson(result.personId);
         }
       } catch { if (!cancelled) setLoadError("Não foi possível carregar seu perfil. Tente novamente antes de editar."); }
       finally { if (!cancelled) setLoaded(true); }
     }
     setLoaded(false); setLoadError(""); void load();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; profileGeneration.current++; };
   }, [user.uid, orgId, revision]);
 
   async function handleSave() {
-    if (saving || !loaded || loadError) return;
+    if (saveLock.current || saving || !loaded || loadError) return;
     if (!orgId) { Alert.alert("Erro", "Organização não vinculada."); return; }
-    setSaving(true);
+    saveLock.current = true; const version = profileGeneration.current; setSaved(false); setSaving(true);
     try {
-      const sdk = await import("@alvo/firebase");
-      await sdk.saveMemberProfile(firebaseConfig, { organizationId: orgId, userId: user.uid }, {
-        ministerialInterests: interests,
-        servingProfile: serving || undefined,
-        availability,
-        occupation: occupation || undefined,
-        educationLevel: education,
-        householdIncomeRange: income,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      const result = await profileRequest({action:"save", expectedRevision:profileVersion,expectedPersonId:linkedPerson, fields:{
+        ministerialInterests:interests,servingProfile:serving,availability,occupation,educationLevel:education,householdIncomeRange:income
+      }});
+      if(version !== profileGeneration.current) return;
+      setProfileVersion(result.revision); setSaved(true);
     } catch (e) {
-      Alert.alert("Perfil não salvo", "Confira a conexão e tente novamente.");
+      if(version === profileGeneration.current) Alert.alert("Perfil não salvo", e instanceof Error ? e.message : "Confira a conexão e tente novamente.");
     } finally {
-      setSaving(false);
+      if(version === profileGeneration.current) { saveLock.current = false; setSaving(false); }
     }
   }
+
+  useEffect(() => { setSaved(false); }, [interests, serving, availability, occupation, education, income]);
 
   function toggleInterest(v: string) {
     setInterests(prev => prev.includes(v) ? prev.filter(i => i !== v) : [...prev, v]);
@@ -1557,8 +1582,10 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
       {!loaded ? (
         <View style={[s.fill, s.center]}><ActivityIndicator color={primary} /></View>
       ) : loadError ? null : (
-        <ScrollView contentContainerStyle={[s.tabContent, { paddingBottom: 40 }]} keyboardShouldPersistTaps="handled">
+        <ScrollView pointerEvents={saving ? "none" : "auto"} contentContainerStyle={[s.tabContent, { paddingBottom: 40 }]} keyboardShouldPersistTaps="handled">
 
+          <Text style={s.cardMeta}>{linkedPerson ? "Perfil vinculado ao cadastro da igreja." : "Perfil salvo na conta. Peça à administração para confirmar o vínculo com Pessoas."}</Text>
+          <Btn label="Atualizar perfil" variant="outline" disabled={saving} onPress={() => setRevision(r => r+1)} />
           {/* Informações pessoais */}
           <Text style={s.sectionTitle}>Informações pessoais</Text>
           <View style={s.card}>
@@ -1567,6 +1594,8 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
             <View style={mpStyles.optionRow}>
               {[
                 { v: "not_informed", l: "Não inf." },
+                { v: "elementary", l: "Fundamental" },
+                { v: "technical", l: "Técnico" },
                 { v: "high_school", l: "Médio" },
                 { v: "undergraduate", l: "Superior" },
                 { v: "postgraduate", l: "Pós" },
@@ -1584,6 +1613,7 @@ function MeuPerfilScreen({ primary, user, orgId, onBack }: { primary: string; us
                 { v: "up_to_1_minimum_wage", l: "Até 1 SM" },
                 { v: "one_to_3_minimum_wages", l: "1–3 SM" },
                 { v: "three_to_5_minimum_wages", l: "3–5 SM" },
+                { v: "five_to_10_minimum_wages", l: "5–10 SM" },
                 { v: "above_10_minimum_wages", l: "+10 SM" },
               ].map(({ v, l }) => (
                 <Pressable key={v} onPress={() => setIncome(v)}

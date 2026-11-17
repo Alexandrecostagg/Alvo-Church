@@ -35,6 +35,10 @@
     "qa:delivery8": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery8.ts",
     "qa:delivery9": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery9.ts",
     "qa:delivery10": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-delivery10.ts",
+    "qa:finance": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-finance.ts",
+    "qa:own-profile": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-own-profile.ts",
+    "qa:people": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-people.ts",
+    "qa:marketplace": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-marketplace.ts",
     "qa:communication": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-communication.ts",
     "qa:whatsapp": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-whatsapp.ts",
     "qa:security": "node scripts/with-qa-env.mjs node scripts/audit-security-local.mjs",
@@ -48,7 +52,9 @@
     "qa:journeys": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-journeys.ts",
     "qa:groups": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-groups.ts",
     "qa:tribes": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-tribes.ts",
-    "qa:giving": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-giving.ts"
+    "qa:giving": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-giving.ts",
+    "qa:pastoral": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-pastoral.ts",
+    "qa:reception": "node scripts/with-qa-env.mjs corepack pnpm exec tsx scripts/verify-qa-reception.ts"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

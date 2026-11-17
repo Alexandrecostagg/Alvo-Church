@@ -1,4 +1,5 @@
-import {MobileCellReport} from "../groups/cell-report";
+import { MobilePastoralCare } from "./pastoral-care";
+import { MobileCellReport } from "../groups/cell-report";
 import { MobileIntegration } from "./integration";
 import { MobileContact, MobileLeaderInsights } from "./leader-insights";
 import {
@@ -27,6 +28,7 @@ import {
 import * as Crypto from "expo-crypto";
 import {
   HOME_PROFILE_LABELS,
+  homeDestination,
   type HomeProfile,
   type RoleHomeSnapshot,
   type HomeGroupDetail,
@@ -91,6 +93,8 @@ export function MobileRoleHome(
   props: Props & {
     children: ReactNode;
     externalRevision?: number;
+    onRefresh: () => Promise<void>;
+    refreshing?: boolean;
     onAction: (key: string, profile: HomeProfile) => boolean;
   },
 ) {
@@ -99,7 +103,14 @@ export function MobileRoleHome(
   const [profile, setProfile] = useState<HomeProfile>();
   const [period, setPeriod] = useState("week"),
     [revision, setRevision] = useState(0);
-  const [data, setData] = useState<RoleHomeSnapshot>();
+  const [snapshot, setSnapshot] = useState<{
+    key: string;
+    value: RoleHomeSnapshot;
+  }>();
+  const dataKey = `${props.orgId}:${props.user.uid}:${profile}:${period}:${revision}:${props.externalRevision}`;
+  const data = snapshot?.key === dataKey ? snapshot.value : undefined;
+  const scroll = useRef<ScrollView>(null);
+  const careY = useRef(0);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
   const [message, setMessage] = useState(""),
@@ -108,14 +119,14 @@ export function MobileRoleHome(
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    setData(undefined);
+    setSnapshot(undefined);
     setError("");
     call<RoleHomeSnapshot>(
       { action: "overview", profile, birthdayPeriod: period },
       controller.signal,
     )
       .then((r) => {
-        if (!controller.signal.aborted) setData(r);
+        if (!controller.signal.aborted) setSnapshot({ key: dataKey, value: r });
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -124,7 +135,7 @@ export function MobileRoleHome(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [call, profile, period, revision, props.externalRevision]);
+  }, [call, profile, period, revision, props.externalRevision, dataKey]);
   useEffect(() => {
     const listener = AppState.addEventListener("change", (state) => {
       if (state === "active") setRevision((n) => n + 1);
@@ -136,34 +147,30 @@ export function MobileRoleHome(
       setRecording(true);
       return;
     }
-    if (
-      !["/groups", "/serving"].includes(href) ||
-      data?.profile === "member" ||
-      data?.profile === "cell_leader"
-    ) {
-      if (props.onAction(key, data!.profile)) return;
+    if (!data) return;
+    const destination = homeDestination(href, data.profile);
+    if (!destination) {
+      setError(
+        "Este acesso não está disponível. Atualize o painel e tente novamente.",
+      );
+      return;
     }
-    // These are fixed application routes. Do not forward arbitrary provider URLs.
-    const webRoutes = new Set([
-      "/network",
-      "/members",
-      "/reception",
-      "/groups",
-      "/campaigns",
-      "/finance",
-      "/giving",
-      "/communication",
-      "/operations",
-      "/serving",
-      "/me",
-    ]);
-    if (!webRoutes.has(href)) return;
+    if (destination.kind === "section") {
+      scroll.current?.scrollTo({ y: careY.current, animated: true });
+      return;
+    }
+    if (
+      destination.kind === "native" &&
+      props.onAction(destination.key, data.profile)
+    )
+      return;
     try {
-      await Linking.openURL(`${props.apiOrigin}${href}`);
+      await Linking.openURL(`${props.apiOrigin}${destination.href}`);
     } catch {
       setError("Não foi possível abrir a gestão web.");
     }
   }
+
   async function completeTask(t: RoleHomeSnapshot["tasks"][number]) {
     if (busy || !t.personId) return;
     setBusy(true);
@@ -202,12 +209,16 @@ export function MobileRoleHome(
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
+        ref={scroll}
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={() => setRevision((n) => n + 1)}
+            refreshing={loading || !!props.refreshing}
+            onRefresh={() => {
+              setRevision((n) => n + 1);
+              void props.onRefresh();
+            }}
             tintColor={props.primary}
           />
         }
@@ -232,7 +243,13 @@ export function MobileRoleHome(
         {data && (
           <>
             <Text style={s.title}>{HOME_PROFILE_LABELS[data.profile]}</Text>
-            <Text style={s.meta}>{data.scopeLabel}</Text>
+            <Text style={s.strong}>{data.organizationName}</Text>
+            <Text style={s.meta}>
+              {data.scopeLabel} · atualizado{" "}
+              {new Date(data.asOf).toLocaleString("pt-BR", {
+                timeZone: data.timezone,
+              })}
+            </Text>
             {data.profiles.length > 1 && (
               <View style={s.wrap}>
                 {data.profiles.map((p) => (
@@ -256,14 +273,33 @@ export function MobileRoleHome(
             ))}
             <View style={s.wrap}>
               {data.metrics.map((m) => (
-                <View key={m.key} style={s.metric}>
+                <TouchableOpacity
+                  key={m.key}
+                  style={s.metric}
+                  disabled={!m.href}
+                  accessibilityRole={m.href ? "button" : undefined}
+                  accessibilityLabel={`${m.label}: ${m.value === null ? "indisponível" : m.value}${m.href ? ". Conferir" : ""}`}
+                  onPress={() => m.href && void action("metric", m.href)}
+                >
                   <Text style={s.number}>
                     {m.value === null ? "—" : m.value}
                   </Text>
                   <Text style={s.meta}>{m.label}</Text>
-                </View>
+                  {!!m.href && <Text style={s.buttonText}>Conferir →</Text>}
+                </TouchableOpacity>
               ))}
             </View>
+            {data.care && (
+              <MobilePastoralCare
+                key={props.orgId + ":" + data.profile}
+                user={props.user}
+                orgId={props.orgId}
+                apiOrigin={props.apiOrigin}
+                profile={data.profile}
+                care={data.care}
+                onChanged={() => setRevision((n) => n + 1)}
+              />
+            )}
             {["pastoral", "administration", "cell_leader"].includes(
               data.profile,
             ) &&
@@ -289,7 +325,7 @@ export function MobileRoleHome(
               {data.actions.map((a) => (
                 <Button
                   key={a.key}
-                  label={`${a.title}${["people", "reception", "finance", "operations", "network", "campaigns"].includes(a.key) ? " · web" : ""}`}
+                  label={`${a.title}${homeDestination(a.href, data.profile)?.kind === "web" ? " · web" : ""}`}
                   onPress={() => void action(a.key, a.href)}
                 />
               ))}
@@ -300,14 +336,21 @@ export function MobileRoleHome(
               </Text>
             )}
             {data.actions.some((a) => a.key === "absence") && (
-              <View style={s.card}>
-                <Text style={s.heading}>Quem precisa de cuidado</Text>
+              <View
+                style={s.card}
+                onLayout={(e) => {
+                  careY.current = e.nativeEvent.layout.y;
+                }}
+              >
+                <Text style={s.heading}>Contatos e ausências percebidas</Text>
                 <Text style={s.meta}>
                   Registro humano. A falta de check-in não indica ausência por
                   si só.
                 </Text>
                 {!data.absences.length && (
-                  <Text style={s.meta}>Nenhum acompanhamento em aberto.</Text>
+                  <Text style={s.meta}>
+                    Nenhum contato ou ausência percebida em aberto.
+                  </Text>
                 )}
                 {data.absences.map((a) => (
                   <View key={a.id} style={s.row}>
@@ -414,6 +457,12 @@ export function MobileRoleHome(
                     <Text style={s.strong}>{c.name}</Text>
                     <Text style={s.meta}>
                       {c.members ?? "—"} membros · {c.groups ?? "—"} células
+                      {c.receptionAsOf
+                        ? `\n${c.receptionPending ?? "—"} entrada(s) aguardando integração\nRecepção: ${new Date(c.receptionAsOf).toLocaleString("pt-BR")}`
+                        : ""}
+                      {c.careAsOf
+                        ? `\n${c.careOpen ?? "—"} pedidos pastorais abertos · ${c.careInProgress ?? "—"} em acompanhamento · ${c.careUrgent ?? "—"} urgente(s) · ${c.careOverdue ?? "—"} com prazo vencido\nFila: ${new Date(c.careAsOf).toLocaleString("pt-BR")}`
+                        : ""}
                     </Text>
                     <Text style={s.meta}>
                       {c.date
@@ -623,7 +672,11 @@ function MobileAbsence(
   );
 }
 export function MobileScopedGroups(
-  props: Props & { profile: HomeProfile; externalRevision?: number; onPrepare?: (groupId:string) => void },
+  props: Props & {
+    profile: HomeProfile;
+    externalRevision?: number;
+    onPrepare?: (groupId: string) => void;
+  },
 ) {
   const call = useApi(props);
   const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]),
@@ -648,7 +701,11 @@ export function MobileScopedGroups(
       .then((r) => {
         if (!controller.signal.aborted) {
           setGroups(r.groups);
-          setGroup(current=>r.groups.some(g=>g.id===current)?current:r.groups[0]?.id || "");
+          setGroup((current) =>
+            r.groups.some((g) => g.id === current)
+              ? current
+              : r.groups[0]?.id || "",
+          );
         }
       })
       .catch((e) => {
@@ -678,7 +735,14 @@ export function MobileScopedGroups(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [call, groupId, meetingId, revision, props.profile, props.externalRevision]);
+  }, [
+    call,
+    groupId,
+    meetingId,
+    revision,
+    props.profile,
+    props.externalRevision,
+  ]);
   async function create() {
     setBusy(true);
     setError("");
@@ -739,7 +803,10 @@ export function MobileScopedGroups(
     >
       <Text style={s.title}>Minhas células · liderança</Text>
       {props.onPrepare && groupId && (
-        <Button label="Preparar encontro com IA" onPress={()=>props.onPrepare?.(groupId)} />
+        <Button
+          label="Preparar encontro com IA"
+          onPress={() => props.onPrepare?.(groupId)}
+        />
       )}
       <Text style={s.meta}>
         Somente as células em que seu cadastro está vinculado como responsável.
@@ -812,7 +879,17 @@ export function MobileScopedGroups(
           />
         </View>
       )}
-      {!!groupId&&<MobileCellReport key={groupId} apiOrigin={props.apiOrigin} user={props.user} orgId={props.orgId} groupId={groupId} primary={props.primary} draft={null}/> }
+      {!!groupId && (
+        <MobileCellReport
+          key={groupId}
+          apiOrigin={props.apiOrigin}
+          user={props.user}
+          orgId={props.orgId}
+          groupId={groupId}
+          primary={props.primary}
+          draft={null}
+        />
+      )}
       {detail && (
         <>
           <Text style={s.heading}>Encontro</Text>
@@ -829,8 +906,8 @@ export function MobileScopedGroups(
             ))}
           </ScrollView>
           <Text style={s.meta}>
-            Últimos 25 encontros. O histórico completo está na gestão web. Registro a partir de 3 horas antes, até 90
-            dias depois.
+            Últimos 25 encontros. O histórico completo está na gestão web.
+            Registro a partir de 3 horas antes, até 90 dias depois.
           </Text>
           {!detail.meetings.length && (
             <Text style={s.meta}>Cadastre o primeiro encontro.</Text>
