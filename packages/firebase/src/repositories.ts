@@ -207,6 +207,7 @@ function toOrganization(documentId: string, data: DocumentData): Organization {
     publicName: data.publicName ? String(data.publicName) : undefined,
     displayName: data.displayName ? String(data.displayName) : undefined,
     organizationType: data.organizationType as Organization["organizationType"],
+    organizationTier: ["solo", "campus", "network", "denomination"].includes(data.organizationTier) ? data.organizationTier : undefined,
     ownerUid: data.ownerUid ? String(data.ownerUid) : undefined,
     registrationEmail: data.registrationEmail ? String(data.registrationEmail) : undefined,
     createdAt: data.createdAt ? String(data.createdAt) : undefined,
@@ -2692,6 +2693,8 @@ function toLesson(documentId: string, data: DocumentData): Lesson {
     moduleId: String(data.moduleId ?? ""),
     title: String(data.title ?? ""),
     videoUrl: String(data.videoUrl ?? ""),
+    videoAssetId: typeof data.videoAssetId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(data.videoAssetId) ? data.videoAssetId : undefined,
+    materialUrl: typeof data.materialUrl === "string" ? data.materialUrl : undefined,
     durationMinutes: Number(data.durationMinutes ?? 0),
     sortOrder: Number(data.sortOrder ?? 0)
   };

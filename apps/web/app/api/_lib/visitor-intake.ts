@@ -74,6 +74,7 @@ export async function capturePublicVisitor(
       throw new AccountError(404, "Igreja não encontrada.");
     const root = `organizations/${orgId}`;
     await assertModuleEnabled(tx, root, "publicForms");
+    await assertModuleEnabled(tx, root, "visitors");
     const path = `${root}/visitorIntakes/public_${id}`;
     const limits = [
       `${root}/publicIntakeLimits/ip_${hash(clientKey).slice(0, 2)}`,

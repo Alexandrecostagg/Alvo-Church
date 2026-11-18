@@ -7,13 +7,18 @@ import { PlanGuard } from "../../../src/components/plan-guard";
 import { ModuleLoading } from "../../../src/components/module-loading";
 
 const FinanceView = dynamic(
-  () => import("../../../src/features/finance/finance-view").then((mod) => mod.FinanceView),
-  { ssr: false, loading: () => <ModuleLoading label="Abrindo Finanças" /> }
+  () =>
+    import("../../../src/features/finance/finance-view").then(
+      (mod) => mod.FinanceView,
+    ),
+  { ssr: false, loading: () => <ModuleLoading label="Abrindo Finanças" /> },
 );
 
 export default function FinancePage() {
   return (
-    <RoleGuard required={["super_admin", "church_admin"]}>
+    <RoleGuard
+      required={["super_admin", "church_admin", "pastor", "secretary"]}
+    >
       <PlanGuard feature="finance">
         <ModuleGuard moduleKey="finance">
           <FinanceView />

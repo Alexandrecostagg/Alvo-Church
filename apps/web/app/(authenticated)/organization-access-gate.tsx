@@ -3,6 +3,10 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Building2, ShieldOff } from "lucide-react";
+import { homeRouteAllowed } from "@alvo/domain";
+import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
+import { usePlan } from "../../contexts/PlanContext";
+import Link from "next/link";
 import { useAppAuth } from "../providers";
 
 const ADMIN_EXCEPTION = new Set(["/platform-admin"]);
@@ -10,8 +14,10 @@ const ADMIN_EXCEPTION = new Set(["/platform-admin"]);
 export function OrganizationAccessGate({ children }: { children: ReactNode }) {
   const { tenantReady, tenantRuntime, roles } = useAppAuth();
   const pathname = usePathname();
-  if (!tenantReady || ADMIN_EXCEPTION.has(pathname ?? ""))
-    return <>{children}</>;
+  const { orgTier, ready } = useOrgFeatures();
+  const { plan } = usePlan();
+  if (ADMIN_EXCEPTION.has(pathname ?? "")) return <>{children}</>;
+  if (!tenantReady) return <p role="status" style={{ padding: 24 }}>Preparando seu acesso…</p>;
 
   const status = tenantRuntime?.organization.status ?? "active";
   if (status !== "active") {
@@ -38,6 +44,9 @@ export function OrganizationAccessGate({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!ready) return <p role="status" style={{ padding: 24 }}>Preparando seu acesso…</p>;
+  const networkPlan = ["rede", "enterprise"].includes(tenantRuntime?.settings?.subscription?.plan || plan);
+  if (!homeRouteAllowed(roles, pathname || "/app", orgTier, networkPlan)) return <><AccessMessage icon={<ShieldOff size={26} />} title="Área de outra responsabilidade" description="Seu acesso nesta instituição não inclui esta área. Volte ao seu painel para consultar suas tarefas e vínculos." /><p style={{ textAlign: "center" }}><Link href="/app">Abrir meu painel</Link></p></>;
   return <>{children}</>;
 }
 

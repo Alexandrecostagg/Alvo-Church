@@ -432,6 +432,28 @@ async function main() {
     );
     assert.match(prepared.data.url, /^https:\/\/wa.me\/5562999990001\?text=/);
     checks++;
+    const webLink = new URL(prepared.data.webUrl);
+    eq(
+      webLink.origin,
+      "https://web.whatsapp.com",
+      "manual desktop link opens WhatsApp Web",
+    );
+    eq(webLink.pathname, "/send", "desktop link opens composer");
+    eq(
+      webLink.searchParams.get("phone"),
+      "5562999990001",
+      "desktop link uses authorized contact",
+    );
+    eq(
+      webLink.searchParams.get("text"),
+      prepared.data.message,
+      "desktop link preserves message preview",
+    );
+    eq(
+      new URL(prepared.data.url).searchParams.get("text"),
+      prepared.data.message,
+      "app and web use the same message",
+    );
     await db.doc(`${root}/people/${pid}`).update({ communicationOptOut: true });
     eq(
       (

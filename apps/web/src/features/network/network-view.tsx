@@ -31,10 +31,10 @@ const STATUS_CONFIG = {
   inactive: { label: "Inativa",  color: "#dc2626", bg: "#fee2e2", icon: AlertCircle },
 };
 
-function fmt(n: number) { return n.toLocaleString("pt-BR"); }
-function fmtBRL(n: number) { return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }); }
+function fmt(n: number) { return Number.isFinite(n) ? n.toLocaleString("pt-BR") : "—"; }
+function fmtBRL(n: number) { return Number.isFinite(n) ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }) : "—"; }
 function pctDelta(now: number, prev: number) {
-  if (!prev) return null;
+  if (!Number.isFinite(now) || !Number.isFinite(prev) || !prev) return null;
   const d = ((now - prev) / prev) * 100;
   return { text: `${Math.abs(d).toFixed(1)}%`, positive: d >= 0 };
 }
@@ -165,6 +165,7 @@ export function NetworkView() {
             if (latest) snaps[a.childOrganizationId] = latest;
             // Aggregate history across all affiliates by month
             for (const h of hist) {
+              if (!/^\d{4}-\d{2}$/.test(h.month || "")) continue;
               if (!histByMonth[h.month]) {
                 histByMonth[h.month] = { ...h, organizationId: "net", id: h.month };
               } else {
@@ -217,7 +218,7 @@ export function NetworkView() {
       if (!s) return acc;
       acc.members  += s.totalMembers;
       acc.visitors += s.visitors;
-      acc.groups   += s.totalGroups;
+      acc.groups   += s.activeGroups;
       acc.giving   += s.givingThisMonth;
       acc.events   += s.eventsThisMonth;
       acc.newMembers += s.newMembersThisMonth;
@@ -237,19 +238,20 @@ export function NetworkView() {
 
   /* ── Bar chart data ───────────────────────────────────────────────── */
   const memberBarData = activeAffiliates
-    .map(a => ({ label: a.childName.replace("Igreja Esdras ", ""), value: snapshots[a.childOrganizationId]?.totalMembers ?? 0, color: "var(--alvo-accent)" }))
+    .map(a => ({ label: a.childName.replace("Igreja Esdras ", ""), value: snapshots[a.childOrganizationId]?.totalMembers ?? NaN, color: "var(--alvo-accent)" }))
+    .filter(d => Number.isFinite(d.value))
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
 
   const givingBarData = activeAffiliates
-    .map(a => ({ label: a.childName.replace("Igreja Esdras ", ""), value: snapshots[a.childOrganizationId]?.givingThisMonth ?? 0, color: "#10b981" }))
+    .map(a => ({ label: a.childName.replace("Igreja Esdras ", ""), value: snapshots[a.childOrganizationId]?.givingThisMonth ?? NaN, color: "#10b981" }))
+    .filter(d => Number.isFinite(d.value))
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
 
   const tierLabel = orgTier === "denomination" ? "Denominação" : "Rede de Igrejas";
-  const avgActiveMemberRate = activeAffiliates.length
-    ? Math.round(activeAffiliates.reduce((a, af) => a + (snapshots[af.childOrganizationId]?.serviceAttendanceRate ?? 0), 0) / activeAffiliates.length)
-    : 0;
+  const activeRates = activeAffiliates.map(a => snapshots[a.childOrganizationId]?.serviceAttendanceRate).filter((n): n is number => Number.isFinite(n));
+  const avgActiveMemberRate = activeRates.length ? Math.round(activeRates.reduce((sum, n) => sum + n, 0) / activeRates.length) : null;
 
   function exportCSV() {
     const headers = [
@@ -407,6 +409,7 @@ export function NetworkView() {
           Indicadores consolidados de <strong>{consolidatedAffiliates.length}/{activeAffiliates.length}</strong> instituições ativas
           {latestSnapshotDate ? ` · última consolidação: ${latestSnapshotDate.split("-").reverse().join("/")}` : " · aguardando a primeira execução diária"}.
           {consolidatedAffiliates.length < activeAffiliates.length && " Os totais ainda não incluem as instituições sem snapshot."}
+          {consolidatedAffiliates.some(a => !Number.isFinite(snapshots[a.childOrganizationId]?.givingThisMonth)) && " Há indicadores incompletos. O traço (—) significa não informado."}
         </div>
       )}
 
@@ -414,10 +417,10 @@ export function NetworkView() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
         <MetricCard
           label="Total de Membros"
-          value={totals.members}
-          delta={`+${totals.newMembers} este mês`}
+          value={fmt(totals.members)}
+          delta={Number.isFinite(totals.newMembers) ? `+${totals.newMembers} este mês` : undefined}
           deltaPositive
-          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.totalMembers ?? 0)}
+          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.totalMembers).filter((n): n is number => Number.isFinite(n))}
           color="var(--alvo-accent)"
           icon={<Users size={20} />}
         />
@@ -426,19 +429,19 @@ export function NetworkView() {
           value={fmtBRL(totals.giving)}
           delta={givingDelta?.text}
           deltaPositive={givingDelta?.positive}
-          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.givingThisMonth ?? 0)}
+          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.givingThisMonth).filter((n): n is number => Number.isFinite(n))}
           color="#10b981"
           icon={<Heart size={20} />}
         />
         <MetricCard
           label="Visitantes"
-          value={totals.visitors}
-          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.visitors ?? 0)}
+          value={fmt(totals.visitors)}
+          trend={activeAffiliates.map(a => snapshots[a.childOrganizationId]?.visitors).filter((n): n is number => Number.isFinite(n))}
           color="#f59e0b"
           icon={<Users size={20} />}
         />
         <div style={{ background: "var(--alvo-surface)", border: "1px solid var(--alvo-line)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 16 }}>
-          <Donut value={avgActiveMemberRate} color="var(--alvo-accent)" size={80} label={`${avgActiveMemberRate}%`} />
+          <Donut value={avgActiveMemberRate ?? 0} color="var(--alvo-accent)" size={80} label={avgActiveMemberRate === null ? "—" : `${avgActiveMemberRate}%`} />
           <div>
             <span style={{ fontSize: 12, color: "var(--alvo-ink-soft)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Membros ativos
@@ -462,6 +465,7 @@ export function NetworkView() {
           <div className="section-header">
             <h2 className="section-title">Arrecadação por Igreja</h2>
           </div>
+          {!givingBarData.length && <p>Arrecadação ainda não informada pelas igrejas.</p>}
           <BarChart
             data={givingBarData.map(d => ({ ...d, value: Math.round(d.value / 1000) }))}
             height={140}
@@ -564,7 +568,7 @@ export function NetworkView() {
                         <div style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>arrecadação</div>
                       </div>
                       <div style={{ textAlign: "center" }}>
-                        <div style={{ fontWeight: 800, color: "var(--alvo-ink)" }}>{snap.serviceAttendanceRate}%</div>
+                        <div style={{ fontWeight: 800, color: "var(--alvo-ink)" }}>{Number.isFinite(snap.serviceAttendanceRate) ? `${snap.serviceAttendanceRate}%` : "—"}</div>
                         <div style={{ fontSize: 11, color: "var(--alvo-ink-soft)" }}>membros ativos</div>
                       </div>
                     </div>
@@ -590,10 +594,10 @@ export function NetworkView() {
                 {isSelected && snap && (
                   <div style={{ padding: "16px 20px", borderTop: "1px solid var(--alvo-line)", background: "var(--alvo-surface-muted)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 12 }}>
                     {[
-                      { label: "Novos membros",     value: `+${snap.newMembersThisMonth}`, color: "#16a34a" },
+                      { label: "Novos membros",     value: Number.isFinite(snap.newMembersThisMonth) ? `+${snap.newMembersThisMonth}` : "—", color: "#16a34a" },
                       { label: "Visitantes",         value: fmt(snap.visitors),             color: "#f59e0b" },
-                      { label: "Grupos ativos",      value: `${snap.activeGroups}/${snap.totalGroups}`, color: "#8b5cf6" },
-                      { label: "Presença média",      value: `${snap.avgGroupAttendance} p/encontro`, color: "#06b6d4" },
+                      { label: "Grupos ativos",      value: `${fmt(snap.activeGroups)}/${fmt(snap.totalGroups)}`, color: "#8b5cf6" },
+                      { label: "Presença média",      value: Number.isFinite(snap.avgGroupAttendance) ? `${snap.avgGroupAttendance} p/encontro` : "—", color: "#06b6d4" },
                       { label: "Eventos/mês",        value: snap.eventsThisMonth,           color: "#ec4899" },
                       { label: "Presenças em eventos/mês", value: fmt(snap.totalEventAttendance), color: "#ec4899" },
                       { label: "Arrecad. anterior",  value: fmtBRL(snap.givingLastMonth),   color: "#64748b" },

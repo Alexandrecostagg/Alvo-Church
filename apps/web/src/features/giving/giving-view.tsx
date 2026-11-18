@@ -1,391 +1,574 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { HeartHandshake, TrendingUp, Users, Target, Plus, MessageCircle, Trash2, X, CheckCircle2, Copy, Megaphone, Check } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useAppAuth } from "../../../app/providers";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
-  fetchGivingIntents,
-  fetchGivingCampaigns,
-  fetchGivingReceipts,
-  saveGivingCampaign,
-  deleteGivingCampaign,
-  isFirebaseWebRuntimeConfigured
-} from "@alvo/firebase";
-import { financeRequest } from "../../lib/finance-client";
-import type { GivingIntent, GivingCampaign, GivingReceipt } from "@alvo/types";
-
-function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-function formatDate(iso: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-function parseAmount(raw: string): number {
-  const n = parseFloat(raw.replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
+  Plus,
+  RefreshCw,
+  HeartHandshake,
+  Target,
+  Copy,
+  MessageCircle,
+} from "lucide-react";
+import {
+  GIVING_STATUS,
+  parseGivingAmount,
+  type GivingOverview,
+} from "@alvo/domain";
+import { useGivingApi, useGivingResource } from "./giving-api";
+import styles from "./giving.module.css";
+const brl = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const date = (v: string) => {
+  const d = new Date(v.length === 10 ? `${v}T12:00:00` : v);
+  return Number.isNaN(d.getTime())
+    ? "Data não informada"
+    : d.toLocaleDateString("pt-BR");
+};
 export function GivingView() {
-  const { organizationId, firebaseConfig, user, tenantRuntime } = useAppAuth();
-  const router = useRouter();
-  const orgSlug = tenantRuntime?.organization?.slug ?? "";
-  const [intents, setIntents] = useState<GivingIntent[]>([]);
-  const [campaigns, setCampaigns] = useState<GivingCampaign[]>([]);
-  const [receipts, setReceipts] = useState<GivingReceipt[]>([]);
-  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  async function openReceipt(r: GivingReceipt) {
-    if (!user) return;
-    try { const data = await financeRequest(user, { action: "receipt", organizationId, receiptId: r.receiptId || r.id, legacyGiving: !r.receiptId }); setViewingReceipt(data.dataUrl); }
-    catch (e) { setError(e instanceof Error ? e.message : "Comprovante indisponível."); }
-  }
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", category: "", goal: "" });
-
-  // Comprovantes indexados por intentId — mostra "Pago ✓" na doação captada.
-  const receiptByIntent = useMemo(() => {
-    const map = new Map<string, GivingReceipt>();
-    for (const r of receipts) if (r.intentId) map.set(r.intentId, r);
-    return map;
-  }, [receipts]);
-
-  // Link público da campanha + soma automática das doações captadas por ela.
-  function campaignLink(id: string) {
-    const base = typeof window !== "undefined" ? window.location.origin : "";
-    return `${base}/p/${orgSlug}/give?campanha=${id}`;
-  }
-  function campaignAutoRaised(id: string) {
-    return intents.filter((i) => i.campaignId === id && i.status === "confirmed").reduce((s, i) => s + i.amount, 0);
-  }
-  function shareMessage(c: GivingCampaign) {
-    return `🙌 *${c.title}*\n${c.description ? c.description + "\n" : ""}Ajude nossa igreja a alcançar a meta de ${formatBRL(c.goalAmount)}. Contribua aqui (PIX): ${campaignLink(c.id)}`;
-  }
-  async function copyLink(c: GivingCampaign) {
-    try {
-      await navigator.clipboard.writeText(campaignLink(c.id));
-      setCopiedId(c.id);
-      setTimeout(() => setCopiedId((v) => (v === c.id ? null : v)), 2000);
-    } catch { /* ignore */ }
-  }
-  function broadcastToMembers(c: GivingCampaign) {
-    router.push(`/communication?compose=${encodeURIComponent(shareMessage(c))}`);
-  }
-
-  useEffect(() => {
-    if (!isFirebaseWebRuntimeConfigured(firebaseConfig) || !organizationId) return;
-    let cancelled = false; setIntents([]); setCampaigns([]); setReceipts([]); setViewingReceipt(null); setError("");
-    Promise.all([fetchGivingIntents(firebaseConfig, { organizationId }), fetchGivingCampaigns(firebaseConfig, { organizationId }), fetchGivingReceipts(firebaseConfig, { organizationId })]).then(([i,c,r]) => { if (!cancelled) { setIntents(i); setCampaigns(c); setReceipts(r); } }).catch(() => { if (!cancelled) setError("Não foi possível carregar as doações."); });
-    return () => { cancelled = true; };
-  }, [organizationId, firebaseConfig]);
-
-  const totalCaptured = useMemo(() => intents.reduce((s, i) => s + i.amount, 0), [intents]);
-  const capturedThisMonth = useMemo(() => {
-    const now = new Date();
-    return intents
-      .filter((i) => {
-        const d = new Date(i.createdAt);
-        return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      })
-      .reduce((s, i) => s + i.amount, 0);
-  }, [intents]);
-  const activeCampaigns = useMemo(() => campaigns.filter((c) => c.status === "active"), [campaigns]);
-  const totalRaised = useMemo(
-    () => campaigns.reduce((s, c) => s + (c.raisedAmount || 0), 0),
-    [campaigns, intents]
+  const { identity, ready } = useGivingApi();
+  return ready ? (
+    <GivingContent key={identity} />
+  ) : (
+    <p role="status">Carregando seu acesso…</p>
   );
-
-  async function handleCreateCampaign() {
-    if (!organizationId || !user || !form.title.trim() || parseAmount(form.goal) <= 0) return;
-    setSaving(true);
+}
+function GivingContent() {
+  const { call } = useGivingApi();
+  const [revision, setRevision] = useState(0),
+    { data, error: loadError } = useGivingResource<GivingOverview>(
+      { action: "snapshot" },
+      revision,
+    );
+  const [showForm, setShowForm] = useState(false),
+    [busy, setBusy] = useState(""),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const [preparedContact, setPreparedContact] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    goal: "",
+  });
+  const attempt = useRef({ fingerprint: "", id: "" }),
+    lock = useRef(false),
+    alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    const refresh = () => setRevision((v) => v + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
+  async function mutate(
+    key: string,
+    body: Record<string, unknown>,
+    message: string,
+  ) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(key);
+    setError("");
+    setNotice("");
     try {
-      const id = await saveGivingCampaign(firebaseConfig, { organizationId }, {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        category: form.category.trim() || undefined,
-        goalAmount: parseAmount(form.goal),
-        raisedAmount: 0,
-        status: "active",
-        createdByUserId: user.uid,
-      });
-      const now = new Date().toISOString();
-      setCampaigns((prev) => [{
-        id, organizationId, title: form.title.trim(), description: form.description.trim(),
-        category: form.category.trim() || undefined, goalAmount: parseAmount(form.goal),
-        raisedAmount: 0, status: "active", createdByUserId: user.uid, createdAt: now, updatedAt: now
-      }, ...prev]);
-      setForm({ title: "", description: "", category: "", goal: "" });
-      setShowForm(false);
-    } catch { setError("Não foi possível criar a campanha."); } finally {
-      setSaving(false);
+      await call(body);
+      if (!alive.current) return;
+      setNotice(message);
+      setRevision((v) => v + 1);
+      if (key === "create") {
+        setForm({ title: "", description: "", category: "", goal: "" });
+        setShowForm(false);
+        attempt.current = { fingerprint: "", id: "" };
+      }
+    } catch (e) {
+      if (alive.current)
+        setError(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      lock.current = false;
+      if (alive.current) setBusy("");
     }
   }
-
-  async function updateCampaign(c: GivingCampaign, patch: Partial<GivingCampaign>) {
-    if (!organizationId || !user) return;
-    const updated = { ...c, ...patch };
+  function create() {
+    const goalAmount = parseGivingAmount(form.goal);
+    if (!form.title.trim() || !goalAmount) {
+      setError("Preencha o título e uma meta válida, por exemplo 4.000,00.");
+      return;
+    }
+    const body = {
+      action: "create",
+      title: form.title.trim(),
+      description: form.description.trim(),
+      category: form.category.trim(),
+      goalAmount,
+    };
+    const fingerprint = JSON.stringify(body);
+    if (attempt.current.fingerprint !== fingerprint)
+      attempt.current = { fingerprint, id: crypto.randomUUID() };
+    void mutate(
+      "create",
+      { ...body, requestId: attempt.current.id },
+      "Campanha criada. Compartilhe o convite ou acompanhe as contribuições abaixo.",
+    );
+  }
+  async function prepareContact(id: string) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(id);
+    setError("");
+    setPreparedContact(null);
     try {
-      await saveGivingCampaign(firebaseConfig, { organizationId }, {
-        id: c.id, title: updated.title, description: updated.description, category: updated.category,
-        goalAmount: updated.goalAmount, raisedAmount: updated.raisedAmount, status: updated.status,
-        createdByUserId: c.createdByUserId, createdAt: c.createdAt,
+      const result = await call<{ url: string }>({
+        action: "contact",
+        intentId: id,
       });
-      setCampaigns((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
-    } catch { setError("Não foi possível atualizar a campanha."); }
+      if (alive.current) {
+        const url = new URL(result.url);
+        setPreparedContact(
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+            ? result.url
+            : `https://web.whatsapp.com/send?phone=${url.pathname.slice(1)}&${url.searchParams.toString()}`,
+        );
+        setNotice(
+          "Mensagem preparada. Abra o WhatsApp e confira antes de enviar.",
+        );
+      }
+    } catch (e) {
+      if (alive.current)
+        setError(
+          e instanceof Error
+            ? e.message
+            : "Não foi possível preparar o contato.",
+        );
+    } finally {
+      lock.current = false;
+      if (alive.current) setBusy("");
+    }
   }
-
-  async function handleDeleteCampaign(c: GivingCampaign) {
-    if (!organizationId) return;
-    if (!window.confirm(`Excluir a campanha "${c.title}"?`)) return;
+  const publicUrl = (id?: string) =>
+    data?.publicPath
+      ? `${window.location.origin}${data.publicPath}${id ? `?campanha=${encodeURIComponent(id)}` : ""}`
+      : "";
+  const message = (c: GivingOverview["campaigns"][number]) =>
+    `${c.title}\n${c.description ? c.description + "\n" : ""}Conheça esta campanha e contribua se desejar: ${publicUrl(c.id)}`;
+  const whatsapp = (text: string) =>
+    `${/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "https://wa.me/" : "https://web.whatsapp.com/send"}?text=${encodeURIComponent(text)}`;
+  async function copy(id: string) {
     try {
-      await deleteGivingCampaign(firebaseConfig, { organizationId }, c.id);
-      setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
-    } catch { setError("Não foi possível excluir a campanha."); }
+      await navigator.clipboard.writeText(publicUrl(id));
+      setNotice("Link copiado.");
+      setError("");
+    } catch {
+      setError(
+        "Não foi possível copiar. Abra a página da campanha e copie o endereço.",
+      );
+    }
   }
-
   return (
-    <div className="page-root">
-      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
-      <p>Declarações aguardam conferência em <a href="/finance">Finanças</a>. Intenção e comprovante não confirmam recebimento.</p>
+    <div className={`page-root ${styles.root}`}>
       <header className="page-header">
-        <div className="page-header-left">
+        <div>
           <h1 className="page-title">Doações</h1>
-          <p className="page-subtitle">Dízimos, ofertas e campanhas da organização</p>
+          <p className="page-subtitle">
+            {data?.manager
+              ? "Campanhas, contribuições e conferência de recebimentos"
+              : "Campanhas da igreja e minhas contribuições"}
+          </p>
         </div>
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Fechar" : "Nova Campanha"}
+        <div className={styles.actions}>
+          <button
+            className="btn-secondary"
+            onClick={() => setRevision((v) => v + 1)}
+            disabled={!!busy}
+          >
+            <RefreshCw size={16} /> Atualizar
           </button>
+          {data?.publicPath && data.pixConfigured && (
+            <a className="btn-secondary" href={publicUrl()} target="_blank" rel="noopener noreferrer">
+              {data.manager ? "Página de doações" : "Contribuir à igreja"}
+            </a>
+          )}
+          {data?.manager && (
+            <button
+              className="btn-primary"
+              disabled={!!busy}
+              onClick={() => setShowForm((v) => !v)}
+            >
+              <Plus size={16} />
+              {showForm ? "Fechar formulário" : "Nova campanha"}
+            </button>
+          )}
         </div>
       </header>
-
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-icon"><HeartHandshake size={20} /></div>
-          <div className="stat-body">
-            <span className="stat-label">Captado este mês</span>
-            <span className="stat-value">{formatBRL(capturedThisMonth)}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><Users size={20} /></div>
-          <div className="stat-body">
-            <span className="stat-label">Captadas (link público)</span>
-            <span className="stat-value">{intents.length}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><Target size={20} /></div>
-          <div className="stat-body">
-            <span className="stat-label">Campanhas ativas</span>
-            <span className="stat-value">{activeCampaigns.length}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon"><TrendingUp size={20} /></div>
-          <div className="stat-body">
-            <span className="stat-label">Arrecadado (campanhas)</span>
-            <span className="stat-value">{formatBRL(totalRaised)}</span>
-          </div>
-        </div>
-      </div>
-
-      {showForm && (
-        <section className="content-section">
-          <div className="section-header">
-            <h2 className="section-title">Nova campanha de oferta</h2>
-          </div>
-          <div style={{ display: "grid", gap: 10, maxWidth: 560 }}>
-            <input
-              type="text" placeholder="Título (ex: Reforma do templo)"
-              value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)", fontSize: 14 }}
-            />
-            <textarea
-              placeholder="Descrição da causa (opcional)" rows={2}
-              value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)", fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
-            />
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input
-                type="text" placeholder="Categoria (ex: Obras, Missões)"
-                value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                style={{ flex: 1, minWidth: 160, padding: "10px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)", fontSize: 14 }}
-              />
-              <input
-                type="text" inputMode="decimal" placeholder="Meta (R$)"
-                value={form.goal} onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
-                style={{ width: 160, padding: "10px 14px", borderRadius: 10, border: "1px solid var(--alvo-line)", fontSize: 14 }}
-              />
-            </div>
-            <button
-              className="btn-primary" onClick={handleCreateCampaign}
-              disabled={saving || !form.title.trim() || parseAmount(form.goal) <= 0}
-              style={{ justifySelf: "start", opacity: saving || !form.title.trim() || parseAmount(form.goal) <= 0 ? 0.5 : 1 }}
-            >
-              <CheckCircle2 size={16} /> {saving ? "Criando..." : "Criar campanha"}
-            </button>
-          </div>
-        </section>
+      {notice && (
+        <p role="status" className={styles.success}>
+          {notice}
+        </p>
       )}
-
-      <section className="content-section">
-        <div className="section-header">
-          <h2 className="section-title">Campanhas de oferta</h2>
-        </div>
-        {campaigns.length === 0 ? (
-          <div className="empty-state">
-            <Target size={40} strokeWidth={1.4} />
-            <p>Nenhuma campanha criada ainda.</p>
-            <p className="empty-hint">Crie uma campanha para arrecadar para um projeto ou causa específica.</p>
-            <button className="btn-primary btn-sm" onClick={() => setShowForm(true)}>
-              <Plus size={14} /> Criar primeira campanha
-            </button>
+      {preparedContact && (
+        <a
+          className="btn-secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+          href={preparedContact}
+        >
+          Abrir conversa preparada no WhatsApp
+        </a>
+      )}
+      {(error || loadError) && (
+        <p role="alert" className={styles.error}>
+          {error || loadError}
+        </p>
+      )}
+      {!data && !loadError && (
+        <p role="status">Carregando campanhas e contribuições…</p>
+      )}
+      {data && (
+        <>
+          <div className={styles.explanation}>
+            <HeartHandshake size={24} />
+            <div>
+              O PIX é pago à igreja pelo aplicativo do banco. A plataforma
+              registra a declaração; o recebimento só é confirmado após
+              conferência.
+              {data.canReconcile && (
+                <>
+                  {" "}
+                  <Link href="/finance">Abrir conferência em Finanças →</Link>
+                </>
+              )}
+            </div>
           </div>
-        ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            {campaigns.map((c) => {
-              const auto = campaignAutoRaised(c.id);
-              const raised = c.raisedAmount;
-              const pct = c.goalAmount > 0 ? Math.min(100, Math.round((raised / c.goalAmount) * 100)) : 0;
-              return (
-                <div key={c.id} style={{ padding: 16, borderRadius: 14, border: "1px solid var(--alvo-line)", background: "var(--alvo-surface, #fff)", opacity: c.status === "closed" ? 0.7 : 1 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <strong style={{ fontSize: 16, color: "var(--alvo-ink)" }}>{c.title}</strong>
-                        {c.category && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "var(--alvo-accent-soft, #eff6ff)", color: "var(--alvo-accent-dark, #1e3a8a)" }}>{c.category}</span>}
-                        {c.status === "closed" && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#f1f5f9", color: "#64748b" }}>Encerrada</span>}
-                      </div>
-                      {c.description && <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--alvo-ink-soft)" }}>{c.description}</p>}
-                    </div>
-                    <button onClick={() => handleDeleteCampaign(c)} aria-label="Excluir campanha" style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: 4 }}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                      <span style={{ color: "#16a34a", fontWeight: 700 }}>{formatBRL(raised)}</span>
-                      <span style={{ color: "var(--alvo-ink-soft)" }}>de {formatBRL(c.goalAmount)} · {pct}%</span>
-                    </div>
-                    <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", background: "#16a34a", borderRadius: 999 }} />
-                    </div>
-                    {auto > 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--alvo-ink-soft)" }}>{formatBRL(auto)} pelo link público · {formatBRL(c.raisedAmount)} total conferido</p>}
-                  </div>
-
-                  {/* Disparo: compartilhar o link da campanha pros doadores */}
-                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                    <button className="btn-secondary btn-sm" onClick={() => copyLink(c)}>
-                      {copiedId === c.id ? <Check size={14} /> : <Copy size={14} />} {copiedId === c.id ? "Copiado!" : "Copiar link"}
-                    </button>
-                    <a
-                      className="btn-secondary btn-sm"
-                      href={`https://wa.me/?text=${encodeURIComponent(shareMessage(c))}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ textDecoration: "none", color: "#25D366" }}
-                    >
-                      <MessageCircle size={14} /> WhatsApp
-                    </a>
-                    <button className="btn-secondary btn-sm" onClick={() => broadcastToMembers(c)}>
-                      <Megaphone size={14} /> Disparar pros membros
-                    </button>
-                  </div>
-
-                  <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {c.status === "active" && (
-                      <>
-
-                        <button className="btn-secondary btn-sm" onClick={() => updateCampaign(c, { status: "closed" })}>
-                          Encerrar
-                        </button>
-                      </>
-                    )}
-                    {c.status === "closed" && (
-                      <button className="btn-secondary btn-sm" onClick={() => updateCampaign(c, { status: "active" })}>
-                        Reabrir
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="content-section">
-        <div className="section-header">
-          <h2 className="section-title">Doações captadas (link público)</h2>
-          {intents.length > 0 && <span style={{ fontSize: 13, color: "var(--alvo-ink-soft, #64748b)" }}>{formatBRL(totalCaptured)} em intenções</span>}
-        </div>
-        {intents.length === 0 ? (
-          <div className="empty-state">
-            <HeartHandshake size={40} strokeWidth={1.4} />
-            <p>Nenhuma doação captada ainda.</p>
-            <p className="empty-hint">As doações feitas pelo link público (/p/&lt;sua-igreja&gt;/give) aparecerão aqui, com o contato do doador.</p>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {intents.map((i) => {
-              const receipt = receiptByIntent.get(i.id);
-              return (
-              <div key={i.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 16px", borderRadius: 12, background: "var(--alvo-surface, #fff)", border: "1px solid var(--alvo-line, #e2e8f0)" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ color: "var(--alvo-ink, #0f172a)", overflowWrap: "anywhere" }}>{i.name}</strong>
-                    {receipt && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#dcfce7", color: "#15803d" }}>
-                        <CheckCircle2 size={12} /> {i.status === "confirmed" ? "Conferido" : i.status === "rejected" ? "Rejeitado" : "Declarado — conferir"}
-                      </span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: 12, color: "var(--alvo-ink-soft, #64748b)" }}>{formatDate(i.createdAt)}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-                  {(receipt?.receiptId || receipt?.imageBase64) && (
-                    <button onClick={() => receipt && openReceipt(receipt)} className="btn-secondary btn-sm">
-                      Ver comprovante
-                    </button>
+          {!data.pixConfigured && (
+            <p className={styles.warning}>
+              A igreja ainda precisa configurar a chave PIX para receber pelo
+              app e pelo link público.
+              {data.manager && (
+                <>
+                  {" "}
+                  <Link href="/settings">Abrir configurações</Link>
+                </>
+              )}
+            </p>
+          )}
+          {!data.publicPath && (
+            <p className={styles.warning}>
+              O link público desta igreja ainda não está disponível.{" "}
+              {data.manager
+                ? "Confira o endereço público em Configurações."
+                : "Você pode contribuir pelo app após a configuração do PIX."}
+            </p>
+          )}
+          <div className="stats-row">
+            <div className="stat-card">
+              <div>
+                <span className="stat-label">Campanhas ativas</span>
+                <strong className="stat-value">
+                  {data.campaigns.filter((c) => c.status === "active").length}
+                </strong>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div>
+                <span className="stat-label">
+                  Confirmado nas campanhas {data.manager ? "" : "ativas"}
+                </span>
+                <strong className="stat-value">
+                  {brl(
+                    data.campaigns.reduce(
+                      (s, c) => s + Math.round(c.raisedAmount * 100),
+                      0,
+                    ) / 100,
                   )}
-                  <a aria-disabled={!i.consentContact} href={i.consentContact ? `https://wa.me/${i.whatsapp.replace(/\D/g, "")}` : undefined} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>
-                    <MessageCircle size={15} /> {i.whatsapp}
-                  </a>
-                  <strong style={{ color: "#16a34a" }}>{formatBRL(i.amount)}</strong>
+                </strong>
+              </div>
+            </div>
+            {data.manager && (
+              <div className="stat-card">
+                <div>
+                  <span className="stat-label">
+                    Declarações aguardando conferência
+                  </span>
+                  <strong className="stat-value">{data.pendingCount}</strong>
+                  {data.canReconcile && (
+                    <Link href="/finance">Conferir recebimentos →</Link>
+                  )}
                 </div>
               </div>
-              );
-            })}
+            )}
           </div>
-        )}
-      </section>
-
-      {viewingReceipt && (
-        <div
-          onClick={() => setViewingReceipt(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480, width: "100%", background: "#fff", borderRadius: 16, padding: 16, position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <strong style={{ fontSize: 15, color: "#0f172a" }}>Comprovante</strong>
-              <button onClick={() => setViewingReceipt(null)} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
-                <X size={18} />
-              </button>
+          {showForm && data.manager && (
+            <section className={`content-section ${styles.form}`}>
+              <h2>Nova campanha de oferta</h2>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  create();
+                }}
+              >
+                <label>
+                  Título
+                  <input
+                    required
+                    maxLength={140}
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                    placeholder="Ex.: Reforma do templo"
+                  />
+                </label>
+                <label>
+                  Descrição da causa
+                  <textarea
+                    rows={4}
+                    maxLength={2000}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                  />
+                </label>
+                <div className={styles.columns}>
+                  <label>
+                    Categoria
+                    <input
+                      maxLength={80}
+                      value={form.category}
+                      onChange={(e) =>
+                        setForm({ ...form, category: e.target.value })
+                      }
+                      placeholder="Obras, missões…"
+                    />
+                  </label>
+                  <label>
+                    Meta em reais
+                    <input
+                      required
+                      inputMode="decimal"
+                      value={form.goal}
+                      onChange={(e) =>
+                        setForm({ ...form, goal: e.target.value })
+                      }
+                      placeholder="4.000,00"
+                    />
+                  </label>
+                </div>
+                {parseGivingAmount(form.goal) !== null && (
+                  <p>
+                    Meta: <strong>{brl(parseGivingAmount(form.goal)!)}</strong>
+                  </p>
+                )}
+                <button className="btn-primary" disabled={!!busy}>
+                  {busy === "create" ? "Criando campanha…" : "Criar campanha"}
+                </button>
+              </form>
+            </section>
+          )}
+          <section className="content-section">
+            <h2>Campanhas de oferta</h2>
+            {!data.campaigns.length && (
+              <p>
+                Nenhuma campanha {data.manager ? "cadastrada" : "ativa"} no
+                momento.
+              </p>
+            )}
+            <div className={styles.campaigns}>
+              {data.campaigns.map((c) => {
+                const available =
+                  c.status === "active" &&
+                  !!data.publicPath &&
+                  data.pixConfigured;
+                const pct =
+                  c.goalAmount > 0
+                    ? Math.min(
+                        100,
+                        Math.round((c.raisedAmount / c.goalAmount) * 100),
+                      )
+                    : 0;
+                return (
+                  <article key={c.id} className={styles.campaign}>
+                    <div className={styles.heading}>
+                      <h3>
+                        <Target size={19} /> {c.title}
+                      </h3>
+                      <span>
+                        {c.status === "active" ? "Ativa" : "Encerrada"}
+                        {c.category ? ` · ${c.category}` : ""}
+                      </span>
+                    </div>
+                    <p>{c.description}</p>
+                    <div className={styles.heading}>
+                      <strong>{brl(c.raisedAmount)} confirmado</strong>
+                      <span>
+                        Meta {brl(c.goalAmount)} · {pct}%
+                      </span>
+                    </div>
+                    <progress
+                      max={100}
+                      value={pct}
+                      aria-label={`Progresso da campanha ${c.title}`}
+                    />
+                    <div className={styles.actions}>
+                      {available && (
+                        <>
+                          <a
+                            className="btn-primary"
+                            href={publicUrl(c.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {data.manager ? "Ver página pública" : "Contribuir"}
+                          </a>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => void copy(c.id)}
+                          >
+                            <Copy size={16} />
+                            Copiar link
+                          </button>
+                          <a
+                            className="btn-secondary"
+                            href={whatsapp(message(c))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MessageCircle size={16} />
+                            Abrir WhatsApp
+                          </a>
+                          {data.canCommunicate && (
+                            <Link
+                              className="btn-secondary"
+                              href={`/communication?compose=${encodeURIComponent(message(c))}`}
+                            >
+                              Preparar mensagem aos membros
+                            </Link>
+                          )}
+                        </>
+                      )}
+                      {data.manager && (
+                        <button
+                          className="btn-secondary"
+                          disabled={!!busy}
+                          onClick={() =>
+                            void mutate(
+                              c.id,
+                              {
+                                action: "status",
+                                campaignId: c.id,
+                                status:
+                                  c.status === "active" ? "closed" : "active",
+                                expectedUpdatedAt: c.updatedAt,
+                              },
+                              c.status === "active"
+                                ? "Campanha encerrada. O histórico foi preservado."
+                                : "Campanha reaberta.",
+                            )
+                          }
+                        >
+                          {busy === c.id
+                            ? "Salvando…"
+                            : c.status === "active"
+                              ? "Encerrar campanha"
+                              : "Reabrir campanha"}
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={viewingReceipt}
-              alt="Comprovante de pagamento"
-              style={{ width: "100%", borderRadius: 10, display: "block" }}
-            />
-          </div>
-        </div>
+            <p className={styles.hint}>
+              O WhatsApp abre com o texto preparado. Você escolhe o destinatário
+              e confirma o envio.
+            </p>
+          </section>
+          <section className="content-section">
+            <h2>
+              {data.manager
+                ? "Contribuições declaradas · app e link público"
+                : "Minhas contribuições pelo app"}
+            </h2>
+            {!data.manager && <p>Este histórico reúne as declarações feitas com sua conta no app. Contribuições pelo link público são acompanhadas pela secretaria.</p>}
+            {data.truncated && (
+              <p className={styles.warning}>
+                Exibindo até 200 registros recentes por origem. O histórico
+                financeiro completo deve ser consultado em Finanças.
+              </p>
+            )}
+            {!data.contributions.length && (
+              <p>
+                Nenhuma contribuição declarada{" "}
+                {data.manager ? "ainda" : "por esta conta"}.
+              </p>
+            )}
+            <div className={styles.records}>
+              {data.contributions.map((c) => (
+                <article key={c.id} className={styles.record}>
+                  <div>
+                    <strong>
+                      {data.manager ? c.contributorName : "Minha contribuição"}
+                    </strong>
+                    <p>
+                      {date(c.date)} ·{" "}
+                      {data.campaigns.find((x) => x.id === c.campaignId)
+                        ?.title || c.type}
+                    </p>
+                    <span
+                      className={
+                        c.status === "confirmed"
+                          ? styles.confirmed
+                          : styles.pending
+                      }
+                    >
+                      {GIVING_STATUS[c.status] ||
+                        "Registro antigo — consultar Finanças"}
+                    </span>
+                  </div>
+                  <strong>{brl(c.amount)}</strong>
+                </article>
+              ))}
+            </div>
+          </section>
+          {data.manager && (
+            <section className="content-section">
+              <h2>Intenções pelo link público</h2>
+              <p>
+                Gerar um PIX não comprova pagamento. As declarações aparecem
+                acima e em Finanças.
+              </p>
+              {!data.intents.length && (
+                <p>Nenhuma intenção registrada pelo link público.</p>
+              )}
+              <div className={styles.records}>
+                {data.intents.map((i) => (
+                  <article key={i.id} className={styles.record}>
+                    <div>
+                      <strong>{i.name}</strong>
+                      <p>{date(i.createdAt)}</p>
+                      <span>{GIVING_STATUS[i.status] || "A conferir"}</span>
+                    </div>
+                    <div className={styles.actions}>
+                      <strong>{brl(i.amount)}</strong>
+                      {i.canContact && (
+                        <button
+                          className="btn-secondary"
+                          disabled={!!busy}
+                          onClick={() => void prepareContact(i.id)}
+                        >
+                          {busy === i.id ? "Preparando…" : "Preparar contato"}
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   );

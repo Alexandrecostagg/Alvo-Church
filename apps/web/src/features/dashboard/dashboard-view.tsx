@@ -93,7 +93,7 @@ import { useOrgFeatures } from "../../../contexts/OrgFeaturesContext";
 import type { TribeReclassificationSnapshot as DashboardShape } from "@alvo/types";
 
 
-export function DashboardView() {
+export function LegacyDashboardView() {
   const { configured, user, organizationId, firebaseConfig, roles, tenantReady } = useAppAuth();
   const { isEnabled } = useOrgFeatures();
   const moduleHighlights = getModuleHighlights(isEnabled, roles.includes("super_admin"));

@@ -44,3 +44,16 @@ describe("generateCommunicationDraft", () => {
     expect(callChatWithFallback).not.toHaveBeenCalled();
   });
 });
+
+it('tribe suggestion uses explicit interests without identity or sensitive notes', async()=>{
+  const {classifyTribe}=await import('./tasks');
+  vi.mocked(callChatWithFallback).mockClear();
+  await classifyTribe({groqApiKey:'test'},{memberName:'Nome privado',memberStatus:'visitor',notes:'Nota privada',ministerialInterests:['Recepção'],servingProfile:'Quero acolher visitantes.'});
+  const [,messages]=vi.mocked(callChatWithFallback).mock.calls[0];
+  const prompt=JSON.stringify(messages);
+  expect(prompt).not.toContain('Nome privado');
+  expect(prompt).not.toContain('Nota privada');
+  expect(prompt).toContain('Recepção');
+  expect(prompt).toContain('revisão humana');
+  expect(prompt).toContain('primary e secondary devem ser null');
+});

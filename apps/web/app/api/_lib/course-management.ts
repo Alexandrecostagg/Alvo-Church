@@ -17,7 +17,7 @@ const VIDEO_HOSTS = [
 type CourseOperation =
   | { action: "save_course"; organizationId: string; requestId: string; courseId: string; title: string; description: string; thumbnailUrl: string | null; instructorName: string; instructorTitle: string; isActive: boolean; contentRights: { accepted: true; version: string; reference: string } | null }
   | { action: "save_module"; organizationId: string; requestId: string; courseId: string; moduleId: string; title: string; sortOrder: number }
-  | { action: "save_lesson"; organizationId: string; requestId: string; courseId: string; moduleId: string; lessonId: string; title: string; videoUrl: string; durationMinutes: number; sortOrder: number; materialUrl: string | null }
+  | { action: "save_lesson"; organizationId: string; requestId: string; courseId: string; moduleId: string; lessonId: string; title: string; videoUrl: string; videoAssetId: string | null; durationMinutes: number; sortOrder: number; materialUrl: string | null }
   | { action: "delete_module"; organizationId: string; requestId: string; courseId: string; moduleId: string }
   | { action: "delete_lesson"; organizationId: string; requestId: string; courseId: string; lessonId: string };
 
@@ -94,15 +94,16 @@ function common(raw: unknown): CourseOperation {
       contentRights,
     };
   }
+  if (action === "delete_lesson") return { ...base, action: "delete_lesson", lessonId: documentId(data.lessonId, "Aula") };
   const moduleId = documentId(data.moduleId, "Módulo");
   if (action === "save_module") {
     return { ...base, action: "save_module", moduleId, title: text(data.title, "Título", 160), sortOrder: integer(data.sortOrder, "Ordem", 0, 9999) };
   }
   if (action === "delete_module") return { ...base, action: "delete_module", moduleId };
   const lessonId = documentId(data.lessonId, "Aula");
-  if (action === "delete_lesson") return { ...base, action: "delete_lesson", lessonId };
-  const videoUrl = text(data.videoUrl, "Vídeo", 1000);
-  if (!isSupportedCourseVideoUrl(videoUrl)) throw new AccountError(400, "Use vídeo HTTPS do YouTube, Vimeo ou Cloudflare.");
+  const videoAssetId = data.videoAssetId ? documentId(data.videoAssetId, "Vídeo") : null;
+  const videoUrl = videoAssetId ? "" : text(data.videoUrl, "Vídeo", 1000);
+  if (!videoAssetId && !isSupportedCourseVideoUrl(videoUrl)) throw new AccountError(400, "Use vídeo HTTPS do YouTube, Vimeo ou Cloudflare.");
   return {
     ...base,
     action: "save_lesson",
@@ -110,6 +111,7 @@ function common(raw: unknown): CourseOperation {
     lessonId,
     title: text(data.title, "Título", 160),
     videoUrl,
+    videoAssetId,
     durationMinutes: integer(data.durationMinutes, "Duração", 0, 1440),
     sortOrder: integer(data.sortOrder, "Ordem", 0, 9999),
     materialUrl: optionalHttpsUrl(data.materialUrl, "Material"),
@@ -198,6 +200,14 @@ export async function manageCourse(raw: unknown, uid: string) {
       } else if (input.action === "save_lesson") {
         const [module] = await tx.read(`${coursePath}/modules/${input.moduleId}`);
         if (!module || module.organizationId !== input.organizationId || module.courseId !== input.courseId) throw new AccountError(404, "Módulo não encontrado.");
+        if (input.videoAssetId) {
+          const videoPath = `${root}/courseVideos/${input.videoAssetId}`;
+          const [video] = await tx.read(videoPath);
+          if (!video || video.organizationId !== input.organizationId || video.courseId !== input.courseId || video.status !== "ready" || (video.lessonId && video.lessonId !== input.lessonId)) {
+            throw new AccountError(409, "Escolha um vídeo enviado e disponível neste curso.");
+          }
+          tx.patch(videoPath, { lessonId: input.lessonId });
+        }
         const lesson = {
           id: input.lessonId,
           organizationId: input.organizationId,
@@ -205,6 +215,7 @@ export async function manageCourse(raw: unknown, uid: string) {
           moduleId: input.moduleId,
           title: input.title,
           videoUrl: input.videoUrl,
+          ...(input.videoAssetId ? { videoAssetId: input.videoAssetId } : {}),
           durationMinutes: input.durationMinutes,
           sortOrder: input.sortOrder,
           ...(input.materialUrl ? { materialUrl: input.materialUrl } : {}),

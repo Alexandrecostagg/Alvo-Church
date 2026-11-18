@@ -11,7 +11,7 @@ const CareRadarView = dynamic(
 
 export default function CareRadarPage() {
   return (
-    <RoleGuard required={["super_admin", "church_admin", "pastor", "secretary"]}>
+    <RoleGuard required={["super_admin", "church_admin", "pastor", "group_leader"]}>
       <ModuleGuard moduleKey="ai">
         <CareRadarView />
       </ModuleGuard>

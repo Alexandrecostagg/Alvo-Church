@@ -132,9 +132,9 @@ export function ServingView() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
-  const [dialog, setDialog] = useState<"area" | "scale" | "replace" | null>(
-      null,
-    ),
+  const [dialog, setDialog] = useState<
+      "area" | "scale" | "replace" | "whatsapp" | null
+    >(null),
     [area, setArea] = useState(blankArea),
     [draft, setDraft] = useState(blankScale);
   const [replacement, setReplacement] = useState({
@@ -147,7 +147,11 @@ export function ServingView() {
     [areaFilter, setAreaFilter] = useState(""),
     [dateFilter, setDateFilter] = useState(""),
     [statusFilter, setStatusFilter] = useState("");
-  const [preparedLink, setPreparedLink] = useState(""),
+  const [preparedLink, setPreparedLink] = useState<{
+      url: string;
+      webUrl: string;
+      message: string;
+    } | null>(null),
     [whatsappAttempt, setWhatsappAttempt] = useState<{
       id: string;
       requestId: string;
@@ -203,7 +207,7 @@ export function ServingView() {
     setData(EMPTY);
     setDialog(null);
     setNotice("");
-    setPreparedLink("");
+    setPreparedLink(null);
     if (canManage) void load();
     else setLoading(false);
     return () => {
@@ -353,7 +357,9 @@ export function ServingView() {
     const job = ++mutationVersion.current;
     setBusy(true);
     setError("");
-    setPreparedLink("");
+    setPreparedLink(null);
+    setFormError("");
+    setDialog("whatsapp");
     setNotice("Preparando mensagem para envio manual…");
     const org = organizationId;
     try {
@@ -363,7 +369,7 @@ export function ServingView() {
         requestId: crypto.randomUUID(),
       });
       if (scope.current !== org) return;
-      setPreparedLink(result.url);
+      setPreparedLink(result);
       setNotice(
         "Mensagem preparada. Abra o WhatsApp e confira antes de enviar. Nada foi enviado automaticamente.",
       );
@@ -371,6 +377,7 @@ export function ServingView() {
       if (scope.current === org) {
         setNotice("");
         setError(e instanceof Error ? e.message : "Contato indisponível.");
+        setFormError(e instanceof Error ? e.message : "Contato indisponível.");
       }
     } finally {
       if (job === mutationVersion.current) {
@@ -448,19 +455,6 @@ export function ServingView() {
           >
             Atualizar lista
           </button>
-        </div>
-      )}
-      {preparedLink && (
-        <div className="serving-feedback">
-          <a
-            className="serving-button"
-            href={preparedLink}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Abrir mensagem no WhatsApp
-          </a>
-          <span>Preparado para envio manual; não é comprovante de envio.</span>
         </div>
       )}
       {!loading && (
@@ -805,15 +799,78 @@ export function ServingView() {
               aparelho.
             </p>
             <p>
-              WhatsApp:{" "}
-              {data.whatsappConnected
-                ? "canal conectado; o envio depende do vínculo, preferência de contato e janela de atendimento."
-                : "envio automático ainda não conectado. Use Preparar WhatsApp para enviar manualmente."}{" "}
-              Fora da janela de atendimento, use um template aprovado em
-              Comunicação. Não há envio pago automático nesta tela.
+              WhatsApp: Use Preparar WhatsApp para conferir a mensagem e abrir o
+              WhatsApp Web ou o aplicativo. Esse envio é manual e não depende da
+              conexão com a API da Meta. Use a sessão do número da igreja e
+              confirme o envio no WhatsApp.
             </p>
+            {data.whatsappConnected && (
+              <p>
+                API da Meta conectada: o envio pelo canal conectado depende do
+                vínculo, da preferência de contato e da janela de atendimento.
+                Fora dessa janela, use um template aprovado em Comunicação.
+              </p>
+            )}
           </aside>
         </>
+      )}
+      {dialog === "whatsapp" && (
+        <Dialog
+          title="Enviar escala pelo WhatsApp"
+          busy={busy}
+          onClose={() => {
+            setDialog(null);
+            setPreparedLink(null);
+          }}
+        >
+          {busy && (
+            <p role="status">Preparando a mensagem e conferindo o contato…</p>
+          )}
+          {formError && (
+            <p role="alert" className="serving-error">
+              {formError}
+            </p>
+          )}
+          {preparedLink && (
+            <>
+              <p>
+                Confira a mensagem abaixo. No computador, use WhatsApp Web; no
+                celular, abra o aplicativo.
+              </p>
+              <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                {preparedLink.message}
+              </p>
+              <div className="serving-row-actions">
+                <a
+                  className="serving-button primary"
+                  href={preparedLink.webUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir WhatsApp Web
+                </a>
+                <a
+                  className="serving-button"
+                  href={preparedLink.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir no aplicativo WhatsApp
+                </a>
+              </div>
+              <p>
+                Use a sessão do número da igreja. Se necessário, conecte o
+                WhatsApp Web pelo QR code. Isso não exige conectar a API da
+                Meta.
+              </p>
+              <p>
+                Você confirma o envio no WhatsApp. Abrir a conversa não marca a
+                mensagem como enviada nem confirma a escala. Depois, registre
+                aqui a resposta recebida.
+              </p>
+            </>
+          )}
+        </Dialog>
       )}
       {dialog === "replace" && (
         <Dialog

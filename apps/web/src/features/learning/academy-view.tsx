@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CourseVideoPlayer } from "./course-video-player";
 import { 
   ArrowLeft, 
   Play, 
@@ -588,20 +589,7 @@ export function AcademyView() {
                 {/* Efeito luminoso de fundo */}
                 <div style={{ position: "absolute", width: "100%", height: "100%", background: "radial-gradient(circle at center, rgba(6, 182, 212, 0.08) 0%, transparent 70%)", pointerEvents: "none", zIndex: 1 }} />
 
-                <iframe
-                  src={`${selectedLesson.videoUrl}?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479`}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    border: "none",
-                    zIndex: 2
-                  }}
-                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write"
-                  title={selectedLesson.title}
-                />
+                <CourseVideoPlayer key={selectedLesson.id} lesson={selectedLesson} />
               </div>
 
               {/* Título e Ação rápida abaixo do Player */}

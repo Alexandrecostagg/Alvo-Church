@@ -14,7 +14,7 @@ const PastoralAiWithRadarView = dynamic(
 export default function PastoralAiPage() {
   return (
     <PlanGuard feature="pastoral-ai">
-      <RoleGuard required={["super_admin", "church_admin", "pastor"]}>
+      <RoleGuard required={["super_admin", "church_admin", "pastor", "group_leader"]}>
         <ModuleGuard moduleKey="ai">
           <PastoralAiWithRadarView />
         </ModuleGuard>

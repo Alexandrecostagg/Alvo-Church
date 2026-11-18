@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { money } from "./finance-operations";
 import { checkoutUrl } from "./billing-operations";
-import { reportMonth, csvCell } from "./finance-report";
+import { reportMonth, csvCell, financeDate } from "./finance-report";
 import { retentionDays, retentionEligible } from "./kids-retention";
 describe("financial boundaries", () => {
   it.each([0, -1, 0.001, 1e-10, 1000000.01, NaN, Infinity, "79", null, {}])(
@@ -52,6 +52,17 @@ describe("Kids retention eligibility", () => {
 });
 
 describe("monthly CSV", () => {
+  it.each([
+    "2026-02-30",
+    "2026-13-01",
+    "2026-1-01",
+    "2026-01-01T00:00:00Z",
+    null,
+  ])("rejects invalid ledger date %s", (value) =>
+    expect(() => financeDate(value)).toThrow(),
+  );
+  it("accepts a valid leap day", () =>
+    expect(financeDate("2028-02-29")).toBe("2028-02-29"));
   it.each(["2026-13", "2026-00", "../../file", null])(
     "rejects month %s",
     (value) => expect(() => reportMonth(value)).toThrow(),

@@ -10,3 +10,5 @@ export function toSlug(value: string) {
 }
 
 export { whatsappPhone, whatsappHref, manualWhatsappLink, type WhatsappContact } from "./whatsapp";
+
+export * from "./community-marketplace";

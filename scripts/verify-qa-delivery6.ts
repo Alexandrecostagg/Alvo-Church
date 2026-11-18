@@ -108,7 +108,7 @@ async function run() {
   await org
     .collection("settings")
     .doc("subscription")
-    .set({ plan: "free", billingStatus: "active" });
+    .set({ plan: "pastoral", billingStatus: "active" });
   await org
     .collection("users")
     .doc(admin)
@@ -326,7 +326,9 @@ async function run() {
     0,
     "Honeypot não grava",
   );
-  // Simultaneous final free slot across different entry points.
+  // Jornada exige plano pastoral; o limite gratuito é testado no cadastro básico.
+  await org.collection("settings").doc("subscription").update({ plan: "free" });
+  equal((await api("members", reception(), a)).status, 403, "Plano gratuito não libera jornada da recepção");
   const batch = db.batch();
   for (let i = 3; i < 49; i++)
     batch.set(org.collection("people").doc(`existing_${i}`), {
@@ -335,18 +337,8 @@ async function run() {
     });
   await batch.commit();
   await org.update({ memberCount: 0 }); // A stale helper counter cannot bypass the actual count.
-  const race = await Promise.all([
-    api("members", reception(), a),
-    api("members", { ...serving, requestId: randomUUID() }, a),
-    api(
-      "members",
-      {
-        requestId: randomUUID(),
-        person: { firstName: "Membro", lastName: "QA" },
-      },
-      a,
-    ),
-  ]);
+  const basic = () => ({ requestId: randomUUID(), person: { firstName: "Membro", lastName: "QA" } });
+  const race = await Promise.all([api("members", basic(), a), api("members", basic(), a), api("members", basic(), a)]);
   equal(
     race.map((r) => r.status).sort(),
     [200, 409, 409],
@@ -363,12 +355,13 @@ async function run() {
     "Contador corrigido pela contagem real",
   );
   const before = (await org.collection("followUpTasks").get()).size;
-  equal((await api("members", reception(), a)).status, 409, "Plano cheio");
+  equal((await api("members", basic(), a)).status, 409, "Plano cheio");
   equal(
     (await org.collection("followUpTasks").get()).size,
     before,
     "Limite sem tarefas órfãs",
   );
+  await org.collection("settings").doc("subscription").update({ plan: "pastoral" });
   // Session authorization, room capacity and revocation.
   const config = session();
   equal(
@@ -753,9 +746,12 @@ async function run() {
   };
   equal(
     await direct("communityStores/own", m, "PATCH", storeFields),
-    200,
-    "Membro cria loja pendente",
+    403,
+    "Criação de loja exige backend; fluxo autorizado coberto em qa:marketplace",
   );
+  await org.collection("communityStores").doc("own").set({
+    organizationId: orgId, ownerId: member, status: "pending", name: "Minha loja QA",
+  });
   equal(
     await direct("communityStores/own", m, "PATCH", {
       ...storeFields,

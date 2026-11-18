@@ -60,9 +60,15 @@ async function login(who: string) {
   return (await r.json()).idToken as string;
 }
 async function api(path: string, body: object, token?: string) {
-  const payload = path === "public/giving" && (body as { action?: string }).action === "intent"
-    ? { turnstileToken: localQaTurnstileToken("public_giving"), turnstileRequestId: randomUUID(), ...body }
-    : body;
+  const payload =
+    path === "public/giving" &&
+    (body as { action?: string }).action === "intent"
+      ? {
+          turnstileToken: localQaTurnstileToken("public_giving"),
+          turnstileRequestId: randomUUID(),
+          ...body,
+        }
+      : body;
   const r = await fetch(`http://127.0.0.1:3001/api/${path}`, {
     method: "POST",
     headers: {
@@ -140,7 +146,7 @@ async function run() {
   await org
     .collection("settings")
     .doc("subscription")
-    .set({ plan: "free", billingStatus: "active" });
+    .set({ plan: "comunidade", billingStatus: "active" });
   await db.doc(`org_slugs/${slug}`).set({ organizationId: orgId });
   await org.collection("givingCampaigns").doc("campaign").set({
     organizationId: orgId,
@@ -591,11 +597,30 @@ async function run() {
   );
   equal(
     legacyReport.data.incomeCents,
-    6190,
-    "Contribuição manual legada incluída uma vez",
+    5985,
+    "Contribuição legada sem confirmação excluída da receita",
   );
   equal(
-    legacyReport.data.csv.includes("'=1+1"),
+    legacyReport.data.unconfirmedLegacyCount,
+    1,
+    "Legado sem confirmação destacado para revisão",
+  );
+  await org
+    .collection("contributions")
+    .doc("legacy")
+    .update({ status: "confirmed" });
+  const confirmedLegacyReport = await api(
+    "finance",
+    { action: "report", month: new Date().toISOString().slice(0, 7) },
+    a,
+  );
+  equal(
+    confirmedLegacyReport.data.incomeCents,
+    6190,
+    "Legado explicitamente confirmado incluído uma vez",
+  );
+  equal(
+    confirmedLegacyReport.data.csv.includes("'=1+1"),
     true,
     "CSV neutraliza fórmula",
   );
@@ -622,6 +647,11 @@ async function run() {
     "Webhook exige token próprio",
   );
   // Provider adapter has no network. Real HTTP/Firestore exercise above remains separate.
+  // Billing starts from Free; the giving fixtures above require Comunidade.
+  await org
+    .collection("settings")
+    .doc("subscription")
+    .set({ plan: "free", billingStatus: "active" });
   const resources = new Map<string, any>();
   let posts = 0,
     loseSubscription = true;
@@ -889,7 +919,13 @@ async function run() {
     .doc("subscription")
     .set({ plan: "free", billingStatus: "active" });
   equal(
-    (await api("ai", { task: "cell_script", input: { theme: "Encontro de teste" } }, m)).status,
+    (
+      await api(
+        "ai",
+        { task: "cell_script", input: { theme: "Encontro de teste" } },
+        m,
+      )
+    ).status,
     429,
     "IA gratuita não ultrapassa cota zero",
   );

@@ -20,6 +20,7 @@ function decode(value: Data): any {
   return value.doubleValue ?? value.timestampValue ?? value.stringValue ?? value.booleanValue ?? null;
 }
 export interface AccountTransaction {
+  count: (parent: string, collection: string, field?: string, value?: unknown, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }) => Promise<number>;
   query: (parent: string, collection: string, field?: string, value?: unknown, op?: "EQUAL" | "NOT_EQUAL" | "ARRAY_CONTAINS" | "LESS_THAN_OR_EQUAL" | "GREATER_THAN_OR_EQUAL", limit?: number, and?: { field: string; value: unknown; op?: "EQUAL" | "LESS_THAN_OR_EQUAL" }, order?: { field: string; direction: "ASCENDING" | "DESCENDING" }, startAfterId?: string) => Promise<Data[]>;
   usersByEmail: (orgId: string, email: string) => Promise<Data[]>;
   read: (...paths: string[]) => Promise<Array<Data | null>>;
@@ -57,6 +58,15 @@ export async function accountTransaction<T>(work: (tx: AccountTransaction) => Pr
       if (!transaction) throw new Error("Transação ausente.");
       const writes: Data[] = [];
       const result = await work({
+        count: async (parent, collection, field, value, and) => {
+          const filters=field?[{fieldFilter:{field:{fieldPath:field},op:"EQUAL",value:encode(value)}}]:[];
+          if(and)filters.push({fieldFilter:{field:{fieldPath:and.field},op:and.op || "EQUAL",value:encode(and.value)}});
+          const rows: Data[] = await call(`/${parent}:runAggregationQuery`, { transaction, structuredAggregationQuery: {
+            structuredQuery: { from: [{ collectionId: collection }], ...(filters.length ? {where:filters.length===1?filters[0]:{compositeFilter:{op:"AND",filters}}} : {}) },
+            aggregations: [{ alias: "total", count: {} }],
+          } });
+          return rows.reduce((sum, row) => sum + Number(row.result?.aggregateFields?.total?.integerValue || 0), 0);
+        },
         query: async (parent, collection, field, value, op = "EQUAL", limit = 200, and, order, startAfterId) => {
           if (startAfterId && (order?.field !== "__name__" || startAfterId.includes("/"))) throw new Error("Cursor inválido.");
           const filters = field ? [{ fieldFilter: { field: { fieldPath: field }, op, value: encode(value) } }] : [];

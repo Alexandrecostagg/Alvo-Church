@@ -62,6 +62,18 @@ try {
     "qa:worship",
     "qa:campaigns",
     "qa:platform-admin",
+    "qa:home",
+    "qa:journeys",
+    "qa:groups",
+    "qa:tribes",
+    "qa:giving",
+    "qa:communication",
+    "qa:marketplace",
+    "qa:people",
+    "qa:own-profile",
+    "qa:finance",
+    "qa:pastoral",
+    "qa:reception",
   ])
     await run([task]);
   await run(["qa:security"], { SECURITY_AUDIT_API: "1" });

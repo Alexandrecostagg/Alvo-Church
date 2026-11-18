@@ -1,3 +1,6 @@
+import { assertModuleEnabled } from './module-access';
+import { planHasModule } from '@alvo/firebase';
+import { isChurchStaff } from '@alvo/domain';
 import {
   PLAN_LIMITS,
   planTierToPlanId,
@@ -53,6 +56,10 @@ export async function aiGate(
         403,
         "Este recurso é restrito à liderança pastoral.",
       );
+    if (task === 'tribe_classify') {
+      if (!isChurchStaff(actor.roles || [])) throw new AccountError(403, 'A sugestão de tribo exige revisão da equipe pastoral ou administração.');
+      await assertModuleEnabled(tx, root, 'tribes');
+    }
     const month = new Date(now).toISOString().slice(0, 7),
       minute = Math.floor(now / 60000);
     const monthPath = `${root}/aiUsage/${month}`,
@@ -70,6 +77,7 @@ export async function aiGate(
     const plan: PlanId = Object.hasOwn(PLAN_LIMITS, candidate)
       ? candidate
       : "free";
+    if (task === 'tribe_classify' && !planHasModule(plan,'tribes')) throw new AccountError(403,'Tribos não está incluído no plano.');
     if (
       task === "pastoral_suggestion" &&
       !["pastoral", "rede", "enterprise"].includes(plan)

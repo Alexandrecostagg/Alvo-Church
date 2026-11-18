@@ -9,6 +9,7 @@ import {
   voidLedger,
 } from "../_lib/finance-operations";
 import { monthlyFinance } from "../_lib/finance-report";
+import { financeOverview } from "../_lib/finance-overview";
 export async function POST(req: NextRequest) {
   try {
     const uid = await verifyFirebaseIdToken(req);
@@ -16,6 +17,10 @@ export async function POST(req: NextRequest) {
     const body = await boundedJson(req, 700000);
     let result;
     switch (body.action) {
+      case "overview":
+      case "evolution":
+        result = await financeOverview(body, uid);
+        break;
       case "report":
         result = await monthlyFinance(body.organizationId, body.month, uid);
         break;

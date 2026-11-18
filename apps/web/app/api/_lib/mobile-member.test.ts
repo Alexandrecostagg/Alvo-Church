@@ -11,6 +11,7 @@ vi.mock("./member-account-store", async (importOriginal) => {
     ...original,
     accountTransaction: async (work: (tx: AccountTransaction) => unknown) =>
       work({
+        count: async () => 0,
         read: async (...paths) => paths.map((p) => store.docs.get(p) ?? null),
         query: async (parent, collection, field, value) =>
           [...store.docs]

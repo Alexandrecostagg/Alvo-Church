@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Plus, Trash2, X, GraduationCap, Video, Layers, Save, Youtube, ChevronRight
+  ArrowLeft, Plus, Trash2, X, GraduationCap, Video, Layers, Save, Youtube, ChevronRight, CheckCircle2, Loader2
 } from "lucide-react";
 import {
   fetchCourses,
@@ -13,6 +13,7 @@ import {
 } from "@alvo/firebase";
 import type { Course, CourseModule, Lesson } from "@alvo/types";
 import { useAppAuth } from "../../../app/providers";
+import { CourseVideoInput } from "./course-video-input";
 import { COURSE_RIGHTS_DECLARATION, COURSE_RIGHTS_VERSION } from "../../lib/course-content-rights";
 
 function newId(prefix: string) {
@@ -39,6 +40,9 @@ export function CourseManagerView() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMessage, setSaveMessage] = useState("");
   const [rightsAccepted, setRightsAccepted] = useState(false);
   const [rightsReference, setRightsReference] = useState("");
 
@@ -47,7 +51,7 @@ export function CourseManagerView() {
   // Novo módulo.
   const [moduleTitle, setModuleTitle] = useState("");
   // Nova aula por módulo (map moduleId -> rascunho).
-  const [lessonDraft, setLessonDraft] = useState<Record<string, { title: string; videoUrl: string; durationMinutes: string; materialUrl: string }>>({});
+  const [lessonDraft, setLessonDraft] = useState<Record<string, { title: string; videoUrl: string; videoAssetId?: string; videoMode?: "link" | "upload"; durationMinutes: string; materialUrl: string }>>({});
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [newCourse, setNewCourse] = useState({ title: "", description: "" });
 
@@ -66,6 +70,7 @@ export function CourseManagerView() {
   useEffect(() => { setRightsAccepted(false); }, [selectedCourseId, courseForm, rightsReference, modules, lessons]);
   useEffect(() => { setRightsReference(""); }, [selectedCourseId]);
   const canPublish = rightsAccepted && rightsReference.trim().length >= 10;
+  useEffect(() => { setSaveState("idle"); setSaveMessage(""); }, [selectedCourseId, courseForm, rightsReference]);
 
   async function managementRequest(body: Record<string, unknown>) {
     if (!user) throw new Error("Entre na sua conta.");
@@ -130,12 +135,22 @@ export function CourseManagerView() {
   }
 
   async function handleSaveCourse(nextActive = selectedCourse?.isActive ?? false) {
-    if (!ready || !selectedCourse || !courseForm.title.trim()) return;
-    if (nextActive && !canPublish) {
-      setStatus("Confira os direitos de conteúdo e informe a referência antes de publicar.");
+    if (saveInFlight.current) return;
+    if (!ready || !selectedCourse || !courseForm.title.trim()) {
+      setSaveState("error");
+      setSaveMessage(!ready ? "Aguarde a conexão com sua conta antes de salvar." : "Preencha o título do curso antes de salvar.");
       return;
     }
+    if (nextActive && !canPublish) {
+      setStatus("Confira os direitos de conteúdo e informe a referência antes de publicar.");
+      setSaveState("error");
+      setSaveMessage("Confira os direitos de conteúdo e informe a referência antes de publicar.");
+      return;
+    }
+    saveInFlight.current = true;
     setSaving(true);
+    setSaveState("saving");
+    setSaveMessage("Salvando os dados do curso…");
     const updated: Course = {
       ...selectedCourse,
       title: courseForm.title.trim(),
@@ -150,10 +165,15 @@ export function CourseManagerView() {
       const saved = data.course as Course;
       setCourses((cur) => cur.map((c) => (c.id === saved.id ? saved : c)));
       setStatus(saved.isActive ? "Curso publicado e salvo." : "Rascunho salvo.");
+      setSaveState("saved");
+      setSaveMessage(saved.isActive ? "Curso salvo e publicado na Escola." : "Rascunho salvo com sucesso. Você já pode adicionar módulos e aulas abaixo. O curso ainda não está publicado.");
       setRightsAccepted(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Não foi possível salvar o curso.");
+      setSaveState("error");
+      setSaveMessage(error instanceof Error ? error.message : "Não foi possível salvar o curso. Seus campos foram mantidos; tente novamente.");
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   }
@@ -190,7 +210,7 @@ export function CourseManagerView() {
   async function handleAddLesson(mod: CourseModule) {
     if (!ready || !selectedCourseId) return;
     const draft = lessonDraft[mod.id] ?? { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" };
-    if (!draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl)) return;
+    if (!draft.title.trim() || !(draft.videoMode === "upload" ? draft.videoAssetId : isProbablyVideoUrl(draft.videoUrl))) return;
     const moduleLessons = lessons.filter((l) => l.moduleId === mod.id);
     const lesson: Lesson = {
       id: newId("les"),
@@ -198,13 +218,14 @@ export function CourseManagerView() {
       courseId: selectedCourseId,
       moduleId: mod.id,
       title: draft.title.trim(),
-      videoUrl: draft.videoUrl.trim(),
+      videoUrl: draft.videoMode === "upload" ? "" : draft.videoUrl.trim(),
+      ...(draft.videoMode === "upload" && draft.videoAssetId ? { videoAssetId: draft.videoAssetId } : {}),
       durationMinutes: Number.parseInt(draft.durationMinutes, 10) || 0,
       sortOrder: moduleLessons.length,
       materialUrl: draft.materialUrl.trim() || undefined
     };
     try {
-      const data = await managementRequest({ action: "save_lesson", courseId: lesson.courseId, moduleId: lesson.moduleId, lessonId: lesson.id, title: lesson.title, videoUrl: lesson.videoUrl, durationMinutes: lesson.durationMinutes, sortOrder: lesson.sortOrder, materialUrl: lesson.materialUrl ?? "" });
+      const data = await managementRequest({ action: "save_lesson", courseId: lesson.courseId, moduleId: lesson.moduleId, lessonId: lesson.id, title: lesson.title, videoUrl: lesson.videoUrl, videoAssetId: lesson.videoAssetId, durationMinutes: lesson.durationMinutes, sortOrder: lesson.sortOrder, materialUrl: lesson.materialUrl ?? "" });
       setLessons((cur) => [...cur, data.lesson as Lesson]);
       setLessonDraft((cur) => ({ ...cur, [mod.id]: { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" } }));
       setStatus(`Aula "${lesson.title}" adicionada.`);
@@ -220,7 +241,7 @@ export function CourseManagerView() {
     } catch (error) { setStatus(error instanceof Error ? error.message : "Não foi possível excluir a aula."); }
   }
 
-  function setDraft(moduleId: string, patch: Partial<{ title: string; videoUrl: string; durationMinutes: string; materialUrl: string }>) {
+  function setDraft(moduleId: string, patch: Partial<{ title: string; videoUrl: string; videoAssetId?: string; videoMode?: "link" | "upload"; durationMinutes: string; materialUrl: string }>) {
     setLessonDraft((cur) => {
       const base = cur[moduleId] ?? { title: "", videoUrl: "", durationMinutes: "", materialUrl: "" };
       return { ...cur, [moduleId]: { ...base, ...patch } };
@@ -240,7 +261,7 @@ export function CourseManagerView() {
           </p>
         </div>
         <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowNewCourse((s) => !s)}>
+          <button className="btn-primary" disabled={saving} onClick={() => setShowNewCourse((s) => !s)}>
             {showNewCourse ? <X size={16} /> : <Plus size={16} />} {showNewCourse ? "Fechar" : "Novo curso"}
           </button>
         </div>
@@ -284,6 +305,7 @@ export function CourseManagerView() {
               {courses.map((c) => (
                 <button
                   key={c.id}
+                  disabled={saving}
                   onClick={() => setSelectedCourseId(c.id)}
                   style={{
                     textAlign: "left", padding: "12px 14px", borderRadius: 12, cursor: "pointer",
@@ -311,11 +333,11 @@ export function CourseManagerView() {
             <>
               <div className="section-header"><h2 className="section-title">Editar curso</h2>
                 <button className="btn-secondary btn-sm" onClick={() => void handleSaveCourse(!selectedCourse.isActive)} disabled={saving || (!selectedCourse.isActive && !canPublish)} style={{ color: selectedCourse.isActive ? "#b45309" : "#15803d", display: "flex", alignItems: "center", gap: 4, opacity: saving || (!selectedCourse.isActive && !canPublish) ? 0.6 : 1 }}>
-                  <GraduationCap size={14} /> {selectedCourse.isActive ? "Retirar da Escola" : "Publicar curso"}
+                  <GraduationCap size={14} /> {saving ? "Salvando…" : selectedCourse.isActive ? "Retirar da Escola" : "Publicar curso"}
                 </button>
               </div>
 
-              <div style={{ display: "grid", gap: 10, maxWidth: 640, marginBottom: 24 }}>
+              <fieldset disabled={saving} style={{ display: "grid", gap: 10, maxWidth: 640, margin: "0 0 24px", padding: 0, border: 0, minWidth: 0 }}>
                 <label style={labelStyle}>Título
                   <input type="text" value={courseForm.title} onChange={(e) => setCourseForm((f) => ({ ...f, title: e.target.value }))} style={inputStyle} />
                 </label>
@@ -345,10 +367,13 @@ export function CourseManagerView() {
                   </label>
                   <p style={{ fontSize: 12 }}>A declaração fica registrada com sua conta, data e conteúdo publicado. Ela não substitui os comprovantes de autorização.</p>
                 </fieldset>
-                <button className="btn-primary" onClick={() => void handleSaveCourse()} disabled={saving || (selectedCourse.isActive && !canPublish)} style={{ justifySelf: "start", opacity: saving || (selectedCourse.isActive && !canPublish) ? 0.6 : 1 }}>
-                  <Save size={16} /> Salvar curso
+                <button className="btn-primary" onClick={() => void handleSaveCourse()} aria-busy={saving} disabled={saving || saveState === "saved" || (selectedCourse.isActive && !canPublish)} style={{ justifySelf: "start", ...(saveState === "saved" ? { background: "#166534", color: "#fff" } : {}), opacity: saving || (selectedCourse.isActive && !canPublish && saveState !== "saved") ? 0.6 : 1 }}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : saveState === "saved" ? <CheckCircle2 size={16} /> : <Save size={16} />}
+                  {saving ? "Salvando…" : saveState === "saved" ? "Curso salvo" : saveState === "error" ? "Tentar salvar novamente" : "Salvar curso"}
                 </button>
-              </div>
+                {saveMessage && <p role={saveState === "error" ? "alert" : "status"} style={{ margin: 0, padding: "12px 14px", borderRadius: 10, background: saveState === "error" ? "#fef2f2" : "#f0fdf4", color: saveState === "error" ? "#991b1b" : "#166534", fontSize: 14 }}>{saveMessage}</p>}
+                {selectedCourse.isActive && !canPublish && saveState !== "saved" && <p style={{ margin: 0, fontSize: 13 }}>Para salvar alterações no curso publicado, confira a referência e marque a declaração de direitos de conteúdo.</p>}
+              </fieldset>
 
               {/* Módulos */}
               <div className="section-header" style={{ marginTop: 8 }}><h3 className="section-title" style={{ fontSize: 16 }}>Módulos e aulas</h3></div>
@@ -400,7 +425,7 @@ export function CourseManagerView() {
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <strong style={{ fontSize: 13, color: "var(--alvo-ink)", display: "block", overflowWrap: "anywhere" }}>{les.title}</strong>
                                   <span style={{ fontSize: 11, color: "var(--alvo-ink-soft)", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                    <Youtube size={11} /> {les.durationMinutes} min{les.materialUrl ? " · com material" : ""}
+                                    {les.videoAssetId ? <Video size={11} /> : <Youtube size={11} />} {les.videoAssetId ? "Esdras · " : "Link · "}{les.durationMinutes} min{les.materialUrl ? " · com material" : ""}
                                   </span>
                                 </div>
                                 <button onClick={() => void handleDeleteLesson(les)} disabled={selectedCourse.isActive} aria-label="Excluir aula" style={{ background: "none", border: "none", cursor: selectedCourse.isActive ? "not-allowed" : "pointer", color: "#dc2626", flexShrink: 0, opacity: selectedCourse.isActive ? 0.35 : 1 }}>
@@ -414,7 +439,13 @@ export function CourseManagerView() {
                         {/* Nova aula */}
                         <div style={{ display: "grid", gap: 8, padding: 12, borderRadius: 10, border: "1px dashed var(--alvo-line)" }}>
                           <input type="text" placeholder="Título da aula" value={draft.title} onChange={(e) => setDraft(mod.id, { title: e.target.value })} style={inputStyle} />
-                          <input type="url" placeholder="Link do vídeo no YouTube (não listado)" value={draft.videoUrl} onChange={(e) => setDraft(mod.id, { videoUrl: e.target.value })} style={inputStyle} />
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Origem do vídeo">
+                            <button type="button" className="btn-secondary" aria-pressed={draft.videoMode !== "upload"} onClick={() => setDraft(mod.id, { videoMode: "link", videoAssetId: "" })}>Link do YouTube / Vimeo</button>
+                            <button type="button" className="btn-secondary" aria-pressed={draft.videoMode === "upload"} onClick={() => setDraft(mod.id, { videoMode: "upload" })}>Enviar vídeo pelo Esdras</button>
+                          </div>
+                          {draft.videoMode === "upload" ? <CourseVideoInput key={`${organizationId}:${selectedCourseId}:${mod.id}`} courseId={selectedCourseId!} value={draft.videoAssetId} disabled={selectedCourse.isActive} onChange={videoAssetId => setDraft(mod.id, { videoAssetId })} /> :
+                            <input type="url" aria-label="Link do vídeo" placeholder="Link do vídeo no YouTube, Vimeo ou Cloudflare" value={draft.videoUrl} onChange={(e) => setDraft(mod.id, { videoUrl: e.target.value })} style={inputStyle} />}
+
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             <input type="number" min="0" placeholder="Duração (min)" value={draft.durationMinutes} onChange={(e) => setDraft(mod.id, { durationMinutes: e.target.value })} style={{ ...inputStyle, width: 140 }} />
                             <input type="url" placeholder="Link de material/PDF (opcional)" value={draft.materialUrl} onChange={(e) => setDraft(mod.id, { materialUrl: e.target.value })} style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
@@ -422,12 +453,12 @@ export function CourseManagerView() {
                           <button
                             className="btn-primary btn-sm"
                             onClick={() => void handleAddLesson(mod)}
-                            disabled={selectedCourse.isActive || !draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl)}
-                            style={{ justifySelf: "start", opacity: selectedCourse.isActive || !draft.title.trim() || !isProbablyVideoUrl(draft.videoUrl) ? 0.5 : 1 }}
+                            disabled={selectedCourse.isActive || !draft.title.trim() || !(draft.videoMode === "upload" ? draft.videoAssetId : isProbablyVideoUrl(draft.videoUrl))}
+                            style={{ justifySelf: "start", opacity: selectedCourse.isActive || !draft.title.trim() || !(draft.videoMode === "upload" ? draft.videoAssetId : isProbablyVideoUrl(draft.videoUrl)) ? 0.5 : 1 }}
                           >
                             <Plus size={14} /> Adicionar aula
                           </button>
-                          {draft.videoUrl && !isProbablyVideoUrl(draft.videoUrl) && (
+                          {draft.videoMode !== "upload" && draft.videoUrl && !isProbablyVideoUrl(draft.videoUrl) && (
                             <span style={{ fontSize: 12, color: "#dc2626" }}>Cole um link completo (começando com https://).</span>
                           )}
                         </div>

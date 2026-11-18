@@ -4,6 +4,7 @@ import { assertModuleEnabled } from "./module-access";
 
 function transaction(features: unknown): AccountTransaction {
   return {
+    count: async () => 0,
     query: async () => [],
     usersByEmail: async () => [],
     read: async () => [features as Record<string, unknown> | null],

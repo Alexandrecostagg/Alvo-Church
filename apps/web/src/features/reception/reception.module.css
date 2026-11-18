@@ -1,0 +1,266 @@
+.workspace {
+  max-width: 1440px;
+  margin: auto;
+  padding: 32px;
+  color: #182337;
+  line-height: 1.55;
+}
+.workspace * {
+  box-sizing: border-box;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.header h1 {
+  font-size: clamp(28px, 3.4vw, 48px);
+  line-height: 1.1;
+  margin: 8px 0 16px;
+  letter-spacing: -1px;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #b54b08;
+  font-weight: 800;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.workspace button,
+.actions a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid #bdc9d7;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #24364c;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+.workspace button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.workspace button[aria-pressed="true"] {
+  border-color: #b94d0d;
+  background: #fff4e9;
+}
+.workspace .primary {
+  background: #a84308;
+  color: #fff;
+  border-color: #a84308;
+}
+.workspace a {
+  color: #075a84;
+}
+.workspace :focus-visible {
+  outline: 3px solid #078cae;
+  outline-offset: 3px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.metrics article,
+.card {
+  background: #fff;
+  border: 1px solid #d7dfe7;
+  border-radius: 20px;
+  padding: 24px;
+}
+.metrics strong {
+  display: block;
+  font-size: 40px;
+  color: #057b98;
+}
+.metrics span {
+  font-weight: 650;
+}
+.muted {
+  color: #546477;
+  font-size: 14px;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+.card h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 8px 0 20px;
+}
+.card h3 {
+  margin: 24px 0 12px;
+  font-size: 20px;
+}
+.workspace fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.workspace label {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  font-weight: 600;
+}
+.workspace input:not([type="checkbox"]),
+.workspace textarea,
+.workspace select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #bdc9d7;
+  border-radius: 10px;
+  background: #f9fbfd;
+  color: #172338;
+  font: inherit;
+}
+.workspace textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+.workspace .check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 500;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.workspace details {
+  margin: 20px 0;
+}
+.workspace summary {
+  cursor: pointer;
+  font-weight: 750;
+  min-height: 44px;
+}
+.list {
+  display: grid;
+  gap: 10px;
+  max-height: 560px;
+  overflow: auto;
+  margin: 20px 0;
+}
+.list button {
+  display: grid;
+  justify-content: stretch;
+  text-align: left;
+  gap: 4px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.list span,
+.list small {
+  font-weight: 400;
+  color: #526174;
+}
+.error,
+.notice {
+  padding: 16px;
+  border-radius: 12px;
+}
+.error {
+  color: #8b2020;
+  background: #fff0ef;
+}
+.notice {
+  color: #145032;
+  background: #eaf8ef;
+}
+.internal {
+  background: #f1f4f8;
+  padding: 16px;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.preview {
+  padding: 20px;
+  border: 1px dashed #b5c4d2;
+  background: #f1f8fb;
+  border-radius: 12px;
+  margin: 16px 0;
+  white-space: pre-wrap;
+}
+.pulpit {
+  display: grid;
+  gap: 24px;
+  margin: 32px 0;
+}
+.pulpit article {
+  background: #fff;
+  border-radius: 24px;
+  border: 1px solid #c9d8e2;
+  padding: 32px;
+}
+.pulpit h2 {
+  font-size: clamp(28px, 5vw, 64px);
+  line-height: 1.15;
+  margin: 0 0 20px;
+  overflow-wrap: anywhere;
+}
+.pulpit p {
+  font-size: 24px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .header {
+    display: block;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .workspace {
+    padding: 20px 14px;
+  }
+  .card,
+  .metrics article {
+    padding: 18px;
+  }
+  .metrics {
+    gap: 10px;
+  }
+  .metrics strong {
+    font-size: 32px;
+  }
+  .actions {
+    gap: 8px;
+  }
+  .actions button,
+  .actions a {
+    padding: 10px 12px;
+  }
+  .pulpit article {
+    padding: 20px;
+  }
+}

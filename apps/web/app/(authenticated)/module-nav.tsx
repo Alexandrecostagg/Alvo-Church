@@ -31,7 +31,9 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "../brand-logo";
 import { useOrgFeatures } from "../../contexts/OrgFeaturesContext";
-import type { ModuleKey } from "@alvo/domain";
+import { homeRouteAllowed, isChurchStaff, type ModuleKey } from "@alvo/domain";
+import { useAppAuth } from "../providers";
+import { usePlan } from "../../contexts/PlanContext";
 import { Building2 as NetworkIcon, Layers } from "lucide-react";
 
 type NavItem = {
@@ -111,6 +113,10 @@ function buildNavigationGroups(groupsLabel: string, orgTier: string): NavGroup[]
 }
 
 export function ModuleNav() {
+  const { roles, tenantRuntime } = useAppAuth();
+  const { plan } = usePlan();
+  const networkPlan = ["rede", "enterprise"].includes(tenantRuntime?.settings?.subscription?.plan || plan);
+  const staff = isChurchStaff(roles);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
@@ -126,7 +132,13 @@ export function ModuleNav() {
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => {
+      items: group.items.map((item): NavItem => {
+        if (!staff && !roles.includes("group_leader") && item.href === "/tribes") return { ...item, label: "Meu lugar para servir", href: "/my-tribe", match: pathname => pathname.startsWith("/my-tribe") };
+        if (!staff && item.href === "/groups") return { ...item, label: `Minhas ${groupsLabel.toLocaleLowerCase("pt-BR")}`, href: "/my-groups", match: pathname => pathname.startsWith("/my-groups") };
+        if (!staff && item.href === "/campaigns") return { ...item, label: "Meus convidados", href: "/my-invites" };
+        return item;
+      }).filter((item) => {
+        if (!ready || !homeRouteAllowed(roles, item.href, orgTier, networkPlan)) return false;
         if (!item.moduleKey) return true;
         return isEnabled(item.moduleKey);
       })

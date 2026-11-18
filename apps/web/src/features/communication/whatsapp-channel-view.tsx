@@ -35,6 +35,7 @@ export function WhatsappChannelView() {
     [parameters, setParameters] = useState(""),
     [language, setLanguage] = useState("pt_BR"),
     [scheduledAt, setScheduledAt] = useState("");
+  const actionLock = useRef(false);
   const attempt = useRef({ fingerprint: "", id: "" });
   async function request(body: Record<string, any>) {
     if (!user) throw new Error("Entre na sua conta.");
@@ -56,7 +57,7 @@ export function WhatsappChannelView() {
       setError("");
       const next = await request({ action: "settings" });
       setData(next);
-      setSettings(next.settings);
+      // Refreshing messages must not discard edits in the settings form.
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao carregar.");
     }
@@ -83,7 +84,8 @@ export function WhatsappChannelView() {
     };
   }, [user, organizationId]);
   async function action(work: () => Promise<void>) {
-    if (busy) return;
+    if (actionLock.current) return;
+    actionLock.current = true;
     setBusy(true);
     setError("");
     setStatus("");
@@ -94,6 +96,7 @@ export function WhatsappChannelView() {
         cause instanceof Error ? cause.message : "Não foi possível concluir.",
       );
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   }
@@ -109,10 +112,11 @@ export function WhatsappChannelView() {
   };
   return (
     <section className="content-section" aria-label="Atendimento pelo WhatsApp">
-      <h2 className="section-title">
-        Participação pelo WhatsApp, sem aplicativo
-      </h2>
-      <p>Agenda, inscrições, visitantes e cuidado na mesma base da igreja.</p>
+      <h2 className="section-title">Atendimento automático pela API Meta</h2>
+      <p>
+        Integração opcional para receber conversas, atender e acompanhar
+        confirmações do provedor.
+      </p>
       {error && (
         <p role="alert" style={{ color: "#b91c1c" }}>
           {error}
@@ -129,331 +133,361 @@ export function WhatsappChannelView() {
             <strong>
               {data.connection.configured
                 ? "Conexão configurada — falta confirmar operação com um número real se ainda não foi homologada."
-                : "Conexão pendente: a plataforma precisa provisionar o número e as credenciais da API oficial."}
+                : "API ainda não conectada. Continue usando a aba WhatsApp manual com o número da igreja."}
             </strong>
           </p>
           {data.connection.publicPhone && (
             <p>Número da igreja: +{data.connection.publicPhone}</p>
           )}
-          <details>
-            <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-              Identidade da assistente e opções de atendimento
-            </summary>
-            <form
-              style={{ display: "grid", gap: 14, marginTop: 16 }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                void action(async () => {
-                  const next = await request({ action: "settings", settings });
-                  setData(next);
-                  setSettings(next.settings);
-                  setStatus("Configurações salvas.");
-                });
-              }}
-            >
-              {Object.entries(fields).map(([key, label]) => (
-                <label key={key}>
-                  {label}
-                  <textarea
-                    rows={
-                      key === "churchHistory" || key === "instructions" ? 3 : 2
-                    }
-                    style={input}
-                    maxLength={
-                      PASTORAL_CONTEXT_LIMITS[
-                        key as keyof typeof PASTORAL_CONTEXT_LIMITS
-                      ]
-                    }
-                    value={settings[key] ?? ""}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, [key]: e.target.value }))
-                    }
-                  />
-                </label>
-              ))}
-              {Object.entries(flags).map(([key, label]) => (
-                <label key={key} style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings[key] === true}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, [key]: e.target.checked }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-              <p>
-                Perguntas gerais usam Gemini/Groq. Pedidos de oração seguem
-                diretamente à equipe, sem geração automática. Não inclua
-                segredos ou dados pessoais no contexto institucional.
-              </p>
-              <button disabled={busy} className="btn-primary" type="submit">
-                {busy ? "Salvando…" : "Salvar configurações"}
-              </button>
-            </form>
-          </details>
-          <h3>Conversas recentes</h3>
-          <p>
-            Ao iniciar uma conversa, o contato poderá usar MENU, AGENDA,
-            VISITANTE, ORACAO, HUMANO e SAIR.
-          </p>
-          {!data.inbox.length && (
-            <p>Nenhuma conversa recebida nesta conexão.</p>
+          {!data.connection.configured && (
+            <p>
+              Atendimento automático e envio pela API dependem da conexão
+              oficial. A aba manual funciona sem essa conexão. As notificações
+              do aplicativo são gerenciadas nos serviços de origem.
+            </p>
           )}
-          <div style={{ display: "grid", gap: 10 }}>
-            {data.inbox.map((c: any) => (
-              <div
-                key={c.id}
-                style={{
-                  border: "1px solid var(--alvo-line)",
-                  borderRadius: 10,
-                  padding: 12,
-                }}
-              >
-                <strong>{c.name}</strong> · +{c.phone}{" "}
-                {c.handoff && <strong> · Aguardando equipe</strong>}
-                <p style={{ whiteSpace: "pre-wrap" }}>{c.lastText}</p>
-                <button
-                  disabled={busy}
-                  className="btn-secondary btn-sm"
-                  onClick={() =>
+          {data.connection.configured && (
+            <>
+              <details>
+                <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                  Identidade da assistente e opções de atendimento
+                </summary>
+                <form
+                  style={{ display: "grid", gap: 14, marginTop: 16 }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
                     void action(async () => {
-                      setContact(c);
-                      setTemplate("");
-                      setText("");
-                      const result = await request({
-                        action: "history",
-                        contactId: c.id,
+                      const next = await request({
+                        action: "settings",
+                        settings,
                       });
-                      setThread(result.thread);
-                    })
-                  }
+                      setData(next);
+                      setSettings(next.settings);
+                      setStatus("Configurações salvas.");
+                    });
+                  }}
                 >
-                  Ver conversa e responder
-                </button>{" "}
-                <button
-                  disabled={busy}
-                  className="btn-secondary btn-sm"
-                  onClick={() =>
-                    void action(async () => {
-                      await request({
-                        action: "handoff",
-                        contactId: c.id,
-                        handoff: !c.handoff,
-                      });
-                      await load();
-                      setStatus(
-                        c.handoff
-                          ? "Atendimento humano concluído; automação retomada."
-                          : "Conversa assumida pela equipe.",
-                      );
-                    })
-                  }
-                >
-                  {c.handoff
-                    ? "Concluir atendimento humano"
-                    : "Assumir atendimento"}
-                </button>
-              </div>
-            ))}
-          </div>
-          {contact && (
-            <form
-              style={{ display: "grid", gap: 12, marginTop: 18 }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                void action(async () => {
-                  const values = {
-                    to: contact.phone,
-                    kind: template ? "template" : "text",
-                    text,
-                    templateName: template,
-                    language,
-                    parameters: parameters.split("\n").filter(Boolean),
-                    scheduledAt: scheduledAt
-                      ? new Date(scheduledAt).toISOString()
-                      : undefined,
-                  };
-                  const fingerprint = JSON.stringify(values);
-                  if (attempt.current.fingerprint !== fingerprint)
-                    attempt.current = { fingerprint, id: crypto.randomUUID() };
-                  const result = await request({
-                    action: "send",
-                    ...values,
-                    requestId: attempt.current.id,
-                  });
-                  setStatus(
-                    `Mensagem registrada: ${result.status}. Aceita pelo provedor não significa entregue.`,
-                  );
-                  await load();
-                });
-              }}
-            >
-              <h3>Responder a {contact.name}</h3>
-              <div
-                style={{
-                  maxHeight: 320,
-                  overflowY: "auto",
-                  display: "grid",
-                  gap: 10,
-                }}
-              >
-                {thread.map((m: any, i: number) => (
-                  <p
-                    key={i}
+                  {Object.entries(fields).map(([key, label]) => (
+                    <label key={key}>
+                      {label}
+                      <textarea
+                        rows={
+                          key === "churchHistory" || key === "instructions"
+                            ? 3
+                            : 2
+                        }
+                        style={input}
+                        maxLength={
+                          PASTORAL_CONTEXT_LIMITS[
+                            key as keyof typeof PASTORAL_CONTEXT_LIMITS
+                          ]
+                        }
+                        value={settings[key] ?? ""}
+                        onChange={(e) =>
+                          setSettings((s) => ({ ...s, [key]: e.target.value }))
+                        }
+                      />
+                    </label>
+                  ))}
+                  {Object.entries(flags).map(([key, label]) => (
+                    <label key={key} style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={settings[key] === true}
+                        onChange={(e) =>
+                          setSettings((s) => ({
+                            ...s,
+                            [key]: e.target.checked,
+                          }))
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                  <p>
+                    Perguntas gerais usam Gemini/Groq. Pedidos de oração seguem
+                    diretamente à equipe, sem geração automática. Não inclua
+                    segredos ou dados pessoais no contexto institucional.
+                  </p>
+                  <button disabled={busy} className="btn-primary" type="submit">
+                    {busy ? "Salvando…" : "Salvar configurações"}
+                  </button>
+                </form>
+              </details>
+              <h3>Conversas recentes</h3>
+              <p>
+                Ao iniciar uma conversa, o contato poderá usar MENU, AGENDA,
+                VISITANTE, ORACAO, HUMANO e SAIR.
+              </p>
+              {!data.inbox.length && (
+                <p>Nenhuma conversa recebida nesta conexão.</p>
+              )}
+              <div style={{ display: "grid", gap: 10 }}>
+                {data.inbox.map((c: any) => (
+                  <div
+                    key={c.id}
                     style={{
-                      whiteSpace: "pre-wrap",
-                      padding: 10,
-                      background: "var(--alvo-surface-muted)",
-                      borderRadius: 8,
+                      border: "1px solid var(--alvo-line)",
+                      borderRadius: 10,
+                      padding: 12,
                     }}
                   >
-                    <strong>
-                      {m.direction === "in" ? "Contato" : "Assistente/equipe"}:
-                    </strong>{" "}
-                    {m.text}
-                  </p>
+                    <strong>{c.name}</strong> · +{c.phone}{" "}
+                    {c.handoff && <strong> · Aguardando equipe</strong>}
+                    <p style={{ whiteSpace: "pre-wrap" }}>{c.lastText}</p>
+                    <button
+                      disabled={busy}
+                      className="btn-secondary btn-sm"
+                      onClick={() =>
+                        void action(async () => {
+                          setContact(c);
+                          setThread([]);
+                          setParameters("");
+                          setScheduledAt("");
+                          setLanguage("pt_BR");
+                          attempt.current = { fingerprint: "", id: "" };
+                          setTemplate("");
+                          setText("");
+                          const result = await request({
+                            action: "history",
+                            contactId: c.id,
+                          });
+                          setThread(result.thread);
+                        })
+                      }
+                    >
+                      Ver conversa e responder
+                    </button>{" "}
+                    <button
+                      disabled={busy}
+                      className="btn-secondary btn-sm"
+                      onClick={() =>
+                        void action(async () => {
+                          await request({
+                            action: "handoff",
+                            contactId: c.id,
+                            handoff: !c.handoff,
+                          });
+                          await load();
+                          setStatus(
+                            c.handoff
+                              ? "Atendimento humano concluído; automação retomada."
+                              : "Conversa assumida pela equipe.",
+                          );
+                        })
+                      }
+                    >
+                      {c.handoff
+                        ? "Concluir atendimento humano"
+                        : "Assumir atendimento"}
+                    </button>
+                  </div>
                 ))}
               </div>
-              <label>
-                Tipo de mensagem
-                <select
-                  style={input}
-                  value={template}
-                  onChange={(e) => setTemplate(e.target.value)}
+              {contact && (
+                <form
+                  style={{ display: "grid", gap: 12, marginTop: 18 }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void action(async () => {
+                      const values = {
+                        to: contact.phone,
+                        kind: template ? "template" : "text",
+                        text,
+                        templateName: template,
+                        language,
+                        parameters: parameters.split("\n").filter(Boolean),
+                        scheduledAt: scheduledAt
+                          ? new Date(scheduledAt).toISOString()
+                          : undefined,
+                      };
+                      const fingerprint = JSON.stringify(values);
+                      if (attempt.current.fingerprint !== fingerprint)
+                        attempt.current = {
+                          fingerprint,
+                          id: crypto.randomUUID(),
+                        };
+                      const result = await request({
+                        action: "send",
+                        ...values,
+                        requestId: attempt.current.id,
+                      });
+                      setStatus(
+                        `Mensagem registrada: ${result.status}. Aceita pelo provedor não significa entregue.`,
+                      );
+                      await load();
+                    });
+                  }}
                 >
-                  <option value="">Texto na janela de atendimento</option>
-                  {data.connection.templates.map((t: string) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {!template ? (
-                <label>
-                  Texto
-                  <textarea
-                    required
-                    maxLength={4000}
-                    rows={4}
-                    style={input}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                  />
-                </label>
-              ) : (
-                <>
+                  <h3>Responder a {contact.name}</h3>
+                  <div
+                    style={{
+                      maxHeight: 320,
+                      overflowY: "auto",
+                      display: "grid",
+                      gap: 10,
+                    }}
+                  >
+                    {thread.map((m: any, i: number) => (
+                      <p
+                        key={i}
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          padding: 10,
+                          background: "var(--alvo-surface-muted)",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <strong>
+                          {m.direction === "in"
+                            ? "Contato"
+                            : "Assistente/equipe"}
+                          :
+                        </strong>{" "}
+                        {m.text}
+                      </p>
+                    ))}
+                  </div>
                   <label>
-                    Idioma aprovado
+                    Tipo de mensagem
+                    <select
+                      style={input}
+                      value={template}
+                      onChange={(e) => setTemplate(e.target.value)}
+                    >
+                      <option value="">Texto na janela de atendimento</option>
+                      {data.connection.templates.map((t: string) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {!template ? (
+                    <label>
+                      Texto
+                      <textarea
+                        required
+                        maxLength={4000}
+                        rows={4}
+                        style={input}
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                      />
+                    </label>
+                  ) : (
+                    <>
+                      <label>
+                        Idioma aprovado
+                        <input
+                          style={input}
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Parâmetros do corpo, um por linha
+                        <textarea
+                          rows={3}
+                          style={input}
+                          value={parameters}
+                          onChange={(e) => setParameters(e.target.value)}
+                        />
+                      </label>
+                    </>
+                  )}
+                  <label>
+                    Agendar (opcional, horário local)
                     <input
                       style={input}
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
                     />
                   </label>
-                  <label>
-                    Parâmetros do corpo, um por linha
-                    <textarea
-                      rows={3}
-                      style={input}
-                      value={parameters}
-                      onChange={(e) => setParameters(e.target.value)}
-                    />
-                  </label>
-                </>
+                  <p>
+                    {data.connection.paidMessagesEnabled
+                      ? "Fora da janela de atendimento, selecione um template aprovado."
+                      : "Envios potencialmente pagos estão bloqueados. O atendimento começa quando o membro envia uma mensagem; respostas em texto ficam disponíveis por 24 horas após a última mensagem dele."}
+                    Envios agendados dependem do processador periódico da
+                    plataforma. Resultado incerto exige conferência antes de uma
+                    nova tentativa.
+                  </p>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={busy || !data.connection.configured}
+                  >
+                    {busy ? "Registrando…" : "Registrar envio pela API"}
+                  </button>
+                </form>
               )}
-              <label>
-                Agendar (opcional, horário local)
-                <input
-                  style={input}
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </label>
-              <p>
-                {data.connection.paidMessagesEnabled
-                  ? "Fora da janela de atendimento, selecione um template aprovado."
-                  : "Envios potencialmente pagos estão bloqueados. O atendimento começa quando o membro envia uma mensagem; respostas em texto ficam disponíveis por 24 horas após a última mensagem dele."}
-                Envios agendados dependem do processador periódico da
-                plataforma. Resultado incerto exige conferência antes de uma
-                nova tentativa.
-              </p>
+              <h3>Envios e confirmações do provedor</h3>
               <button
-                type="submit"
-                className="btn-primary"
-                disabled={busy || !data.connection.configured}
+                className="btn-secondary btn-sm"
+                disabled={busy}
+                onClick={() =>
+                  void action(async () => {
+                    const result = await request({ action: "process" });
+                    await load();
+                    setStatus(
+                      `Fila conferida: ${result.processed?.length ?? 0} item(ns) processado(s). Confira os estados abaixo; isso não comprova entrega.`,
+                    );
+                  })
+                }
               >
-                {busy ? "Registrando…" : "Registrar envio pela API"}
+                Processar fila pendente
+              </button>{" "}
+              <button
+                className="btn-secondary btn-sm"
+                disabled={busy}
+                onClick={() => void load()}
+              >
+                Atualizar
               </button>
-            </form>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", marginTop: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>Contato</th>
+                      <th>Tipo</th>
+                      <th>Estado</th>
+                      <th>Agendado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.outbox.map((m: any) => (
+                      <tr key={m.id}>
+                        <td>+{m.to}</td>
+                        <td>{m.kind}</td>
+                        <td>
+                          {(
+                            {
+                              pending: "Pendente",
+                              sending: "Em envio — conferir se persistir",
+                              accepted: "Aceita pelo provedor",
+                              sent: "Enviada",
+                              delivered: "Entregue",
+                              read: "Lida",
+                              failed: "Recusada",
+                              uncertain: "Resultado incerto — conferir",
+                              blocked: "Bloqueada",
+                              expired: "Janela expirada",
+                            } as Record<string, string>
+                          )[m.status] ?? m.status}
+                        </td>
+                        <td>
+                          {m.scheduledAt
+                            ? new Date(m.scheduledAt).toLocaleString("pt-BR")
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
-          <h3>Envios e confirmações do provedor</h3>
-          <button
-            className="btn-secondary btn-sm"
-            disabled={busy}
-            onClick={() =>
-              void action(async () => {
-                await request({ action: "process" });
-                await load();
-                setStatus(
-                  "Fila conferida. Envios incertos não foram repetidos.",
-                );
-              })
-            }
-          >
-            Processar fila pendente
-          </button>{" "}
-          <button
-            className="btn-secondary btn-sm"
-            disabled={busy}
-            onClick={() => void load()}
-          >
-            Atualizar
-          </button>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", marginTop: 12 }}>
-              <thead>
-                <tr>
-                  <th>Contato</th>
-                  <th>Tipo</th>
-                  <th>Estado</th>
-                  <th>Agendado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.outbox.map((m: any) => (
-                  <tr key={m.id}>
-                    <td>+{m.to}</td>
-                    <td>{m.kind}</td>
-                    <td>
-                      {(
-                        {
-                          pending: "Pendente",
-                          sending: "Em envio — conferir se persistir",
-                          accepted: "Aceita pelo provedor",
-                          sent: "Enviada",
-                          delivered: "Entregue",
-                          read: "Lida",
-                          failed: "Recusada",
-                          uncertain: "Resultado incerto — conferir",
-                          blocked: "Bloqueada",
-                          expired: "Janela expirada",
-                        } as Record<string, string>
-                      )[m.status] ?? m.status}
-                    </td>
-                    <td>
-                      {m.scheduledAt
-                        ? new Date(m.scheduledAt).toLocaleString("pt-BR")
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </>
       )}
     </section>

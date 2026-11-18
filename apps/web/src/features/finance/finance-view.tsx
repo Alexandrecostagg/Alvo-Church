@@ -1,1042 +1,889 @@
 "use client";
-
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { 
-  ReceiptText, 
-  TrendingUp, 
-  TrendingDown, 
-  Globe, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Filter, 
-  Download,
-  Calendar,
-  Wallet,
-  PieChart as PieIcon,
-  Plus,
-  Send,
-  MessageSquare,
-  Sparkles,
-  Smartphone,
-  Copy,
-  Check,
-  X,
-  Printer,
-  ChevronRight,
-  TrendingUp as ChartIcon,
-  HeartHandshake
-} from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useAppAuth } from "../../../app/providers";
-import type { MemberContribution, FinancialTransaction } from "@alvo/types";
-import {
-  fetchAllContributions,
-  fetchFinancialTransactions,
-  fetchGivingCampaigns
-} from "@alvo/firebase";
-
 import { financeRequest } from "../../lib/finance-client";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  }).format(value);
-}
-
-// Campanhas / Metas de Arrecadação
-export interface GivingGoal {
+import s from "../members/people.module.css";
+import f from "./finance.module.css";
+type Entry = {
   id: string;
-  title: string;
-  description: string;
-  targetAmount: number;
-  raisedAmount: number;
-  category: string;
-}
-
+  date: string;
+  kind: string;
+  label: string;
+  note: string;
+  amountCents: number;
+  source: string;
+  canVoid: boolean;
+};
+type Report = {
+  month: string;
+  entries: Entry[];
+  incomeCents: number;
+  expenseCents: number;
+  missionsCents: number;
+  balanceCents: number;
+  unconfirmedLegacyCount: number;
+  voidedCount: number;
+};
+type Overview = {
+  report: Report;
+  pending: Array<{
+    id: string;
+    name: string;
+    amount: number;
+    type: string;
+    date: string;
+    receiptId: string | null;
+  }>;
+  pendingCount: number;
+  nextPendingCursor: string | null;
+  campaigns: Array<{
+    id: string;
+    title: string;
+    goalAmount: number;
+    raisedAmount: number;
+  }>;
+  campaignsTruncated: boolean;
+  givingAvailable: boolean;
+  publicPath: string | null;
+};
+type Series = Array<{
+  month: string;
+  incomeCents: number;
+  expenseCents: number;
+  balanceCents: number;
+  unconfirmedLegacyCount: number;
+}>;
+const money = (c: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    c / 100,
+  );
+const monthName = (v: string) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(v + "-01T12:00:00Z"));
+const localDate = () => new Date().toLocaleDateString("sv-SE");
+const labels: Record<string, string> = {
+  income: "Entrada",
+  expense: "Saída",
+  missions: "Entrada para missões",
+};
+const dateLabel = (v: string) =>
+  v ? String(v).slice(0, 10).split("-").reverse().join("/") : "Sem data";
 export function FinanceView() {
-  const { configured, user, organizationId, firebaseConfig, tenantRuntime } = useAppAuth();
-  const [decision, setDecision] = useState<{id:string;action:"confirm"|"reject"|"void"}|null>(null);
-  const [decisionReason, setDecisionReason] = useState("");
-  const [statementChecked, setStatementChecked] = useState(false);
-  const [decisionBusy, setDecisionBusy] = useState(false);
-  function openDecision(id: string, action: "confirm"|"reject"|"void") { setDecision({id,action}); setDecisionReason(""); setStatementChecked(false); setError(""); }
-  async function submitDecision(e: React.FormEvent) {
-    e.preventDefault(); if (!user || !decision || operationBusy.current || !decisionReason.trim()) return;
-    if (decision.action === "confirm" && !statementChecked) return;
-    operationBusy.current = true; setDecisionBusy(true); setError("");
-    try {
-      await financeRequest(user, { action:decision.action, organizationId, contributionId:decision.id, transactionId:decision.id, reference:decisionReason, reason:decisionReason });
-      setContributions(await fetchAllContributions(firebaseConfig,{organizationId},200)); await reloadTransactions(); setDecision(null);
-    } catch(e) { setError(e instanceof Error ? e.message : "Não foi possível concluir."); }
-    finally { operationBusy.current = false; setDecisionBusy(false); }
-  }
-  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0,7));
-  const [reportSummary, setReportSummary] = useState("");
-  async function exportMonth() {
-    if (!user || operationBusy.current) return; operationBusy.current = true; setError("");
-    try {
-      const report = await financeRequest(user, { action: "report", organizationId, month: reportMonth });
-      if (currentOrg.current !== organizationId) return;
-      const url = URL.createObjectURL(new Blob([report.csv], {type:"text/csv;charset=utf-8"}));
-      const a = document.createElement("a"); a.href = url; a.download = `financas-${reportMonth}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
-      setReportSummary(`${report.entries.length} lançamentos. Entradas: ${formatCurrency(report.incomeCents/100)}; saídas: ${formatCurrency(report.expenseCents/100)}; saldo do mês: ${formatCurrency(report.balanceCents/100)}.`);
-    } catch(e) { setError(e instanceof Error ? e.message : "Não foi possível exportar."); }
-    finally { operationBusy.current = false; }
-  }
-  const [error, setError] = useState("");
-  const operationBusy = useRef(false);
-  const manualRequest = useRef("");
-  const currentOrg = useRef(organizationId); currentOrg.current = organizationId;
-  const orgSlug = tenantRuntime?.organization?.slug ?? "";
-
-  // Contribuições reais vindas do app (PIX autodeclarado) — os relatórios
-  // mensais abaixo (income/expenses/missions) continuam sendo lançamento
-  // manual da liderança; isto aqui é o que os membros registraram sozinhos
-  // pelo app mobile e que precisa de confirmação humana antes de contar
-  // como recebido de fato.
-  const [contributions, setContributions] = useState<MemberContribution[]>([]);
-  const [contribLoading, setContribLoading] = useState(true);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  // Comprovante: modal com a imagem (base64) carregada sob demanda
-  const [receiptModal, setReceiptModal] = useState<string | null>(null);
-  const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
-
-  async function openReceipt(receiptId: string) {
-    if (!organizationId || !user) return;
-    setLoadingReceiptId(receiptId);
-    try {
-      const r = await financeRequest(user, { action: "receipt", organizationId, receiptId });
-      if (currentOrg.current === organizationId) setReceiptModal(r.dataUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Comprovante indisponível.");
-    } finally {
-      setLoadingReceiptId(null);
-    }
-  }
-
+  const { user, organizationId, tenantReady } = useAppAuth();
+  const [month, setMonth] = useState(() => localDate().slice(0, 7)),
+    [revision, setRevision] = useState(0);
+  const [data, setData] = useState<Overview | null>(null),
+    [loading, setLoading] = useState(false),
+    [busy, setBusy] = useState(false);
+  const [error, setError] = useState(""),
+    [status, setStatus] = useState("");
+  const [tab, setTab] = useState<"entries" | "evolution" | "campaigns">(
+      "entries",
+    ),
+    [series, setSeries] = useState<Series | null>(null),
+    [seriesError, setSeriesError] = useState("");
+  const [query, setQuery] = useState(""),
+    [cursor, setCursor] = useState("");
+  const [manual, setManual] = useState(false),
+    [form, setForm] = useState({
+      kind: "income",
+      label: "",
+      amount: "",
+      date: localDate(),
+      note: "",
+    });
+  const [decision, setDecision] = useState<{
+      id: string;
+      action: "confirm" | "reject" | "void";
+      label: string;
+    } | null>(null),
+    [reason, setReason] = useState(""),
+    [checked, setChecked] = useState(false);
+  const [receipt, setReceipt] = useState<string | null>(null);
+  const generation = useRef(0),
+    lock = useRef(false),
+    requestId = useRef("");
   useEffect(() => {
-    if (!configured || !organizationId) { setContribLoading(false); return; }
-    let cancelled = false;
-    setContributions([]); setReceiptModal(null); setContribLoading(true);
-    fetchAllContributions(firebaseConfig, { organizationId }, 200)
-      .then((list) => { if (!cancelled) setContributions(list); })
-      .catch(() => { if (!cancelled) setError("Não foi possível carregar contribuições."); })
-      .finally(() => { if (!cancelled) setContribLoading(false); });
-    return () => { cancelled = true; };
-  }, [configured, organizationId, firebaseConfig]);
-
-  const pendingContributions = contributions.filter((c) => c.status === "pending");
-  const confirmedContributions = contributions.filter((c) => (c.status === "confirmed" || !c.status) && !c.ledgerId);
-
-  // Ledger real: lançamentos individuais (entradas/saídas/missões).
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-  const reloadTransactions = useCallback(async () => {
-    if (!configured || !organizationId) return;
-    try {
-      const list = await fetchFinancialTransactions(firebaseConfig, { organizationId }, 500);
-      if (currentOrg.current === organizationId) setTransactions(list);
-    } catch { if (currentOrg.current === organizationId) setError("Não foi possível carregar os lançamentos."); }
-  }, [configured, organizationId, firebaseConfig]);
-  useEffect(() => { setTransactions([]); setReceiptModal(null); setDecision(null); setReportSummary(""); manualRequest.current = ""; void reloadTransactions(); }, [reloadTransactions]);
-
-  const [filterQuery, setFilterQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"chart" | "distribution" | "goals">("chart");
-
-  // Metas reais das campanhas; somente valores conferidos.
-  const [givingGoals, setGivingGoals] = useState<GivingGoal[]>([]);
-  useEffect(() => { let cancelled = false; setGivingGoals([]);
-    if (organizationId && configured) fetchGivingCampaigns(firebaseConfig, { organizationId }).then(list => { if (!cancelled) setGivingGoals(list.map(c => ({ id: c.id, title: c.title, description: c.description || "", targetAmount: c.goalAmount, raisedAmount: c.raisedAmount, category: c.category || "Campanha" }))); }).catch(() => { if (!cancelled) setError("Não foi possível carregar as campanhas."); });
-    return () => { cancelled = true; };
-  }, [organizationId, configured, firebaseConfig]);
-
-  // Modais
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showPrintStatement, setShowPrintStatement] = useState(false);
-
-  // Form de Lançamento Manual
-  const [newEntry, setNewEntry] = useState({
-    category: "Entrada" as "Entrada" | "Saída" | "Missões",
-    label: "",
-    amount: "",
-    note: ""
-  });
-
-  // Extrato/relatório derivado 100% dos dados reais: lançamentos manuais
-  // (financialTransactions) + contribuições PIX confirmadas. Sinal por kind:
-  // Entrada e Missões contam como arrecadação; Saída é despesa.
-  const currentReport = useMemo(() => {
-    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" })
-      .format(new Date());
-    const kindToCategory: Record<FinancialTransaction["kind"], "Entrada" | "Saída" | "Missões"> = {
-      income: "Entrada",
-      expense: "Saída",
-      missions: "Missões"
-    };
-
-    const entries = [
-      ...transactions.filter(t => t.status !== "voided").map((t) => ({
-        id: t.id,
-        category: kindToCategory[t.kind],
-        label: t.label,
-        amount: t.amount,
-        note: t.note ?? "",
-        createdAt: t.date,
-        source: t.contributionId ? "contrib" as const : "tx" as const
-      })),
-      ...confirmedContributions.map((c) => ({
-        id: c.id,
-        category: "Entrada" as const,
-        label: `${c.contributorName ?? "Membro"} — PIX (${c.type})`,
-        amount: c.amount,
-        note: "Confirmada pela liderança",
-        createdAt: c.date,
-        source: "contrib" as const
-      }))
-    ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-
-    const isMonth = (d: string) => (d ?? "").slice(0, 7) === monthKey;
-    const sumBy = (pred: (e: (typeof entries)[number]) => boolean) =>
-      entries.filter(pred).reduce((s, e) => s + e.amount, 0);
-
-    const incomeMonth = sumBy((e) => e.category !== "Saída" && isMonth(e.createdAt));
-    const expensesMonth = sumBy((e) => e.category === "Saída" && isMonth(e.createdAt));
-    const missionsMonth = sumBy((e) => e.category === "Missões" && isMonth(e.createdAt));
-    const incomeAll = sumBy((e) => e.category !== "Saída");
-    const expensesAll = sumBy((e) => e.category === "Saída");
-
-    return {
-      month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
-      income: incomeMonth,
-      expenses: expensesMonth,
-      missions: missionsMonth,
-      balance: incomeAll - expensesAll,
-      entries
-    };
-  }, [transactions, confirmedContributions]);
-
-  // Filtra lançamentos do extrato
-  const filteredEntries = useMemo(() => {
-    return currentReport.entries.filter(entry =>
-      entry.label.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      entry.category.toLowerCase().includes(filterQuery.toLowerCase())
-    );
-  }, [currentReport, filterQuery]);
-
-  // Série mensal real (últimos 6 meses) p/ o gráfico de evolução.
-  const monthlySeries = useMemo(() => {
-    const map = new Map<string, { income: number; expense: number }>();
-    for (const e of currentReport.entries) {
-      const key = (e.createdAt ?? "").slice(0, 7);
-      if (!key) continue;
-      const cur = map.get(key) ?? { income: 0, expense: 0 };
-      if (e.category === "Saída") cur.expense += e.amount; else cur.income += e.amount;
-      map.set(key, cur);
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .slice(-6)
-      .map(([month, v]) => ({
-        label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(`${month}-01T12:00:00`)),
-        income: v.income,
-        expense: v.expense
-      }));
-  }, [currentReport]);
-
-  // Quebra real das despesas por descrição (top 6) p/ o gráfico de distribuição.
-  const expenseBreakdown = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of currentReport.entries) {
-      if (e.category !== "Saída") continue;
-      map.set(e.label, (map.get(e.label) ?? 0) + e.amount);
-    }
-    const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([label, amount]) => ({ label, amount, pct: total ? Math.round((amount / total) * 100) : 0 }));
-  }, [currentReport]);
-
-  // Lançamento Manual — persiste de verdade no ledger (financialTransactions).
-  const handleCreateEntry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (operationBusy.current || !user) return;
-    const amountVal = parseFloat(newEntry.amount);
-    if (!newEntry.label || isNaN(amountVal) || amountVal <= 0) return;
-    if (!configured || !organizationId) { setShowAddModal(false); return; }
-
-    const kind: FinancialTransaction["kind"] =
-      newEntry.category === "Entrada" ? "income" : newEntry.category === "Saída" ? "expense" : "missions";
-    operationBusy.current = true; manualRequest.current ||= crypto.randomUUID();
-    try {
-      await financeRequest(user, { action: "manual", organizationId, requestId: manualRequest.current,
-        kind,
-        label: newEntry.label.trim(),
-        amount: amountVal,
-        note: newEntry.note.trim() || undefined,
-        date: new Date().toISOString(),
-        createdByUserId: user?.uid
+    const g = ++generation.current;
+    lock.current = false;
+    setBusy(false);
+    setData(null);
+    setError("");
+    setSeries(null);
+    setSeriesError("");
+    setReceipt(null);
+    setDecision(null);
+    if (!user || !tenantReady) return;
+    setLoading(true);
+    void financeRequest(user, {
+      action: "overview",
+      organizationId,
+      month,
+      pendingAfter: cursor || undefined,
+    })
+      .then((r) => {
+        if (g === generation.current) setData(r);
+      })
+      .catch((e) => {
+        if (g === generation.current) setError(e.message);
+      })
+      .finally(() => {
+        if (g === generation.current) setLoading(false);
       });
-      await reloadTransactions();
-      manualRequest.current = "";
-      setNewEntry({ category: "Entrada", label: "", amount: "", note: "" });
-      setShowAddModal(false);
-    } catch (e) { setError(e instanceof Error ? e.message : "Falha ao salvar lançamento."); }
-    finally { operationBusy.current = false; }
-  };
-
-  // Excluir lançamento (só os manuais; contribuições PIX se gerenciam no painel próprio).
-  const handleDeleteEntry = (id: string, source: "tx" | "contrib") => { if (source === "tx") openDecision(id,"void"); };
-
+    return () => {
+      generation.current++;
+    };
+  }, [user, organizationId, tenantReady, month, revision, cursor]);
+  useEffect(() => {
+    setManual(false);
+    requestId.current = "";
+    setStatus("");
+    setCursor("");
+    setForm({
+      kind: "income",
+      label: "",
+      amount: "",
+      date: localDate(),
+      note: "",
+    });
+  }, [organizationId, user?.uid]);
+  useEffect(() => {
+    if (tab !== "evolution" || !data || !user) return;
+    let cancelled = false;
+    setSeries(null);
+    setSeriesError("");
+    void financeRequest(user, { action: "evolution", organizationId, month })
+      .then((r) => {
+        if (!cancelled) setSeries(r.series);
+      })
+      .catch((e) => {
+        if (!cancelled) setSeriesError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, data, user, organizationId, month]);
+  async function run(body: Record<string, unknown>, message: string) {
+    if (!user || lock.current) return false;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    setStatus("");
+    const g = generation.current;
+    try {
+      await financeRequest(user, { ...body, organizationId });
+      if (g !== generation.current) return false;
+      setStatus(message);
+      setRevision((v) => v + 1);
+      return true;
+    } catch (e) {
+      if (g === generation.current)
+        setError(e instanceof Error ? e.message : "Não foi possível concluir.");
+      return false;
+    } finally {
+      if (g === generation.current) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function saveManual(e: React.FormEvent) {
+    e.preventDefault();
+    requestId.current ||= crypto.randomUUID();
+    if (
+      await run(
+        {
+          action: "manual",
+          requestId: requestId.current,
+          ...form,
+          amount: Number(form.amount),
+        },
+        "Lançamento registrado. Os totais do mês foram atualizados.",
+      )
+    ) {
+      requestId.current = "";
+      setManual(false);
+      setForm({
+        kind: "income",
+        label: "",
+        amount: "",
+        date: localDate(),
+        note: "",
+      });
+    }
+  }
+  async function decide(e: React.FormEvent) {
+    e.preventDefault();
+    if (!decision || (decision.action === "confirm" && !checked)) return;
+    await run(
+      {
+        action: decision.action,
+        contributionId: decision.id,
+        transactionId: decision.id,
+        reference: reason,
+        reason,
+      },
+      decision.action === "confirm"
+        ? "Recebimento confirmado e integrado a Doações e ao perfil do contribuinte."
+        : decision.action === "reject"
+          ? "Declaração rejeitada; nenhum recebimento foi lançado."
+          : "Lançamento anulado. O histórico foi preservado.",
+    );
+  }
+  function choose(
+    id: string,
+    action: "confirm" | "reject" | "void",
+    label: string,
+  ) {
+    setDecision({ id, action, label });
+    setReason("");
+    setChecked(false);
+    setError("");
+    setStatus("");
+  }
+  async function exportCsv() {
+    if (!user || lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    const g = generation.current;
+    try {
+      const r = await financeRequest(user, {
+        action: "report",
+        organizationId,
+        month,
+      });
+      if (g !== generation.current) return;
+      const url = URL.createObjectURL(
+          new Blob([r.csv], { type: "text/csv;charset=utf-8" }),
+        ),
+        a = document.createElement("a");
+      a.href = url;
+      a.download = "financas-" + month + ".csv";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setStatus(
+        "CSV do mês preparado com " + r.entries.length + " lançamentos.",
+      );
+    } catch (e) {
+      if (g === generation.current)
+        setError(e instanceof Error ? e.message : "Não foi possível exportar.");
+    } finally {
+      if (g === generation.current) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  async function showReceipt(id: string) {
+    if (!user || lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    const g = generation.current;
+    try {
+      const r = await financeRequest(user, {
+        action: "receipt",
+        organizationId,
+        receiptId: id,
+      });
+      if (g === generation.current) setReceipt(r.dataUrl);
+    } catch (e) {
+      if (g === generation.current)
+        setError(e instanceof Error ? e.message : "Comprovante indisponível.");
+    } finally {
+      if (g === generation.current) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  const entries =
+    data?.report.entries.filter((e) =>
+      (e.label + " " + labels[e.kind])
+        .toLocaleLowerCase("pt-BR")
+        .includes(query.toLocaleLowerCase("pt-BR")),
+    ) || [];
+  const max = series
+    ? Math.max(1, ...series.flatMap((v) => [v.incomeCents, v.expenseCents]))
+    : 1;
   return (
-    <main className="finance-workbench">
-      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
-      
-      <section style={{ padding: 16 }}>
-        <label>Mês do relatório <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)} /></label>{" "}
-        <button className="btn-secondary" onClick={exportMonth}>Baixar CSV do mês</button>
-        {reportSummary && <p role="status">{reportSummary}</p>}
-        <p>O painel abaixo mostra até 500 lançamentos recentes e 200 contribuições. O CSV consulta o mês completo, com limite explícito de 1.000 registros por origem.</p>
-      </section>
-      {decision && <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(15,23,42,.7)",display:"grid",placeItems:"center",padding:16}}>
-        <form role="dialog" aria-modal="true" aria-label="Conferência financeira" onSubmit={submitDecision} style={{background:"white",color:"#0f172a",padding:24,borderRadius:16,maxWidth:480,width:"100%",display:"grid",gap:16}}>
-          <h2>{decision.action === "confirm" ? "Conferir recebimento" : decision.action === "reject" ? "Rejeitar declaração" : "Anular lançamento manual"}</h2>
-          <p>{decision.action === "confirm" ? "Verifique o crédito no extrato bancário. A imagem do comprovante, sozinha, não confirma o recebimento." : "O histórico e a auditoria serão preservados."}</p>
-          <label>{decision.action === "confirm" ? "Referência única do extrato" : "Motivo"}<input required maxLength={decision.action === "confirm" ? 160 : 500} value={decisionReason} onChange={e=>setDecisionReason(e.target.value)} style={{width:"100%",padding:10}} /></label>
-          {decision.action === "confirm" && <label><input type="checkbox" checked={statementChecked} onChange={e=>setStatementChecked(e.target.checked)} /> Conferi o valor recebido no extrato bancário.</label>}
-          {error && <p role="alert" style={{color:"#b91c1c"}}>{error}</p>}
-          <button className="btn-primary" disabled={decisionBusy || !decisionReason.trim() || (decision.action === "confirm" && !statementChecked)}>{decisionBusy ? "Salvando..." : "Registrar decisão"}</button>
-          <button type="button" className="btn-secondary" disabled={decisionBusy} onClick={()=>setDecision(null)}>Cancelar</button>
-        </form>
-      </div>}
-      {/* Estilo e Folha de Impressão Contábil */}
+    <main className={s.page + " " + f.page}>
       <style jsx global>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          .printable-statement, .printable-statement * {
-            visibility: visible;
-          }
-          .printable-statement {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 2.5rem !important;
-            background: white !important;
-            color: black !important;
-            box-shadow: none !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-        @keyframes scanLine {
-          0% { top: 15%; }
-          50% { top: 85%; }
-          100% { top: 15%; }
         }
       `}</style>
-
-      {/* 1. Modal de Lançamento Manual */}
-      {showAddModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.8)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(6px)"
-          }}
-          className="animate-entrance"
-        >
-          <div
-            style={{
-              background: "#1e293b",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 24,
-              padding: "2.5rem",
-              width: "100%",
-              maxWidth: 480,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-              color: "white"
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
-                <ReceiptText size={20} style={{ color: "#f97316" }} />
-                Novo Lançamento Contábil
-              </h3>
-              <button 
-                onClick={() => setShowAddModal(false)} 
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateEntry} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Tipo de Fluxo *</label>
-                <select
-                  value={newEntry.category}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, category: e.target.value as "Entrada" | "Saída" | "Missões" }))}
-                  style={{ width: "100%", padding: "0.75rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
-                >
-                  <option value="Entrada">Entrada (Dízimo/Oferta)</option>
-                  <option value="Saída">Saída (Despesa/Custo)</option>
-                  <option value="Missões">Fundo Missionário</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Descrição / Identificação *</label>
-                <input
-                  required
-                  placeholder="Ex: Oferta Especial Culto de Missões"
-                  value={newEntry.label}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, label: e.target.value }))}
-                  style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Valor Monetário (R$) *</label>
-                  <input
-                    required
-                    type="number"
-                    step="0.01"
-                    placeholder="Ex: 1250.00"
-                    value={newEntry.amount}
-                    onChange={(e) => setNewEntry(prev => ({ ...prev, amount: e.target.value }))}
-                    style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Anotação / Observação</label>
-                <input
-                  placeholder="Observação contábil para conciliação..."
-                  value={newEntry.note}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, note: e.target.value }))}
-                  style={{ width: "100%", padding: "0.75rem 1rem", backgroundColor: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", outline: "none" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="secondary-button"
-                  style={{ width: "50%", padding: "0.85rem", color: "white", borderColor: "rgba(255,255,255,0.2)" }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="primary-button"
-                  style={{ width: "50%", padding: "0.85rem", backgroundColor: "#f97316", color: "white", fontWeight: 700 }}
-                >
-                  Confirmar Lançamento
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Modal do Relatório Contábil Consolidado (Visualizador / Impressão) */}
-      {showPrintStatement && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(9, 13, 22, 0.9)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(10px)",
-            padding: "2rem"
-          }}
-          className="animate-entrance"
-        >
-          <div
-            style={{
-              background: "white",
-              borderRadius: 24,
-              padding: "2.5rem",
-              width: "100%",
-              maxWidth: 800,
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1.5rem"
-            }}
-          >
-            {/* Folha Contábil Oficial */}
-            <div
-              className="printable-statement"
-              style={{
-                border: "1px solid #cbd5e1",
-                borderRadius: 12,
-                padding: "2rem",
-                background: "#ffffff",
-                color: "#1e293b",
-                fontFamily: "Georgia, serif"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0f172a", paddingBottom: "1.5rem" }}>
-                <div>
-                  <strong style={{ fontSize: "1.4rem", color: "#0f172a", display: "block" }}>ESDRAS CONTABILIDADE</strong>
-                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Relatório Geral de Transparência Financeira</span>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>Competência: {currentReport.month}</strong>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>Emitido em {new Date().toLocaleDateString("pt-BR")}</span>
-                </div>
-              </div>
-
-              {/* Tabela de Consolidado */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", margin: "1.5rem 0", padding: "1.25rem", background: "#f8fafc", borderRadius: 8 }}>
-                <div>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>Arrecadação Geral (Entradas)</span>
-                  <strong style={{ display: "block", fontSize: "1.25rem", color: "#16a34a", marginTop: 4 }}>{formatCurrency(currentReport.income)}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>Despesas Consolidadas (Saídas)</span>
-                  <strong style={{ display: "block", fontSize: "1.25rem", color: "#dc2626", marginTop: 4 }}>{formatCurrency(currentReport.expenses)}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase" }}>Entradas de missões registradas</span>
-                  <strong style={{ display: "block", fontSize: "1.25rem", color: "#2563eb", marginTop: 4 }}>{formatCurrency(currentReport.missions)}</strong>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid #e2e8f0", paddingBottom: "0.5rem" }}>
-                <strong style={{ fontSize: "1.1rem", color: "#0f172a" }}>Saldo Líquido Operacional em Caixa</strong>
-                <strong style={{ fontSize: "1.25rem", color: "#f97316" }}>{formatCurrency(currentReport.balance)}</strong>
-              </div>
-
-              <strong style={{ fontSize: "0.95rem", display: "block", marginBottom: "0.75rem", color: "#0f172a" }}>Detalhamento das Operações Recentes:</strong>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {currentReport.entries.map((ent, idx) => (
-                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", padding: "6px 0", borderBottom: "1px dashed #e2e8f0" }}>
-                    <span>
-                      <strong>{ent.label}</strong>
-                      <small style={{ color: "#64748b", display: "block" }}>Categoria: {ent.category}</small>
-                    </span>
-                    <strong style={{ color: ent.category === "Saída" ? "#dc2626" : "#16a34a" }}>
-                      {ent.category === "Saída" ? "-" : "+"} {formatCurrency(ent.amount)}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px dashed #cbd5e1" }}>
-                <div style={{ textAlign: "center", width: "240px" }}>
-                  <div style={{ borderBottom: "1px solid #94a3b8", height: 20 }} />
-                  <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", marginTop: 6, display: "block" }}>Liderança Financeira Esdras</span>
-                </div>
-                <div style={{ textAlign: "center", width: "240px" }}>
-                  <div style={{ borderBottom: "1px solid #94a3b8", height: 20 }} />
-                  <span style={{ fontSize: "0.7er", color: "#64748b", textTransform: "uppercase", marginTop: 6, display: "block" }}>Conselho de Transparência</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Ações da Janela */}
-            <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
-              <button
-                onClick={() => setShowPrintStatement(false)}
-                className="secondary-button"
-                style={{ padding: "0.75rem 1.5rem", borderRadius: 12 }}
-              >
-                Fechar Painel
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="primary-button"
-                style={{ backgroundColor: "#f97316", color: "white", padding: "0.75rem 1.5rem", borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <Printer size={16} />
-                Confirmar Impressão Contábil
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Header */}
-      <header className="finance-hero topbar">
-        <div className="topbar-content">
-          <p className="eyebrow" style={{ color: "#f97316" }}>Finanças e transparência</p>
-          <h1>Gestão Financeira da Igreja</h1>
-          <p>Controle entradas, saídas, missões, metas e contribuições por PIX em uma visão clara para liderança e transparência.</p>
-        </div>
-        <div className="topbar-actions">
-           <button onClick={() => setShowPrintStatement(true)} className="ghost-button compact" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}>
-             <Download size={16} /> Imprimir visão atual
-           </button>
-           <button onClick={() => setShowAddModal(true)} className="primary-button compact" style={{ backgroundColor: "#f97316", color: "white", borderRadius: 12 }}>
-             <Plus size={16} /> Lançamento Manual
-           </button>
+      <header className={f.header}>
+        <div>
+          <span className={f.eyebrow}>FINANÇAS E TRANSPARÊNCIA</span>
+          <h1>Finanças da igreja</h1>
+          <p>
+            Recebimentos conferidos, despesas e pendências em uma única visão.
+          </p>
         </div>
       </header>
-
-      {/* Contribuições reais recebidas via PIX pelo app mobile — precisam de
-          confirmação humana antes de entrar no relatório mensal manual abaixo. */}
-      {!contribLoading && contributions.length > 0 && (
-        <section
-          className="no-print"
-          style={{
-            marginTop: "1.5rem",
-            background: "#1e293b",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 16,
-            padding: "1.25rem 1.5rem"
+      <div className={s.actions}>
+        <label>
+          Mês do relatório
+          <input
+            type="month"
+            aria-label="Mês do relatório"
+            value={month}
+            disabled={busy}
+            onChange={(e) => {
+              if (e.target.value) {
+                setMonth(e.target.value);
+                setStatus("");
+                setCursor("");
+              }
+            }}
+          />
+        </label>
+        <button
+          disabled={busy || loading}
+          onClick={() => setRevision((v) => v + 1)}
+        >
+          Atualizar
+        </button>
+        <button disabled={!data || busy || loading} onClick={exportCsv}>
+          {busy ? "Aguarde…" : "Baixar CSV do mês"}
+        </button>
+        <button
+          disabled={!data || busy || loading}
+          onClick={() => window.print()}
+        >
+          Imprimir mês
+        </button>
+        <button
+          disabled={!data || busy || loading}
+          onClick={() => {
+            setManual((v) => !v);
+            setDecision(null);
+            setStatus("");
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
-              <Smartphone size={18} style={{ color: "#f97316" }} />
-              Contribuições para conferência
-            </h3>
-            {pendingContributions.length > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24", background: "rgba(251,191,36,0.12)", padding: "4px 10px", borderRadius: 100 }}>
-                {pendingContributions.length} pendente{pendingContributions.length > 1 ? "s" : ""} de confirmação
-              </span>
-            )}
-          </div>
-
-          {pendingContributions.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-              Nenhuma contribuição pendente — {contributions.length} registro{contributions.length > 1 ? "s" : ""} no total, todos conferidos.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pendingContributions.slice(0, 8).map((c) => (
-                <div
-                  key={c.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "0.75rem 1rem",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: 10
-                  }}
+          Lançamento manual
+        </button>
+      </div>
+      <p className={f.help}>
+        O período selecionado vale para os totais, o extrato, a impressão e o
+        CSV. Pendências de conferência abrangem todos os meses.
+      </p>
+      <p role="status">
+        {loading ? "Carregando Finanças…" : busy ? "Processando…" : status}
+      </p>
+      {error && (
+        <p role="alert" className={s.notice}>
+          {error}
+        </p>
+      )}
+      {manual && (
+        <section className={s.card}>
+          <h2>Novo lançamento manual</h2>
+          <p>
+            Registra uma movimentação no caixa. Para associar uma contribuição a
+            uma pessoa, use o cadastro em <Link href="/members">Pessoas</Link>.
+          </p>
+          <form onSubmit={saveManual}>
+            <fieldset disabled={busy} className={f.form}>
+              <label>
+                Categoria
+                <select
+                  value={form.kind}
+                  onChange={(e) => setForm({ ...form, kind: e.target.value })}
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-                    <div>
-                      <strong style={{ color: "white", fontSize: 14 }}>{c.contributorName ?? "Membro"}</strong>
-                      <span style={{ marginLeft: 8, fontSize: 14, color: "#22c55e", fontWeight: 700 }}>{formatCurrency(c.amount)}</span>
-                    </div>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                      {c.type} · {new Date(c.date.length === 10 ? `${c.date}T12:00:00` : c.date).toLocaleDateString("pt-BR")}
-                      {c.receiptId && (
-                        <> · <button
-                          onClick={() => openReceipt(c.receiptId!)}
-                          disabled={loadingReceiptId === c.receiptId}
-                          style={{ background: "none", border: "none", padding: 0, color: "#60a5fa", fontWeight: 600, fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
-                        >{loadingReceiptId === c.receiptId ? "Carregando…" : "Ver comprovante"}</button></>
-                      )}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => openDecision(c.id,"confirm")}
-                    disabled={confirmingId === c.id}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      background: "#16a34a", color: "white", border: "none",
-                      borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 600,
-                      cursor: confirmingId === c.id ? "default" : "pointer",
-                      opacity: confirmingId === c.id ? 0.6 : 1
-                    }}
-                  >
-                    <Check size={14} />
-                    {confirmingId === c.id ? "Confirmando..." : "Conferir recebimento"}
-                  </button>
-                  <button disabled={Boolean(confirmingId)} className="btn-secondary" onClick={() => openDecision(c.id,"reject")}>Rejeitar</button>
-                </div>
-              ))}
-            </div>
-          )}
+                  {Object.entries(labels).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Descrição
+                <input
+                  autoFocus
+                  required
+                  maxLength={120}
+                  value={form.label}
+                  onChange={(e) => setForm({ ...form, label: e.target.value })}
+                />
+              </label>
+              <label>
+                Valor (R$)
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  max="1000000"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+              </label>
+              <label>
+                Data do lançamento
+                <input
+                  required
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </label>
+              <label>
+                Observação
+                <textarea
+                  maxLength={1000}
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                />
+              </label>
+              <div className={s.actions}>
+                <button type="submit">
+                  {busy ? "Salvando…" : "Salvar lançamento"}
+                </button>
+                <button type="button" onClick={() => setManual(false)}>
+                  Fechar
+                </button>
+              </div>
+            </fieldset>
+          </form>
         </section>
       )}
-
-      {/* Main Grid: Insights Contábeis + WhatsApp Smartphone Sim */}
-      <section className="finance-layout" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: "2.5rem", marginTop: "2rem" }}>
-        
-        {/* Lado Esquerdo: Cards, Gráficos Dinâmicos e Extrato */}
-        <div className="finance-left-column" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-          
-          {/* Nubank Card de Caixa e Indicadores */}
-          <div className="finance-main-card antigravity-float" style={{ width: "100%" }}>
-            <div className="card-header">
-               <div className="month-selector">
-                 <Calendar size={18} style={{ color: "#f97316" }} />
-                 <strong>{currentReport.month}</strong>
-               </div>
-               <div className="status-pill published">Visão administrativa</div>
-            </div>
-            
-            <div className="main-metrics">
-              <div className="metric-primary">
-                <span>Entradas registradas no mês</span>
-                <strong style={{ color: "white" }}>{formatCurrency(currentReport.income)}</strong>
-                <div className="trend up">
-                  Registros conferidos
-                </div>
+      {decision && (
+        <section className={s.card} aria-label="Conferência financeira">
+          <h2>
+            {decision.action === "confirm"
+              ? "Conferir recebimento"
+              : decision.action === "reject"
+                ? "Rejeitar declaração"
+                : "Anular lançamento"}
+          </h2>
+          <p>{decision.label}</p>
+          <p>
+            {decision.action === "confirm"
+              ? "Confira o crédito no extrato bancário. O recebimento será registrado na data da confirmação."
+              : "O motivo ficará registrado no histórico."}
+          </p>
+          <form onSubmit={decide}>
+            <fieldset disabled={busy} className={f.form}>
+              <label>
+                {decision.action === "confirm"
+                  ? "Referência única do extrato"
+                  : "Motivo"}
+                <input
+                  autoFocus
+                  required
+                  maxLength={decision.action === "void" ? 500 : 160}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </label>
+              {decision.action === "confirm" && (
+                <label className={f.check}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => setChecked(e.target.checked)}
+                  />
+                  Conferi o valor recebido no extrato bancário.
+                </label>
+              )}
+              <div className={s.actions}>
+                <button
+                  disabled={
+                    !reason.trim() ||
+                    (decision.action === "confirm" && !checked)
+                  }
+                >
+                  {busy ? "Registrando…" : "Registrar decisão"}
+                </button>
+                <button type="button" onClick={() => setDecision(null)}>
+                  Cancelar
+                </button>
               </div>
-              <div className="metric-primary">
-                <span>Saldo dos registros exibidos</span>
-                <strong style={{ color: "#f97316" }}>{formatCurrency(currentReport.balance)}</strong>
-                <p style={{ opacity: 0.6, fontSize: "0.85rem", marginTop: 4 }}>Não substitui o saldo do extrato bancário</p>
-              </div>
+            </fieldset>
+          </form>
+        </section>
+      )}
+      {receipt && (
+        <section className={s.card}>
+          <h2>Comprovante para conferência</h2>
+          <p>A imagem não confirma o recebimento.</p>
+          <img
+            className={f.receipt}
+            src={receipt}
+            alt="Comprovante da contribuição selecionada"
+          />
+          <button onClick={() => setReceipt(null)}>Fechar comprovante</button>
+        </section>
+      )}
+      {data && (
+        <>
+          <p className={s.notice}>
+            <a href="#finance-pending">
+              {data.pendingCount} contribuição(ões) aguardando conferência
+            </a>{" "}
+            · Todos os meses
+          </p>
+          <section className={f.print} aria-label="Relatório mensal">
+            <h2>{monthName(data.report.month)}</h2>
+            <div className={s.metrics}>
+              <article className={s.card}>
+                Entradas do mês<strong>{money(data.report.incomeCents)}</strong>
+              </article>
+              <article className={s.card}>
+                Saídas do mês<strong>{money(data.report.expenseCents)}</strong>
+              </article>
+              <article className={s.card}>
+                Saldo do mês<strong>{money(data.report.balanceCents)}</strong>
+              </article>
+              <article className={s.card}>
+                Entradas para missões
+                <strong>{money(data.report.missionsCents)}</strong>
+                <small>Já incluídas nas entradas.</small>
+              </article>
             </div>
-
-            <div className="mini-stats">
-               <div className="mini-stat">
-                 <TrendingDown size={16} color="#ef4444" />
-                 <div>
-                   <small>Despesas Consolidadas</small>
-                   <b>{formatCurrency(currentReport.expenses)}</b>
-                 </div>
-               </div>
-               <div className="mini-stat">
-                 <Globe size={16} color="#0ea5e9" />
-                 <div>
-                   <small>Fundo Missionário</small>
-                   <b>{formatCurrency(currentReport.missions)}</b>
-                 </div>
-               </div>
-               <div className="mini-stat">
-                 <Wallet size={16} color="#10b981" />
-                 <div>
-                   <small>Referência de planejamento (10%)</small>
-                   <b>{formatCurrency(currentReport.income * 0.1)}</b>
-                 </div>
-               </div>
-            </div>
-          </div>
-
-          {/* Gráfico & Insights Tab System */}
-          <div
-            className="finance-insight-panel"
-            style={{
-              background: "rgba(30, 41, 59, 0.4)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
-              borderRadius: 24,
-              padding: "2rem"
-            }}
-          >
-            <div style={{ display: "flex", gap: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
-              <button
-                className={activeTab === "chart" ? "finance-tab-button is-active" : "finance-tab-button"}
-                onClick={() => setActiveTab("chart")}
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderRadius: 10,
-                  background: activeTab === "chart" ? "rgba(249, 115, 22, 0.15)" : "transparent",
-                  border: "none",
-                  color: activeTab === "chart" ? "#f97316" : "rgba(255,255,255,0.6)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <ChartIcon size={14} />
-                Histórico Anual
-              </button>
-              <button
-                className={activeTab === "distribution" ? "finance-tab-button is-active" : "finance-tab-button"}
-                onClick={() => setActiveTab("distribution")}
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderRadius: 10,
-                  background: activeTab === "distribution" ? "rgba(249, 115, 22, 0.15)" : "transparent",
-                  border: "none",
-                  color: activeTab === "distribution" ? "#f97316" : "rgba(255,255,255,0.6)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <PieIcon size={14} />
-                Distribuição de Despesas
-              </button>
-              <button
-                className={activeTab === "goals" ? "finance-tab-button is-active" : "finance-tab-button"}
-                onClick={() => setActiveTab("goals")}
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderRadius: 10,
-                  background: activeTab === "goals" ? "rgba(249, 115, 22, 0.15)" : "transparent",
-                  border: "none",
-                  color: activeTab === "goals" ? "#f97316" : "rgba(255,255,255,0.6)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <HeartHandshake size={14} />
-                Metas / Campanhas
-              </button>
-            </div>
-
-            <div style={{ minHeight: "220px" }}>
-              
-              {/* ABA 1: Evolução mensal (dados reais) */}
-              {activeTab === "chart" && (
-                <div className="animate-entrance">
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-                    <h4 style={{ color: "white", fontSize: "0.95rem", fontWeight: 700 }}>Entradas vs Saídas por mês</h4>
-                    <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)" }}>Últimos {monthlySeries.length} meses</span>
+            <p>
+              Saldo das movimentações registradas neste período; não é o saldo
+              da conta bancária.
+            </p>
+            {!!data.report.unconfirmedLegacyCount && (
+              <p className={s.notice}>
+                {data.report.unconfirmedLegacyCount} contribuição(ões) antiga(s)
+                sem confirmação excluída(s) das receitas. Solicite revisão do
+                histórico à administração.
+              </p>
+            )}
+            {!!data.report.voidedCount && (
+              <p>
+                {data.report.voidedCount} lançamento(s) anulado(s) excluído(s)
+                dos totais; histórico preservado.
+              </p>
+            )}
+            <p className={f.help}>
+              Consulta completa do mês até 1.000 registros por origem. Acima
+              desse limite, a consulta é bloqueada para não apresentar totais
+              parciais.
+            </p>
+            <div className={f.screenOnly}>
+              <nav className={s.actions} aria-label="Visões financeiras">
+                {(["entries", "evolution", "campaigns"] as const).map(
+                  (v, i) => (
+                    <button
+                      key={v}
+                      aria-pressed={tab === v}
+                      onClick={() => setTab(v)}
+                    >
+                      {["Extrato", "Evolução", "Campanhas"][i]}
+                    </button>
+                  ),
+                )}
+              </nav>
+              {tab === "entries" && (
+                <>
+                  <label className={f.filter}>
+                    Filtrar lançamentos
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Descrição ou categoria"
+                    />
+                  </label>
+                  <div className={f.tableWrap}>
+                    <table className={f.table}>
+                      <caption>
+                        Extrato de {monthName(month)}
+                        {query ? " · filtro: " + query : ""}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Descrição</th>
+                          <th>Categoria</th>
+                          <th>Valor</th>
+                          <th>Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entries.map((e) => (
+                          <tr key={e.source + e.id}>
+                            <td>{dateLabel(e.date)}</td>
+                            <td>
+                              <strong>{e.label}</strong>
+                              {e.note && <small>{e.note}</small>}
+                              <small>
+                                {e.source === "manual"
+                                  ? "Lançamento manual"
+                                  : "Contribuição confirmada"}
+                              </small>
+                            </td>
+                            <td>{labels[e.kind]}</td>
+                            <td>
+                              {e.kind === "expense" ? "− " : "+ "}
+                              {money(e.amountCents)}
+                            </td>
+                            <td>
+                              {e.canVoid ? (
+                                <button
+                                  disabled={busy}
+                                  onClick={() => choose(e.id, "void", e.label)}
+                                >
+                                  Anular
+                                </button>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  {monthlySeries.length === 0 ? (
-                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", padding: "2.5rem 0", textAlign: "center" }}>Sem lançamentos ainda. Registre entradas e saídas para ver a evolução.</p>
+                  {!entries.length && (
+                    <p>
+                      Nenhum lançamento encontrado neste período
+                      {query ? " e filtro" : ""}.
+                    </p>
+                  )}
+                </>
+              )}
+              {tab === "evolution" && (
+                <section className={s.card}>
+                  <h3>Evolução nos seis meses até {monthName(month)}</h3>
+                  {seriesError ? (
+                    <p role="alert">{seriesError}</p>
+                  ) : !series ? (
+                    <p role="status">Carregando evolução…</p>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", height: 200, paddingTop: 10 }}>
-                      {(() => {
-                        const max = Math.max(1, ...monthlySeries.map((m) => Math.max(m.income, m.expense)));
-                        return monthlySeries.map((m, i) => (
-                          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
-                            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: "100%", width: "100%", justifyContent: "center" }}>
-                              <div title={"Entradas " + formatCurrency(m.income)} style={{ width: 14, height: (m.income / max) * 100 + "%", background: "#22c55e", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
-                              <div title={"Saídas " + formatCurrency(m.expense)} style={{ width: 14, height: (m.expense / max) * 100 + "%", background: "#ef4444", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
+                    <>
+                      <div className={f.chart} aria-hidden="true">
+                        {series.map((v) => (
+                          <div key={v.month} className={f.column}>
+                            <div className={f.bars}>
+                              <span
+                                title={"Entradas: " + money(v.incomeCents)}
+                                style={{
+                                  height: (v.incomeCents / max) * 100 + "%",
+                                  background: "#15803d",
+                                }}
+                              />
+                              <span
+                                title={"Saídas: " + money(v.expenseCents)}
+                                style={{
+                                  height: (v.expenseCents / max) * 100 + "%",
+                                  background: "#c2410c",
+                                }}
+                              />
                             </div>
-                            <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>{m.label}</span>
+                            <small>
+                              {v.month.slice(5) + "/" + v.month.slice(2, 4)}
+                            </small>
                           </div>
-                        ));
-                      })()}
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: "#22c55e" }} />Entradas</span>
-                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: "#ef4444" }} />Saídas</span>
-                  </div>
-                </div>
-              )}
-
-              {/* ABA 2: Distribuição real das despesas por descrição */}
-              {activeTab === "distribution" && (
-                <div className="animate-entrance">
-                  <h4 style={{ color: "white", fontSize: "0.95rem", fontWeight: 700, marginBottom: "1rem" }}>Para onde vão as despesas</h4>
-                  {expenseBreakdown.length === 0 ? (
-                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", padding: "2.5rem 0", textAlign: "center" }}>Nenhuma saída registrada ainda.</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
-                      {expenseBreakdown.map((it, i) => (
-                        <div key={i}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                            <span style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.75)", overflowWrap: "anywhere" }}>{it.label}</span>
-                            <strong style={{ fontSize: "0.85rem", color: "white", whiteSpace: "nowrap", marginLeft: 8 }}>{formatCurrency(it.amount)} · {it.pct}%</strong>
-                          </div>
-                          <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 6, overflow: "hidden" }}>
-                            <div style={{ width: it.pct + "%", height: "100%", background: "#f97316", borderRadius: 6 }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ABA 3: Metas e Campanhas da Igreja (Giving Goals Progress Bars) */}
-              {activeTab === "goals" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }} className="animate-entrance">
-                  {givingGoals.map(goal => {
-                    const percent = Math.min(Math.round((goal.raisedAmount / goal.targetAmount) * 100), 100);
-                    return (
-                      <div 
-                        key={goal.id} 
-                        style={{
-                          padding: "1rem", 
-                          background: "rgba(255,255,255,0.03)", 
-                          border: "1px solid rgba(255,255,255,0.05)", 
-                          borderRadius: 16
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                          <div>
-                            <strong style={{ color: "white", fontSize: "0.9rem", display: "block" }}>{goal.title}</strong>
-                            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>{goal.description}</span>
-                          </div>
-                          <span style={{ fontSize: "0.8rem", color: "#f97316", fontWeight: 700 }}>{percent}%</span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div style={{ width: "100%", height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", margin: "8px 0" }}>
-                          <div style={{ width: `${percent}%`, height: "100%", backgroundColor: "#f97316", borderRadius: 4 }} />
-                        </div>
-
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>
-                          <span>Arrecadado: <strong>{formatCurrency(goal.raisedAmount)}</strong></span>
-                          <span>Meta Geral: <strong>{formatCurrency(goal.targetAmount)}</strong></span>
-                        </div>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Extrato de Lançamentos */}
-          <section className="finance-entries-panel" style={{ margin: 0, width: "100%", background: "rgba(30, 41, 59, 0.4)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 24 }}>
-            <div className="section-header">
-               <h2 style={{ color: "white" }}>Extrato de Lançamentos</h2>
-               <div className="filter-row">
-                 <div className="search-box-compact" style={{ background: "rgba(9, 13, 22, 0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}>
-                   <Filter size={14} style={{ color: "#94a3b8" }} />
-                   <input 
-                     placeholder="Filtrar lançamentos..." 
-                     value={filterQuery}
-                     onChange={e => setFilterQuery(e.target.value)}
-                     style={{ color: "white" }}
-                   />
-                 </div>
-               </div>
-            </div>
-
-            <div className="entries-table-wrapper" style={{ maxHeight: "380px", overflowY: "auto" }}>
-              <table className="entries-table">
-                <thead>
-                  <tr>
-                    <th style={{ color: "rgba(255,255,255,0.4)", borderBottomColor: "rgba(255,255,255,0.08)" }}>Data</th>
-                    <th style={{ color: "rgba(255,255,255,0.4)", borderBottomColor: "rgba(255,255,255,0.08)" }}>Categoria</th>
-                    <th style={{ color: "rgba(255,255,255,0.4)", borderBottomColor: "rgba(255,255,255,0.08)" }}>Descrição</th>
-                    <th style={{ color: "rgba(255,255,255,0.4)", borderBottomColor: "rgba(255,255,255,0.08)" }}>Valor</th>
-                    <th style={{ color: "rgba(255,255,255,0.4)", borderBottomColor: "rgba(255,255,255,0.08)" }}>Canal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEntries.map(entry => (
-                    <tr key={entry.id} className="animate-entrance" style={{ borderBottomColor: "rgba(255,255,255,0.05)" }}>
-                      <td style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—"}
-                      </td>
-                      <td style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        <span className={`entry-badge ${entry.category === 'Entrada' ? 'income' : entry.category === 'Missões' ? 'missions' : 'expense'}`} style={{
-                          backgroundColor: entry.category === "Entrada" ? "rgba(16,185,129,0.15)" : entry.category === "Missões" ? "rgba(14,165,233,0.15)" : "rgba(239,68,68,0.15)",
-                          color: entry.category === "Entrada" ? "#10b981" : entry.category === "Missões" ? "#0ea5e9" : "#ef4444"
-                        }}>
-                          {entry.category}
-                        </span>
-                      </td>
-                      <td style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        <strong style={{ color: "white" }}>{entry.label}</strong>
-                        {entry.note && <p className="entry-note" style={{ color: "#c084fc", fontWeight: 600 }}>✨ {entry.note}</p>}
-                      </td>
-                      <td style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        <b className={entry.category === 'Entrada' || entry.category === 'Missões' ? 'text-income' : 'text-expense'} style={{
-                          color: entry.category === "Entrada" || entry.category === "Missões" ? "#10b981" : "#ef4444"
-                        }}>
-                          {entry.category === 'Entrada' || entry.category === 'Missões' ? '+ ' : '- '}
-                          {formatCurrency(entry.amount)}
-                        </b>
-                      </td>
-                      <td style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
-                          <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: 8, color: "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>
-                            {entry.source === "contrib" ? "📱 PIX (app)" : "✏️ Lançamento"}
-                          </span>
-                          {entry.source === "tx" && (
-                            <button type="button" onClick={() => handleDeleteEntry(entry.id, entry.source)} title="Anular lançamento manual" style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 4 }}>
-                              <X size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredEntries.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: "2.5rem 1rem", textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: "0.9rem" }}>
-                        {filterQuery
-                          ? "Nenhum lançamento corresponde ao filtro."
-                          : "Nenhum lançamento ainda. Use “Lançamento Manual” ou confirme uma contribuição PIX."}
-                      </td>
-                    </tr>
+                      <p>Verde: entradas · Laranja: saídas</p>
+                      <div className={f.tableWrap}>
+                        <table className={f.table + " " + f.evolutionTable}>
+                          <caption>Valores da evolução</caption>
+                          <thead>
+                            <tr>
+                              <th>Mês</th>
+                              <th>Entradas</th>
+                              <th>Saídas</th>
+                              <th>Saldo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {series.map((v) => (
+                              <tr key={v.month}>
+                                <th>{monthName(v.month)}</th>
+                                <td>{money(v.incomeCents)}</td>
+                                <td>{money(v.expenseCents)}</td>
+                                <td>{money(v.balanceCents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {series.some((v) => v.unconfirmedLegacyCount > 0) && (
+                        <p>
+                          Contribuições antigas sem confirmação não entram nos
+                          valores da evolução.
+                        </p>
+                      )}
+                    </>
                   )}
-                </tbody>
-              </table>
+                </section>
+              )}
+              {tab === "campaigns" && (
+                <section className={s.card}>
+                  <h3>Campanhas ativas · acumulado confirmado</h3>
+                  <p>
+                    Os valores das campanhas abrangem toda a campanha,
+                    independentemente do mês selecionado.
+                  </p>
+                  {!data.givingAvailable ? (
+                    <p>O módulo Doações está indisponível nesta instituição.</p>
+                  ) : !data.campaigns.length ? (
+                    <p>Nenhuma campanha ativa.</p>
+                  ) : (
+                    data.campaigns.map((c) => (
+                      <article key={c.id} className={f.campaign}>
+                        <strong>{c.title}</strong>
+                        <p>
+                          {money(c.raisedAmount * 100)} de{" "}
+                          {money(c.goalAmount * 100)}
+                        </p>
+                        {c.goalAmount > 0 && (
+                          <progress
+                            aria-label={"Progresso de " + c.title}
+                            max={c.goalAmount}
+                            value={Math.min(c.raisedAmount, c.goalAmount)}
+                          />
+                        )}
+                      </article>
+                    ))
+                  )}
+                  {data.campaignsTruncated && (
+                    <p>Exibindo as primeiras 500 campanhas.</p>
+                  )}
+                </section>
+              )}
+            </div>
+            <table className={f.table + " " + f.printOnly}>
+              <caption>Extrato completo do mês selecionado</caption>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.report.entries.map((e) => (
+                  <tr key={e.source + e.id}>
+                    <td>{dateLabel(e.date)}</td>
+                    <td>{e.label}</td>
+                    <td>{labels[e.kind]}</td>
+                    <td>
+                      {e.kind === "expense" ? "− " : "+ "}
+                      {money(e.amountCents)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <section className={s.card} id="finance-pending">
+            <h2>Contribuições para conferência · {data.pendingCount}</h2>
+            <p>
+              Declarações do app, da equipe e do link público. Só entram nas
+              receitas após confirmação.
+            </p>
+            {!data.pendingCount && (
+              <p>Nenhuma declaração pendente de conferência.</p>
+            )}
+            {!!data.pendingCount && !data.pending.length && (
+              <p>Não há mais pendências nesta página.</p>
+            )}
+            <div
+              className={s.list + " " + f.queue}
+              tabIndex={0}
+              aria-label="Lista de contribuições pendentes"
+            >
+              {data.pending.map((c) => (
+                <article key={c.id} className={s.row}>
+                  <div>
+                    <strong>
+                      {c.name} · {money(c.amount * 100)}
+                    </strong>
+                    <small>
+                      {dateLabel(c.date)} · {c.type}
+                    </small>
+                  </div>
+                  <div className={s.actions}>
+                    {c.receiptId && (
+                      <button
+                        disabled={busy}
+                        onClick={() => showReceipt(c.receiptId!)}
+                      >
+                        Ver comprovante
+                      </button>
+                    )}
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        choose(
+                          c.id,
+                          "confirm",
+                          c.name + " · " + money(c.amount * 100),
+                        )
+                      }
+                    >
+                      Conferir recebimento
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={() => choose(c.id, "reject", c.name)}
+                    >
+                      Rejeitar
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className={s.actions}>
+              {cursor && (
+                <button disabled={busy} onClick={() => setCursor("")}>
+                  Primeira página de pendências
+                </button>
+              )}
+              {data.nextPendingCursor && (
+                <button
+                  disabled={busy}
+                  onClick={() => setCursor(data.nextPendingCursor!)}
+                >
+                  Próximas pendências
+                </button>
+              )}
             </div>
           </section>
-
-        </div>
-
-        {/* Lado Direito: WhatsApp Smartphone Simulator */}
-        <aside className="finance-gateway-panel" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <span className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 6, color: "#a855f7" }}>
-            <Smartphone size={14} />
-            Doações sem-app
-          </span>
-
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "1.5rem", display: "flex", flexDirection: "column", gap: "0.9rem" }}>
-            <HeartHandshake size={26} style={{ color: "#25D366" }} />
-            <h3 style={{ color: "white", margin: 0, fontSize: "1.15rem" }}>Link público de doação</h3>
-            <p style={{ color: "rgba(255,255,255,0.65)", margin: 0, fontSize: "0.9rem", lineHeight: 1.5 }}>
-              Qualquer pessoa (mesmo não-membro) contribui via PIX em segundos, sem baixar o app nem se cadastrar. O dinheiro cai direto na conta da igreja.
+          <section className={s.card}>
+            <h2>Doações e acompanhamento</h2>
+            <p>
+              A confirmação em Finanças atualiza Doações e as contribuições
+              pessoais no app e na web, conforme o vínculo da conta.
+              Administradores e pastores acompanham as pendências no painel;
+              líderes de célula não recebem acesso ao caixa.
             </p>
-            {orgSlug ? (
-              <Link href={`/p/${orgSlug}/give`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 16px", borderRadius: 12, background: "#25D366", color: "#062b15", fontWeight: 800, textDecoration: "none" }}>
-                <ArrowUpRight size={16} /> Abrir página de doação
-              </Link>
-            ) : (
-              <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>Configure o slug público da igreja em Configurações.</span>
+            <div className={s.actions}>
+              {data.givingAvailable && (
+                <Link href="/giving">Abrir Doações</Link>
+              )}
+              {data.publicPath && (
+                <Link href={data.publicPath} target="_blank" rel="noreferrer">
+                  Abrir página pública de doação
+                </Link>
+              )}
+              <Link href="/app">Voltar ao painel</Link>
+            </div>
+            {data.givingAvailable && !data.publicPath && (
+              <p>
+                O link público exige endereço público e PIX configurados para
+                esta igreja.
+              </p>
             )}
-            <small style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.78rem" }}>
-              Compartilhe o link/QR. As doações captadas aparecem em <strong>Doações</strong>.
-            </small>
-          </div>
-        </aside>
-
-      </section>
-
-      {/* Modal do comprovante (imagem carregada sob demanda) */}
-      {receiptModal && (
-        <div
-          onClick={() => setReceiptModal(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.8)",
-            display: "flex", alignItems: "center", justifyContent: "center", padding: 24
-          }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "90vh", display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={receiptModal} alt="Comprovante" style={{ maxWidth: "90vw", maxHeight: "80vh", borderRadius: 10, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }} />
-            <button
-              onClick={() => setReceiptModal(null)}
-              style={{ background: "white", color: "#111", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-            >Fechar</button>
-          </div>
-        </div>
+          </section>
+        </>
       )}
     </main>
   );
