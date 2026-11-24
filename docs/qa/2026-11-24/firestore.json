@@ -1,0 +1,102 @@
+{
+  "checkedAt": "2026-11-24T14:03:10.809Z",
+  "ruleset": "projects/alvo-church/rulesets/a3ea62fa-b679-4c3b-8311-f7b996cea926",
+  "rulesMatch": true,
+  "remoteHash": "0796d23da71add6ffed6daa860064b981ca8b1d7881f9ffc8146b7ddab374ef9",
+  "localHash": "0796d23da71add6ffed6daa860064b981ca8b1d7881f9ffc8146b7ddab374ef9",
+  "indexes": [
+    {
+      "collection": "events",
+      "state": "READY"
+    },
+    {
+      "collection": "attendance",
+      "state": "READY"
+    },
+    {
+      "collection": "prayerRequests",
+      "state": "READY"
+    },
+    {
+      "collection": "kidsCheckIns",
+      "state": "READY"
+    },
+    {
+      "collection": "campaignDeliveries",
+      "state": "READY"
+    },
+    {
+      "collection": "kidsCheckIns",
+      "state": "READY"
+    },
+    {
+      "collection": "prayerRequests",
+      "state": "READY"
+    },
+    {
+      "collection": "meetings",
+      "state": "READY"
+    },
+    {
+      "collection": "financialTransactions",
+      "state": "READY"
+    },
+    {
+      "collection": "memberContributions",
+      "state": "READY"
+    },
+    {
+      "collection": "registrations",
+      "state": "READY"
+    },
+    {
+      "collection": "whatsappOutbox",
+      "state": "READY"
+    },
+    {
+      "collection": "financialTransactions",
+      "state": "READY"
+    },
+    {
+      "collection": "prayerRequests",
+      "state": "READY"
+    },
+    {
+      "collection": "memberContributions",
+      "state": "READY"
+    },
+    {
+      "collection": "meetings",
+      "state": "READY"
+    },
+    {
+      "collection": "kidsCheckIns",
+      "state": "READY"
+    },
+    {
+      "collection": "kidsCheckIns",
+      "state": "READY"
+    },
+    {
+      "collection": "receptionAudit",
+      "state": "READY"
+    },
+    {
+      "collection": "pastoralAudit",
+      "state": "READY"
+    },
+    {
+      "collection": "contributions",
+      "state": "READY"
+    },
+    {
+      "collection": "contributions",
+      "state": "READY"
+    },
+    {
+      "collection": "kidsOperationSessions",
+      "state": "READY"
+    }
+  ],
+  "desiredIndexCount": 23
+}

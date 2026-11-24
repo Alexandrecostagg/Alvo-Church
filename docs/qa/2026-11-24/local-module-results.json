@@ -1,0 +1,74 @@
+[
+  {
+    "task": "qa:seed",
+    "code": 0
+  },
+  {
+    "task": "qa:serving",
+    "code": 0
+  },
+  {
+    "task": "qa:worship",
+    "code": 0
+  },
+  {
+    "task": "qa:campaigns",
+    "code": 0
+  },
+  {
+    "task": "qa:platform-admin",
+    "code": 0
+  },
+  {
+    "task": "qa:home",
+    "code": 0
+  },
+  {
+    "task": "qa:journeys",
+    "code": 0
+  },
+  {
+    "task": "qa:groups",
+    "code": 0
+  },
+  {
+    "task": "qa:tribes",
+    "code": 0
+  },
+  {
+    "task": "qa:giving",
+    "code": 0
+  },
+  {
+    "task": "qa:communication",
+    "code": 0
+  },
+  {
+    "task": "qa:marketplace",
+    "code": 0
+  },
+  {
+    "task": "qa:people",
+    "code": 0
+  },
+  {
+    "task": "qa:own-profile",
+    "code": 0
+  },
+  {
+    "task": "qa:finance",
+    "code": 0
+  },
+  {
+    "task": "qa:pastoral",
+    "code": 0
+  },
+  {
+    "task": "qa:reception",
+    "code": 0
+  },
+  {
+    "task": "qa:security",
+    "code": 0
+  }
+]

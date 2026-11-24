@@ -1,0 +1,193 @@
+{
+  "checkedAt": "2026-11-24T13:58:15.666Z",
+  "results": [
+    {
+      "path": "/login",
+      "status": 200,
+      "ms": 1699,
+      "bytes": 8687,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/landing",
+      "status": 200,
+      "ms": 606,
+      "bytes": 44431,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/app",
+      "status": 200,
+      "ms": 180,
+      "bytes": 9924,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/reception",
+      "status": 200,
+      "ms": 131,
+      "bytes": 13059,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/pastoral-ai",
+      "status": 200,
+      "ms": 124,
+      "bytes": 13075,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/members",
+      "status": 200,
+      "ms": 106,
+      "bytes": 11946,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/groups",
+      "status": 200,
+      "ms": 83,
+      "bytes": 12165,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/tribes",
+      "status": 200,
+      "ms": 84,
+      "bytes": 12165,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/giving",
+      "status": 200,
+      "ms": 83,
+      "bytes": 12165,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/finance",
+      "status": 200,
+      "ms": 96,
+      "bytes": 13051,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/communication",
+      "status": 200,
+      "ms": 135,
+      "bytes": 12193,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/marketplace-community",
+      "status": 200,
+      "ms": 141,
+      "bytes": 12225,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/me",
+      "status": 200,
+      "ms": 126,
+      "bytes": 11927,
+      "security": {
+        "frame": "DENY",
+        "csp": true,
+        "nosniff": "nosniff"
+      }
+    },
+    {
+      "path": "/api/home",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/reception",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/pastoral",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/mobile/member",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/groups",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/tribes",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/giving",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/finance",
+      "status": 401,
+      "noStore": "private, no-store"
+    },
+    {
+      "path": "/api/marketplace",
+      "status": 404,
+      "noStore": "private, no-cache, no-store, max-age=0, must-revalidate"
+    }
+  ]
+}

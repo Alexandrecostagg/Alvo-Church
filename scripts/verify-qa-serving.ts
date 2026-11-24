@@ -202,7 +202,7 @@ async function main() {
     eq(
       concurrent.map((r) => r.status),
       [200, 200],
-      "concurrent idempotent creation",
+      `concurrent idempotent creation: ${JSON.stringify(concurrent)}`,
     );
     eq(
       (await db.collection(`${root}/serviceAssignments`).get()).size,

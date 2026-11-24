@@ -1,0 +1,47 @@
+[
+  {
+    "path": "/api/marketplace/community",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/members/directory",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/members/profile",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/learning/manage",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/learning/videos",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/journeys",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/serving",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/worship",
+    "status": 401,
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/campaigns",
+    "status": 401,
+    "cache": "private, no-store"
+  }
+]

@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-24",
+  "verdict": "guided-demo-with-recorded-limitations",
+  "sourceCommit": "4f76c1f3f070b72cd140b713c017553bdde39f85",
+  "ci": {
+    "url": "https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/44179794471",
+    "attempt": 2,
+    "conclusion": "success",
+    "jobs": {
+      "authorization": "success",
+      "builds (mobile)": "success",
+      "builds (lp)": "success",
+      "quality": "success",
+      "builds (web)": "success"
+    }
+  },
+  "unitTests": {
+    "passed": 766,
+    "files": 84
+  },
+  "security": {
+    "passed": 48,
+    "findings": 0,
+    "scope": "local emulators and actual API handlers; no external pentest"
+  },
+  "moduleSuites": 27,
+  "dashboardChecks": 79,
+  "additionalVideoChecks": 50,
+  "r2Checks": 7,
+  "dependencyAdvisories": 0,
+  "mobileExports": [
+    "android",
+    "ios"
+  ],
+  "mobileCompatibilityCheck": "passed online after applying all 9 recommended SDK 57 patch updates",
+  "physicalDeviceTest": false,
+  "providerDeliveryTest": "simulated only",
+  "productionWrites": false,
+  "productionVersion": "281d7f5d-1554-4242-9459-4c91700f8ea6",
+  "productionSourceProvenance": "version has no source tag; production contract checks performed independently",
+  "rulesMatch": true,
+  "readyIndexes": 23,
+  "ui": {
+    "productionLogin": [
+      "desktop",
+      "390x844",
+      "keyboard email-to-password",
+      "recovery guidance with empty email"
+    ],
+    "local": [
+      "login",
+      "dashboard",
+      "visitor capture",
+      "journey created",
+      "in-person contact"
+    ],
+    "fullNavigation": "inconclusive after dev compile timeout and server shutdown"
+  },
+  "initialFailure": {
+    "test": "serving concurrent idempotency",
+    "observed": "409/409; emulator transaction lock timeout",
+    "retest": "54 checks passed locally and full suite passed in clean CI",
+    "environmentLoadAverage": 46.7
+  },
+  "localModuleRerun": {
+    "completed": true,
+    "failed": [],
+    "securityChecks": 43,
+    "note": "43 checks locally without HTTP server; complete API-inclusive 48 checks passed in CI"
+  },
+  "postUpdateVerification": {
+    "unitTests": 766,
+    "testFiles": 84,
+    "typecheck": "all workspaces passed",
+    "exports": [
+      "android",
+      "ios"
+    ],
+    "dependencyAdvisories": 0,
+    "physicalDeviceTest": false
+  }
+}
