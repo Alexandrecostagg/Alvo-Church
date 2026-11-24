@@ -38,7 +38,7 @@ A navegação para Jornadas ficou em compilação no servidor dev durante a carg
 
 1. Primeira execução de escalas recebeu 409/409 na criação concorrente esperada 200/200; emulador registrou `Transaction lock timeout`. Repetição local passou 54 controles, sem relaxar expectativas, e a execução limpa do GitHub também passou. A máquina estava sob carga elevada (load average observado 46,70). A ocorrência é compatível com contenção no laboratório; não foi reproduzida como falha funcional no ambiente limpo. O teste passou a incluir os corpos das respostas na mensagem de erro para facilitar investigações futuras.
 2. Reinício do servidor dev excedeu 120 segundos sob a mesma carga. Os cenários restantes passaram a chamar diretamente os handlers reais.
-3. Os nove patches recomendados pelo Expo foram aplicados em 24/11, mantendo o SDK 57. A validação online `expo install --check` passou. Após a atualização, os 766 testes, o typecheck de todos os workspaces, os exports Android/iOS e a consulta de vulnerabilidades (zero alertas) passaram novamente. O teste físico continua pendente.
+3. O [pipeline do novo commit 99a4191](https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/45414368409) também concluiu os cinco jobs com sucesso. Os nove patches recomendados pelo Expo foram aplicados em 24/11, mantendo o SDK 57. A validação online `expo install --check` passou. Após a atualização, os 766 testes, o typecheck de todos os workspaces, os exports Android/iOS e a consulta de vulnerabilidades (zero alertas) passaram novamente. O teste físico continua pendente.
 4. Nesta rodada não houve teste físico do AAB 19 via Play, câmera/Kids, push real, segundo plano, rede instável e revogação no aparelho.
 5. Integrações externas foram simuladas. Não prometer WhatsApp oficial, recebimento PIX ou IA ao vivo sem confirmar provisionamento e ensaiar o fluxo controlado.
 
@@ -82,4 +82,8 @@ corepack pnpm --filter @alvo/mobile exec expo export --platform android --platfo
 
 O smoke do runtime requer Worker previamente compilado com `corepack pnpm build:cloudflare:web`. Esse build também foi repetido e aprovado no pipeline limpo. A suíte grava somente nos emuladores. O teste adicional de vídeos exige fixture MP4 local; o R2 é local/workerd, sem gravação no bucket publicado.
 
-Não houve deploy, alteração de regras ou mudança de dados de negócio de produção nesta rodada.
+A rodada de auditoria não alterou regras ou dados de negócio de produção. A publicação Android subsequente tem evidências próprias em `mobile-update.json`.
+
+## Publicação Android após a auditoria
+
+Os patches foram publicados em 24/11 na versão **20 (1.0.0)**, disponível para testadores internos. O AAB usa o commit `99a4191`, aprovado no pipeline completo. Assinatura, certificado e 15 imagens de ícones conferidos; nenhuma perda de dispositivos compatíveis indicada pelo Google Play. Evidência em `docs/qa/2026-11-24/play-internal-20.jpg` e detalhes em `docs/publicacao-android-20-2026-11-24.md`. O teste físico da versão 20 continua pendente.

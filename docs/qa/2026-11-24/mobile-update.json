@@ -20,5 +20,62 @@
     "ios"
   ],
   "dependencyAdvisories": 0,
-  "physicalDeviceTest": false
+  "physicalDeviceTest": false,
+  "sourceCommit": "99a4191c6618b5057c25c540c08238425841d3d3",
+  "ci": {
+    "url": "https://github.com/Alexandrecostagg/Alvo-Church/actions/runs/45414368409",
+    "conclusion": "success",
+    "jobs": {
+      "quality": "success",
+      "builds (lp)": "success",
+      "builds (web)": "success",
+      "authorization": "success",
+      "builds (mobile)": "success"
+    }
+  },
+  "expoDoctor": {
+    "passed": 20,
+    "total": 21,
+    "remainingWarning": "Native iOS folder is checked in; no Android native folder. Android CNG prebuild passed separately in a temporary folder."
+  },
+  "configEquivalence": true,
+  "androidPrebuild": "passed",
+  "build": {
+    "id": "74c65d7d-c190-4d91-bb65-11c598d25438",
+    "status": "FINISHED",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "20",
+    "gitCommitHash": "99a4191c6618b5057c25c540c08238425841d3d3",
+    "createdAt": "2026-11-24T14:27:54.750Z",
+    "updatedAt": "2026-11-24T14:57:14.924Z",
+    "completedAt": "2026-11-24T14:57:14.664Z",
+    "url": "https://expo.dev/accounts/alexandrecostagg/projects/plataforma-esdras/builds/74c65d7d-c190-4d91-bb65-11c598d25438"
+  },
+  "artifact": {
+    "bytes": 61182551,
+    "sha256": "da5e40643fa20b5a064c3f2f3f8646453bddf2e0bd58d2eb93a08ffaa564afcf",
+    "zipIntegrity": true,
+    "launcherImagesMatchingPrebuild": 15,
+    "signatureVerified": true,
+    "uploadCertificateSha256": "97:2E:DE:AD:36:87:1F:9D:DB:8F:18:CF:52:12:01:81:CA:D7:15:60:EB:76:E7:6C:D9:6E:CE:79:3D:D8:BE:C6",
+    "certificateMatchesPrevious": true,
+    "localPath": "apps/mobile/build/esdrasapp-v20.aab"
+  },
+  "androidCloudPrebuild": "passed",
+  "signatureVerificationNotes": "jarsigner reported jar verified; warnings about self-signed chain, timestamp and JarInputStream entry order were retained locally. Upload certificate SHA-256 matched the previous release. Google Play accepted the signed AAB and published it to the internal track.",
+  "play": {
+    "package": "com.plataformaesdras.app",
+    "track": "internal",
+    "release": "20 (1.0.0)",
+    "status": "available to internal testers",
+    "publishedLocal": "2026-11-24 12:02 America/Belem",
+    "releaseUrl": "https://play.google.com/console/u/0/developers/6634974275284956398/app/4974621366811081252/tracks/4701732869010871749/releases/7/details",
+    "minSdk": 24,
+    "targetSdk": 36,
+    "abis": 4,
+    "newlyIncompatibleDevices": 0,
+    "compatiblePhones": 12434,
+    "compatibleTablets": 6603,
+    "evidence": "play-internal-20.jpg"
+  }
 }
